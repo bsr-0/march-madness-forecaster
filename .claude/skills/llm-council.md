@@ -132,15 +132,56 @@ If the question is too vague ("council this: my business"), ask one clarifying q
 
 Save the framed question for the transcript.
 
-### Step 2: Convene the Council (5 sub-agents in parallel)
+### Step 1.5: Choose the Panel Size (bucket-driven)
 
-Spawn all 5 advisors simultaneously as sub-agents. Each gets:
+The 5-advisor panel is the full treatment. It is not always the right tool.
+The council is expensive — 11 sub-agents at full scale (5 drafts + 5
+peer reviews + 1 chairman). Use the bucket classification from Step 0 /
+`COUNCIL_LESSONS.md §4` to pick the right size:
+
+| §4 bucket | Advisors | Panel composition | Why |
+|---|---|---|---|
+| **A** (already answered) + user has new evidence | 2 | Contrarian + Statistician | Re-litigating settled ground — need the skeptic and the numbers check, not a fresh 5-angle fan-out |
+| **B** (execute an open `Ox`) | 1 | Executor | Strategic question is settled; just sanity-check the plan |
+| **C** (blocked on prereq) | 0 | — | Step 0 should have aborted — you shouldn't be here |
+| **D** (locked decision) + user has new evidence | 2 | Contrarian + Statistician | Same rationale as A |
+| **E** (genuinely novel) | 5 | All five | What the council was designed for |
+
+Rules of thumb:
+
+- **Default to full panel (5) when in doubt.** The cost of false-negative
+  (under-counciling a real novel question) is much higher than the cost
+  of false-positive (over-counciling a bucket-A question).
+- **Never go below the size prescribed by the bucket.** If the user
+  insists on a "quick council" of the full bucket-E panel, that's bucket
+  E — run all 5.
+- **Record the panel size in the transcript** ("Panel: 2 advisors
+  (Contrarian + Statistician); bucket A with new evidence"). This lets
+  future Step 0 duplicate-check see what kind of verdict was produced.
+
+### Step 2: Convene the Council (run the panel in parallel)
+
+Spawn the advisors chosen in Step 1.5 **in a single tool-call batch** —
+one message with N `Agent` tool uses, dispatched together. Do NOT run
+them sequentially. Sequential spawning is where most wall-clock cost
+lives, and the advisors are independent by design — they have no data
+dependency on each other. A 5-way parallel fan-out completes in the
+time of the slowest advisor, not the sum.
+
+Each advisor gets:
 
 1. Their advisor identity and thinking style (from the descriptions above)
-2. The framed question
-3. A clear instruction: respond independently. Do not hedge. Do not try to be balanced. Lean fully into your assigned perspective. If you see a fatal flaw, say it. If you see massive upside, say it. Your job is to represent your angle as strongly as possible. The synthesis comes later.
+2. The framed question + prior-art block from Step 1
+3. A clear instruction: respond independently. Do not hedge. Do not try
+   to be balanced. Lean fully into your assigned perspective. If you see
+   a fatal flaw, say it. If you see massive upside, say it. Your job is
+   to represent your angle as strongly as possible. The synthesis comes
+   later.
 
-Each advisor should produce a response of 150-300 words. Long enough to be substantive, short enough to be scannable.
+Each advisor should produce a response of **150-250 words**. Tight
+enough to force a top-3 thesis rather than an enumeration. If an
+advisor can't make their case in 250 words, they're hedging — the
+shorter cap surfaces that.
 
 **Sub-agent prompt template:**
 ```
@@ -156,10 +197,43 @@ A user has brought this question to the council:
 
 Respond from your perspective. Be direct and specific. Don't hedge or try to be balanced. Lean fully into your assigned angle. The other advisors will cover the angles you're not covering.
 
-Keep your response between 150-300 words. No preamble. Go straight into your analysis.
+Keep your response between 150-250 words. No preamble. Go straight into your analysis.
 ```
 
-### Step 3: Peer Review (5 sub-agents in parallel)
+### Step 2.5: Check Convergence (skip peer review if advisors agree)
+
+Read all advisor responses. Extract each advisor's bottom-line
+recommendation — usually the last paragraph or an explicit "so do X"
+line. Compare them.
+
+**Converge test:** do the advisors land on the same recommendation
+(same action, same direction, same scope)?
+
+- **5-advisor panel (bucket E):** if ≥ 4 of 5 advisors converge on the
+  same recommendation AND no advisor calls the majority view a "fatal
+  flaw", the council agrees. Peer review will add nothing except cost
+  and marginal blind-spot detection. **Skip to Step 4** with a
+  `peer_review: skipped (convergence)` note in the transcript.
+- **2-advisor panel (bucket A / D):** if both advisors agree, go
+  straight to Step 4. If they disagree, skip peer review anyway —
+  there's no "majority" to peer-review with only 2 voices. The
+  chairman directly mediates the disagreement.
+- **1-advisor panel (bucket B):** peer review is always skipped. Go
+  straight to Step 4.
+
+**Diverge case (only on 5-advisor panel):** if 2+ advisors materially
+disagree with the rest, or any advisor flags a "fatal flaw" in the
+majority view, **proceed to Step 3**. Peer review is what Karpathy's
+method exists for; this is the case it was designed to handle.
+
+Record the convergence decision in the transcript so later Step 0
+duplicate-checks can see whether the verdict came from a peer-reviewed
+deliberation or a short-circuited unanimous first pass.
+
+### Step 3: Peer Review (5 sub-agents in parallel, ONLY on divergence)
+
+**Run this step only if Step 2.5 determined that the 5-advisor panel
+has material disagreement.** Otherwise skip to Step 4.
 
 This is the step that makes the council more than just "ask 5 times." It's the core of Karpathy's insight.
 
@@ -207,9 +281,32 @@ Keep your review under 200 words. Be direct.
 
 ### Step 4: Chairman Synthesis
 
-This is the final step. One agent gets everything: the original question, all 5 advisor responses (now de-anonymized so you can see which advisor said what), and all 5 peer reviews.
+This is the final step. One agent gets everything: the original
+question, all advisor responses (de-anonymized so you can see which
+advisor said what), and — when Step 3 ran — all peer reviews.
 
-The chairman's job is to produce a verdict that no individual advisor could have reached alone. The chairman is not a summarizer — the transcript already exists for that. The chairman is the most senior mind in the room, expected to make judgment calls, take sides on disagreements, and add independent analysis.
+**Inputs by panel size:**
+
+- **5-advisor panel, converged (Step 2.5 skipped peer review):** the
+  chairman receives the 5 advisor drafts only. They must note in their
+  verdict that peer review was skipped due to convergence, so the
+  reader can calibrate confidence accordingly.
+- **5-advisor panel, diverged (Step 3 ran):** the chairman receives
+  advisor drafts + all 5 peer reviews. This is the classic Karpathy
+  flow.
+- **2-advisor panel (bucket A / D):** the chairman receives 2 advisor
+  drafts. They must either endorse one side or carve out a specific
+  middle that neither advisor argued. "Both have points" is not
+  acceptable.
+- **1-advisor panel (bucket B):** the chairman receives 1 advisor draft
+  and their own independent read of the plan. Their job is to
+  stress-test the Executor's sanity check, not to expand scope.
+
+The chairman's job is to produce a verdict that no individual advisor
+could have reached alone. The chairman is not a summarizer — the
+transcript already exists for that. The chairman is the most senior
+mind in the room, expected to make judgment calls, take sides on
+disagreements, and add independent analysis.
 
 **COUNCIL VERDICT**
 
@@ -223,7 +320,7 @@ The chairman's job is to produce a verdict that no individual advisor could have
 
 5. **Critical actions** -- a maximum of 3 concrete actions, dependency-ordered (what must happen first gates what comes next). Each action is one sentence stating what to do, and one sentence stating the gate (how you know it's done or what result lets you proceed). No prose. No rationale. The reasoning lives in the sections above — this section is the punch list.
 
-**Chairman prompt template:**
+**Chairman prompt template (full 5-advisor, peer-reviewed):**
 ```
 You are the Chairman of an LLM Council. Your job is to synthesize the work of 5 advisors and their peer reviews into a final verdict.
 
@@ -272,6 +369,77 @@ Produce the council verdict using this exact structure:
 You are not a secretary taking minutes. You are the most senior person in the room. Summarizing what others said is not your job — that's what the transcript is for. Your job is to think independently, make judgment calls the advisors couldn't make individually, and deliver a verdict the user can act on without reading anything else. If you find yourself writing "the council agrees" without adding your own analysis of WHY that agreement is trustworthy (or suspicious), you're not doing your job.
 ```
 
+**Chairman prompt template (5-advisor, converged — peer review skipped):**
+```
+You are the Chairman of an LLM Council. The council produced 5
+independent advisor drafts; all converged on substantively the same
+recommendation, so the peer-review step was skipped. Your job is to
+produce the final verdict AND an independent red-team on why the
+convergence should or should not be trusted.
+
+Follow the full verdict structure above, with these adjustments:
+
+- "Where the council agrees" is the entire panel — call out that the
+  convergence is the signal.
+- "Where the council clashes" becomes "Latent disagreement": any
+  second-order tension in the drafts the advisors didn't surface as
+  top-line. If there is none, write "No latent disagreement" — do NOT
+  invent clashes.
+- "Blind spots the council caught" becomes "Blind spots the chairman
+  flags": what did all 5 miss that a peer-review pass likely would
+  have caught? Be specific.
+- "The chairman's take" must explicitly answer: is the convergence
+  the signal, or is it groupthink? If groupthink, recommend re-running
+  with peer review.
+- "Critical actions" unchanged: max 3, dependency-ordered.
+```
+
+**Chairman prompt template (2-advisor, bucket A / D):**
+```
+You are the Chairman. Two advisors (Contrarian + Statistician) reviewed
+a case where the user brought new evidence against a previously-settled
+question. The question is:
+---
+[framed question]
+---
+
+Contrarian:
+[response]
+
+Statistician:
+[response]
+
+Produce a tight 3-section verdict (≤ 300 words total):
+
+1. **What's the new evidence worth?** Side with one advisor or carve a
+   specific middle neither argued. "Both have points" is NOT acceptable.
+2. **Does the prior lock hold?** Yes / No / Needs-further-test. If
+   "needs further test", name the specific test and the pass threshold.
+3. **Critical actions** (max 2): what to do now; what to do next.
+```
+
+**Chairman prompt template (1-advisor, bucket B):**
+```
+You are the Chairman. The Executor reviewed a plan for executing an
+already-identified open item:
+---
+[framed question]
+---
+
+Executor's sanity check:
+[response]
+
+Produce a tight verdict (≤ 200 words):
+
+1. **Is the plan executable as stated?** Yes / No.
+2. **Hidden prerequisites the Executor missed?** Name them or say
+   "none spotted".
+3. **Critical actions** (max 2): do X; then do Y.
+
+Do NOT expand scope. Your job is to stress-test the sanity check, not
+to re-open the strategic decision that §2 already captured.
+```
+
 ### Step 5: Generate the Council Report
 
 After the chairman synthesis is complete, generate a visual HTML report and save it to the user's workspace.
@@ -300,12 +468,25 @@ Open the HTML file after generating it so the user can see it immediately.
 the same location. This includes:
 
 - The original question
+- The §4 bucket classification from Step 0 (A / B / C / D / E)
+- Panel size chosen in Step 1.5 and why (e.g., "2 advisors — bucket A
+  with new evidence")
 - The framed question
-- All 5 advisor responses
-- All 5 peer reviews (with anonymization mapping revealed)
+- The prior-art block injected into each advisor's prompt
+- All advisor responses (N drafts matching the panel size)
+- Peer review block: either all N reviews, or an explicit `peer_review:
+  skipped (convergence)` / `peer_review: skipped (panel size)` note
+  from Step 2.5 with the justification
 - The chairman's full synthesis
 
 This transcript is the artifact. If the user wants to run the council again on the same question after making changes, having the previous transcript lets them (or a future agent) see how the thinking evolved.
+
+Recording the panel size and peer-review decision lets future Step 0
+dedup-checks tell whether a prior verdict came from a full 5-advisor
+peer-reviewed deliberation, a converged-no-review short-circuit, or a
+2-advisor re-litigation. That distinction matters when the user says
+"the council said X" — a 2-advisor bucket-A verdict has different
+evidentiary weight than an 11-sub-agent bucket-E verdict.
 
 **B. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
 4 update rule:
