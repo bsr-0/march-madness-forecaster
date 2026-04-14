@@ -153,7 +153,7 @@ jobs:
               console.log(`No open PR found for branch ${branch}`);
             }
 
-      - name: Enable auto-merge on PR
+      - name: Enable auto-rebase on PR
         if: steps.find-pr.outputs.found == 'true'
         uses: actions/github-script@v7
         with:
@@ -168,12 +168,12 @@ jobs:
             });
 
             try {
-              // Enable auto-merge via GraphQL (squash merge)
+              // Enable auto-merge via GraphQL (rebase merge)
               await github.graphql(`
                 mutation($pullRequestId: ID!) {
                   enablePullRequestAutoMerge(input: {
                     pullRequestId: $pullRequestId,
-                    mergeMethod: SQUASH
+                    mergeMethod: REBASE
                   }) {
                     pullRequest {
                       autoMergeRequest {
@@ -185,8 +185,8 @@ jobs:
               `, {
                 pullRequestId: pr.data.node_id,
               });
-              console.log(`Auto-merge enabled on PR #${prNumber}`);
+              console.log(`Auto-rebase enabled on PR #${prNumber}`);
             } catch (e) {
-              console.log(`Could not enable auto-merge: ${e.message}`);
-              console.log('Note: Auto-merge requires branch protection rules with required status checks.');
+              console.log(`Could not enable auto-rebase: ${e.message}`);
+              console.log('Note: Auto-rebase requires branch protection rules with required status checks.');
             }
