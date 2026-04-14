@@ -1,4 +1,4 @@
-name: Auto-merge Claude branches
+name: Auto-rebase Claude branches
 on:
   push:
     branches-ignore:
@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Create PR, trigger CI, and enable auto-merge
+      - name: Create PR, trigger CI, and enable auto-rebase
         run: |
           # Create a PR if one doesn't exist, otherwise get the existing one
           PR_URL=$(gh pr view --json url -q .url 2>/dev/null || gh pr create --fill --base main)
@@ -29,7 +29,7 @@ jobs:
           # ref guarantees the checks post to the PR's head SHA.
           gh workflow run ci.yml --ref "${GITHUB_REF_NAME}" || true
 
-          gh pr merge --squash --delete-branch --auto "$PR_URL"
-          gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=merge || true
+          gh pr merge --rebase --delete-branch --auto "$PR_URL"
+          gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=rebase || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
