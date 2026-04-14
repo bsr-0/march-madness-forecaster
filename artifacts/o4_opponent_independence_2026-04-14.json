@@ -1,0 +1,48 @@
+{
+  "per_year": {
+    "2023": {
+      "year": 2023,
+      "n_brackets": 18,
+      "observed_mean": 0.4104581647473805,
+      "simulated_mean": 0.4449084561750065,
+      "excess": -0.03445029142762601,
+      "z_score": -2.3844210419753082,
+      "verdict": "less_correlated_than_independence"
+    },
+    "2024": {
+      "year": 2024,
+      "n_brackets": 25,
+      "observed_mean": 0.40132347010621344,
+      "simulated_mean": 0.42708040426921295,
+      "excess": -0.025756934162999512,
+      "z_score": -2.1808088780327077,
+      "verdict": "less_correlated_than_independence"
+    },
+    "2025": {
+      "year": 2025,
+      "n_brackets": 32,
+      "observed_mean": 0.4394844461403077,
+      "simulated_mean": 0.4584725099845941,
+      "excess": -0.018988063844286418,
+      "z_score": -1.8221718238551545,
+      "verdict": "independence_holds"
+    },
+    "2026": {
+      "year": 2026,
+      "n_brackets": 30,
+      "observed_mean": 0.46350916803503023,
+      "simulated_mean": 0.483370879457193,
+      "excess": -0.019861711422162753,
+      "z_score": -1.911393656628272,
+      "verdict": "independence_holds"
+    }
+  },
+  "pooled_stouffer_z": -4.149397700245721,
+  "n_years": 4,
+  "source_file": "pool_hist_results.json",
+  "pool": "pool0",
+  "group_id": "0b6a2bbe-d3d7-365d-82f6-1e995566daa8",
+  "rng_seed": 42,
+  "n_sim_per_year": 2000,
+  "note": "Re-serialization of the independence test behind O4. Stouffer pooled z < 0 means brackets are LESS correlated than IID draws from the empirical marginals \u2014 the core O4 closure invariant."
+}
