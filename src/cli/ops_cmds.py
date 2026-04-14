@@ -10,6 +10,7 @@ from ._helpers import _parse_year_list, _parse_float_list
 # Handler functions
 # ---------------------------------------------------------------------------
 
+
 def run_calibrate_mc(args):
     """Calibrate Monte Carlo noise parameters against historical upset rates."""
     from ..simulation.mc_calibration import calibrate_mc_parameters
@@ -53,18 +54,10 @@ def run_validate_vs_market(args):
         if not isinstance(payload, dict):
             return {}
         if isinstance(payload.get("championship_odds"), dict):
-            return {
-                str(k): float(v)
-                for k, v in payload["championship_odds"].items()
-                if isinstance(v, (int, float))
-            }
+            return {str(k): float(v) for k, v in payload["championship_odds"].items() if isinstance(v, (int, float))}
         sim = payload.get("simulation")
         if isinstance(sim, dict) and isinstance(sim.get("championship_odds"), dict):
-            return {
-                str(k): float(v)
-                for k, v in sim["championship_odds"].items()
-                if isinstance(v, (int, float))
-            }
+            return {str(k): float(v) for k, v in sim["championship_odds"].items() if isinstance(v, (int, float))}
         round_probs = payload.get("round_probabilities")
         if isinstance(round_probs, dict):
             extracted = {}
@@ -145,8 +138,7 @@ def run_validate_vs_market(args):
     print("Top disagreements:")
     for row in result.top_disagreements:
         print(
-            f"  {row['team_id']}: model={row['model_prob']:.3f} "
-            f"market={row['market_prob']:.3f} diff={row['diff']:+.3f}"
+            f"  {row['team_id']}: model={row['model_prob']:.3f} market={row['market_prob']:.3f} diff={row['diff']:+.3f}"
         )
     return 0
 
@@ -166,8 +158,7 @@ def freeze_pipeline_cmd(args):
     if result.get("git_tag"):
         print(f"Git tag: {result['git_tag']}")
     if result.get("git_dirty"):
-        print("WARNING: Uncommitted changes detected.  Commit before "
-              "tournament for clean provenance.")
+        print("WARNING: Uncommitted changes detected.  Commit before tournament for clean provenance.")
     return 0
 
 
@@ -179,12 +170,10 @@ def verify_freeze_cmd(args):
     config = SOTAPipelineConfig()
     result = verify_freeze(config, freeze_path=args.freeze_file)
     if result["matches"]:
-        print(f"VERIFIED: Current config matches freeze from "
-              f"{result['frozen_timestamp']}")
+        print(f"VERIFIED: Current config matches freeze from {result['frozen_timestamp']}")
         print(f"Hash: {result['current_hash']}")
     else:
-        print(f"MISMATCH: Config has changed since freeze at "
-              f"{result['frozen_timestamp']}")
+        print(f"MISMATCH: Config has changed since freeze at {result['frozen_timestamp']}")
         for m in result["mismatches"]:
             print(f"  {m}")
     return 0 if result["matches"] else 1
@@ -313,48 +302,19 @@ def run_governance(args):
         print(f"Denied: {ok}")
     elif args.gov_command == "audit":
         from ..governance.audit_trail import GovernanceAuditLog
+
         audit = GovernanceAuditLog()
         entries = audit.query()
         if not entries:
             print("No audit entries.")
         else:
             for entry in entries[-20:]:
-                print(f"  [{entry.get('timestamp', '')[:19]}] "
-                      f"{entry.get('type', '')} - {entry.get('action', entry.get('checkpoint', ''))}")
+                print(
+                    f"  [{entry.get('timestamp', '')[:19]}] "
+                    f"{entry.get('type', '')} - {entry.get('action', entry.get('checkpoint', ''))}"
+                )
     else:
         print("Usage: governance {status|approve|deny|audit}")
-    return 0
-
-
-def run_deploy(args):
-    """Model deployment management (S18)."""
-    from ..deployment.model_store import ModelStore
-
-    store = ModelStore()
-    if args.deploy_command == "list":
-        versions = store.list_versions()
-        if not versions:
-            print("No model versions found.")
-        else:
-            print(f"{'Version ID':<20s} {'Model':<20s} {'Brier':>8s} {'Production':>12s} {'Created'}")
-            print("-" * 80)
-            for v in versions:
-                prod = "YES" if v.is_production else ""
-                brier = f"{v.brier_score:.4f}" if v.brier_score is not None else "N/A"
-                print(f"{v.version_id:<20s} {v.model_name:<20s} {brier:>8s} {prod:>12s} {v.created_at[:19]}")
-    elif args.deploy_command == "promote":
-        store.promote(args.version)
-        print(f"Promoted version {args.version} to production")
-    elif args.deploy_command == "shadow":
-        from ..deployment.orchestrator import DeploymentOrchestrator
-        orch = DeploymentOrchestrator(model_store=store)
-        result = orch.deploy_shadow(args.candidate)
-        print(json.dumps(result, indent=2, default=str))
-    elif args.deploy_command == "drift-check":
-        print("Drift check requires baseline and current feature stats.")
-        print("Run the pipeline first to generate feature statistics.")
-    else:
-        print("Usage: deploy {list|shadow|promote|drift-check}")
     return 0
 
 
@@ -368,6 +328,7 @@ def run_conference_tournaments(args):
         print("Training SOTA pipeline for predictions...")
         from ..pipeline.config import SOTAPipelineConfig
         from ..pipeline.sota import SOTAPipeline
+
         config = SOTAPipelineConfig(
             year=args.year,
             torvik_json=args.torvik,
@@ -397,6 +358,7 @@ def run_conference_tournaments(args):
     simulation_results = None
     if getattr(args, "simulate", False):
         from ..conference_tournament.simulator import ConferenceTournamentSimulator
+
         print(f"Running Monte Carlo simulation ({args.simulations:,} sims)...")
         simulator = ConferenceTournamentSimulator(
             predictor,
@@ -418,6 +380,7 @@ def run_conference_tournaments(args):
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
+
 
 def register(subparsers):
     """Register operations/monitoring/calibration/freeze/governance/deploy commands."""
@@ -473,7 +436,8 @@ def register(subparsers):
         help="Parallel workers for simulation (default: cpu_count-1)",
     )
     mc_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="data/raw/mc_calibration.json",
         help="Output calibration artifact JSON",
     )
@@ -513,7 +477,8 @@ def register(subparsers):
         help="Create a pre-registration freeze artifact with config hash and git tag",
     )
     freeze_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="pipeline_freeze.json",
         help="Path to write freeze artifact JSON",
     )
@@ -552,7 +517,9 @@ def register(subparsers):
         help="Save current feature statistics as baseline for drift detection",
     )
     save_baseline_parser.add_argument("--features", required=True, help="Path to feature table (CSV or Parquet)")
-    save_baseline_parser.add_argument("--output", "-o", default="data/feature_baseline.json", help="Output baseline JSON path")
+    save_baseline_parser.add_argument(
+        "--output", "-o", default="data/feature_baseline.json", help="Output baseline JSON path"
+    )
     save_baseline_parser.set_defaults(func=run_save_baseline)
 
     # --- pre-tournament-check ---
@@ -624,9 +591,7 @@ def register(subparsers):
     coverage_parser.set_defaults(func=run_audit_metrics_coverage)
 
     # --- governance (S21) ---
-    gov_parser = subparsers.add_parser(
-        "governance", help="Governance gate management (S21)"
-    )
+    gov_parser = subparsers.add_parser("governance", help="Governance gate management (S21)")
     gov_sub = gov_parser.add_subparsers(dest="gov_command")
     gov_sub.add_parser("status", help="Show pending approvals and authority matrix")
     gov_approve = gov_sub.add_parser("approve", help="Approve a pending request")
@@ -640,62 +605,63 @@ def register(subparsers):
     gov_sub.add_parser("audit", help="Show recent audit log entries")
     gov_parser.set_defaults(func=run_governance)
 
-    # --- deploy (S18) ---
-    deploy_parser = subparsers.add_parser(
-        "deploy", help="Model deployment management (S18)"
-    )
-    deploy_sub = deploy_parser.add_subparsers(dest="deploy_command")
-    deploy_sub.add_parser("list", help="List all model versions")
-    deploy_shadow = deploy_sub.add_parser("shadow", help="Run shadow comparison")
-    deploy_shadow.add_argument("--candidate", required=True, help="Candidate version ID")
-    deploy_promote = deploy_sub.add_parser("promote", help="Promote a model version")
-    deploy_promote.add_argument("--version", required=True, help="Version ID to promote")
-    deploy_sub.add_parser("drift-check", help="Run drift analysis on latest model")
-    deploy_parser.set_defaults(func=run_deploy)
-
     # --- conference-tournaments ---
     conf_parser = subparsers.add_parser(
         "conference-tournaments",
         help="Predict conference tournament outcomes (pre-NCAA validation)",
     )
     conf_parser.add_argument(
-        "--torvik", default="data/raw/torvik_2026.json",
+        "--torvik",
+        default="data/raw/torvik_2026.json",
         help="Path to Torvik JSON data file",
     )
     conf_parser.add_argument(
-        "--conference", "-c", default=None,
+        "--conference",
+        "-c",
+        default=None,
         help="Predict a single conference (e.g. ACC, B12, SEC). Default: all",
     )
     conf_parser.add_argument(
-        "--output", "-o", default=None,
+        "--output",
+        "-o",
+        default=None,
         help="Output JSON file path for predictions",
     )
     conf_parser.add_argument(
-        "--year", type=int, default=2026,
+        "--year",
+        type=int,
+        default=2026,
         help="Season year (default: 2026)",
     )
     conf_parser.add_argument(
-        "--list-conferences", action="store_true",
+        "--list-conferences",
+        action="store_true",
         help="List available conferences and exit",
     )
     conf_parser.add_argument(
-        "--seeds", default=None,
+        "--seeds",
+        default=None,
         help="Path to seed overrides JSON (conference -> {team_id: seed})",
     )
     conf_parser.add_argument(
-        "--simulate", action="store_true",
+        "--simulate",
+        action="store_true",
         help="Run Monte Carlo simulation for championship probabilities",
     )
     conf_parser.add_argument(
-        "--simulations", type=int, default=10000,
+        "--simulations",
+        type=int,
+        default=10000,
         help="Number of Monte Carlo simulations (default: 10000)",
     )
     conf_parser.add_argument(
-        "--use-pipeline", action="store_true",
+        "--use-pipeline",
+        action="store_true",
         help="Use trained SOTA pipeline for predictions (requires historical data)",
     )
     conf_parser.add_argument(
-        "--data-dir", default=None,
+        "--data-dir",
+        default=None,
         help="Data directory for supplementary files (Four Factors, shooting)",
     )
     conf_parser.set_defaults(func=run_conference_tournaments)
