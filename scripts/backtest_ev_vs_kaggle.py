@@ -20,6 +20,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Tuple
+from scripts._common import (  # noqa: F401
+    build_chalk_picks as _cm_build_chalk_picks,
+    determine_winners as _cm_determine_winners,
+    load_seeds,
+    load_tournament_results,
+    score_bracket_espn,
+)
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
@@ -57,23 +64,6 @@ SCOREABLE_ROUNDS = {"R64", "R32", "S16", "E8", "F4", "NCG"}
 # ---------------------------------------------------------------------------
 # Data loading (reuses patterns from ablation script)
 # ---------------------------------------------------------------------------
-
-
-def load_tournament_results(year):
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        return json.load(f).get("games", [])
-
-
-def load_seeds(year):
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        data = json.load(f)
-    return {t["team_id"]: t["seed"] for t in data["teams"]}
 
 
 def load_team_stats(year):
@@ -300,37 +290,15 @@ def build_blend_round_probs(seed_round, noseed_round, alpha=0.5):
 
 
 def determine_winners(games):
-    winners = {r: set() for r in ESPN_SCORING}
-    for game in games:
-        scoring_round = RESULT_ROUND_TO_SCORING.get(game["round_name"])
-        if scoring_round is None:
-            continue
-        if game["team1_won"]:
-            winners[scoring_round].add(game["team1_id"])
-        else:
-            winners[scoring_round].add(game["team2_id"])
-    return winners
+    return _cm_determine_winners(games, ESPN_SCORING, RESULT_ROUND_TO_SCORING)
 
 
 def score_bracket(picks, winners):
-    total = 0
-    for team_id, round_name in picks.items():
-        if team_id in winners.get(round_name, set()):
-            total += ESPN_SCORING[round_name]
-    return total
+    return score_bracket_espn(picks, winners, ESPN_SCORING)
 
 
 def build_chalk_picks(games, seeds):
-    picks = {}
-    for game in games:
-        scoring_round = RESULT_ROUND_TO_SCORING.get(game["round_name"])
-        if scoring_round is None:
-            continue
-        t1, t2 = game["team1_id"], game["team2_id"]
-        s1 = seeds.get(t1, 16)
-        s2 = seeds.get(t2, 16)
-        picks[t1 if s1 <= s2 else t2] = scoring_round
-    return picks
+    return _cm_build_chalk_picks(games, seeds, RESULT_ROUND_TO_SCORING)
 
 
 def build_leverage_bracket(games, seeds, leverage_picks):
