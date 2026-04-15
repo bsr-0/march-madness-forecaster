@@ -26,6 +26,74 @@
       "defensive_four_factors_teams": 652,
       "rapm_players_estimated": 0,
       "coaches_mapped_to_teams": 0
+    },
+    "data_artifacts": {
+      "audited_at_utc": "2026-04-15T02:33:25+00:00",
+      "files": {
+        "coach_tournament_json": {
+          "path": "data/raw/coach_tournament_2026.json",
+          "provider": "barttorvik",
+          "exists": true,
+          "sha256": "bc030f57f38ab65001d2e1e7a3801a8f39cb156dbebd5a521bdb45d4bd9b86d5",
+          "sha256_short": "bc030f57f38ab650",
+          "bytes": 59765,
+          "mtime_utc": "2026-04-09T19:11:03+00:00"
+        },
+        "conf_champions_json": {
+          "path": "data/raw/conf_champions_2026.json",
+          "provider": "sports_reference",
+          "exists": true,
+          "sha256": "33223946416f1cf70e7397acd4a80633feb73d90a205392f847e0d8625ef3f49",
+          "sha256_short": "33223946416f1cf7",
+          "bytes": 666,
+          "mtime_utc": "2026-04-09T19:11:03+00:00"
+        },
+        "rosters_json": {
+          "path": "data/raw/rosters_2026.json",
+          "provider": "cbbpy_schedule_boxscore",
+          "exists": true,
+          "sha256": "d9665ee87b309464d7258edc9f67413a75fee5e20cec985360b501d0bf1ec12a",
+          "sha256_short": "d9665ee87b309464",
+          "bytes": 11099830,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        },
+        "sports_reference_json": {
+          "path": "data/raw/sports_reference_2026.json",
+          "provider": "sports_reference_scraper",
+          "exists": true,
+          "sha256": "0560e309841638111f6ebad2e5159213cb62d49b6b2787763ec8b89918d1aafd",
+          "sha256_short": "0560e30984163811",
+          "bytes": 96988,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        },
+        "torvik_four_factors_json": {
+          "path": "data/raw/torvik_four_factors_2026.json",
+          "provider": "barttorvik",
+          "exists": true,
+          "sha256": "d458499479c306fb481fa184d5c96e3e5d8b95f26847d4874e05a95f007ab078",
+          "sha256_short": "d458499479c306fb",
+          "bytes": 109434,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        },
+        "torvik_json": {
+          "path": "data/raw/torvik_2026.json",
+          "provider": "barttorvik",
+          "exists": true,
+          "sha256": "cd571aabc92685427d85a9e0401f9a87a9888e5cbdcc2c38c67fb4b32d7d42d4",
+          "sha256_short": "cd571aabc9268542",
+          "bytes": 221995,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        },
+        "torvik_shooting_json": {
+          "path": "data/raw/torvik_shooting_2026.json",
+          "provider": "barttorvik",
+          "exists": true,
+          "sha256": "123e8f4aa0fd0dcda80c2380d0ddc8419a5babff547891c05b4d32b0556bb0fe",
+          "sha256_short": "123e8f4aa0fd0dcd",
+          "bytes": 26728,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        }
+      }
     }
   },
   "credential_requirements": {
