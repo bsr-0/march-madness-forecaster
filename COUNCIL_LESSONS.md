@@ -29,7 +29,7 @@ proposing new work — most "new ideas" have been tried or ruled out.
   irrelevant samples bury tournament signal.
 - **Tournament-only model vs blended stacked model** was never directly
   measured head-to-head. Flagged as the diagnostic experiment but not run.
-  `[open → §2 O7]`
+  `[closed 2026-04-13; §2 O7]`
 - **Calibration on 60–70 holdout games is fatal.** Temperature scaling on that
   sample produces "noise with decimal places." Vegas lines proposed as a
   better-calibrated external source.
@@ -97,7 +97,7 @@ proposing new work — most "new ideas" have been tried or ruled out.
   barthag r = 0.73 divergence (reverse-engineered from ESPN box scores vs.
   real Torvik) is the precedent to remember. Local four factors still need
   the same validation: gate ≥ 0.99 per-season, no systematic residual bias.
-  `[open → §2 O2]`
+  `[closed 2026-04-13; §2 O2]`
 - **Silent failures are worse than crashes.** "Won't crash" ≠ "works".
   Team-name matching bug (snake_case double-underscores → silent fallback to
   seed rates) was load-bearing before it was caught. Runtime guards beat
@@ -108,12 +108,13 @@ proposing new work — most "new ideas" have been tried or ruled out.
   revoke-and-relock protocol existed.
 - **Researcher degrees-of-freedom leakage** (hyperparameters tuned while
   observing backtest on same years) was raised but never audited.
-  `[open → §2 O17]`
+  `[closed 2026-04-14; §2 O17]`
 - **Define kill-criteria BEFORE running tests.** Without a pre-committed
   threshold you rationalize whatever number comes back.
 - **Held-out last-3-years validation is recommended but not enforced.**
   Multiple sessions asked for it; no gating mechanism exists.
-  `[open → §2 O20]`
+  `[closed 2026-04-13; §2 O20 — gate is the single-year holdout [2025]
+  per MEMORY.md §1]`
 
 ### Data pipeline / infrastructure
 - **Trank.php promoted to primary data source over cbbdata.com** (decided
@@ -121,7 +122,7 @@ proposing new work — most "new ideas" have been tried or ruled out.
   leakage guard. Chooses loudly-failing Cloudflare fragility over silently-
   corrupting hardcoded `TOURNAMENT_START_DATES` dict.
 - **`TOURNAMENT_START_DATES` dict is a single point of failure** — hardcoded,
-  requires yearly update, no test catches a missing entry. `[open → §2 O16]`
+  requires yearly update, no test catches a missing entry. `[closed 2026-04-13; §2 O16]`
 - **`_validate_pretournament()` runtime guard added to
   `noseed_model._load_team_stats()`** with 10 regression tests (2026-04-05).
   Still need to trace the full call graph to confirm coverage on all load
@@ -130,7 +131,7 @@ proposing new work — most "new ideas" have been tried or ruled out.
   Cannot audit which data source was used for a given model run. `[open]`
 - **Pre-2011 vs post-2011 tournaments aren't interchangeable.** Field expanded
   64 → 68, analytics culture shifted. Naive concatenation of 19 yrs of picks
-  ignores non-stationarity. `[open → §2 O19]`
+  ignores non-stationarity. `[closed 2026-04-14; §2 O19]`
 
 ### Diversity / optimizer
 - **Diversity collapse is underdiagnosed.** Pareto frontier was producing 8–14
