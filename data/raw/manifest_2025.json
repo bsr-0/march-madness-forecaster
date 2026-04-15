@@ -24,5 +24,39 @@
     "historical_games_json": [],
     "kenpom_json": [],
     "sports_reference_json": []
+  },
+  "provenance": {
+    "data_artifacts": {
+      "audited_at_utc": "2026-04-15T02:33:25+00:00",
+      "files": {
+        "historical_games_json": {
+          "path": "data/raw/historical_games_2025.json",
+          "provider": "cbbpy",
+          "exists": true,
+          "sha256": "2ff7ca544af6ff26c5715c3ab863cc8bb0e1b7742752ff06c38cbe9754f3c528",
+          "sha256_short": "2ff7ca544af6ff26",
+          "bytes": 8316725,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        },
+        "kenpom_json": {
+          "path": "data/raw/kenpom_2025.json",
+          "provider": "cbbpy",
+          "exists": false,
+          "sha256": "FILE_NOT_FOUND",
+          "sha256_short": "FILE_NOT_FOUND",
+          "bytes": 0,
+          "mtime_utc": null
+        },
+        "sports_reference_json": {
+          "path": "data/raw/sports_reference_2025.json",
+          "provider": "sports_reference_scraper",
+          "exists": true,
+          "sha256": "530e256223c173982c7f28a49b81d02edfb867b270e351a4e334b5b64e20541d",
+          "sha256_short": "530e256223c17398",
+          "bytes": 93026,
+          "mtime_utc": "2026-04-09T19:11:06+00:00"
+        }
+      }
+    }
   }
 }
