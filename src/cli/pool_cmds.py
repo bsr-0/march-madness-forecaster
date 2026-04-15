@@ -1132,6 +1132,7 @@ def register(subparsers):
         choices=[
             "forward_greedy",
             "champ_first",
+            "champ_first_chalkfade",
             "f4_first",
             "e8_first",
             "all",
@@ -1144,7 +1145,9 @@ def register(subparsers):
             "Bracket construction algorithm. 'forward_greedy' (default) picks "
             "each game's winner by argmax _ev_score for the current round. "
             "'champ_first'/'f4_first'/'e8_first' lock anchor teams then fill "
-            "greedily. 'all' runs a mixed-mode frontier. "
+            "greedily. 'champ_first_chalkfade' fades over-picked champions by "
+            "dividing ev_score by the empirical ESPN chalk-bias ratio at CHAMP. "
+            "'all' runs a mixed-mode frontier. "
             "'det_champ_first'/'det_f4_first'/'det_e8_first' sweep risk levels "
             "0-1 using construct_bracket() directly — backtest-recommended for "
             "small pools (det_f4_first hits 6.2%% P(1st) at N=31). "
