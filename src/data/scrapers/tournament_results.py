@@ -17,8 +17,9 @@ import json
 import logging
 import re
 import time
+from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -26,6 +27,18 @@ from bs4 import BeautifulSoup
 from ..normalize import normalize_team_id
 
 logger = logging.getLogger(__name__)
+
+
+class TaxonomyValidationError(ValueError):
+    """Raised when a scrape produces non-canonical round_name labels or
+    a canonically-shaped-but-wrong round distribution.
+
+    This is the loud-failure guardrail that closes the O22 defect class:
+    historically the scraper silently produced {R68:4, NCG:49, ...} for
+    2026 and we only caught it during year-over-year analysis. Raising
+    here moves the detection from "weeks later during O21 analysis" to
+    "scrape time, in CI".
+    """
 
 
 def _make_soup(html_or_text):
@@ -41,20 +54,134 @@ _ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball
 # ESPN season type 3 = postseason (NCAA tournament).
 _ESPN_SEASON_TYPE = 3
 
-# Map ESPN round slugs / display names to our canonical round labels.
-_ESPN_ROUND_MAP = {
-    "first four": "R68",
-    "first round": "R64",
-    "second round": "R32",
-    "sweet 16": "S16",
-    "elite 8": "E8",
-    "elite eight": "E8",
-    "final four": "F4",
-    "national championship": "NCG",
-    "championship": "NCG",
+# Canonical tournament round labels used project-wide. See
+# ``src/data/historical_tournament_results.py`` for consumer contract.
+CANONICAL_ROUND_LABELS: frozenset[str] = frozenset(
+    {
+        "FF",
+        "R64",
+        "R32",
+        "S16",
+        "E8",
+        "F4",
+        "NCG",
+    }
+)
+
+# Canonical per-round game counts, era-aware.
+# Pre-2011 played a single opening-round game (FF=1). 2011+ expanded to
+# a four-game First Four (FF=4). Everything else is structurally fixed.
+_CANONICAL_COUNTS_POST_2011: Dict[str, int] = {
+    "FF": 4,
+    "R64": 32,
+    "R32": 16,
+    "S16": 8,
+    "E8": 4,
+    "F4": 2,
+    "NCG": 1,
+}
+_CANONICAL_COUNTS_PRE_2011: Dict[str, int] = {
+    **_CANONICAL_COUNTS_POST_2011,
+    "FF": 1,
 }
 
-# Round labels based on column position in SR bracket layout (fallback)
+# ESPN event-note headline → canonical round label.
+#
+# ORDERED MOST-SPECIFIC → LEAST-SPECIFIC. The matcher below iterates this
+# list in order and returns the FIRST pattern that appears in the joined
+# note text. Ordering is load-bearing: "first four" must beat "first
+# round" (some ESPN headlines contain both; first-four is the truth);
+# "national championship" must beat any bare "championship" phrasing.
+#
+# DELIBERATELY NO BARE "championship" CATCH-ALL. That was the O22 root
+# cause — ESPN 2026 attached per-event notes like "NCAA Men's Basketball
+# Championship" alongside a specific-round note, and the bare substring
+# collapsed 48 non-NCG games onto NCG. If ESPN changes phrasing in a
+# future season so that NCG games no longer contain "national
+# championship" verbatim, the matcher returns None, the event is dropped,
+# and the post-scrape distribution assert fails loudly — which is the
+# intended behavior. Silent relabeling is never acceptable.
+_ROUND_PATTERNS: tuple[tuple[re.Pattern, str], ...] = (
+    (re.compile(r"\bfirst\s+four\b"), "FF"),
+    (re.compile(r"\bnational\s+championship\b"), "NCG"),
+    (re.compile(r"\bchampionship\s+game\b"), "NCG"),
+    (re.compile(r"\bfinal\s+four\b"), "F4"),
+    (re.compile(r"\belite\s+(?:8|eight)\b"), "E8"),
+    (re.compile(r"\bsweet\s+(?:16|sixteen)\b"), "S16"),
+    (re.compile(r"\bsecond\s+round\b"), "R32"),
+    (re.compile(r"\bfirst\s+round\b"), "R64"),
+)
+
+
+def _round_name_from_headlines(headlines: Iterable[str]) -> Optional[str]:
+    """Return the canonical round label implied by the notes, or None.
+
+    Iterates the specificity-ordered ``_ROUND_PATTERNS`` list from most-
+    specific to least-specific and returns the first match. Returns
+    ``None`` if no pattern matches — callers should drop the event rather
+    than assume a default (see O22 closure).
+
+    Robust to note ordering: the matcher joins all headlines and searches
+    the joined text for each pattern, so a more-specific round phrase
+    appearing in any note will beat a less-specific phrase in any other.
+    """
+    joined = " | ".join(h.lower() for h in headlines if h)
+    if not joined:
+        return None
+    for pattern, label in _ROUND_PATTERNS:
+        if pattern.search(joined):
+            return label
+    return None
+
+
+def _assert_canonical_labels(games: List[Dict]) -> None:
+    """Raise TaxonomyValidationError if any game carries a non-canonical label."""
+    bad = sorted({g.get("round_name") for g in games} - CANONICAL_ROUND_LABELS)
+    if bad:
+        raise TaxonomyValidationError(
+            f"non-canonical round_name label(s) in scraped games: {bad}. "
+            f"Canonical set: {sorted(CANONICAL_ROUND_LABELS)}. "
+            "If 'R68' appears, the scraper has not been migrated to the "
+            "canonical 'FF' label — see COUNCIL_LESSONS.md §2 O22."
+        )
+
+
+def _assert_canonical_distribution(games: List[Dict], season: int) -> None:
+    """Raise TaxonomyValidationError if a complete scrape's round distribution
+    does not match the era-appropriate canonical counts.
+
+    Skipped on partial scrapes (tournament in progress, some rounds not
+    yet completed). The skip condition uses the total game count, not
+    per-round counts, because ESPN returns only completed games and a
+    mid-tournament scrape legitimately has a reduced total.
+    """
+    expected_total = 67 if season >= 2011 else 64
+    if len(games) != expected_total:
+        logger.info(
+            "Skipping canonical-distribution assert for %d: scraped %d games "
+            "(expected %d for a complete tournament). Partial scrape is "
+            "valid mid-tournament.",
+            season,
+            len(games),
+            expected_total,
+        )
+        return
+
+    expected = _CANONICAL_COUNTS_POST_2011 if season >= 2011 else _CANONICAL_COUNTS_PRE_2011
+    counts = dict(Counter(g["round_name"] for g in games))
+    if counts != expected:
+        raise TaxonomyValidationError(
+            f"scrape for {season} has canonical game count ({len(games)}) but "
+            f"non-canonical round distribution. got {counts}, expected {expected}. "
+            "This is the exact O22 defect shape: upstream headline parsing "
+            "collapsed rounds. Inspect the ESPN event notes for the affected "
+            "games before accepting the scrape."
+        )
+
+
+# Round labels based on column position in SR bracket layout (fallback).
+# FF is not represented here — Sports Reference puts play-in games in a
+# separate HTML location and the SR path is the secondary fallback.
 _ROUND_LABELS = {
     0: "R64",
     1: "R32",
@@ -122,6 +249,15 @@ class TournamentResultsScraper:
                 games = validate_tournament_games(games)
             except Exception as e:
                 logger.warning("Tournament games schema validation failed: %s", e)
+
+        # Post-scrape taxonomy guardrails — closes the O22 defect class.
+        # Labels must be canonical; distribution must match era counts
+        # when the scrape is complete. Both raise on violation rather
+        # than warn, because silently writing a malformed cache is
+        # exactly what produced the 2026 defect.
+        if games:
+            _assert_canonical_labels(games)
+            _assert_canonical_distribution(games, season)
 
         if games:
             self._save_cache(cache_name, {"year": season, "games": games})
@@ -250,24 +386,30 @@ class TournamentResultsScraper:
         if teams[0]["score"] == 0 and teams[1]["score"] == 0:
             return None
 
-        # Determine round from event notes or season type detail
-        round_name = "R64"  # default
+        # Determine round from event notes. Drop the event if no
+        # specificity-ordered pattern matches — silently defaulting to
+        # R64 was the O22 root cause (see _ROUND_PATTERNS docstring).
         notes = event.get("competitions", [{}])[0].get("notes", [])
-        for note in notes:
-            headline = (note.get("headline") or "").lower()
-            for pattern, label in _ESPN_ROUND_MAP.items():
-                if pattern in headline:
-                    round_name = label
-                    break
+        headlines = [note.get("headline") or "" for note in notes]
+        round_name = _round_name_from_headlines(headlines)
+        if round_name is None:
+            logger.debug(
+                "Dropping ESPN event: no round pattern matched any note headline. headlines=%r",
+                headlines,
+            )
+            return None
 
-        # Region from notes
+        # Region from notes. Independent of round parsing; "" is fine
+        # when ESPN omits region (e.g. F4/NCG games; see post-repair
+        # convention of labeling those "National" in the historical file).
         region = ""
-        for note in notes:
-            headline = note.get("headline") or ""
+        for headline in headlines:
             for r in ("East", "West", "South", "Midwest"):
                 if r.lower() in headline.lower():
                     region = r
                     break
+            if region:
+                break
 
         t1, t2 = teams[0], teams[1]
         t1_won = t1.get("winner", t1["score"] > t2["score"])
