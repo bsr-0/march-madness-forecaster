@@ -89,7 +89,13 @@ _DEFAULT_SCORING: Dict[str, int] = {
 }
 
 # Supported construction modes.
-CONSTRUCTION_MODES: Tuple[str, ...] = ("champ_first", "f4_first", "e8_first", "forward_greedy")
+CONSTRUCTION_MODES: Tuple[str, ...] = (
+    "champ_first",
+    "f4_first",
+    "e8_first",
+    "forward_greedy",
+    "champ_first_chalkfade",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +178,31 @@ def _make_ev_scorer(
 
         blended_diff = (1.0 - risk_level) * 1.0 + risk_level * diff
         return model_prob * pts * blended_diff
+
+    return scorer
+
+
+def _make_chalkfade_champ_scorer(
+    base_scorer: Callable[[str, str], float],
+    seeds: Dict[str, int],
+    chalk_bias_table: Dict[int, Dict[str, float]],
+) -> Callable[[str, str], float]:
+    """Wrap base scorer to fade over-picked champions at CHAMP selection.
+
+    Divides the CHAMP ev_score by the empirical chalk-bias ratio for the
+    team's seed. Seeds the public over-picks at CHAMP (high ratio) get a
+    lower chalkfade score; under-picked seeds (low ratio) get relatively
+    boosted. Non-CHAMP rounds pass through unchanged so path-fill games
+    use the unmodified base scorer.
+    """
+
+    def scorer(team_id: str, round_name: str) -> float:
+        score = base_scorer(team_id, round_name)
+        if round_name == "CHAMP":
+            seed = seeds.get(team_id, 8)
+            ratio = chalk_bias_table.get(seed, {}).get("CHAMP", 1.0) or 1.0
+            return score / max(ratio, 0.01)
+        return score
 
     return scorer
 
@@ -487,11 +518,11 @@ def _pick_f4_teams(
         picks[region] = (best_team, best_score)
 
     # Phase 2: enforce one-seed cap
-    one_seed_regions = [
-        r for r, (t, _) in picks.items()
-        if team_seed.get(t) == 1 and r != forced_region
-    ]
-    while len(one_seed_regions) + (1 if forced_region and team_seed.get(picks[forced_region][0]) == 1 else 0) > max_one_seeds:
+    one_seed_regions = [r for r, (t, _) in picks.items() if team_seed.get(t) == 1 and r != forced_region]
+    while (
+        len(one_seed_regions) + (1 if forced_region and team_seed.get(picks[forced_region][0]) == 1 else 0)
+        > max_one_seeds
+    ):
         # Replace the one-seed with the weakest EV contribution
         weakest_region = min(one_seed_regions, key=lambda r: picks[r][1])
         # Pick best non-one-seed in that region
@@ -582,6 +613,7 @@ def construct_bracket(
     scoring_system: Optional[Dict[str, int]] = None,
     forced_champion: Optional[str] = None,
     max_one_seeds_f4: int = 2,
+    chalk_bias_table: Optional[Dict[int, Dict[str, float]]] = None,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Construct a complete 63-game bracket using the specified mode.
 
@@ -591,6 +623,11 @@ def construct_bracket(
     See the module docstring for a description of each mode. All modes
     share the same ``_ev_score``-based scorer (via ``_make_ev_scorer``) so
     comparisons between modes isolate the construction-order signal.
+
+    Args:
+        chalk_bias_table: Optional empirical chalk-bias ratios loaded from
+            ``load_chalk_bias_table()``. Only used by ``champ_first_chalkfade``
+            mode; auto-loaded from the latest artifact if None.
 
     Raises:
         ValueError: if mode is unknown, if the seed map can't be built to
@@ -621,6 +658,15 @@ def construct_bracket(
         champion = _pick_champion(scorer, all_teams, forced_champion)
         locked_teams: Set[str] = {champion}
         lock_through_round: Optional[str] = "CHAMP"
+    elif mode == "champ_first_chalkfade":
+        if chalk_bias_table is None:
+            from ..data.seed_pick_model import load_chalk_bias_table
+
+            chalk_bias_table = load_chalk_bias_table()
+        chalkfade_scorer = _make_chalkfade_champ_scorer(scorer, seeds, chalk_bias_table)
+        champion = _pick_champion(chalkfade_scorer, all_teams, forced_champion)
+        locked_teams = {champion}
+        lock_through_round = "CHAMP"
     elif mode == "f4_first":
         locked_teams = _pick_f4_teams(scorer, by_region, forced_champion, max_one_seeds=max_one_seeds_f4)
         lock_through_round = "E8"

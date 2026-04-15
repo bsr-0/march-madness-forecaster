@@ -86,6 +86,7 @@ ALL_MODES: Tuple[str, ...] = (
     "blend",
     "torvik",
     "champ_first_tv",
+    "champ_first_chalkfade_tv",
     "f4_first_tv",
     "e8_first_tv",
     "det_champ_tv",
@@ -701,6 +702,49 @@ def sample_champ_first_brackets(first_round_matchups, round_probs, n_brackets, r
     """
     teams = list(round_probs.keys())
     champ_weights = [round_probs[t].get("CHAMP", 0.0) for t in teams]
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        champion = _draw_categorical(rng, teams, champ_weights)
+        locked_teams_per_sample.append({champion})
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="CHAMP",
+    )
+
+
+def sample_champ_first_chalkfade_brackets(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    chalk_bias_table,
+):
+    """Sample n_brackets via chalk-bias-faded champion selection.
+
+    Like sample_champ_first_brackets but down-weights over-picked champions:
+    the categorical draw weight for each team is
+        round_probs[t]["CHAMP"] / chalk_bias_table[seeds[t]]["CHAMP"]
+
+    Over-picked seeds (high chalk ratio) appear as champion less often;
+    under-picked seeds (low ratio) get a relative boost. The locked-path
+    walk is identical to champ_first — once a champion is drawn, all their
+    R64-CHAMP games are locked and the rest of the bracket is sampled
+    stochastically from round_probs.
+    """
+    teams = list(round_probs.keys())
+    champ_weights = []
+    for t in teams:
+        raw = round_probs[t].get("CHAMP", 0.0)
+        seed = seeds.get(t, 8)
+        ratio = chalk_bias_table.get(seed, {}).get("CHAMP", 1.0) or 1.0
+        champ_weights.append(raw / max(ratio, 0.01))
 
     locked_teams_per_sample = []
     for _ in range(n_brackets):
@@ -1374,6 +1418,12 @@ def run_backtest(
         else:
             pick_dist = build_seed_pick_distribution(seeds)
 
+        # Load the empirical chalk-bias table once per year. Falls back to the
+        # static _chalk_multiplier table if no artifact is found.
+        from src.data.seed_pick_model import load_chalk_bias_table
+
+        chalk_bias_table = load_chalk_bias_table()
+
         # Each entry is (mode_name, round_probs, sampler_fn). The sampler_fn
         # takes (first_round, round_probs, n_samples, rng) and returns an
         # (n_samples, 63) bool array. The 4 baseline modes all use
@@ -1394,6 +1444,13 @@ def run_backtest(
                 "champ_first_tv",
                 torvik_rp,
                 lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
+            ),
+            (
+                "champ_first_chalkfade_tv",
+                torvik_rp,
+                lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
+                    fr, rp, n, r, seeds, _cbt
+                ),
             ),
             (
                 "f4_first_tv",
