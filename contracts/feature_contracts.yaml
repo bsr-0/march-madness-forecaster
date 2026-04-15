@@ -444,6 +444,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: transfer_impact
+    deprecated: true
     owner: data-platform
     source:
       system: roster
@@ -526,6 +527,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: injury_risk
+    deprecated: true
     owner: data-platform
     source:
       system: roster
@@ -556,6 +558,7 @@ features:
   # Volatility (4 features) — source: game_flows
   # ==========================================================================
   - feature_name: lead_volatility
+    deprecated: true
     owner: data-platform
     source:
       system: game_flows
@@ -583,6 +586,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: entropy
+    deprecated: true
     owner: data-platform
     source:
       system: game_flows
@@ -610,6 +614,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: lead_sustainability
+    deprecated: true
     owner: data-platform
     source:
       system: game_flows
@@ -637,6 +642,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: comeback_factor
+    deprecated: true
     owner: data-platform
     source:
       system: game_flows
@@ -866,6 +872,7 @@ features:
   # it is no longer included in to_vector().  wab_poisson is canonical.
 
   - feature_name: sor
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1031,6 +1038,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: free_throw_pct
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1058,6 +1066,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: assist_to_turnover
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1085,6 +1094,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: assist_rate
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1112,6 +1122,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: steal_rate
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1139,6 +1150,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: block_rate
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1358,6 +1370,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: elite_sos
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1385,6 +1398,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: q1_win_pct
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1412,6 +1426,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: foul_rate
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1522,6 +1537,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: preseason_ap_rank
+    deprecated: true
     owner: data-platform
     source:
       system: torvik
@@ -1551,6 +1567,7 @@ features:
   # Coach Features (3 features, FIX C3: consolidated from 7) — source: coach_tournament
   # ==========================================================================
   - feature_name: coach_tournament_exp
+    deprecated: true
     owner: data-platform
     source:
       system: coach_tournament
@@ -1577,6 +1594,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: coach_tournament_win_rate
+    deprecated: true
     owner: data-platform
     source:
       system: coach_tournament
@@ -1606,6 +1624,7 @@ features:
   # coach_e8_appearances, coach_s16_appearances CONSOLIDATED into
   # coach_postseason_score (weighted composite).
   - feature_name: coach_postseason_score
+    deprecated: true
     owner: data-platform
     source:
       system: coach_tournament
@@ -1635,6 +1654,7 @@ features:
   # Graph-Theoretic SOS (2 features) — source: schedule_graph
   # ==========================================================================
   - feature_name: pagerank_sos
+    deprecated: true
     owner: data-platform
     source:
       system: schedule_graph
@@ -1662,6 +1682,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: multi_hop_sos
+    deprecated: true
     owner: data-platform
     source:
       system: schedule_graph
@@ -1692,6 +1713,7 @@ features:
   # Win Quality (3 features) — source: schedule_graph
   # ==========================================================================
   - feature_name: best_win_percentile
+    deprecated: true
     owner: data-platform
     source:
       system: schedule_graph
@@ -1719,6 +1741,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: paper_tiger_score
+    deprecated: true
     owner: data-platform
     source:
       system: schedule_graph
@@ -1746,6 +1769,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: dominance_ratio
+    deprecated: true
     owner: data-platform
     source:
       system: schedule_graph
@@ -1803,6 +1827,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: conf_tourney_champ
+    deprecated: true
     owner: data-platform
     source:
       system: torvik
@@ -1859,6 +1884,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: home_court_dependence
+    deprecated: true
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1972,6 +1998,7 @@ features:
   # External Ratings (2 features) — CRITICAL tier
   # ==========================================================================
   - feature_name: external_rating_composite
+    deprecated: true
     owner: data-platform
     source:
       system: external_ratings
@@ -1998,6 +2025,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: external_rating_spread
+    deprecated: true
     owner: data-platform
     source:
       system: external_ratings
@@ -2058,6 +2086,7 @@ features:
   # Uses Selection Sunday snapshot via _compute_max_ranking_day() to prevent leakage.
   # ==========================================================================
   - feature_name: massey_pom
+    deprecated: true
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
@@ -2084,6 +2113,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_sag
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: SAG_normalized}
     event_timestamp_field: ranking_day
@@ -2103,6 +2133,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_mor
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: MOR_normalized}
     event_timestamp_field: ranking_day
@@ -2122,6 +2153,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_dol
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: DOL_normalized}
     event_timestamp_field: ranking_day
@@ -2141,6 +2173,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_col
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: COL_normalized}
     event_timestamp_field: ranking_day
@@ -2160,6 +2193,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_wol
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: WOL_normalized}
     event_timestamp_field: ranking_day
@@ -2179,6 +2213,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_rth
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RTH_normalized}
     event_timestamp_field: ranking_day
@@ -2198,6 +2233,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_ap
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: AP_normalized}
     event_timestamp_field: ranking_day
@@ -2217,6 +2253,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_usa
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: USA_normalized}
     event_timestamp_field: ranking_day
@@ -2236,6 +2273,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_rpi
+    deprecated: true
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RPI_normalized}
     event_timestamp_field: ranking_day
@@ -2255,6 +2293,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_rank_mean
+    deprecated: true
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
@@ -2281,6 +2320,7 @@ features:
     late_arrival_policy: exclude_if_available_after_prediction_time
 
   - feature_name: massey_rank_std
+    deprecated: true
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
