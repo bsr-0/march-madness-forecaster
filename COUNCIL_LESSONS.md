@@ -134,15 +134,33 @@ proposing new work — most "new ideas" have been tried or ruled out.
   ignores non-stationarity. `[closed 2026-04-14; §2 O19]`
 
 ### Diversity / optimizer
-- **Diversity collapse is underdiagnosed.** Pareto frontier was producing 8–14
-  unique brackets; stochastic-tilt mode (which should help) made mean rank
-  *worse* (620 vs 532). Root cause never traced. `[open; see §3 row 17]`
-- **Leveraged mode regression** (adding variance hurt performance) falsified
-  the naive "more diversity = better" hypothesis. Diagnostic gold, never
-  followed up.
+- **Diversity collapse is two observations, not one** (diagnosed 2026-04-15).
+  **Observation A** — `ParetoOptimizer.generate_pareto_brackets` returns 5–8
+  unique brackets in production reports (up to 13 for `det_*` construction
+  paths). This is INTENDED: the risk sweep honestly reflects the
+  (probability × differentiation) scoring curve, which genuinely has few
+  crossovers when one team is an undervalued favorite (Michigan 2026,
+  Gonzaga 2017). Opt-in remediation exists:
+  `ParetoOptimizer.generate_pareto_brackets(include_champion_augmentation=True)`
+  forces per-champion variants. Default OFF per user preference for
+  methodology-driven alternatives over post-hoc forced-champion brackets.
+  **Observation B** — "stochastic-tilt mode made mean rank worse (620 vs
+  532)" was the `leveraged` mode aggregate (MeanRnk 620.2) vs `seed` (532.4)
+  across 17 yrs in `mc_pool_backtest_equalized_results.txt:272,275` (paired
+  t=−3.808, p=0.0015, wins 3/17). The producing modes (`leveraged`,
+  `opt_seed`, `opt_blend`, `opt_torvik`, `hedge_tv`) were retired from
+  `mc_pool_backtest.ALL_MODES` per MEMORY.md §2 D6/D7; the stochastic-tilt
+  utility `build_leverage_tilted_round_probs` and Pareto-leverage
+  constructor `build_optimized_brackets` have zero production callers.
+  **Leveraged mode regression is dead code; Pareto 5–14 collapse is
+  documented design.** `[closed 2026-04-15; see §3 row 49 + artifacts/diversity_collapse_2026-04-15.json;
+  drift guard tests/test_diversity_collapse_lock.py]`
 - **Mean rank vs P(top 5 %) tell different stories.** Pools pay out top
   finishers, not averages. P(top 5 %) 8.3 % vs 5.1 % (a 63 % lift) was real
-  signal; mean rank 532 wasn't.
+  signal; mean rank 532 wasn't. This observation is now locked forward by
+  the 2026-04-02 strategic pivot (MEMORY.md §1 Strategic pivot) —
+  production target is pool EV + P(1st) + P(top 5 %), not mean rank.
+  `[locked by pivot; MEMORY.md §1 Strategic pivot]`
 
 ---
 
@@ -254,6 +272,7 @@ number to §2.
 | 46 | 2026-04-14 | Close O15 as conditional-blocked: Vegas-line vs temperature scaling? | **CLOSED — blocked on data access; ROI marginal even if unblocked.** Empirical data audit confirms no historical Vegas lines anywhere in repo (`data/raw/` swept for `vegas/odds/market/spread/moneyline` — zero hits; 7OT/Torvik/Kaggle data are ratings + outcomes only, no market lines). The scraper was deleted per §2 D10 and no replacement lives in the tree. Free re-acquisition paths exhausted (TheOddsAPI historical paywalled at $30-250/mo, Covers/SBRO archives bot-blocked, Kaggle ships outcomes-only). The `market_validation.py` consumer stub is still present and would accept Vegas input the moment it exists. ROI argument: the literature consensus is Vegas ≈ best models at BSS ±0.5-2% on NCAA tournament, which is second-order given §3 row 7 pivot (accuracy → pool EV) + O7 (simple_7 = +4.8%) + O14 (calibration-to-pool interaction is trivial). Reactivation contract: (1) any `data/raw/vegas_lines_{year}.json` lands, OR (2) a future §2 item reopens where accuracy-ceiling is the binding pool-EV constraint (which would flip the row-7 pivot). Same pattern as O10 — conditional dead-end with explicit trigger. New MEMORY.md §2 **D15**. No empirical artifact (there's nothing to measure); the closure is the formalization of the blocker. *(§2 O15 closed)* |
 | 47 | 2026-04-15 | Close O22: malformed `tournament_results_2026.json`? | **CLOSED — deterministic relabel, not re-scrape.** Pre-repair counts {R68:4, NCG:49, S16:8, E8:4, F4:2} vs canonical {FF:4, R64:32, R32:16, S16:8, E8:4, F4:2, NCG:1}. Root cause lives in `src/data/scrapers/tournament_results.py::_parse_espn_event`: `_ESPN_ROUND_MAP["championship"]→"NCG"` collapses any ESPN headline containing "championship" but not a more specific phrase onto NCG. The underlying game data (teams/scores/winners) is intact — team-continuity audit shows FF winners ⊆ R64 teams and R64→R32, R32→S16, S16→E8, E8→F4, F4→NCG are exact bijections. Fix: `scripts/repair_tournament_results_2026_o22.py` (preconditions: exact malformed counts + chronological run layout + team-continuity invariants; writes idx 0..3 R68→FF, 4..35 NCG→R64, 36..51 NCG→R32, F4+NCG region=""→"National"). Drift guard: `tests/data_integrity/test_tournament_results_taxonomy.py` — 44 parametrized tests across every year 2005-2026, era-aware canonical counts (1×FF pre-2011, 4×FF 2011+), fails loudly on non-canonical labels. The scraper's fragile substring matcher (silent fallback to R64 default + first-match-wins without specificity ordering) is flagged for follow-up; outside O22 scope. *(§2 O22 closed)* |
 | 48 | 2026-04-15 | Structural fix for the O22 scraper root cause? | **CLOSED.** Four coordinated changes to `src/data/scrapers/tournament_results.py`: (1) replaced the `_ESPN_ROUND_MAP` dict with an explicitly specificity-ordered tuple of compiled regex patterns (`_ROUND_PATTERNS`) — most-specific phrase that appears in the joined headline text wins; (2) removed the bare `"championship"` catch-all that was the literal O22 trigger; (3) replaced the silent `round_name = "R64"` default in `_parse_espn_event` with `return None` when no pattern matches, so the event is dropped rather than mislabeled; (4) added post-scrape `_assert_canonical_labels` and `_assert_canonical_distribution` guardrails (raises `TaxonomyValidationError`) invoked in `scrape_year` — catches the O22 shape at scrape time rather than weeks later during year-over-year analysis. Emits canonical `FF` instead of `R68`. Matcher is a pure function (`_round_name_from_headlines(headlines) -> Optional[str]`) with 23 unit tests at `tests/test_tournament_results_scraper_taxonomy.py` covering: specificity ordering (O22 literal case "Championship - First Round" → R64, not NCG), note-order invariance, digit/word form equivalents ("Elite 8" ≡ "Elite Eight"), explicit `None` on no-match, bare-championship-does-not-leak-to-NCG, both guardrails raise on the exact O22 defect shape, partial scrape skipped so mid-tournament polls don't false-fail. All 156 pre-existing scraper tests still green. The distribution asserter is era-aware (pre-2011 expects 1×FF; 2011+ expects 4×FF) and total-count-gated (skipped when `len(games) != 67/64`). Follow-up work deferred: the Sports Reference HTML fallback (`_parse_region` / `_ROUND_LABELS`) has no FF handling and still emits column-position labels; fine because SR is fallback-only and the post-scrape guardrails would catch any drift at scrape time. |
+| 49 | 2026-04-15 | Close §1 Diversity / §3 row 17 diversity-collapse? | **CLOSED — two observations with different resolutions, neither a live bug.** The council bullet bundled two distinct claims under one label. **Observation A:** `ParetoOptimizer.generate_pareto_brackets` returns 5–8 unique brackets in production forecast reports (10–13 for `det_*` paths) — matches the "8–14 unique brackets" symptom. This is intended per the docstring: "May return fewer if the data genuinely has fewer distinct credible brackets." The risk sweep honestly reflects the (probability × differentiation) curve, which has few crossovers when one team is an undervalued favorite (Michigan 2026 mod 20.0% vs public 13.9%; Gonzaga 2017). Opt-in remediation `include_champion_augmentation=True` forces per-champion variants; default OFF per user preference. **Observation B:** the "stochastic-tilt made mean rank worse (620 vs 532)" regression is the `leveraged` mode aggregate (MeanRnk 620.2) vs `seed` (532.4) across 17 yrs in `mc_pool_backtest_equalized_results.txt:272,275` (paired t=−3.808, p=0.0015, wins 3/17). The producing modes (`leveraged`, `opt_seed`, `opt_blend`, `opt_torvik`, `hedge_tv`) were retired from `mc_pool_backtest.ALL_MODES` per MEMORY.md §2 D6/D7. Current `ALL_MODES` = (seed, noseed, blend, torvik, champ_first_tv, f4_first_tv, e8_first_tv, det_champ_tv, det_f4_tv, det_e8_tv) — 10 modes, zero deprecated. The stochastic-tilt utility `build_leverage_tilted_round_probs` has **zero callers anywhere** in the repo; `build_optimized_brackets` has one allowlisted caller (`scripts/diagnose_catastrophic_years.py`, a pre-pivot `opt_torvik` diagnostic) and zero `src/` callers. Evidence: `scripts/diversity_collapse_diagnostic.py` → `artifacts/diversity_collapse_2026-04-15.json`. Drift guard: `tests/test_diversity_collapse_lock.py` (6 tests): pins `ALL_MODES` membership, fails if any dead mode reappears, fails if either dead utility gains a `src/` caller or (for the tighter gate) any caller whatsoever, pins the `ParetoOptimizer` docstring language that documents Observation A as design. Third council observation ("Mean rank vs P(top 5%) tell different stories") is already locked forward by the 2026-04-02 pivot (MEMORY.md §1 Strategic pivot) — production target is P(1st) + P(top 5%), not mean rank. |
 
 ---
 

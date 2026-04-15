@@ -1,0 +1,119 @@
+{
+  "observation_a": {
+    "description": "ParetoOptimizer.generate_pareto_brackets returns 5-8 unique brackets in production forecast reports; det_* construction paths return 10-13. This matches the 8-14 observation from COUNCIL_LESSONS \u00a71.",
+    "status": "intentional_design",
+    "evidence": {
+      "pool_report_counts": {
+        "pool_report.json": {
+          "n_pareto_brackets": 8
+        },
+        "pool_report_blend.json": {
+          "n_pareto_brackets": 5
+        },
+        "pool_report_det_champ_first.json": {
+          "n_unique_brackets": 13
+        },
+        "pool_report_det_e8_first.json": {
+          "n_unique_brackets": 12
+        },
+        "pool_report_det_f4.json": {
+          "n_unique_brackets": 10
+        },
+        "pool_report_n31_blend.json": {
+          "n_pareto_brackets": 8
+        },
+        "pool_report_n31_noseed.json": {
+          "n_pareto_brackets": 8
+        },
+        "pool_report_n31_seed.json": {
+          "n_pareto_brackets": 8
+        },
+        "pool_report_n31_torvik.json": {
+          "n_pareto_brackets": 8
+        },
+        "pool_report_noseed.json": {
+          "n_pareto_brackets": 5
+        },
+        "pool_report_seed.json": {
+          "n_pareto_brackets": 5
+        }
+      },
+      "pareto_bracket_stats": {
+        "files_with_n_pareto_brackets": 8,
+        "min": 5,
+        "max": 8,
+        "distribution": {
+          "8": 5,
+          "5": 3
+        }
+      },
+      "det_unique_bracket_stats": {
+        "files_with_n_unique_brackets": 3,
+        "min": 10,
+        "max": 13,
+        "distribution": {
+          "13": 1,
+          "12": 1,
+          "10": 1
+        }
+      }
+    },
+    "opt_in_remediation": "ParetoOptimizer.generate_pareto_brackets(include_champion_augmentation=True) forces champion diversity via per-champion forced-winner brackets. Default False per user preference for methodology-driven alternatives over post-hoc variants.",
+    "source_file": "src/optimization/leverage.py:1143"
+  },
+  "observation_b": {
+    "description": "The 'stochastic-tilt made mean rank worse (620 vs 532)' regression was produced by the `leveraged` mode (aggregate MeanRnk 620.2) vs `seed` (532.4) in the 17-year equalized backtest (paired t=-3.808, p=0.0015, wins 3/17).",
+    "status": "dead_code_resolved",
+    "active_modes": [
+      "seed",
+      "noseed",
+      "blend",
+      "torvik",
+      "champ_first_tv",
+      "f4_first_tv",
+      "e8_first_tv",
+      "det_champ_tv",
+      "det_f4_tv",
+      "det_e8_tv"
+    ],
+    "dead_modes_expected_absent": [
+      "hedge_tv",
+      "leveraged",
+      "opt_blend",
+      "opt_seed",
+      "opt_torvik"
+    ],
+    "dead_modes_still_in_all_modes": [],
+    "dead_utility_functions": {
+      "build_leverage_tilted_round_probs": {
+        "call_sites": [],
+        "live_src_callers": [],
+        "allowed_diagnostic_callers": [],
+        "unauthorized_callers": []
+      },
+      "build_optimized_brackets": {
+        "call_sites": [
+          "scripts/diagnose_catastrophic_years.py"
+        ],
+        "live_src_callers": [],
+        "allowed_diagnostic_callers": [
+          "scripts/diagnose_catastrophic_years.py"
+        ],
+        "unauthorized_callers": []
+      }
+    },
+    "source_files": {
+      "evidence": "scripts/mc_pool_backtest_equalized_results.txt:272-293",
+      "deprecation": "MEMORY.md \u00a72 D6/D7",
+      "current_all_modes": "scripts/mc_pool_backtest.py:83-94"
+    }
+  },
+  "observation_c": {
+    "description": "COUNCIL_LESSONS \u00a71 also says 'Mean rank vs P(top 5%) tell different stories' \u2014 a real design principle. The 2026-04-02 strategic pivot (MEMORY.md \u00a71 Strategic pivot) moved the production target from prediction accuracy and mean rank to pool EV + P(1st) + P(top 5%); `champ_first_tv` is the recommended mode per MEMORY.md \u00a71 Pool strategy. This part of the council observation is already locked forward.",
+    "status": "locked_by_pivot",
+    "source_files": {
+      "pivot": "MEMORY.md \u00a71 Strategic pivot (2026-04-02)",
+      "recommendation": "MEMORY.md \u00a71 Pool strategy (champ_first_tv)"
+    }
+  }
+}
