@@ -46,9 +46,11 @@ function to these advancement rates.
 
 from __future__ import annotations
 
+import json
 import logging
 import math
-from typing import Dict, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -62,33 +64,33 @@ logger = logging.getLogger(__name__)
 # (lower_seed, higher_seed) -> P(lower_seed wins)
 _HISTORICAL_WIN_RATES: Dict[Tuple[int, int], float] = {
     # Round of 64 (canonical matchups)
-    (1, 16): 0.990,   # 155/157 through 2025 (avg of two codebase sources)
+    (1, 16): 0.990,  # 155/157 through 2025 (avg of two codebase sources)
     (2, 15): 0.944,
     (3, 14): 0.851,
     (4, 13): 0.791,
     (5, 12): 0.642,
     (6, 11): 0.622,
     (7, 10): 0.609,
-    (8, 9):  0.515,
+    (8, 9): 0.515,
     # Round of 32 common matchups
-    (1, 8):  0.798,
-    (1, 9):  0.825,
-    (2, 7):  0.670,
+    (1, 8): 0.798,
+    (1, 9): 0.825,
+    (2, 7): 0.670,
     (2, 10): 0.700,
-    (3, 6):  0.580,
+    (3, 6): 0.580,
     (3, 11): 0.615,
-    (4, 5):  0.539,
+    (4, 5): 0.539,
     (4, 12): 0.620,
     # Sweet 16 common matchups
-    (1, 4):  0.650,
-    (1, 5):  0.700,
-    (2, 3):  0.555,
-    (2, 6):  0.605,
-    (1, 3):  0.610,
+    (1, 4): 0.650,
+    (1, 5): 0.700,
+    (2, 3): 0.555,
+    (2, 6): 0.605,
+    (1, 3): 0.610,
     # Elite 8 / Final Four
-    (1, 2):  0.535,
-    (1, 1):  0.500,
-    (2, 2):  0.500,
+    (1, 2): 0.535,
+    (1, 1): 0.500,
+    (2, 2): 0.500,
 }
 
 
@@ -125,6 +127,7 @@ def _win_rate(seed_a: int, seed_b: int) -> float:
 # representing the probability of facing that opponent (based on
 # historical seed advancement).
 # Format: {my_seed: [(opponent_seed, probability), ...]}
+
 
 def _r64_opponent(seed: int) -> int:
     """The R64 opponent for a given seed (standard bracket pairing)."""
@@ -347,12 +350,12 @@ def _chalk_multiplier(seed: int, round_name: str) -> float:
     # --- R64: minimal bias, public tracks historical rates ---
     if round_name == "R64":
         if seed <= 4:
-            return 0.98   # slight under-pick (favorites already near 100%)
+            return 0.98  # slight under-pick (favorites already near 100%)
         if seed <= 8:
             return 1.00
         if seed <= 12:
             return 1.01
-        return 1.50       # over-pick from tiny base (not meaningful for EV)
+        return 1.50  # over-pick from tiny base (not meaningful for EV)
 
     # --- R32: slight chalk concentration begins ---
     if round_name == "R32":
@@ -387,9 +390,9 @@ def _chalk_multiplier(seed: int, round_name: str) -> float:
     # --- F4: very strong — anchored to ESPN data ---
     if round_name == "F4":
         if seed == 1:
-            return 2.00   # ESPN anchor: 42% / 21%
+            return 2.00  # ESPN anchor: 42% / 21%
         if seed == 2:
-            return 1.87   # ESPN anchor: 22% / 11.8%
+            return 1.87  # ESPN anchor: 22% / 11.8%
         if seed <= 4:
             return 1.40
         if seed <= 8:
@@ -432,8 +435,8 @@ def _apply_chalk_bias(true_rate: float, seed: int, round_name: str) -> float:
 # Seeds 3–16 rates are proportional to historical advancement,
 # normalized to fill the remaining 4% budget.
 _ESPN_CHAMP_RATES: Dict[int, float] = {
-    1: 0.1800,    # ESPN anchor: ~18% per 1-seed team
-    2: 0.0600,    # ESPN anchor: ~6% per 2-seed team
+    1: 0.1800,  # ESPN anchor: ~18% per 1-seed team
+    2: 0.0600,  # ESPN anchor: ~6% per 2-seed team
     # Seeds 3-16: ~4% total budget (0.04/4 = 0.01 per seed-team average).
     # Distributed proportionally to historical advancement rates, then
     # rescaled to sum to the remaining budget.
@@ -462,8 +465,8 @@ def compute_seed_pick_rates() -> Dict[int, Dict[str, float]]:
 
     # --- CHAMP: use direct ESPN rates for seeds 1-2, ---
     # --- proportional advancement for seeds 3-16.    ---
-    top_seed_budget = sum(_ESPN_CHAMP_RATES.values())      # 0.24
-    remaining_budget = 0.25 - top_seed_budget               # 0.01
+    top_seed_budget = sum(_ESPN_CHAMP_RATES.values())  # 0.24
+    remaining_budget = 0.25 - top_seed_budget  # 0.01
     # 0.25 = total per-seed CHAMP budget (64 teams, 4 per seed, sum = 1.0)
 
     # Seeds 3-16: distribute remaining_budget proportionally to advancement
@@ -503,6 +506,7 @@ SEED_PICK_RATES: Dict[int, Dict[str, float]] = compute_seed_pick_rates()
 # Diagnostic: print the table (useful for code review)
 # ============================================================================
 
+
 def print_comparison_table() -> None:
     """Print derived pick rates alongside advancement rates for review."""
     advancement = _compute_advancement_rates()
@@ -531,6 +535,38 @@ def print_comparison_table() -> None:
         opp = 17 - s
         r64_sum = pick_rates[s]["R64"] + pick_rates[opp]["R64"]
         print(f"R64 pairing {s:2d} vs {opp:2d}: sum = {r64_sum:.4f}")
+
+
+_ROUNDS_TUPLE = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
+
+
+def load_chalk_bias_table(
+    path: Optional[Path] = None,
+) -> Dict[int, Dict[str, float]]:
+    """Load empirical chalk-bias table from a JSON artifact.
+
+    Returns {seed: {round: mean_ratio}} where ratio = ESPN_pick / true_advancement.
+    Falls back to the static _chalk_multiplier table if path is None and no
+    artifact is found in artifacts/.
+
+    Used by bracket_construction.py for the champ_first_chalkfade mode (Phase 2).
+    """
+    if path is None:
+        artifacts_dir = Path(__file__).resolve().parent.parent.parent / "artifacts"
+        matches = sorted(artifacts_dir.glob("chalk_bias_table_*.json"))
+        if not matches:
+            return {s: {r: _chalk_multiplier(s, r) for r in _ROUNDS_TUPLE} for s in range(1, 17)}
+        path = matches[-1]
+
+    try:
+        data = json.loads(Path(path).read_text())
+        bias_raw = data["bias"]
+        return {
+            int(seed_str): {rnd: entry["mean"] for rnd, entry in rnd_map.items() if entry.get("mean") is not None}
+            for seed_str, rnd_map in bias_raw.items()
+        }
+    except (KeyError, ValueError, FileNotFoundError, OSError):
+        return {s: {r: _chalk_multiplier(s, r) for r in _ROUNDS_TUPLE} for s in range(1, 17)}
 
 
 if __name__ == "__main__":
