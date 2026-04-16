@@ -1,0 +1,537 @@
+{
+  "generated": "2026-04-16",
+  "parameters": {
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "n_opponents": 30,
+    "n_placement_trials": 100,
+    "n_tournaments_p1": 500,
+    "chalk_noise_std": 0.4,
+    "noise_std": 0.16
+  },
+  "per_year": [
+    {
+      "year": 2023,
+      "n_brackets": 17,
+      "rho_shape": -0.24585242092943627,
+      "rho_team_identity": 0.9343171154012861,
+      "rho_shape_p1_vs_team_rank": 0.9071954332296197,
+      "rho_team_p1_vs_shape_rank": -0.4702279306158904,
+      "delta_rho": 1.1801695363307223,
+      "brackets": [
+        {
+          "champion": "houston",
+          "p1_shape": 0.04,
+          "p1_team": 0.058,
+          "rank_shape": 23.36,
+          "rank_team": 2.51
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.048,
+          "p1_team": 0.056,
+          "rank_shape": 22.43,
+          "rank_team": 2.22
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.05,
+          "p1_team": 0.046,
+          "rank_shape": 20.97,
+          "rank_team": 2.58
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.066,
+          "p1_team": 0.046,
+          "rank_shape": 22.13,
+          "rank_team": 2.97
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.024,
+          "p1_team": 0.028,
+          "rank_shape": 21.51,
+          "rank_team": 3.48
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.006,
+          "p1_team": 0.034,
+          "rank_shape": 23.16,
+          "rank_team": 7.53
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.022,
+          "p1_team": 0.036,
+          "rank_shape": 21.52,
+          "rank_team": 6.42
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.03,
+          "p1_team": 0.042,
+          "rank_shape": 20.16,
+          "rank_team": 5.26
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.02,
+          "p1_team": 0.02,
+          "rank_shape": 19.61,
+          "rank_team": 7.66
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.02,
+          "p1_team": 0.024,
+          "rank_shape": 19.66,
+          "rank_team": 11.68
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.02,
+          "p1_team": 0.032,
+          "rank_shape": 20.37,
+          "rank_team": 15.31
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.018,
+          "p1_team": 0.026,
+          "rank_shape": 18.33,
+          "rank_team": 19.96
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.01,
+          "p1_team": 0.012,
+          "rank_shape": 18.76,
+          "rank_team": 22.13
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.002,
+          "p1_team": 0.004,
+          "rank_shape": 18.01,
+          "rank_team": 25.81
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.0,
+          "p1_team": 0.006,
+          "rank_shape": 20.32,
+          "rank_team": 28.93
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.008,
+          "p1_team": 0.006,
+          "rank_shape": 22.04,
+          "rank_team": 29.88
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.0,
+          "p1_team": 0.004,
+          "rank_shape": 22.65,
+          "rank_team": 30.32
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "n_brackets": 16,
+      "rho_shape": -0.2831870728051829,
+      "rho_team_identity": 0.7775418179971906,
+      "rho_shape_p1_vs_team_rank": 0.4690285893335842,
+      "rho_team_p1_vs_shape_rank": 0.17295131693093405,
+      "delta_rho": 1.0607288908023735,
+      "brackets": [
+        {
+          "champion": "houston",
+          "p1_shape": 0.062,
+          "p1_team": 0.062,
+          "rank_shape": 21.85,
+          "rank_team": 12.8
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.054,
+          "p1_team": 0.07,
+          "rank_shape": 22.46,
+          "rank_team": 12.54
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.046,
+          "p1_team": 0.042,
+          "rank_shape": 23.02,
+          "rank_team": 13.08
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.044,
+          "p1_team": 0.046,
+          "rank_shape": 23.34,
+          "rank_team": 13.27
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.042,
+          "p1_team": 0.046,
+          "rank_shape": 30.11,
+          "rank_team": 21.6
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.062,
+          "p1_team": 0.042,
+          "rank_shape": 29.84,
+          "rank_team": 21.8
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.102,
+          "p1_team": 0.052,
+          "rank_shape": 30.63,
+          "rank_team": 21.33
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.06,
+          "p1_team": 0.022,
+          "rank_shape": 30.0,
+          "rank_team": 22.56
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.096,
+          "p1_team": 0.056,
+          "rank_shape": 30.08,
+          "rank_team": 23.36
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.062,
+          "p1_team": 0.03,
+          "rank_shape": 30.64,
+          "rank_team": 23.38
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.068,
+          "p1_team": 0.046,
+          "rank_shape": 30.37,
+          "rank_team": 22.92
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.03,
+          "p1_team": 0.036,
+          "rank_shape": 30.2,
+          "rank_team": 22.93
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.022,
+          "p1_team": 0.03,
+          "rank_shape": 29.96,
+          "rank_team": 23.6
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.038,
+          "p1_team": 0.024,
+          "rank_shape": 30.3,
+          "rank_team": 24.62
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.024,
+          "p1_team": 0.014,
+          "rank_shape": 29.52,
+          "rank_team": 24.81
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.01,
+          "p1_team": 0.014,
+          "rank_shape": 28.99,
+          "rank_team": 28.59
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "n_brackets": 15,
+      "rho_shape": 0.4275498791130039,
+      "rho_team_identity": 0.3413763650906046,
+      "rho_shape_p1_vs_team_rank": 0.46869484655902516,
+      "rho_team_p1_vs_shape_rank": 0.3967830002623781,
+      "delta_rho": -0.08617351402239931,
+      "brackets": [
+        {
+          "champion": "houston",
+          "p1_shape": 0.062,
+          "p1_team": 0.038,
+          "rank_shape": 10.76,
+          "rank_team": 7.34
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.08,
+          "p1_team": 0.084,
+          "rank_shape": 11.86,
+          "rank_team": 7.92
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.08,
+          "p1_team": 0.056,
+          "rank_shape": 13.06,
+          "rank_team": 8.42
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.068,
+          "p1_team": 0.036,
+          "rank_shape": 13.12,
+          "rank_team": 8.59
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.078,
+          "p1_team": 0.098,
+          "rank_shape": 13.68,
+          "rank_team": 8.93
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.12,
+          "p1_team": 0.15,
+          "rank_shape": 14.32,
+          "rank_team": 9.33
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.04,
+          "p1_team": 0.036,
+          "rank_shape": 18.33,
+          "rank_team": 12.09
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.03,
+          "p1_team": 0.052,
+          "rank_shape": 20.45,
+          "rank_team": 13.88
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.052,
+          "p1_team": 0.028,
+          "rank_shape": 21.42,
+          "rank_team": 14.64
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.154,
+          "p1_team": 0.112,
+          "rank_shape": 19.19,
+          "rank_team": 22.98
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.026,
+          "p1_team": 0.054,
+          "rank_shape": 17.59,
+          "rank_team": 24.7
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.032,
+          "p1_team": 0.044,
+          "rank_shape": 17.36,
+          "rank_team": 25.84
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.074,
+          "p1_team": 0.058,
+          "rank_shape": 17.71,
+          "rank_team": 26.4
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.046,
+          "p1_team": 0.022,
+          "rank_shape": 18.47,
+          "rank_team": 27.17
+        },
+        {
+          "champion": "houston",
+          "p1_shape": 0.032,
+          "p1_team": 0.008,
+          "rank_shape": 23.28,
+          "rank_team": 29.97
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "n_brackets": 19,
+      "rho_shape": 0.29802269779750684,
+      "rho_team_identity": -0.08974944723419678,
+      "rho_shape_p1_vs_team_rank": 0.31310514578457244,
+      "rho_team_p1_vs_shape_rank": -0.13632413328264173,
+      "delta_rho": -0.38777214503170365,
+      "brackets": [
+        {
+          "champion": "michigan",
+          "p1_shape": 0.058,
+          "p1_team": 0.044,
+          "rank_shape": 2.21,
+          "rank_team": 2.09
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.054,
+          "p1_team": 0.032,
+          "rank_shape": 1.93,
+          "rank_team": 1.9
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.064,
+          "p1_team": 0.03,
+          "rank_shape": 2.03,
+          "rank_team": 1.97
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.05,
+          "p1_team": 0.014,
+          "rank_shape": 1.56,
+          "rank_team": 1.66
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.06,
+          "p1_team": 0.054,
+          "rank_shape": 1.74,
+          "rank_team": 1.8
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.092,
+          "p1_team": 0.05,
+          "rank_shape": 2.24,
+          "rank_team": 2.07
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.04,
+          "p1_team": 0.022,
+          "rank_shape": 1.9,
+          "rank_team": 1.92
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.026,
+          "p1_team": 0.02,
+          "rank_shape": 1.67,
+          "rank_team": 1.69
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.078,
+          "p1_team": 0.044,
+          "rank_shape": 1.6,
+          "rank_team": 1.66
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.04,
+          "p1_team": 0.022,
+          "rank_shape": 1.13,
+          "rank_team": 1.37
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.05,
+          "p1_team": 0.03,
+          "rank_shape": 1.19,
+          "rank_team": 1.48
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.038,
+          "p1_team": 0.05,
+          "rank_shape": 25.61,
+          "rank_team": 9.44
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.078,
+          "p1_team": 0.066,
+          "rank_shape": 1.89,
+          "rank_team": 1.74
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.032,
+          "p1_team": 0.036,
+          "rank_shape": 2.04,
+          "rank_team": 1.96
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.056,
+          "p1_team": 0.056,
+          "rank_shape": 27.08,
+          "rank_team": 11.4
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.02,
+          "p1_team": 0.014,
+          "rank_shape": 28.45,
+          "rank_team": 20.51
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.02,
+          "p1_team": 0.032,
+          "rank_shape": 29.39,
+          "rank_team": 23.59
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.042,
+          "p1_team": 0.042,
+          "rank_shape": 30.34,
+          "rank_team": 28.26
+        },
+        {
+          "champion": "michigan",
+          "p1_shape": 0.032,
+          "p1_team": 0.018,
+          "rank_shape": 30.1,
+          "rank_team": 28.47
+        }
+      ]
+    }
+  ],
+  "aggregate": {
+    "mean_rho_shape": 0.04913327079397288,
+    "mean_rho_team_identity": 0.4908714628137211,
+    "mean_abs_delta_rho": 0.6787110215467996,
+    "verdict": "LARGE divergence \u2014 O6 closure number (+0.37) likely needs full 14-yr rerun."
+  }
+}
