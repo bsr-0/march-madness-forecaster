@@ -11,13 +11,17 @@ from pathlib import Path
 
 import pytest
 
+import numpy as np
+
 from src.simulation.pool_history_opponent_model import (
     ABBREV_TO_TEAM_ID,
     ROUNDS,
     PoolHistoryResolutionError,
     build_pool_pick_distribution,
+    load_pool_bracket_vectors,
     load_pool_brackets,
     load_pool_history_picks,
+    pool_entry_to_bracket_vector,
     resolve_abbrev,
 )
 from src.simulation.ratings_opponent_model import blend_opponent_model
@@ -428,3 +432,242 @@ class TestBlendWithPoolHistory:
         for tid in _SEEDS:
             for r in ["R64", "R32", "S16", "E8", "F4"]:
                 assert result[tid][r] == pytest.approx(0.25, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# pool_entry_to_bracket_vector
+# ---------------------------------------------------------------------------
+
+# Per-region R64 matchups in SEED_MATCHUP_ORDER [(1,16), (8,9), (5,12), (4,13),
+# (6,11), (3,14), (7,10), (2,15)], mirroring
+# scripts/o25_g3_diversity_diagnostic.build_first_round_matchups.
+_FIRST_ROUND_CHALK = [
+    # East (seeds 1-16 mapped to _SEEDS entries)
+    "duke",
+    "miami__fl",  # 1v16
+    "ucla",
+    "massachusetts",  # 8v9
+    "st__john_s__ny",
+    "clemson",  # 5v12
+    "virginia_commonwealth",
+    "virginia",  # 4v13
+    "florida_atlantic",
+    "boise_state",  # 6v11
+    "santa_clara",
+    "troy",  # 3v14
+    "high_point",
+    "vermont",  # 7v10
+    "illinois",
+    "saint_peter_s",  # 2v15
+    # West
+    "arizona",
+    "south_dakota_state",
+    "ohio_state",
+    "providence",
+    "kansas",
+    "wisconsin",
+    "texas",
+    "tennessee",
+    "south_florida",
+    "northwestern",
+    "gonzaga",
+    "hawaii",
+    "nc_state",
+    "xavier",
+    "brigham_young",
+    "yale",
+    # South
+    "houston",
+    "akron",
+    "auburn",
+    "vanderbilt",
+    "iowa_state",
+    "colorado",
+    "baylor",
+    "mcneese_state",
+    "missouri",
+    "seton_hall",
+    "mississippi",
+    "drake",
+    "grand_canyon",
+    "furman",
+    "florida",
+    "long_island_university",
+    # Midwest
+    "michigan",
+    "hofstra",
+    "south_carolina",
+    "texas_a_m",
+    "kentucky",
+    "dayton",
+    "tcu",
+    "louisville",
+    "memphis",
+    "saint_louis",
+    "creighton",
+    "utah_state",
+    "marquette",
+    "georgia",
+    "arkansas",
+    "ucf",
+]
+
+
+class TestPoolEntryToBracketVector:
+    def test_shape_and_dtype(self) -> None:
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        assert isinstance(vec, np.ndarray)
+        assert vec.shape == (63,)
+        assert vec.dtype == bool
+
+    def test_r64_picks_match_fixture(self) -> None:
+        """The _bracket() fixture picks the top seed in every R64 game.
+        Because SEED_MATCHUP_ORDER places the top seed first in every
+        R64 pair, all 32 R64 vector entries should be True."""
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        assert vec[:32].all()
+
+    def test_r32_picks_match_fixture(self) -> None:
+        """The fixture's r32 list (positionally) decides which adjacent
+        R64-winner is recorded. East is fully chalk (DUKE,VCU,SCU,ILL ->
+        T,F,F,F) but West has KU/USF picked over TEX/GONZ — both R32
+        winners are team1 in pair order, so vec[37]=vec[38]=True."""
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        # Per-game expectations derived by walking pair order.
+        # East: DUKE=T1, VCU=T2, SCU=T2, ILL=T2.
+        assert list(vec[32:36]) == [True, False, False, False]
+        # West: ARIZ=T1, KU(over TEX)=T1, USF(over GONZ)=T1, BYU=T2.
+        assert list(vec[36:40]) == [True, True, True, False]
+        # South: HOU=T1, ISU(over BAY)=T1, MIZ(over MISS)=T1, FLA=T2.
+        assert list(vec[40:44]) == [True, True, True, False]
+        # Midwest: MICH=T1, TCU=T2, CREI=T2, ARK=T2.
+        assert list(vec[44:48]) == [True, False, False, False]
+
+    def test_e8_picks_match_fixture(self) -> None:
+        """E8 picks per region: fixture e8=['DUKE','ARIZ','FLA','MICH'].
+        DUKE wins East as team1 (top-half S16 winner) -> vec[56]=True.
+        ARIZ wins West as team1 -> vec[57]=True.
+        South: HOU vs FLA matchup, FLA picked, FLA is team2 -> vec[58]=False.
+        MICH wins Midwest as team1 -> vec[59]=True."""
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        assert list(vec[56:60]) == [True, True, False, True]
+
+    def test_single_r64_upset(self) -> None:
+        """Replace the East 5v12 pick SJU->CLEM: game index 2 (third R64
+        game) should flip to False; all others remain True."""
+        upset = _bracket()
+        upset["r64"] = list(upset["r64"])
+        upset["r64"][2] = "CLEM"  # pick Clemson over St. John's
+        upset["r32"] = list(upset["r32"])
+        upset["r32"][1] = "CLEM"  # propagate upset to R32 (Clemson beats VCU)
+        upset["s16"] = list(upset["s16"])
+        upset["s16"][0] = "CLEM"  # keep East S16 consistent
+        upset["e8"] = list(upset["e8"])
+        upset["e8"][0] = "CLEM"
+        upset["f4"] = list(upset["f4"])
+        upset["f4"][0] = "CLEM"
+
+        vec = pool_entry_to_bracket_vector(upset, _FIRST_ROUND_CHALK, _SEEDS)
+        # R64 game 2 (East 5v12) flipped.
+        assert vec[2] == False  # noqa: E712 — explicit bool check
+        # Other R64 games still chalk.
+        assert vec[0] and vec[1]
+        assert vec[3:32].all()
+
+    def test_incomplete_r64_falls_back_to_top_seed(self, caplog) -> None:
+        """An entry with fewer than 32 r64 picks falls back to team1 (top
+        seed) for missing matchups. Mirrors the 2024 rank=23 (29 picks)
+        and 2025 rank=32 (28 picks) real-world cases."""
+        incomplete = _bracket()
+        # Drop the first R64 pick (DUKE 1v16).
+        incomplete["r64"] = list(incomplete["r64"])[1:]
+
+        with caplog.at_level("DEBUG", logger="src.simulation.pool_history_opponent_model"):
+            vec = pool_entry_to_bracket_vector(incomplete, _FIRST_ROUND_CHALK, _SEEDS)
+
+        # Game 0 had no pick -> defaults to team1=duke -> True.
+        # Rest of R64 picks unchanged (chalk).
+        assert vec[:32].all()
+
+    def test_both_teams_picked_raises(self) -> None:
+        """If a bracket picks both teams in one matchup (internally
+        inconsistent), raise PoolHistoryResolutionError."""
+        bad = _bracket()
+        bad["r64"] = list(bad["r64"])
+        # R64 game 0 is DUKE vs MIA (miami__fl). Picking both is invalid.
+        # Append a MIA pick so the set contains both.
+        bad["r64"].append("MIA")
+        with pytest.raises(PoolHistoryResolutionError, match="both"):
+            pool_entry_to_bracket_vector(bad, _FIRST_ROUND_CHALK, _SEEDS)
+
+    def test_strict_raises_on_unresolvable_abbrev(self) -> None:
+        bad = _bracket(champ="NOT_A_TEAM")
+        with pytest.raises(PoolHistoryResolutionError, match="unresolved"):
+            pool_entry_to_bracket_vector(bad, _FIRST_ROUND_CHALK, _SEEDS, strict=True)
+
+    def test_non_strict_logs_and_drops_unresolvable(self, caplog) -> None:
+        bad = _bracket(champ="NOT_A_TEAM")
+        with caplog.at_level("WARNING", logger="src.simulation.pool_history_opponent_model"):
+            vec = pool_entry_to_bracket_vector(bad, _FIRST_ROUND_CHALK, _SEEDS)
+        assert any("NOT_A_TEAM" in rec.message for rec in caplog.records)
+        # Champ defaulted to team1 of the CHAMP matchup (F4 winner of top
+        # half → DUKE in our chalk bracket). Vector[62] True.
+        assert vec[62] == True  # noqa: E712
+
+    def test_wrong_first_round_length_raises(self) -> None:
+        with pytest.raises(ValueError, match="length 64"):
+            pool_entry_to_bracket_vector(_bracket(), ["duke", "miami__fl"], _SEEDS)
+
+    def test_champ_index_reflects_picked_champion(self) -> None:
+        """Index 62 is the CHAMP game. The fixture has f4=['DUKE','MICH']
+        and champ='MICH'. The walk produces CHAMP matchup (duke, michigan)
+        — duke from East/West half (team1), michigan from South/Midwest
+        half (team2). MICH wins → vector[62] is False (team2 won)."""
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        assert vec[62] == False  # noqa: E712
+
+    def test_vector_is_score_compatible(self) -> None:
+        """Vector produced is directly consumable by the pool-competition
+        scoring function (shape + dtype contract)."""
+        from src.simulation.pool_competition import (
+            build_scoring_vector,
+            score_brackets_against_outcome,
+        )
+
+        vec = pool_entry_to_bracket_vector(_bracket(), _FIRST_ROUND_CHALK, _SEEDS)
+        scoring = build_scoring_vector({"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320})
+        # Score vector against itself as the "outcome" → perfect score.
+        scores = score_brackets_against_outcome(vec.reshape(1, 63), vec, scoring)
+        # All 63 games correct: 32*10 + 16*20 + 8*40 + 4*80 + 2*160 + 320 = 1920
+        assert scores[0] == 1920
+
+
+# ---------------------------------------------------------------------------
+# load_pool_bracket_vectors
+# ---------------------------------------------------------------------------
+
+
+class TestLoadPoolBracketVectors:
+    def test_end_to_end(self, tmp_path: Path) -> None:
+        p = _write_pool_file(
+            tmp_path,
+            {"2026": {"brackets": [_bracket(), _bracket()], "groupSize": 30}},
+        )
+        matrix, group_size = load_pool_bracket_vectors(p, 2026, _FIRST_ROUND_CHALK, _SEEDS)
+        assert matrix.shape == (2, 63)
+        assert matrix.dtype == bool
+        assert group_size == 30
+        # Two identical chalk brackets → identical rows.
+        assert np.array_equal(matrix[0], matrix[1])
+
+    def test_empty_brackets_raises(self, tmp_path: Path) -> None:
+        p = _write_pool_file(
+            tmp_path,
+            {"2026": {"brackets": [], "groupSize": 0}},
+        )
+        with pytest.raises(PoolHistoryResolutionError):
+            load_pool_bracket_vectors(p, 2026, _FIRST_ROUND_CHALK, _SEEDS)
+
+    def test_missing_file_propagates(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_pool_bracket_vectors(tmp_path / "nope.json", 2026, _FIRST_ROUND_CHALK, _SEEDS)
