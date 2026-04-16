@@ -71,7 +71,7 @@ HIST_DIR = Path("data/raw/historical")
 # hold-before requires >=3 prior training years, so 2011 is the first valid test
 # year. 2020 excluded (COVID). 2012 lacks archived ESPN picks and will be skipped
 # at runtime by the per-year try/except. Matches unified_mode_evaluation.py.
-BACKTEST_YEARS = [y for y in range(2011, 2026) if y != 2020]  # 14 years (2020 = COVID)
+BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 14 years (2020 = COVID)
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 N_OPPONENTS = 999  # 1000-person pool
