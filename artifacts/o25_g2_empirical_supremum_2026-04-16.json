@@ -1,0 +1,164 @@
+{
+  "generated": "2026-04-16",
+  "parameters": {
+    "n_candidates": 50,
+    "n_tourn": 5000,
+    "noise_std": 0.16,
+    "rng_seed": 42,
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "pool_corpus": "pool_hist_results.json",
+    "candidate_mode": "champ_first_tv (torvik round probs)",
+    "gate_a_threshold": 0.5
+  },
+  "results": {
+    "2023": {
+      "year": 2023,
+      "n_candidates": 50,
+      "n_opp_actual": 18,
+      "group_size": 19,
+      "spearman_new_vs_actual": 0.37145333975109307,
+      "spearman_old_vs_actual": -0.30108614297536423,
+      "actual_best_idx": 11,
+      "actual_best_new_rank": 16,
+      "actual_best_old_rank": 19,
+      "g2b_flipped_into_top5": false,
+      "var_max_actual_opp": 10430.325724,
+      "var_max_iid_opp": 9213.298684000001,
+      "pearsonr_p_sup_upsets": -0.16216702102579852,
+      "pearsonr_p_rank1_upsets": -0.12979362880313752,
+      "g2c_variance_pass": true,
+      "g2c_upset_pass": false,
+      "g2c_pass": false,
+      "actual_scores_summary": {
+        "max": 1640.0,
+        "min": 810.0,
+        "mean": 1127.4
+      },
+      "p_sup_summary": {
+        "max": 0.103,
+        "min": 0.0112,
+        "mean": 0.04589599999999999
+      },
+      "p_rank1_summary": {
+        "max": 0.0464,
+        "min": 0.0052,
+        "mean": 0.02
+      }
+    },
+    "2024": {
+      "year": 2024,
+      "n_candidates": 50,
+      "n_opp_actual": 25,
+      "group_size": 25,
+      "spearman_new_vs_actual": -0.016120508069498187,
+      "spearman_old_vs_actual": 0.3736427680622851,
+      "actual_best_idx": 4,
+      "actual_best_new_rank": 23,
+      "actual_best_old_rank": 5,
+      "g2b_flipped_into_top5": false,
+      "var_max_actual_opp": 8762.928796,
+      "var_max_iid_opp": 7734.7175,
+      "pearsonr_p_sup_upsets": 0.13970252662407043,
+      "pearsonr_p_rank1_upsets": 0.08605418908440952,
+      "g2c_variance_pass": true,
+      "g2c_upset_pass": true,
+      "g2c_pass": true,
+      "actual_scores_summary": {
+        "max": 1560.0,
+        "min": 690.0,
+        "mean": 1067.4
+      },
+      "p_sup_summary": {
+        "max": 0.0782,
+        "min": 0.011,
+        "mean": 0.035332
+      },
+      "p_rank1_summary": {
+        "max": 0.0494,
+        "min": 0.004,
+        "mean": 0.020000000000000004
+      }
+    },
+    "2025": {
+      "year": 2025,
+      "n_candidates": 50,
+      "n_opp_actual": 32,
+      "group_size": 33,
+      "spearman_new_vs_actual": 0.2619871485431014,
+      "spearman_old_vs_actual": 0.23445160077065413,
+      "actual_best_idx": 44,
+      "actual_best_new_rank": 33,
+      "actual_best_old_rank": 2,
+      "g2b_flipped_into_top5": false,
+      "var_max_actual_opp": 11084.111984000001,
+      "var_max_iid_opp": 9767.707324,
+      "pearsonr_p_sup_upsets": -0.16620184190083045,
+      "pearsonr_p_rank1_upsets": -0.27785147663633625,
+      "g2c_variance_pass": true,
+      "g2c_upset_pass": true,
+      "g2c_pass": true,
+      "actual_scores_summary": {
+        "max": 1660.0,
+        "min": 800.0,
+        "mean": 1222.0
+      },
+      "p_sup_summary": {
+        "max": 0.0994,
+        "min": 0.007,
+        "mean": 0.053276
+      },
+      "p_rank1_summary": {
+        "max": 0.0462,
+        "min": 0.0042,
+        "mean": 0.019999999999999997
+      }
+    },
+    "2026": {
+      "year": 2026,
+      "n_candidates": 50,
+      "n_opp_actual": 30,
+      "group_size": 31,
+      "spearman_new_vs_actual": -0.37513511447068004,
+      "spearman_old_vs_actual": -0.5068476746565042,
+      "actual_best_idx": 45,
+      "actual_best_new_rank": 46,
+      "actual_best_old_rank": 47,
+      "g2b_flipped_into_top5": false,
+      "var_max_actual_opp": 7689.660156,
+      "var_max_iid_opp": 10528.503964,
+      "pearsonr_p_sup_upsets": -0.14957349861976407,
+      "pearsonr_p_rank1_upsets": -0.11520617836255577,
+      "g2c_variance_pass": false,
+      "g2c_upset_pass": false,
+      "g2c_pass": false,
+      "actual_scores_summary": {
+        "max": 1650.0,
+        "min": 640.0,
+        "mean": 1202.0
+      },
+      "p_sup_summary": {
+        "max": 0.055,
+        "min": 0.0024,
+        "mean": 0.028356
+      },
+      "p_rank1_summary": {
+        "max": 0.0438,
+        "min": 0.0066,
+        "mean": 0.02
+      }
+    }
+  },
+  "aggregate": {
+    "mean_spearman_new_vs_actual": 0.06054621643850405,
+    "mean_spearman_old_vs_actual": -0.049959862199732294,
+    "g2a_pass": false,
+    "g2b_any_flip": false,
+    "g2c_all_pass": false,
+    "overall_primary_pass": false
+  }
+}
