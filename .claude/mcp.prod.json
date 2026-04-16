@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "march-madness": {
+      "command": "python3",
+      "args": ["-m", "mcp_servers.prod.server"],
+      "env": {
+        "PYTHONPATH": "/home/user/march-madness-forecaster",
+        "DATA_API_URL": "",
+        "ODDS_API_URL": "https://api.the-odds-api.com/v4",
+        "ODDS_API_KEY": "",
+        "DB_PATH": "data/prod.db"
+      }
+    }
+  }
+}
