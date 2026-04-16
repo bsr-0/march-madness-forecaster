@@ -60,6 +60,20 @@ Specialized agents live in `.claude/agents/<name>/`. Each is a self-contained wo
 
 **Key difference from skills:** Skills load guidance into the *current* session. Agents are dispatched as *independent workers* with isolated context windows — use them when the task benefits from a clean slate and domain-specific focus, or when you need parallel execution across independent problem domains.
 
+## MCP Server
+
+`mcp_server.py` exposes five tools for Claude to call directly without reading raw JSON or shelling out to scripts. Registered in `.mcp.json` and auto-approved via `enableAllProjectMcpServers`.
+
+| Tool | What it does |
+|------|-------------|
+| `get_leverage_picks(mode, top_n, round_filter)` | Ranked leverage/fade picks from a pre-computed pool report |
+| `get_sensitivity_report(mode)` | Strategy stability under ±5% public pick shifts — STABLE vs HIGH_STRATEGY_UNCERTAINTY |
+| `get_backtest_summary()` | LOYO Brier scores, regression gate status across modes |
+| `get_production_config()` | Current production config parameters (model, calibration, simulation, governance) |
+| `run_pool_optimization(pool_size, payout_structure, mode)` | Fresh optimizer run — requires project deps installed |
+
+The first four tools read pre-computed artifacts and work immediately. `run_pool_optimization` needs `pip install -r requirements.txt` first.
+
 ## Git Workflow: Rebase-Only
 
 This repo keeps a **linear history**. Every auto-merge workflow in

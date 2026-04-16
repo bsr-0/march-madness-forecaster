@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "march-madness": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "cwd": "/home/user/march-madness-forecaster"
+    }
+  }
+}
