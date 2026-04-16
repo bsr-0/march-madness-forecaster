@@ -32,6 +32,11 @@
             "type": "command",
             "command": "jq -r '.tool_input.command // empty' | { read -r cmd; if echo \"$cmd\" | grep -qE '(rm\\s+-rf|git\\s+push\\s+--force(\\s|$)|git\\s+reset\\s+--hard)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Destructive command blocked. Use a safer alternative or get explicit approval.\"}}'; fi; } || true",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | { read -r cmd; if echo \"$cmd\" | grep -qE 'git\\s+push.*\\bmain\\b'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Direct push to main is blocked. Push to a feature branch instead.\"}}'; fi; } || true",
+            "timeout": 5000
           }
         ]
       },
@@ -41,6 +46,11 @@
           {
             "type": "command",
             "command": "jq -r '.tool_input.file_path // empty' | { read -r f; if echo \"$f\" | grep -qE '(\\.env$|\\.secret|credentials|api_key)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Writing to secrets/credentials files is blocked. Store secrets in environment variables.\"}}'; fi; } || true",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; if echo \"$f\" | grep -qE 'MEMORY\\.md$'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"MEMORY.md is protected. Edit it manually with explicit intent.\"}}'; fi; } || true",
             "timeout": 5000
           }
         ]
@@ -54,6 +64,11 @@
             "type": "command",
             "command": "cd /home/user/march-madness-forecaster && issues=$(ruff check src/ --quiet 2>&1 | head -10) && if [ -n \"$issues\" ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"additionalContext\\\":\\\"WARNING: ruff found lint issues:\\n$issues\\\"}}\"; fi || true",
             "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "result=$(pytest --tb=no -q 2>&1 | tail -3) && if echo \"$result\" | grep -qE 'failed|error'; then echo \"{\\\"hookSpecificOutput\\\":{\\\"additionalContext\\\":\\\"WARNING: pytest failures detected: $result\\\"}}\"; fi || true",
+            "timeout": 60000
           }
         ]
       }
