@@ -37,7 +37,9 @@ import json
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+
+import numpy as np
 
 from src.data.normalize import normalize_team_id
 
@@ -387,6 +389,157 @@ def build_pool_pick_distribution(
             result[tid]["CHAMP"] /= champ_total
 
     return result
+
+
+def pool_entry_to_bracket_vector(
+    entry: Mapping[str, object],
+    first_round: Sequence[str],
+    seeds: Mapping[str, int],
+    strict: bool = False,
+) -> np.ndarray:
+    """Convert a pool_hist_results.json entry into a (63,) bool bracket vector.
+
+    The output is positionally aligned with ``first_round`` (the 64-team
+    list, [team1, team2, team3, team4, ...] in pair order) so the result
+    is directly consumable by ``score_brackets_against_outcome``.
+
+    Walks the bracket round-by-round.  At each round, for every current
+    matchup ``(t1, t2)`` checks which team appears in the entry's pick
+    set for that round.  Resolution rules:
+
+    * Exactly one of ``{t1, t2}`` is in the round's picks → that team wins;
+      ``vector[i] = (winner == t1)``.
+    * Neither is in the round's picks (e.g., the bracket has an incomplete
+      ``r64`` of 28-29 picks; observed for 2 known low-rank entries) →
+      fall back to "higher-seeded team wins" (``team1`` per the
+      ``first_round`` ordering convention) and log a debug record.  This
+      mirrors ``build_actual_outcome``'s default in
+      ``scripts/o25_g3_diversity_diagnostic.py:267``.
+    * Both ``t1`` and ``t2`` are in the round's picks → bracket is
+      internally inconsistent (a team can only advance once per round);
+      raises ``PoolHistoryResolutionError``.
+
+    Args:
+        entry: Single bracket dict from ``pool_hist_results.json`` with
+            ``r64``/``r32``/``s16``/``e8``/``f4``/``champ`` pick fields.
+        first_round: Length-64 list of team_ids in matchup order; produced
+            by ``scripts/o25_g3_diversity_diagnostic.build_first_round_matchups``.
+            Pair ``(first_round[2i], first_round[2i+1])`` is R64 game ``i``.
+        seeds: ``team_id -> seed`` mapping for the target year.  Used by
+            ``resolve_abbrev`` and to break ties when picks are missing.
+        strict: If True, raise on any unresolved abbrev.  If False
+            (default), unresolved abbrevs are dropped from the round's
+            pick set and logged at WARNING; the fallback (top seed wins)
+            then applies.
+
+    Returns:
+        Boolean ``np.ndarray`` of shape ``(63,)``.  Index ordering:
+        ``[0..31]`` = R64, ``[32..47]`` = R32, ``[48..55]`` = S16,
+        ``[56..59]`` = E8, ``[60..61]`` = F4, ``[62]`` = CHAMP.
+
+    Raises:
+        PoolHistoryResolutionError: Bracket picks both teams in a single
+            matchup, or ``strict=True`` and an abbrev is unresolvable.
+        ValueError: ``first_round`` is not length 64.
+    """
+    if len(first_round) != 64:
+        raise ValueError(f"first_round must be length 64, got {len(first_round)}")
+
+    pick_sets: Dict[str, set[str]] = {}
+    for pool_key, round_name in _POOL_ROUND_MAP.items():
+        raw_picks = entry.get(pool_key)
+        if raw_picks is None:
+            pick_sets[round_name] = set()
+            continue
+        if isinstance(raw_picks, str):
+            raw_picks = [raw_picks]
+        resolved: set[str] = set()
+        unresolved: List[str] = []
+        for raw in raw_picks:
+            if not isinstance(raw, str):
+                continue
+            tid = resolve_abbrev(raw, seeds)
+            if tid is None:
+                unresolved.append(raw)
+                continue
+            resolved.add(tid)
+        if unresolved:
+            msg = "pool_entry_to_bracket_vector(rank=%s): %d unresolved abbrev(s) in %s: %s" % (
+                entry.get("rank"),
+                len(unresolved),
+                pool_key,
+                ", ".join(unresolved),
+            )
+            if strict:
+                raise PoolHistoryResolutionError(msg)
+            logger.warning(msg)
+        pick_sets[round_name] = resolved
+
+    vector = np.zeros(63, dtype=bool)
+    current = list(first_round)
+    gi = 0
+    for round_name in ROUNDS:
+        picks = pick_sets[round_name]
+        nxt: List[str] = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            t1_in = t1 in picks
+            t2_in = t2 in picks
+            if t1_in and t2_in:
+                raise PoolHistoryResolutionError(
+                    f"pool_entry_to_bracket_vector(rank={entry.get('rank')}): "
+                    f"both {t1} and {t2} are picked in {round_name}"
+                )
+            if t1_in:
+                winner = t1
+                vector[gi] = True
+            elif t2_in:
+                winner = t2
+                vector[gi] = False
+            else:
+                # No pick for this matchup: default to higher seed (team1).
+                # Mirrors build_actual_outcome's default.
+                winner = t1
+                vector[gi] = True
+                logger.debug(
+                    "pool_entry_to_bracket_vector(rank=%s): no %s pick for (%s, %s); defaulting to team1=%s",
+                    entry.get("rank"),
+                    round_name,
+                    t1,
+                    t2,
+                    t1,
+                )
+            nxt.append(winner)
+            gi += 1
+        current = nxt
+
+    return vector
+
+
+def load_pool_bracket_vectors(
+    path: str | Path,
+    year: int,
+    first_round: Sequence[str],
+    seeds: Mapping[str, int],
+    strict: bool = False,
+) -> Tuple[np.ndarray, int]:
+    """Load ``year``'s pool entries and return a ``(n_opp, 63)`` bool matrix.
+
+    Convenience wrapper: combines ``load_pool_brackets`` +
+    ``pool_entry_to_bracket_vector`` for callers that want a ready-to-score
+    opponent matrix.
+
+    Returns:
+        ``(opponent_matrix, group_size)`` — ``opponent_matrix.shape ==
+        (len(brackets), 63)``; ``group_size`` is the reported pool size
+        (may exceed ``len(brackets)`` per the gap convention in
+        ``tests/test_pool_hist_ev_validation.py:_GROUP_SIZE_GAP``).
+    """
+    brackets, group_size = load_pool_brackets(path, year)
+    if not brackets:
+        raise PoolHistoryResolutionError(f"No pool brackets for year {year} in {path}; cannot build opponent matrix.")
+    matrix = np.stack([pool_entry_to_bracket_vector(b, first_round, seeds, strict=strict) for b in brackets])
+    return matrix, group_size
 
 
 def load_pool_history_picks(
