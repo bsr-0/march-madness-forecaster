@@ -48,6 +48,18 @@ pytest           # Run tests
 ruff check src/  # Lint check
 ```
 
+## Agents
+
+Specialized agents live in `.claude/agents/<name>/`. Each is a self-contained worker with its own CLAUDE.md and domain context. Dispatch via the Agent tool with `subagent_type="<name>"`. Adding a new agent is a new folder.
+
+| Agent | When to Dispatch |
+|-------|-----------------|
+| `code-reviewer` | After any major implementation step — structured review against the plan and project invariants |
+| `pool-optimizer` | Backtest runs, bracket construction, EV/leverage analysis, optimization debugging — anything touching `src/optimization/`, `src/evaluation/`, or `scripts/mc_pool_backtest.py` |
+| `data-pipeline` | Data ingestion, PIT integrity, schema validation, team name normalization, manifest generation — anything touching `src/data/`, `src/espn/`, or `configs/team_aliases.json` |
+
+**Key difference from skills:** Skills load guidance into the *current* session. Agents are dispatched as *independent workers* with isolated context windows — use them when the task benefits from a clean slate and domain-specific focus, or when you need parallel execution across independent problem domains.
+
 ## Git Workflow: Rebase-Only
 
 This repo keeps a **linear history**. Every auto-merge workflow in
