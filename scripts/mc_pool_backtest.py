@@ -61,6 +61,10 @@ from src.simulation.pool_competition import (
     ROUND_NAMES,
     GAMES_PER_ROUND,
 )
+from src.simulation.pool_history_opponent_model import (
+    load_pool_brackets,
+    build_pool_pick_distribution,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -73,6 +77,7 @@ HIST_DIR = Path("data/raw/historical")
 # at runtime by the per-year try/except. Matches unified_mode_evaluation.py.
 BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 14 years (2020 = COVID)
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
+POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 N_OPPONENTS = 999  # 1000-person pool
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
@@ -1268,7 +1273,7 @@ def run_backtest(
     n_opponents=N_OPPONENTS,
     n_repeats=N_REPEATS,
     n_model=N_MODEL_BRACKETS,
-    opponent_source="seed",
+    opponent_source="pool",
     hparam_fitter: HparamFitter = default_pool_hyperparameters,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
@@ -1305,12 +1310,11 @@ def run_backtest(
         years = BACKTEST_YEARS
 
     scoring_vector = build_scoring_vector(ESPN_SCORING)
-    pool_size = n_opponents + 1  # 1 model bracket + N opponents
 
     print("=" * 100)
     print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]")
     print("=" * 100)
-    print(f"  Pool size: {pool_size} (1 model + {n_opponents} opponents)")
+    print(f"  Pool size: {'actual (from pool_hist_results.json)' if opponent_source == 'pool' else n_opponents + 1}")
     print(f"  Opponent model: {opponent_source} pick rates (independent draws)")
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
@@ -1407,9 +1411,26 @@ def run_backtest(
         torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
 
         # Build opponent distribution (needed before leveraged mode).
-        # ESPN mode is strict: missing archived picks raise FileNotFoundError.
-        # Skip the year cleanly so other years still produce results.
-        if opponent_source == "espn":
+        # pool: empirical pick distribution from pool_hist_results.json for this year;
+        #       pool_size is set to the actual pool's group size.
+        #       Falls back to ESPN if pool history is unavailable for the year.
+        # espn: strict — missing archived picks raise FileNotFoundError.
+        # seed: static SEED_PICK_RATES (year-agnostic fallback).
+        year_n_opponents = n_opponents  # may be overridden below for pool mode
+        if opponent_source == "pool":
+            try:
+                pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
+                pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
+                year_n_opponents = group_size - 1  # pool size excludes model bracket
+            except (FileNotFoundError, KeyError):
+                # No pool history for this year — fall back to ESPN silently.
+                try:
+                    pick_dist = build_espn_pick_distribution(year, seeds)
+                    year_n_opponents = n_opponents
+                except FileNotFoundError as exc:
+                    print(f"  {year:<6} SKIP — {exc}")
+                    continue
+        elif opponent_source == "espn":
             try:
                 pick_dist = build_espn_pick_distribution(year, seeds)
             except FileNotFoundError as exc:
@@ -1417,6 +1438,7 @@ def run_backtest(
                 continue
         else:
             pick_dist = build_seed_pick_distribution(seeds)
+        pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
 
         # Load the empirical chalk-bias table once per year. Falls back to the
         # static _chalk_multiplier table if no artifact is found.
@@ -1523,7 +1545,7 @@ def run_backtest(
 
             for rep in range(n_repeats):
                 opp = generate_opponent_brackets(
-                    n_opponents,
+                    year_n_opponents,
                     first_round,
                     seed_pw,
                     pick_dist,
@@ -1699,10 +1721,11 @@ def main():
     parser.add_argument("--n-model", type=int, default=N_MODEL_BRACKETS, help="Stochastic brackets per mode")
     parser.add_argument(
         "--opponent",
-        choices=["seed", "espn"],
-        default="espn",
-        help="Opponent pick distribution source: espn (real archived ESPN picks, "
-        "strict — fails if missing) or seed (SEED_PICK_RATES fallback). Default: espn.",
+        choices=["seed", "espn", "pool"],
+        default="pool",
+        help="Opponent pick distribution source: pool (empirical from pool_hist_results.json, "
+        "falls back to espn if year unavailable — DEFAULT), espn (real archived ESPN picks, "
+        "strict — fails if missing), or seed (SEED_PICK_RATES fallback).",
     )
     parser.add_argument(
         "--no-log",
