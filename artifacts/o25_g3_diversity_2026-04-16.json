@@ -1,0 +1,155 @@
+{
+  "generated": "2026-04-16",
+  "parameters": {
+    "n_brackets": 50,
+    "n_tourn": 5000,
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "mode": "champ_first_tv (torvik round probs)",
+    "corr_gate": 0.6
+  },
+  "results": {
+    "2023": {
+      "year": 2023,
+      "n_brackets": 50,
+      "mean_pairwise_r": 0.056922126129100956,
+      "median_pairwise_r": 0.22157619713827018,
+      "p10_pairwise_r": -0.6619880867709231,
+      "p90_pairwise_r": 0.7056199417675453,
+      "gate_corr_pass": true,
+      "upset_counts": {
+        "mean": 8.54,
+        "min": 4,
+        "max": 13,
+        "p90_threshold": 11.0,
+        "n_top_decile": 7,
+        "gate_diversity_pass": true
+      },
+      "actual_scores": {
+        "max": 1640.0,
+        "mean": 1127.4,
+        "min": 810.0,
+        "p90": 1334.0,
+        "top5": [
+          1640.0,
+          1430.0,
+          1430.0,
+          1370.0,
+          1370.0
+        ]
+      },
+      "g3_pass": true
+    },
+    "2024": {
+      "year": 2024,
+      "n_brackets": 50,
+      "mean_pairwise_r": 0.07383713463988341,
+      "median_pairwise_r": 0.1961355293770742,
+      "p10_pairwise_r": -0.6509561176394936,
+      "p90_pairwise_r": 0.7789184171730702,
+      "gate_corr_pass": true,
+      "upset_counts": {
+        "mean": 7.62,
+        "min": 3,
+        "max": 13,
+        "p90_threshold": 10.0,
+        "n_top_decile": 10,
+        "gate_diversity_pass": true
+      },
+      "actual_scores": {
+        "max": 1590.0,
+        "mean": 1055.4,
+        "min": 660.0,
+        "p90": 1411.0,
+        "top5": [
+          1590.0,
+          1510.0,
+          1470.0,
+          1440.0,
+          1420.0
+        ]
+      },
+      "g3_pass": true
+    },
+    "2025": {
+      "year": 2025,
+      "n_brackets": 50,
+      "mean_pairwise_r": 0.05096287437886857,
+      "median_pairwise_r": -0.06118828552576192,
+      "p10_pairwise_r": -0.6488916923998205,
+      "p90_pairwise_r": 0.7349415452768702,
+      "gate_corr_pass": true,
+      "upset_counts": {
+        "mean": 7.48,
+        "min": 4,
+        "max": 13,
+        "p90_threshold": 9.100000000000001,
+        "n_top_decile": 5,
+        "gate_diversity_pass": true
+      },
+      "actual_scores": {
+        "max": 1780.0,
+        "mean": 1192.4,
+        "min": 770.0,
+        "p90": 1494.0,
+        "top5": [
+          1780.0,
+          1730.0,
+          1580.0,
+          1560.0,
+          1530.0
+        ]
+      },
+      "g3_pass": true,
+      "pool_winner_score": 1620,
+      "brackets_beat_pool": 2,
+      "coverage_2025": {
+        "n": 2,
+        "scores": [
+          1780.0,
+          1730.0
+        ],
+        "upset_counts": [
+          7,
+          4
+        ]
+      }
+    },
+    "2026": {
+      "year": 2026,
+      "n_brackets": 50,
+      "mean_pairwise_r": 0.03165660363419271,
+      "median_pairwise_r": -0.07386347932680103,
+      "p10_pairwise_r": -0.6592947601120971,
+      "p90_pairwise_r": 0.7219054908290021,
+      "gate_corr_pass": true,
+      "upset_counts": {
+        "mean": 5.92,
+        "min": 2,
+        "max": 10,
+        "p90_threshold": 9.0,
+        "n_top_decile": 6,
+        "gate_diversity_pass": true
+      },
+      "actual_scores": {
+        "max": 1610.0,
+        "mean": 1137.2,
+        "min": 660.0,
+        "p90": 1377.0,
+        "top5": [
+          1610.0,
+          1580.0,
+          1500.0,
+          1490.0,
+          1440.0
+        ]
+      },
+      "g3_pass": true
+    }
+  },
+  "overall_g3_pass": true
+}
