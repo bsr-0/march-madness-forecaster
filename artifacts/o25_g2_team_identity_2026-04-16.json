@@ -1,0 +1,129 @@
+{
+  "generated": "2026-04-16",
+  "purpose": "Team-identity (real ESPN) companion to o25_g2_empirical_supremum_2026-04-16.json",
+  "parameters": {
+    "n_candidates": 50,
+    "n_tourn": 5000,
+    "noise_std": 0.16,
+    "rng_seed": 42,
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "pool_corpus": "pool_hist_results.json",
+    "candidate_mode": "champ_first_tv (torvik round probs)",
+    "scoring": "team_identity (per-round |picks \u2229 winners| \u00d7 pts)",
+    "gate_a_threshold": 0.5
+  },
+  "results": {
+    "2023": {
+      "year": 2023,
+      "n_candidates": 50,
+      "n_opp_actual": 18,
+      "group_size": 19,
+      "spearman_new_vs_actual": -0.12371457187750132,
+      "spearman_old_vs_actual": 0.02184098791012038,
+      "actual_best_idx": 11,
+      "actual_best_score": 1220,
+      "actual_best_new_rank": 31,
+      "actual_best_old_rank": 24,
+      "g2b_flipped_into_top5": false,
+      "stored_pool_max_pts": 720,
+      "coverage_beats_stored": true,
+      "actual_scores_summary": {
+        "max": 1220.0,
+        "min": 340.0,
+        "mean": 577.8
+      },
+      "actual_opp_scores_summary": {
+        "max": 720.0,
+        "min": 410.0,
+        "mean": 612.7777777777778
+      }
+    },
+    "2024": {
+      "year": 2024,
+      "n_candidates": 50,
+      "n_opp_actual": 25,
+      "group_size": 25,
+      "spearman_new_vs_actual": 0.016528529906986725,
+      "spearman_old_vs_actual": 0.260289780589962,
+      "actual_best_idx": 4,
+      "actual_best_score": 1400,
+      "actual_best_new_rank": 23,
+      "actual_best_old_rank": 8,
+      "g2b_flipped_into_top5": false,
+      "stored_pool_max_pts": 1380,
+      "coverage_beats_stored": true,
+      "actual_scores_summary": {
+        "max": 1400.0,
+        "min": 430.0,
+        "mean": 762.6
+      },
+      "actual_opp_scores_summary": {
+        "max": 1540.0,
+        "min": 450.0,
+        "mean": 807.6
+      }
+    },
+    "2025": {
+      "year": 2025,
+      "n_candidates": 50,
+      "n_opp_actual": 32,
+      "group_size": 33,
+      "spearman_new_vs_actual": 0.29143148438885325,
+      "spearman_old_vs_actual": 0.2357067578860179,
+      "actual_best_idx": 44,
+      "actual_best_score": 1660,
+      "actual_best_new_rank": 32,
+      "actual_best_old_rank": 5,
+      "g2b_flipped_into_top5": false,
+      "stored_pool_max_pts": 1600,
+      "coverage_beats_stored": true,
+      "actual_scores_summary": {
+        "max": 1660.0,
+        "min": 520.0,
+        "mean": 1004.8
+      },
+      "actual_opp_scores_summary": {
+        "max": 1620.0,
+        "min": 350.0,
+        "mean": 1057.1875
+      }
+    },
+    "2026": {
+      "year": 2026,
+      "n_candidates": 50,
+      "n_opp_actual": 30,
+      "group_size": 31,
+      "spearman_new_vs_actual": -0.1500240153698367,
+      "spearman_old_vs_actual": -0.2539145052833814,
+      "actual_best_idx": 6,
+      "actual_best_score": 1520,
+      "actual_best_new_rank": 23,
+      "actual_best_old_rank": 42,
+      "g2b_flipped_into_top5": false,
+      "stored_pool_max_pts": 1350,
+      "coverage_beats_stored": true,
+      "actual_scores_summary": {
+        "max": 1520.0,
+        "min": 520.0,
+        "mean": 906.8
+      },
+      "actual_opp_scores_summary": {
+        "max": 1350.0,
+        "min": 460.0,
+        "mean": 849.0
+      }
+    }
+  },
+  "aggregate": {
+    "mean_spearman_new_vs_actual": 0.008555356762125488,
+    "mean_spearman_old_vs_actual": 0.06598075527567972,
+    "g2a_pass": false,
+    "g2b_any_flip": false,
+    "coverage_all_years": true
+  }
+}
