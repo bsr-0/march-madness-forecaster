@@ -40,9 +40,6 @@ BASELINE_UNVERIFIED: set[str] = {
     # repo). The closure is the formalization of the blocker — there is
     # legitimately nothing to serialize.
     "O15",
-    # O21: closure cites ANALYSIS_O21_MARGINAL_BLEND.md (repo-root analysis
-    # doc, not under an audited dir). Evidence is real and verifiable.
-    "O21",
 }
 
 
