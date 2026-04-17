@@ -440,55 +440,83 @@ Do NOT expand scope. Your job is to stress-test the sanity check, not
 to re-open the strategic decision that §2 already captured.
 ```
 
-### Step 5: Generate the Council Report
+### Step 5: Write the Council Report (single markdown file)
 
-After the chairman synthesis is complete, generate a visual HTML report and save it to the user's workspace.
+After the chairman synthesis is complete, write **one** markdown file that
+serves as both the scannable report AND the full transcript. Do not
+generate HTML, PDF, or any other format. Do not write a second
+`council-transcript-*.md` file — this single file is the artifact.
 
-**File:** `council-report-[timestamp].html`
+**File:** `council-report-[timestamp].md`
 
-The report should be a single self-contained HTML file with inline CSS. Clean design, easy to scan. It should contain:
+**Why one markdown file, not an HTML report + markdown transcript:** the
+old flow streamed a self-contained HTML document with inline CSS,
+collapsible `<details>` scaffolding, and visual grids, then wrote the
+same advisor drafts/peer reviews/verdict a second time as a
+`council-transcript-*.md`. Every byte of that HTML boilerplate and every
+duplicated sentence is emitted token-by-token, which is exactly where
+the long delay between the last chairman statement and the finalized
+report was coming from. Markdown renders natively in the terminal and in
+every editor the user opens it in, needs no CSS, and only has to be
+serialized once.
 
-1. **The question** at the top
-2. **Critical Actions** -- displayed once, prominently, as a styled callout box near the top of the report. Extract this section from the chairman's synthesis and render it here. This is the punch list the user takes away. Do NOT repeat these actions anywhere else in the report.
-3. **The chairman's analysis** -- the chairman's verdict sections (Where the Council Agrees, Where the Council Clashes, Blind Spots the Council Caught, The Chairman's Take) displayed prominently. **Omit the Critical Actions subsection here** since it is already rendered above.
-4. **An agreement/disagreement visual** -- a simple visual showing which advisors aligned and which diverged. This could be a grid, a spectrum, or a simple breakdown showing advisor positions. Keep it clean and scannable.
-5. **Collapsible sections** for each advisor's full response (collapsed by default so the page isn't overwhelming, but available if the user wants to dig in)
-6. **Collapsible section** for the peer review highlights
-7. **A footer** showing the timestamp and what was counciled
+**Required structure (top-to-bottom, in this order):**
 
-**Deduplication rule:** Every piece of information appears exactly once in the report. The Critical Actions are extracted from the chairman's output and shown in the callout box (item 2) — they must not also appear inside the chairman's analysis (item 3). Advisor responses live in the collapsible sections — do not repeat their arguments in the main body.
+1. `# Council Report — YYYY-MM-DD [topic slug]` (H1)
+2. **Question** — the user's raw question, one short paragraph.
+3. **Metadata block** — bucket (A/B/C/D/E), panel size + composition,
+   peer review status (`ran` / `skipped (convergence)` / `skipped (panel
+   size)`), timestamp.
+4. **Critical Actions** — rendered as a blockquote callout (`>` prefix)
+   near the top. Extract verbatim from the chairman's synthesis. This
+   appears exactly once — do NOT repeat it inside the chairman's
+   analysis below.
+5. **Chairman's Verdict** — the four analysis sections (Where the
+   Council Agrees, Where the Council Clashes, Blind Spots the Council
+   Caught, The Chairman's Take) as H2s. Omit the Critical Actions
+   subsection here since it is already rendered in step 4.
+6. **Agreement / Disagreement Summary** — a small markdown table with
+   one row per advisor: name, one-line bottom-line recommendation,
+   aligned/dissenting marker. Keep it to 5 short rows (or N for smaller
+   panels).
+7. **Framed Question + Prior Art** — the enriched prompt that was sent
+   to every advisor, plus the `Ox`/lessons block that was injected.
+8. **Advisor Responses** — each advisor's full 150-250 word draft under
+   an H3 (`### The Contrarian`, etc.). Use `<details><summary>` only if
+   you want them collapsed by default; otherwise plain H3s are fine.
+9. **Peer Review** — either all reviewer outputs under an H2, or a
+   single line `_Peer review skipped (convergence)._` / `_Peer review
+   skipped (panel size = N)._` with the justification.
+10. **Footer** — one-line timestamp + what was counciled.
 
-Use clean styling: white background, subtle borders, readable sans-serif font (system font stack), soft accent colors to distinguish advisor sections. Nothing flashy. It should look like a professional briefing document.
+**Deduplication rule (unchanged, now enforced in one file):** every
+piece of information appears exactly once. Critical Actions live only
+in the callout (item 4). Advisor drafts live only in section 8. The
+chairman's verdict never re-states advisor drafts verbatim.
 
-Open the HTML file after generating it so the user can see it immediately.
+**What NOT to do:**
+- Do not emit any `<style>`, inline `style="..."`, or CSS.
+- Do not wrap the document in `<html>` / `<body>`.
+- Do not write a second file. `council-transcript-*.md` is deprecated —
+  this single `council-report-*.md` replaces both.
+- Do not open the file in a browser; the user reads markdown inline.
 
-### Step 6: Save the Full Transcript and Update the Index
+### Step 6: Update the Lessons Index
 
-**A. Save the full transcript** as `council-transcript-[timestamp].md` in
-the same location. This includes:
+The single markdown file from Step 5 already contains the full
+transcript content (framed question, bucket, panel size, advisor
+drafts, peer review, chairman). The only remaining housekeeping is
+updating the consolidated lessons index.
 
-- The original question
-- The §4 bucket classification from Step 0 (A / B / C / D / E)
-- Panel size chosen in Step 1.5 and why (e.g., "2 advisors — bucket A
-  with new evidence")
-- The framed question
-- The prior-art block injected into each advisor's prompt
-- All advisor responses (N drafts matching the panel size)
-- Peer review block: either all N reviews, or an explicit `peer_review:
-  skipped (convergence)` / `peer_review: skipped (panel size)` note
-  from Step 2.5 with the justification
-- The chairman's full synthesis
+Recording the panel size and peer-review decision in the report's
+metadata block lets future Step 0 dedup-checks tell whether a prior
+verdict came from a full 5-advisor peer-reviewed deliberation, a
+converged-no-review short-circuit, or a 2-advisor re-litigation. That
+distinction matters when the user says "the council said X" — a
+2-advisor bucket-A verdict has different evidentiary weight than an
+11-sub-agent bucket-E verdict.
 
-This transcript is the artifact. If the user wants to run the council again on the same question after making changes, having the previous transcript lets them (or a future agent) see how the thinking evolved.
-
-Recording the panel size and peer-review decision lets future Step 0
-dedup-checks tell whether a prior verdict came from a full 5-advisor
-peer-reviewed deliberation, a converged-no-review short-circuit, or a
-2-advisor re-litigation. That distinction matters when the user says
-"the council said X" — a 2-advisor bucket-A verdict has different
-evidentiary weight than an 11-sub-agent bucket-E verdict.
-
-**B. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
+**A. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
 4 update rule:
 
 - Append one row to §3 with: next sequential `#`, date, one-line framed
@@ -505,25 +533,30 @@ This keeps the duplicate-check protocol (Step 0) effective for the next
 session. A `COUNCIL_LESSONS.md` that isn't updated after each council
 quickly loses its value as a dedup index.
 
-**C. Periodic transcript consolidation (user-initiated).** Raw
-transcripts accumulate fast. When the user asks to prune / consolidate /
-clean up transcripts, the consolidation pattern is: extract lessons +
-open questions into `COUNCIL_LESSONS.md`, then delete the raw
-`council-transcript-*.md` and `council-report-*.html` files. This is
-user-initiated, not automatic.
+**B. Periodic report consolidation (user-initiated).** Raw reports
+accumulate fast. When the user asks to prune / consolidate / clean up
+council artifacts, the consolidation pattern is: extract lessons + open
+questions into `COUNCIL_LESSONS.md`, then delete the raw
+`council-report-*.md` files (plus any legacy
+`council-transcript-*.md` or `council-report-*.html` left over from the
+old two-file flow). This is user-initiated, not automatic.
 
 ---
 
 ## Output Format
 
-Every council session produces two files:
+Every council session produces exactly one file:
 
 ```
-council-report-[timestamp].html   # visual report for scanning
-council-transcript-[timestamp].md # full transcript for reference
+council-report-[timestamp].md   # single markdown artifact: report + transcript
 ```
 
-The user sees the HTML report. The transcript is there if they want to dig deeper or reference specific advisor arguments later.
+The top of the file is the scannable verdict (question, critical
+actions, chairman's analysis, agreement table). The bottom holds the
+framed question, advisor drafts, and peer review for later reference.
+No HTML, no PDF, no second transcript file — the old
+`council-report-*.html` + `council-transcript-*.md` split is
+deprecated.
 
 ---
 
@@ -533,4 +566,4 @@ The user sees the HTML report. The transcript is there if they want to dig deepe
 - **Always anonymize for peer review.** If reviewers know which advisor said what, they'll defer to certain thinking styles instead of evaluating on merit.
 - **The chairman MUST make judgment calls, not just summarize.** If 4 out of 5 advisors say "do it" but the reasoning of the 1 dissenter is strongest, the chairman should side with the dissenter and explain why. The chairman adds a "Chairman's Take" section with independent analysis — something no advisor raised. If the chairman finds themselves just reorganizing what others said, the synthesis has failed.
 - **Don't council trivial questions.** If the user asks something with one right answer, just answer it. The council is for genuine uncertainty where multiple perspectives add value.
-- **The visual report matters.** Most users will scan the report, not read the full transcript. Make the HTML output clean and scannable.
+- **Keep the report in markdown.** The old HTML report was the slowest step in the pipeline — inline CSS, collapsible `<details>`, visual grids, and then a duplicated markdown transcript all had to be streamed token-by-token. A single markdown file cuts the finalization time roughly in half and renders cleanly everywhere the user reads it.
