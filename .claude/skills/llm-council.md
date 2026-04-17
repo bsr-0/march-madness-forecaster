@@ -320,6 +320,16 @@ disagreements, and add independent analysis.
 
 5. **Critical actions** -- a maximum of 3 concrete actions, dependency-ordered (what must happen first gates what comes next). Each action is one sentence stating what to do, and one sentence stating the gate (how you know it's done or what result lets you proceed). No prose. No rationale. The reasoning lives in the sections above — this section is the punch list.
 
+6. **Load-bearing assumptions** -- the methodological choices this verdict rests on, with one short line each on what observation would invalidate each one. Future sessions grep this block when an assumption is discovered to be wrong, to find every prior verdict that needs re-examination. Direct motivation: MEMORY.md §1 "P(1st) ranking is calibrated" row carries Amendments A and B because O26 found the original +0.37 number was shape-encoded when the pool pays under team-identity (real number +0.61, 15/15 years positive); §2 D17 ran O25-G2 on a preflight whose encoding assumption was never disclosed. A disclosed assumption block makes both failure modes `grep`-discoverable instead of accidentally rediscoverable.
+
+   Minimum categories to consider (use `N/A` on a single line for any that don't apply — do NOT omit the category):
+   - **Scoring encoding**: e.g., `shape-encoded ((brackets == outcome) @ weights)` or `team-identity (real ESPN)`.
+   - **Opponent field**: e.g., `ESPN-national 60/30/10` or `actual 30-person pool from pool_hist_results.json` or `N/A`.
+   - **RNG / sample count**: e.g., `rng_seed=42, n_sim=5000` or `N/A (deterministic)`.
+   - **Year scope**: e.g., `2011–2025 ex. 2020` or `2023–2026 pool-history window`.
+   - **Baseline anchor**: e.g., `vs champ_first_tv` or `vs seed` or `vs IID`.
+   - **Data sources**: file paths for load-bearing artifacts (must survive the stale-citation gate in `tests/test_lesson_citations.py`).
+
 **Chairman prompt template (full 5-advisor, peer-reviewed):**
 ```
 You are the Chairman of an LLM Council. Your job is to synthesize the work of 5 advisors and their peer reviews into a final verdict.
@@ -366,6 +376,9 @@ Produce the council verdict using this exact structure:
 ## Critical Actions
 [Maximum 3 actions. Dependency-ordered — action 1 gates action 2, action 2 gates action 3. Each action is two sentences: what to do, and the gate (the concrete result that means it's done or the condition that unlocks the next action). No prose, no rationale — the reasoning lives in the sections above. This is the punch list the user takes away and executes. If only one action matters, list one. Do not pad to three.]
 
+## Load-Bearing Assumptions
+[List the methodological choices this verdict rests on. For each, one short line on what observation would invalidate it. REQUIRED — do not omit. Use `N/A` on a single line for categories that don't apply; don't skip the category entirely. Minimum categories: Scoring encoding, Opponent field, RNG / sample count, Year scope, Baseline anchor, Data sources. Example row: `- **Scoring encoding**: team-identity (real ESPN). Invalidates if: re-run under shape-encoding flips the sign of ρ or drops it below the pre-committed gate.`]
+
 You are not a secretary taking minutes. You are the most senior person in the room. Summarizing what others said is not your job — that's what the transcript is for. Your job is to think independently, make judgment calls the advisors couldn't make individually, and deliver a verdict the user can act on without reading anything else. If you find yourself writing "the council agrees" without adding your own analysis of WHY that agreement is trustworthy (or suspicious), you're not doing your job.
 ```
 
@@ -392,6 +405,8 @@ Follow the full verdict structure above, with these adjustments:
   the signal, or is it groupthink? If groupthink, recommend re-running
   with peer review.
 - "Critical actions" unchanged: max 3, dependency-ordered.
+- "Load-Bearing Assumptions" unchanged: REQUIRED block as specified in
+  the full-panel template above. Convergence does not waive this.
 ```
 
 **Chairman prompt template (2-advisor, bucket A / D):**
@@ -409,13 +424,17 @@ Contrarian:
 Statistician:
 [response]
 
-Produce a tight 3-section verdict (≤ 300 words total):
+Produce a tight 4-section verdict (≤ 350 words total):
 
 1. **What's the new evidence worth?** Side with one advisor or carve a
    specific middle neither argued. "Both have points" is NOT acceptable.
 2. **Does the prior lock hold?** Yes / No / Needs-further-test. If
    "needs further test", name the specific test and the pass threshold.
 3. **Critical actions** (max 2): what to do now; what to do next.
+4. **Load-Bearing Assumptions**: one short line each on Scoring
+   encoding / Opponent field / Year scope / Baseline anchor / Data
+   sources. Skip categories that are truly unrelated to the question
+   — otherwise write `N/A` inline on the same line as the category.
 ```
 
 **Chairman prompt template (1-advisor, bucket B):**
@@ -429,12 +448,16 @@ already-identified open item:
 Executor's sanity check:
 [response]
 
-Produce a tight verdict (≤ 200 words):
+Produce a tight verdict (≤ 250 words):
 
 1. **Is the plan executable as stated?** Yes / No.
 2. **Hidden prerequisites the Executor missed?** Name them or say
    "none spotted".
 3. **Critical actions** (max 2): do X; then do Y.
+4. **Load-Bearing Assumptions**: one line each on Scoring encoding,
+   Year scope, Baseline anchor, Data sources — whichever apply. Skip
+   a category only if truly unrelated (most bucket-B execution plans
+   will have at least Year scope + Data sources).
 
 Do NOT expand scope. Your job is to stress-test the sanity check, not
 to re-open the strategic decision that §2 already captured.
@@ -473,8 +496,12 @@ serialized once.
    analysis below.
 5. **Chairman's Verdict** — the four analysis sections (Where the
    Council Agrees, Where the Council Clashes, Blind Spots the Council
-   Caught, The Chairman's Take) as H2s. Omit the Critical Actions
-   subsection here since it is already rendered in step 4.
+   Caught, The Chairman's Take) as H2s, followed by a final
+   **Load-Bearing Assumptions** H2 listing the methodological choices
+   the verdict rests on (Scoring encoding, Opponent field, RNG /
+   sample count, Year scope, Baseline anchor, Data sources — with
+   `N/A` rows kept explicit). Omit the Critical Actions subsection
+   here since it is already rendered in step 4.
 6. **Agreement / Disagreement Summary** — a small markdown table with
    one row per advisor: name, one-line bottom-line recommendation,
    aligned/dissenting marker. Keep it to 5 short rows (or N for smaller
