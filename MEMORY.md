@@ -122,8 +122,10 @@ Current numbers. If you're about to claim an improvement, it has to clear these.
 | torvik *(prior rec)* | 31.5 | 546.0 | 0.02% | 5.05% |
 | seed *(baseline)* | 38.1 | 527.4 | 0.02% | 4.89% |
 
-Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_n31_results.txt`.
+Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_hedge_results.txt`.
 **Statistical power:** N=14 yrs, ~9–16% power. 12–17-position BestRank effects are meaningful but not conclusive.
+
+**Team-identity caveat (2026-04-17, per `COUNCIL_LESSONS.md §2 O26-G3-narrow` → `artifacts/o26_g3_n31_team_identity_2026-04-17.json`):** the numbers above are shape-encoded (`score_brackets_against_outcome`). A narrow-scope N=31 rerun under real ESPN team-identity scoring (9 of 11 modes; noseed+blend deferred) shows **BestRank top-5 ordering rearranges** — shape's f4/e8/champ_first/seed/torvik (BestRanks 1.50/1.50/1.60/1.60/2.00) becomes team-identity's **torvik/e8/f4/seed/champ_first (1.42/1.87/2.06/2.30/2.67)**. Production-recommended `champ_first_tv` BestRank moves from ~tied-for-top to worst of the 5 headline modes at N=31. **P(1st) argmax is PRESERVED** — torvik wins both encodings (0.0445 shape, 0.0417 team-identity), so the WTA mode recommendation is not invalidated. N=1000 team-identity rerun tracked as `COUNCIL_LESSONS.md §2 O27`. Until O27 closes: do not cite the BestRank ordering in the table above as authoritative for new mode recommendations; the P(1st) column and `champ_first_tv` recommendation remain locked pending N=1000 confirmation.
 
 ### 2026 tournament result
 - System produced a winning-quality bracket (1440 pts, 4/4 Final Four) but **ranked it #11** in its own portfolio.
