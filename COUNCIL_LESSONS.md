@@ -358,6 +358,18 @@ repo-root files (`pool_hist_results.json`, `ANALYSIS_O21_*.md`) or
 because the closure is a blocked-on-data formalization with nothing to
 serialize. Do NOT extend the baseline to silence new failures.
 
+**Stale-citation gate (CI-enforced).** Every path token under
+`scripts/`, `tests/`, `src/`, `artifacts/`, `data/`, or `configs/`
+cited in this file or in `MEMORY.md` must exist on disk.
+`tests/test_lesson_citations.py` fails CI on any new broken citation.
+Run `python scripts/check_lesson_citations.py --report-only` for the
+current audit. Two pre-existing rotted citations are grandfathered in
+`BASELINE_BROKEN` (the deleted `feature_selection.py` module from D4
+and the missing `artifacts/backtest_runs/mc_pool_backtest_20260415_*.txt`
+log from D16/O23). Fix new failures by either restoring the file or
+updating the citation to point at where the evidence now lives — do
+NOT extend the baseline.
+
 ### What NOT to skip the council for
 - Bucket E (genuinely novel) → run the council.
 - Bucket A with explicit new evidence from the user → run the council.
