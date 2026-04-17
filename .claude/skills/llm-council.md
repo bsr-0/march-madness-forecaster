@@ -529,6 +529,19 @@ distinction matters when the user says "the council said X" — a
 - If the verdict supersedes a §1 lesson → append a superseding bullet and
   mark the old one `[SUPERSEDED <date>]`. Do not rewrite.
 
+**Closure-receipt requirement (CI-gated).** Before tagging an `Ox` row
+`[closed <date>]`, the closure narrative MUST cite at least one path
+under `scripts/`, `artifacts/`, or `tests/` that exists on disk —
+typically the script that produced the evidence, the serialized JSON /
+markdown audit, and the lock test that prevents drift. The drift guard
+`tests/test_closure_receipts.py` (powered by
+`scripts/check_closure_receipts.py`) fails CI on any new closure that
+ships without receipts. This exists because §2 O25's first G1 closure
+cited spread numbers (0.835/0.315/0.045/0.310) that had no script, no
+artifact, and no test on disk — caught only by accident on re-run. Do
+NOT add to `BASELINE_UNVERIFIED` to silence a failure; fix the closure
+to cite real evidence instead.
+
 This keeps the duplicate-check protocol (Step 0) effective for the next
 session. A `COUNCIL_LESSONS.md` that isn't updated after each council
 quickly loses its value as a dedup index.
