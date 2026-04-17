@@ -347,6 +347,17 @@ If a new session produced a settled verdict:
 - If it supersedes a §1 lesson: append a superseding bullet; mark the old
   one `[SUPERSEDED <date>]`. Do not rewrite.
 
+**Closure-receipt gate (CI-enforced).** Every new `[closed <date>]` row
+in §2 must cite at least one file under `scripts/`, `artifacts/`, or
+`tests/` that exists on disk. `tests/test_closure_receipts.py` fails CI
+on any closure that ships without receipts. Run
+`python scripts/check_closure_receipts.py --report-only` for the
+current audit. Three pre-existing rows (O1, O15, O21) are
+grandfathered in `BASELINE_UNVERIFIED` because their evidence lives in
+repo-root files (`pool_hist_results.json`, `ANALYSIS_O21_*.md`) or
+because the closure is a blocked-on-data formalization with nothing to
+serialize. Do NOT extend the baseline to silence new failures.
+
 ### What NOT to skip the council for
 - Bucket E (genuinely novel) → run the council.
 - Bucket A with explicit new evidence from the user → run the council.
