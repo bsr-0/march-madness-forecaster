@@ -223,7 +223,13 @@ def test_council_lessons_o24_encoding_invariant_marker():
 
 def test_council_lessons_o26_status_advanced_to_g2_complete():
     text = COUNCIL_MD.read_text()
-    assert "G1+G2 complete 2026-04-17" in text, "§2 O26 status not advanced to G1+G2 complete."
+    # Match either the G2-era status ("G1+G2 complete") or any later
+    # evolution that preserves the "G1+G2" prefix (e.g. "G1+G2+G3-narrow+
+    # G4-companion complete"). What must never be lost: G1 and G2
+    # landed and the 2026-04-17 date anchor.
+    assert "G1+G2" in text and "2026-04-17" in text, (
+        "§2 O26 status does not record G1+G2 completion with 2026-04-17 anchor."
+    )
 
 
 def test_g2_scripts_present():
@@ -347,8 +353,81 @@ def test_council_lessons_o27_exists():
 
 def test_council_lessons_o26_status_advanced_to_g3_narrow():
     text = COUNCIL_MD.read_text()
-    assert "G3 narrow (N=31) complete 2026-04-17" in text, "§2 O26 status row did not advance to G3-narrow complete."
+    # Accept either the G3-landing phrasing or a later evolution that
+    # still records G3-narrow completion (e.g. G4-companion also landing).
+    assert ("G3 narrow (N=31) complete" in text) or ("G3-narrow" in text), (
+        "§2 O26 status row does not record G3-narrow completion."
+    )
 
 
 def test_g3_script_present():
     assert G3_SCRIPT.exists(), f"G3 script missing: {G3_SCRIPT}"
+
+
+# ---------------------------------------------------------------------
+# G4 — team-identity companion landed in src/simulation/pool_competition.py
+# ---------------------------------------------------------------------
+#
+# G4 adds a public team-identity scorer + helpers next to the shape
+# scorer. Call-site migration of scripts/mc_pool_backtest.py is gated
+# behind §2 O27 (N=1000 rerun) — touching it before O27 runs would
+# leave MEMORY §3 stale-shape-encoded while the code produced
+# team-identity. These tests assert the companion API landed and the
+# shape function's docstring now flags the encoding explicitly.
+
+
+def test_g4_companion_api_present():
+    """G4 acceptance: the team-identity companion functions must be
+    importable from src.simulation.pool_competition as public names."""
+    from src.simulation import pool_competition as pc
+
+    assert hasattr(pc, "score_brackets_team_identity"), (
+        "G4: score_brackets_team_identity missing from pool_competition module."
+    )
+    assert hasattr(pc, "picks_by_round"), "G4: picks_by_round missing."
+    assert hasattr(pc, "actual_winners_by_round"), "G4: actual_winners_by_round missing."
+
+
+def test_g4_shape_docstring_flags_encoding():
+    """G4 acceptance: the shape scorer's docstring must reference the
+    team-identity companion so future readers don't re-trip the
+    mixed-encoding bug class that G2-a found."""
+    from src.simulation.pool_competition import score_brackets_against_outcome
+
+    doc = score_brackets_against_outcome.__doc__ or ""
+    assert "score_brackets_team_identity" in doc, (
+        "G4: shape scorer docstring does not point to the team-identity companion."
+    )
+    assert "SHAPE ENCODING" in doc or "shape-encoded" in doc.lower(), (
+        "G4: shape scorer docstring does not flag encoding explicitly."
+    )
+    assert "O26" in doc, "G4: shape scorer docstring does not reference §2 O26."
+
+
+def test_g4_team_identity_scorer_signature():
+    """Stable public signature so downstream callers can rely on it."""
+    import inspect
+
+    from src.simulation.pool_competition import score_brackets_team_identity
+
+    sig = inspect.signature(score_brackets_team_identity)
+    params = list(sig.parameters.keys())
+    assert params == [
+        "brackets",
+        "winners_by_round",
+        "first_round_matchups",
+        "scoring_system",
+    ], f"G4: unexpected signature {params}"
+
+
+def test_g4_actual_winners_by_round_ncg_to_champ_contract():
+    """The scorer expects 'CHAMP' keys; the winners-decoder must map
+    the 'NCG' label used in tournament_results.json. Contract check."""
+    from src.simulation.pool_competition import actual_winners_by_round
+
+    games = [
+        {"round_name": "NCG", "team1_id": "a", "team2_id": "b", "team1_won": True},
+    ]
+    w = actual_winners_by_round(games)
+    assert "CHAMP" in w
+    assert "NCG" not in w

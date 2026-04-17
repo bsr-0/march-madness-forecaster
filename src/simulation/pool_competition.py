@@ -57,7 +57,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -519,10 +519,29 @@ def score_brackets_against_outcome(
     outcome: np.ndarray,
     scoring_vector: np.ndarray,
 ) -> np.ndarray:
-    """Score all brackets against a single tournament outcome.
+    """Score all brackets against a single tournament outcome — SHAPE ENCODING.
 
     Vectorized: computes (brackets == outcome) element-wise, then
     dot-products with the scoring vector.
+
+    **Encoding warning (COUNCIL_LESSONS.md §2 O26):** this is *shape-encoded*
+    scoring. It credits positional bool match across 63 games (i.e.
+    "top-listed team at slot X won both in bracket and in outcome")
+    regardless of whether the picked team equals the actual winner. In
+    rounds past R64, the positions of teams diverge between bracket and
+    outcome whenever earlier-round results disagree, so shape can
+    credit a bracket for advancing a team that never actually won.
+
+    Use this function for:
+      - Within-MC self-consistent scoring where bracket and outcome
+        share the same stochastic realization (fast, vectorized).
+      - Regression anchors for legacy artifacts produced before
+        2026-04-17 (the G2+G3 audits of §2 O26 use shape to reproduce
+        historical baselines exactly).
+
+    For real ESPN-pool-equivalent scoring — where credit depends on
+    *which team* you picked vs which team actually won the round —
+    use :func:`score_brackets_team_identity` instead.
 
     Args:
         brackets: (n_brackets, 63) boolean array of picks.
@@ -534,6 +553,136 @@ def score_brackets_against_outcome(
     """
     correct = brackets == outcome  # (n_brackets, 63)
     return correct.astype(np.float64) @ scoring_vector  # (n_brackets,)
+
+
+def picks_by_round(
+    bracket_vec: np.ndarray,
+    first_round_matchups: List[str],
+) -> Dict[str, Set[str]]:
+    """Decode a 63-game bool-encoded bracket into picked-teams per round.
+
+    For each round R in {R64, R32, S16, E8, F4, CHAMP}, returns the set of
+    teams the bracket has advancing PAST round R (i.e., winners of round R).
+
+    This is the inverse of the shape-encoding: given the bool array and
+    the first-round layout it's slot-aligned to, we can recover the
+    actual team identities the bracket picked to win each round.
+
+    Args:
+        bracket_vec: (63,) boolean array, True = top-listed team of slot won.
+        first_round_matchups: flat list of 64 team_ids in R64 slot order
+            (same list used to sample the bracket).
+
+    Returns:
+        Dict with keys matching ``ROUND_NAMES``; values are team-id sets.
+    """
+    by_round: Dict[str, Set[str]] = {}
+    current = list(first_round_matchups)
+    gi = 0
+    for rnd in ROUND_NAMES:
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            winner = t1 if bracket_vec[gi] else t2
+            nxt.append(winner)
+            gi += 1
+        by_round[rnd] = set(nxt)
+        current = nxt
+    return by_round
+
+
+def actual_winners_by_round(games: Iterable[dict]) -> Dict[str, Set[str]]:
+    """Extract per-round winner sets from tournament_results game records.
+
+    Handles the tournament-results schema used throughout the repo:
+    each game is a dict with ``round_name`` ∈ {FF, R64, R32, S16, E8, F4,
+    NCG}, ``team1_id``, ``team2_id``, ``team1_won``.
+
+    Returns a dict keyed by ROUND_NAMES (R64..CHAMP). The NCG label is
+    mapped to CHAMP. First-Four games are ignored. A downstream
+    bijectivity check chains each round's winners as a subset of the
+    previous round's winners — catches malformed data where a team
+    appears as a later-round winner without advancing past earlier rounds.
+
+    Args:
+        games: iterable of tournament-results dicts.
+
+    Returns:
+        Dict with keys matching ``ROUND_NAMES``; values are team-id sets.
+    """
+    from collections import defaultdict
+
+    winners: Dict[str, Set[str]] = defaultdict(set)
+    for g in games:
+        rn = g.get("round_name")
+        if rn == "FF":
+            continue
+        w = g["team1_id"] if g["team1_won"] else g["team2_id"]
+        winners[rn].add(w)
+    prev: Optional[Set[str]] = None
+    for rnd in ["R64", "R32", "S16", "E8", "F4", "NCG"]:
+        if rnd in winners and prev is not None:
+            winners[rnd] = winners[rnd] & prev
+        prev = winners.get(rnd, set())
+    return {
+        "R64": winners["R64"],
+        "R32": winners["R32"],
+        "S16": winners["S16"],
+        "E8": winners["E8"],
+        "F4": winners["F4"],
+        "CHAMP": winners.get("NCG", set()),
+    }
+
+
+def score_brackets_team_identity(
+    brackets: np.ndarray,
+    winners_by_round: Dict[str, Set[str]],
+    first_round_matchups: List[str],
+    scoring_system: Dict[str, int],
+) -> np.ndarray:
+    """Score all brackets against actual winners — TEAM-IDENTITY ENCODING.
+
+    This is the scoring the ESPN pool actually pays out under. A bracket
+    earns ``scoring_system[round]`` points for every team it picks to
+    advance past round R that actually won round R.
+
+    **How this differs from shape (COUNCIL_LESSONS.md §2 O26):** shape
+    counts positional bool matches in the 63-game vector. Team-identity
+    counts ``picks_by_round(bracket) ∩ winners_by_round(outcome)`` per
+    round. The two encodings agree on R64 (R64 slots map 1-1 to teams)
+    but diverge in later rounds whenever the bracket's earlier picks
+    differ from actual results.
+
+    Empirical evidence this divergence matters (not a rounding issue):
+      - O26-G1: mean ρ(P(1st), placement) = +0.36 (shape) vs +0.61
+        (team-identity) across 15 years — the shape encoding under-
+        stated the real P(1st) signal by 0.25 ρ on aggregate.
+      - G2a: the original O21 null result ("marginals don't change
+        rankings") inverted under consistent team-identity scoring.
+
+    Args:
+        brackets: (n_brackets, 63) boolean array of picks.
+        winners_by_round: actual round winners, e.g. from
+            :func:`actual_winners_by_round`. Keys must cover
+            ``ROUND_NAMES``.
+        first_round_matchups: flat list of 64 team_ids in R64 slot order.
+            Must be the same layout the brackets were sampled against.
+        scoring_system: per-round point values, keyed by ``ROUND_NAMES``
+            entries (e.g. ESPN 10/20/40/80/160/320).
+
+    Returns:
+        (n_brackets,) float array of total scores.
+    """
+    out = np.zeros(brackets.shape[0], dtype=np.float64)
+    for b in range(brackets.shape[0]):
+        picks = picks_by_round(brackets[b], first_round_matchups)
+        total = 0.0
+        for rnd in ROUND_NAMES:
+            pts = scoring_system.get(rnd, 0)
+            if pts:
+                total += pts * len(picks[rnd] & winners_by_round.get(rnd, set()))
+        out[b] = total
+    return out
 
 
 # ---------------------------------------------------------------------------
