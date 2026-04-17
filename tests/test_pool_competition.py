@@ -25,7 +25,10 @@ from src.simulation.pool_competition import (
     compute_bracket_win_probability,
     generate_opponent_brackets,
     simulate_tournament_outcomes,
+    actual_winners_by_round,
+    picks_by_round,
     score_brackets_against_outcome,
+    score_brackets_team_identity,
     wilson_score_interval,
     run_pool_simulation,
     ROUND_NAMES,
@@ -389,6 +392,283 @@ class TestBracketScoring:
         assert scores[0] == 1920
         assert scores[1] == 0
         assert scores[2] == 320  # Only R64 correct (32 * 10)
+
+
+# ---------------------------------------------------------------------------
+# O26-G4 — team-identity companion scoring
+# ---------------------------------------------------------------------------
+
+
+class TestTeamIdentityScoring:
+    """Tests for :func:`score_brackets_team_identity`, :func:`picks_by_round`,
+    and :func:`actual_winners_by_round` — the G4 team-identity companion
+    introduced to replace mixed-encoding scoring (COUNCIL_LESSONS.md §2
+    O26-G4, 2026-04-17)."""
+
+    @staticmethod
+    def _synthetic_first_round_16():
+        """4-region × 4-seed first-round layout with unique team ids
+        ``tA1..tA4, tB1..tB4, tC1..tC4, tD1..tD4``. 8 R64 games."""
+        regions = ["A", "B", "C", "D"]
+        matchups = []
+        for r in regions:
+            # top of region: t?1 vs t?4; bottom: t?2 vs t?3 (seed-style pairs)
+            matchups.extend([f"t{r}1", f"t{r}4"])
+            matchups.extend([f"t{r}2", f"t{r}3"])
+        # Zero-pad to 64 so the 63-game indexer is happy (but we only
+        # exercise the first 8 slots → 15 of 63 games are "live"). We
+        # use 4 regions × 4 seeds = 16 teams, which yields 15 games
+        # total. Team-identity scorer operates on GAMES_PER_ROUND =
+        # [32,16,8,4,2,1] → 63 indices. The vectorized decoder will
+        # still consume 63 bits; we fix bits 15..62 to False and rely
+        # on the first-round list being exactly 64 teams. For test
+        # simplicity we pad the first_round list out to 64 with
+        # distinct filler ids; scoring only checks intersection with
+        # winners sets, so filler teams never show up in winners.
+        padded = list(matchups) + [f"filler_{i}" for i in range(64 - len(matchups))]
+        return padded
+
+    def test_picks_by_round_identity_decoding(self):
+        """Given a known bool vector and first-round layout, the decoder
+        must recover the exact teams advancing past each round."""
+        fr = self._synthetic_first_round_16()
+        # Craft a bracket where A1 wins every round (all "top" True through
+        # A1's chain, but only the relevant bits matter). The rest is
+        # arbitrary; we only assert on A1 being CHAMP winner.
+        vec = np.zeros(63, dtype=bool)
+        # R64: all 8 "top" slots win → bits 0..7 = True (region A1, A2,
+        # B1, B2, C1, C2, D1, D2 advance).
+        vec[0:8] = True
+        # Bits 8..31 are R64 games for the filler teams — keep False
+        # (filler_{2k} "loses" to filler_{2k+1}).
+        # R32: 4 games (bits 32..35 in the original 63-layout) for live
+        # regions. Indexing: R64 = bits 0..31 (32 games), R32 = bits
+        # 32..47 (16 games), ... With filler occupying 24 of 32 R64
+        # slots, the live R32 matchups are at bits 32 (A1-vs-A2), 33
+        # (B1-vs-B2), 34 (C1-vs-C2), 35 (D1-vs-D2). A1 beats A2:
+        vec[32] = True  # A1 advances
+        vec[33] = True  # B1 advances
+        vec[34] = True  # C1 advances
+        vec[35] = True  # D1 advances
+        # S16 (bits 48..55): 2 live games — A1 vs B1, C1 vs D1.
+        vec[48] = True  # A1 advances
+        vec[49] = True  # C1 advances
+        # E8 (bits 56..59): 1 live game — A1 vs C1.
+        vec[56] = True  # A1 advances
+        # F4 (bits 60..61): no live games (single remaining path).
+        # CHAMP (bit 62): A1 is alone; no semantic meaning under our
+        # minimal layout.
+        picks = picks_by_round(vec, fr)
+        assert "tA1" in picks["R64"]
+        assert "tA1" in picks["R32"]
+        assert "tA1" in picks["S16"]
+        assert "tA1" in picks["E8"]
+
+    def test_perfect_bracket_team_identity(self):
+        """A bracket matching the outcome in every live slot earns the
+        expected point total."""
+        scoring = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+        fr = self._synthetic_first_round_16()
+        vec = np.zeros(63, dtype=bool)
+        # Same "top team wins every live game" scenario as above
+        vec[0:8] = True  # R64 live games: 8 top slots win
+        vec[32:36] = True  # R32 live: A1,B1,C1,D1 advance
+        vec[48:50] = True  # S16 live: A1,C1 advance
+        vec[56] = True  # E8 live: A1 advances
+        # F4 + CHAMP: no live competitors; bits irrelevant to scoring
+
+        winners = {
+            "R64": {"tA1", "tA2", "tB1", "tB2", "tC1", "tC2", "tD1", "tD2"},
+            "R32": {"tA1", "tB1", "tC1", "tD1"},
+            "S16": {"tA1", "tC1"},
+            "E8": {"tA1"},
+            "F4": set(),
+            "CHAMP": set(),
+        }
+        scores = score_brackets_team_identity(vec.reshape(1, -1), winners, fr, scoring)
+        # 8×R64 (80) + 4×R32 (80) + 2×S16 (80) + 1×E8 (80) = 320
+        assert scores[0] == 320.0
+
+    def test_zero_score_bracket_team_identity(self):
+        """A bracket picking none of the actual winners scores 0."""
+        scoring = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+        fr = self._synthetic_first_round_16()
+        vec = np.ones(63, dtype=bool)  # all "top" wins
+        winners = {
+            "R64": {"tA4", "tA3", "tB4", "tB3", "tC4", "tC3", "tD4", "tD3"},
+            "R32": set(),
+            "S16": set(),
+            "E8": set(),
+            "F4": set(),
+            "CHAMP": set(),
+        }
+        scores = score_brackets_team_identity(vec.reshape(1, -1), winners, fr, scoring)
+        assert scores[0] == 0.0
+
+    def test_shape_vs_team_identity_diverge_on_upset(self):
+        """Shape and team-identity MUST give different scores when the
+        bracket's earlier picks diverge from actual — this is the whole
+        reason O26 exists.
+
+        Compare two brackets against a fixed outcome:
+          - bracket_A picks A1 to win R64 slot 0 + advance through R32
+          - bracket_B picks A4 to win R64 slot 0 + advance through R32
+        Outcome: A4 actually won R64 slot 0 and advanced through R32.
+
+        Under TEAM-IDENTITY: bracket_B scores strictly more than bracket_A
+        (B picked the actual winner, A didn't). Under SHAPE: bracket_A
+        and bracket_B have *opposite* bit values at slot 0 and slot 32,
+        so they score identically against any single outcome (whichever
+        one matches, the other mismatches by the same amount). Shape
+        therefore cannot distinguish the two brackets on this case —
+        which is exactly the failure mode shape encoding has on upsets.
+
+        We also construct a second pair of brackets (C, D) that differ
+        only in R32 slot-0 pick vs an outcome where the R64 slot-0 was
+        an upset. Shape credits the bracket that matches the R32 bit
+        (even though the underlying team differs from the actual R32
+        winner); team-identity zeros both because neither picked the
+        actual R32 winner. This isolates the pure shape-vs-team-identity
+        divergence: shape delta > 0, team-identity delta = 0.
+        """
+        scoring = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+        fr = self._synthetic_first_round_16()
+        vec = build_scoring_vector(scoring)
+
+        # --- Pair 1: bracket_a vs bracket_b against an upset outcome ---
+        # bracket_a: A1 wins R64 slot 0, then A1 advances through R32.
+        bracket_a = np.zeros(63, dtype=bool)
+        bracket_a[0] = True
+        bracket_a[32] = True
+
+        # bracket_b: A4 wins R64 slot 0, then A4 advances through R32.
+        bracket_b = np.zeros(63, dtype=bool)
+        # bit 0 = False, bit 32 = False (bottom wins in both)
+
+        # Outcome: A4 wins R64 (upset), A4 advances R32.
+        outcome_1 = np.zeros(63, dtype=bool)
+
+        brackets_1 = np.stack([bracket_a, bracket_b])
+        shape_1 = score_brackets_against_outcome(brackets_1, outcome_1, vec)
+        winners_1 = actual_winners_from_outcome_vec(outcome_1, fr)
+        ti_1 = score_brackets_team_identity(brackets_1, winners_1, fr, scoring)
+
+        # bracket_b matches every bit; bracket_a differs on bits 0 and 32.
+        assert shape_1[1] - shape_1[0] == vec[0] + vec[32]
+        # bracket_b picked actual winner for R64 and R32; bracket_a picked loser.
+        assert ti_1[1] > ti_1[0]
+
+        # --- Pair 2: bracket_c vs bracket_d where SHAPE credits a
+        # positional R32 match but TEAM-IDENTITY gives no credit because
+        # the picked team is wrong even in bracket_c. ---
+        # Both brackets say "A4 wins R64 slot 0" (matches outcome).
+        # bracket_c says "top of R32 slot-0 advances" (= A4 in bracket_c).
+        # bracket_d says "bottom of R32 slot-0 advances" (= A3 in bracket_d).
+        bracket_c = np.zeros(63, dtype=bool)
+        bracket_c[32] = True  # top-wins R32 slot 0 (bit 0 = False → A4 wins R64)
+        bracket_d = np.zeros(63, dtype=bool)
+        # bit 32 = False → bottom wins R32 slot 0 = tA3 advances
+
+        # Outcome: A1 wins R64 (top wins), then A1 advances R32 (top wins).
+        outcome_2 = np.zeros(63, dtype=bool)
+        outcome_2[0] = True  # A1 wins R64
+        outcome_2[32] = True  # A1 advances R32
+
+        brackets_2 = np.stack([bracket_c, bracket_d])
+        shape_2 = score_brackets_against_outcome(brackets_2, outcome_2, vec)
+        winners_2 = actual_winners_from_outcome_vec(outcome_2, fr)
+        ti_2 = score_brackets_team_identity(brackets_2, winners_2, fr, scoring)
+
+        # Shape: bracket_c matches bit 32 (both True), bracket_d mismatches.
+        # Bit 0: bracket_c (False) vs outcome (True) → mismatch for both.
+        # Every other bit is False in all three arrays → match.
+        # Shape delta (c - d) = vec[32] = +20.
+        assert shape_2[0] - shape_2[1] == vec[32]
+
+        # Team-identity: outcome R32 slot-0 winner = tA1. bracket_c R32
+        # slot-0 winner = tA4. bracket_d R32 slot-0 winner = tA3. Neither
+        # picked tA1 for R32, so NEITHER gets R32 credit. Both picked the
+        # same set of R64 winners (bit 0 False in both, other bits
+        # identical) → identical R64 credit. Team-identity delta = 0.
+        assert ti_2[0] == ti_2[1], (
+            f"team-identity should zero both brackets' R32 credit since neither "
+            f"picked the actual R32 winner; got ti_c={ti_2[0]}, ti_d={ti_2[1]}"
+        )
+        # And crucially, shape delta ≠ team-identity delta here — this
+        # is the clean divergence case the test is designed to expose.
+        assert shape_2[0] - shape_2[1] != ti_2[0] - ti_2[1]
+
+    def test_actual_winners_by_round_chains_subset(self):
+        """The R64→R32→S16→... chain must be enforced: a team appearing
+        as an S16 winner without appearing as an R32 winner (malformed
+        data) should be silently excluded from later-round sets by the
+        intersection chain."""
+        games = [
+            {"round_name": "R64", "team1_id": "a", "team2_id": "b", "team1_won": True},
+            {"round_name": "R32", "team1_id": "a", "team2_id": "c", "team1_won": True},
+            # Malformed: 'z' appears as S16 winner but never advanced past R32
+            {"round_name": "S16", "team1_id": "z", "team2_id": "a", "team1_won": True},
+        ]
+        winners = actual_winners_by_round(games)
+        assert "a" in winners["R64"]
+        assert "a" in winners["R32"]
+        # 'z' is dropped because it's not in the previous round's winners set
+        assert "z" not in winners["S16"]
+        # 'a' was in R32 but lost to z in malformed S16; intersection trims z,
+        # leaves S16 empty (a didn't win according to the games)
+        assert winners["S16"] == set()
+
+    def test_actual_winners_by_round_ignores_first_four(self):
+        """FF (First Four) play-in games must not be counted."""
+        games = [
+            {"round_name": "FF", "team1_id": "play_in", "team2_id": "other", "team1_won": True},
+            {"round_name": "R64", "team1_id": "a", "team2_id": "b", "team1_won": True},
+        ]
+        winners = actual_winners_by_round(games)
+        # play_in does not appear anywhere
+        for rnd_set in winners.values():
+            assert "play_in" not in rnd_set
+        assert "a" in winners["R64"]
+
+    def test_actual_winners_by_round_ncg_maps_to_champ(self):
+        """Tournament results use 'NCG' label; scorer expects 'CHAMP'."""
+        games = [
+            {"round_name": "R64", "team1_id": "a", "team2_id": "b", "team1_won": True},
+            {"round_name": "R32", "team1_id": "a", "team2_id": "c", "team1_won": True},
+            {"round_name": "S16", "team1_id": "a", "team2_id": "d", "team1_won": True},
+            {"round_name": "E8", "team1_id": "a", "team2_id": "e", "team1_won": True},
+            {"round_name": "F4", "team1_id": "a", "team2_id": "f", "team1_won": True},
+            {"round_name": "NCG", "team1_id": "a", "team2_id": "g", "team1_won": True},
+        ]
+        winners = actual_winners_by_round(games)
+        assert winners["CHAMP"] == {"a"}
+        assert "NCG" not in winners  # internal label stripped
+
+    def test_shape_function_behavior_unchanged(self):
+        """G4 must not change the shape scorer. Run the existing
+        baseline case and assert identical output."""
+        scoring = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+        vec = build_scoring_vector(scoring)
+        outcome = np.ones(63, dtype=bool)
+        brackets = np.array(
+            [
+                [True] * 63,
+                [False] * 63,
+                [True] * 32 + [False] * 31,
+            ]
+        )
+        scores = score_brackets_against_outcome(brackets, outcome, vec)
+        assert scores[0] == 1920
+        assert scores[1] == 0
+        assert scores[2] == 320
+
+
+def actual_winners_from_outcome_vec(outcome_vec: np.ndarray, first_round: list) -> dict:
+    """Helper: decode an outcome bool-array (63,) into winners-by-round
+    using the same walk :func:`picks_by_round` does. Equivalent to
+    actual_winners_by_round when called on game records that produce
+    the same outcome vector."""
+    return picks_by_round(outcome_vec, first_round)
 
 
 # ---------------------------------------------------------------------------
