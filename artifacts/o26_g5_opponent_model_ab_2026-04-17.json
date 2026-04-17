@@ -1,0 +1,174 @@
+{
+  "generated": "2026-04-17",
+  "purpose": "A/B/C backtest of opponent-model construction regimes",
+  "parameters": {
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "regimes": [
+      "espn",
+      "pool",
+      "blend8020"
+    ],
+    "n_tournaments_p1": 2000,
+    "noise_std": 0.16,
+    "decision_threshold": 0.1
+  },
+  "per_regime": {
+    "espn": [
+      {
+        "year": 2023,
+        "regime": "espn",
+        "n_portfolio": 17,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.968267745092348,
+        "p_value": 1.9313760862819454e-10,
+        "n_placed_first": 1,
+        "portfolio_max_score": 730,
+        "fidelity_top_champ_team": "alabama"
+      },
+      {
+        "year": 2024,
+        "regime": "espn",
+        "n_portfolio": 16,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.13739257495783955,
+        "p_value": 0.611868723177279,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1040,
+        "fidelity_top_champ_team": "connecticut"
+      },
+      {
+        "year": 2025,
+        "regime": "espn",
+        "n_portfolio": 15,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9874208829065748,
+        "p_value": 8.472134062238979e-12,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "fidelity_top_champ_team": "duke"
+      },
+      {
+        "year": 2026,
+        "regime": "espn",
+        "n_portfolio": 19,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.6469745149223868,
+        "p_value": 0.002753787378909952,
+        "n_placed_first": 8,
+        "portfolio_max_score": 1450,
+        "fidelity_top_champ_team": "duke"
+      }
+    ],
+    "pool": [
+      {
+        "year": 2023,
+        "regime": "pool",
+        "n_portfolio": 22,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.95782437187289,
+        "p_value": 2.6996346524898497e-12,
+        "n_placed_first": 0,
+        "portfolio_max_score": 710,
+        "fidelity_top_champ_team": "alabama"
+      },
+      {
+        "year": 2024,
+        "regime": "pool",
+        "n_portfolio": 19,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.03139422565984441,
+        "p_value": 0.8984775892263216,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1050,
+        "fidelity_top_champ_team": "north_carolina"
+      },
+      {
+        "year": 2025,
+        "regime": "pool",
+        "n_portfolio": 18,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9298184390657054,
+        "p_value": 2.370863628029686e-08,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "fidelity_top_champ_team": "duke"
+      },
+      {
+        "year": 2026,
+        "regime": "pool",
+        "n_portfolio": 21,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.4966271178391265,
+        "p_value": 0.02201461576887786,
+        "n_placed_first": 6,
+        "portfolio_max_score": 1390,
+        "fidelity_top_champ_team": "arizona"
+      }
+    ],
+    "blend8020": [
+      {
+        "year": 2023,
+        "regime": "blend8020",
+        "n_portfolio": 21,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.8943555313982852,
+        "p_value": 4.599674974577689e-08,
+        "n_placed_first": 0,
+        "portfolio_max_score": 710,
+        "fidelity_top_champ_team": "alabama"
+      },
+      {
+        "year": 2024,
+        "regime": "blend8020",
+        "n_portfolio": 18,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.20289137431909893,
+        "p_value": 0.41940835133225957,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1050,
+        "fidelity_top_champ_team": "connecticut"
+      },
+      {
+        "year": 2025,
+        "regime": "blend8020",
+        "n_portfolio": 18,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9537399425316017,
+        "p_value": 9.117656265543464e-10,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "fidelity_top_champ_team": "duke"
+      },
+      {
+        "year": 2026,
+        "regime": "blend8020",
+        "n_portfolio": 20,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.31913660035140917,
+        "p_value": 0.17021731780582605,
+        "n_placed_first": 7,
+        "portfolio_max_score": 1390,
+        "fidelity_top_champ_team": "arizona"
+      }
+    ]
+  },
+  "aggregate": {
+    "mean_rho": {
+      "espn": 0.3615266720085939,
+      "pool": 0.3556024796898283,
+      "blend8020": 0.43296256197439414
+    },
+    "positive_frac": {
+      "espn": 0.75,
+      "pool": 0.75,
+      "blend8020": 0.75
+    },
+    "lift_over_espn": 0.07143588996580025,
+    "verdict": "HOLD \u2014 lift below threshold; keep ESPN default but document the gap"
+  }
+}
