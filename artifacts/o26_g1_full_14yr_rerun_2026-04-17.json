@@ -1,0 +1,181 @@
+{
+  "generated": "2026-04-17",
+  "purpose": "O26-G1 \u2014 like-for-like rank_correlation_diagnostic under team-identity",
+  "parameters": {
+    "years": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "n_opponents": 30,
+    "n_placement_trials": 200,
+    "n_tournaments_p1": 500,
+    "chalk_noise_std": 0.4,
+    "noise_std": 0.16,
+    "amend_threshold": 0.15
+  },
+  "per_year": [
+    {
+      "year": 2011,
+      "n_brackets": 19,
+      "rho_shape": -0.21538513557636924,
+      "rho_team_identity": 0.6875575735357272,
+      "p_shape": 0.37585232042540795,
+      "p_team_identity": 0.0011415346692968467,
+      "delta_rho": 0.9029427091120965
+    },
+    {
+      "year": 2012,
+      "n_brackets": 18,
+      "rho_shape": 0.8842979925264606,
+      "rho_team_identity": 0.8150830795600204,
+      "p_shape": 1.116640365838644e-06,
+      "p_team_identity": 3.778961644177334e-05,
+      "delta_rho": -0.06921491296644022
+    },
+    {
+      "year": 2013,
+      "n_brackets": 19,
+      "rho_shape": 0.8065111627108547,
+      "rho_team_identity": 0.7783668255170189,
+      "p_shape": 3.032868346221969e-05,
+      "p_team_identity": 8.676641963828446e-05,
+      "delta_rho": -0.0281443371938358
+    },
+    {
+      "year": 2014,
+      "n_brackets": 25,
+      "rho_shape": 0.5064571025113543,
+      "rho_team_identity": 0.9175034032912756,
+      "p_shape": 0.009783177453696106,
+      "p_team_identity": 1.0990544192349453e-10,
+      "delta_rho": 0.4110463007799212
+    },
+    {
+      "year": 2015,
+      "n_brackets": 19,
+      "rho_shape": 0.5905754724709521,
+      "rho_team_identity": 0.5890735012684984,
+      "p_shape": 0.007760895507137802,
+      "p_team_identity": 0.007958065365769639,
+      "delta_rho": -0.0015019712024536558
+    },
+    {
+      "year": 2016,
+      "n_brackets": 21,
+      "rho_shape": 0.6762139249053646,
+      "rho_team_identity": 0.8776071424988824,
+      "p_shape": 0.0007644674286690657,
+      "p_team_identity": 1.7397793869209835e-07,
+      "delta_rho": 0.2013932175935178
+    },
+    {
+      "year": 2017,
+      "n_brackets": 17,
+      "rho_shape": 0.5657995868379523,
+      "rho_team_identity": 0.5582826288402566,
+      "p_shape": 0.0179159223614981,
+      "p_team_identity": 0.019853200184332134,
+      "delta_rho": -0.007516957997695695
+    },
+    {
+      "year": 2018,
+      "n_brackets": 17,
+      "rho_shape": 0.564745628294423,
+      "rho_team_identity": 0.4981583731163036,
+      "p_shape": 0.018178237499978926,
+      "p_team_identity": 0.0418385488423584,
+      "delta_rho": -0.06658725517811936
+    },
+    {
+      "year": 2019,
+      "n_brackets": 17,
+      "rho_shape": 0.25076946934802496,
+      "rho_team_identity": 0.35543284781793794,
+      "p_shape": 0.3316348911666893,
+      "p_team_identity": 0.16148950236510196,
+      "delta_rho": 0.10466337846991297
+    },
+    {
+      "year": 2021,
+      "n_brackets": 21,
+      "rho_shape": 0.37955857869202403,
+      "rho_team_identity": 0.8063802242134233,
+      "p_shape": 0.08969019531542924,
+      "p_team_identity": 1.0126910732866648e-05,
+      "delta_rho": 0.42682164552139923
+    },
+    {
+      "year": 2022,
+      "n_brackets": 19,
+      "rho_shape": 0.42184391149515754,
+      "rho_team_identity": 0.6287565964138314,
+      "p_shape": 0.07202025770896667,
+      "p_team_identity": 0.0039316424905806845,
+      "delta_rho": 0.20691268491867387
+    },
+    {
+      "year": 2023,
+      "n_brackets": 17,
+      "rho_shape": -0.6351370522551021,
+      "rho_team_identity": 0.7559961943580165,
+      "p_shape": 0.0061533536022753375,
+      "p_team_identity": 0.00044665899656206107,
+      "delta_rho": 1.3911332466131185
+    },
+    {
+      "year": 2024,
+      "n_brackets": 16,
+      "rho_shape": 0.10743196433120998,
+      "rho_team_identity": 0.008856148855400953,
+      "p_shape": 0.6920911809221948,
+      "p_team_identity": 0.9740323791636057,
+      "delta_rho": -0.09857581547580903
+    },
+    {
+      "year": 2025,
+      "n_brackets": 15,
+      "rho_shape": 0.3005371535187643,
+      "rho_team_identity": 0.837961840518817,
+      "p_shape": 0.27641526950681383,
+      "p_team_identity": 9.604958505739015e-05,
+      "delta_rho": 0.5374246870000526
+    },
+    {
+      "year": 2026,
+      "n_brackets": 19,
+      "rho_shape": 0.20583552892654608,
+      "rho_team_identity": 0.07489033291895722,
+      "p_shape": 0.39788033326163075,
+      "p_team_identity": 0.7605902676776024,
+      "delta_rho": -0.13094519600758886
+    }
+  ],
+  "aggregate": {
+    "n_years": 15,
+    "mean_rho_shape": 0.3606703525825078,
+    "mean_rho_team_identity": 0.6126604475149579,
+    "median_rho_shape": 0.42184391149515754,
+    "median_rho_team_identity": 0.6875575735357272,
+    "positive_frac_shape": 0.8666666666666667,
+    "positive_frac_team_identity": 1.0,
+    "mean_abs_delta_rho": 0.3056549544020423,
+    "t_shape": 3.554833080551409,
+    "p_shape": 0.0031703526906130524,
+    "t_team_identity": 8.531979457968292,
+    "p_team_identity": 6.422122281830875e-07,
+    "amend_required": true
+  }
+}
