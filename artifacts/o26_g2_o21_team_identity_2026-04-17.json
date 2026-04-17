@@ -1,0 +1,269 @@
+{
+  "generated": "2026-04-17",
+  "purpose": "O26-G2a \u2014 O21 blend backtest under team-identity scoring",
+  "config": {
+    "years": [
+      2023,
+      2024,
+      2025
+    ],
+    "weights": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "n_sims": 400,
+    "n_opponents": "K-1 per year",
+    "rng_seed": 2026,
+    "scoring": "team-identity (consistent for pool brackets AND opponents)",
+    "baseline_artifact": "artifacts/o21_blend_backtest.json (shape-encoded)"
+  },
+  "results": [
+    {
+      "year": 2023,
+      "weight": 0.0,
+      "K": 18,
+      "mean_p1st": 0.03812499999999999,
+      "rho": 0.8800911864009081,
+      "pvalue": 1.465628141840273e-06,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.33375
+    },
+    {
+      "year": 2023,
+      "weight": 0.25,
+      "K": 18,
+      "mean_p1st": 0.028819444444444446,
+      "rho": 0.8404214238087288,
+      "pvalue": 1.2652381359468964e-05,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.3075
+    },
+    {
+      "year": 2023,
+      "weight": 0.5,
+      "K": 18,
+      "mean_p1st": 0.018402777777777782,
+      "rho": 0.7290684796255108,
+      "pvalue": 0.0005975523639658536,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.22875
+    },
+    {
+      "year": 2023,
+      "weight": 0.75,
+      "K": 18,
+      "mean_p1st": 0.01548611111111111,
+      "rho": 0.7909780836737006,
+      "pvalue": 9.283073364038244e-05,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.1975
+    },
+    {
+      "year": 2023,
+      "weight": 1.0,
+      "K": 18,
+      "mean_p1st": 0.012569444444444446,
+      "rho": 0.6503519053768513,
+      "pvalue": 0.003475298858753901,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.19625
+    },
+    {
+      "year": 2024,
+      "weight": 0.0,
+      "K": 25,
+      "mean_p1st": 0.03565,
+      "rho": 0.5648819424711203,
+      "pvalue": 0.0032605103629283925,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.88375
+    },
+    {
+      "year": 2024,
+      "weight": 0.25,
+      "K": 25,
+      "mean_p1st": 0.0347,
+      "rho": 0.6387535977069136,
+      "pvalue": 0.0005890904557721539,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.84875
+    },
+    {
+      "year": 2024,
+      "weight": 0.5,
+      "K": 25,
+      "mean_p1st": 0.03625,
+      "rho": 0.4708598591177703,
+      "pvalue": 0.01751783544835693,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.88875
+    },
+    {
+      "year": 2024,
+      "weight": 0.75,
+      "K": 25,
+      "mean_p1st": 0.035649999999999994,
+      "rho": 0.6387535977069136,
+      "pvalue": 0.0005890904557721539,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.87625
+    },
+    {
+      "year": 2024,
+      "weight": 1.0,
+      "K": 25,
+      "mean_p1st": 0.03705,
+      "rho": 0.6384522277454783,
+      "pvalue": 0.0005937462998578578,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.89375
+    },
+    {
+      "year": 2025,
+      "weight": 0.0,
+      "K": 32,
+      "mean_p1st": 0.0508203125,
+      "rho": 0.6812120741359791,
+      "pvalue": 1.77342934901281e-05,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.5325
+    },
+    {
+      "year": 2025,
+      "weight": 0.25,
+      "K": 32,
+      "mean_p1st": 0.04640625,
+      "rho": 0.8220190592817482,
+      "pvalue": 7.988688333670401e-09,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.47625
+    },
+    {
+      "year": 2025,
+      "weight": 0.5,
+      "K": 32,
+      "mean_p1st": 0.038710937499999994,
+      "rho": 0.6812120741359791,
+      "pvalue": 1.77342934901281e-05,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.42125
+    },
+    {
+      "year": 2025,
+      "weight": 0.75,
+      "K": 32,
+      "mean_p1st": 0.022578125000000004,
+      "rho": 0.7236442785094868,
+      "pvalue": 2.866561866624066e-06,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.24
+    },
+    {
+      "year": 2025,
+      "weight": 1.0,
+      "K": 32,
+      "mean_p1st": 0.015859375,
+      "rho": 0.8463160858063872,
+      "pvalue": 1.049580532429361e-09,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.16625
+    }
+  ],
+  "aggregate_team_identity": {
+    "w=0.00": {
+      "mean_rho_team_identity": 0.7087284010026691,
+      "n_years": 3
+    },
+    "w=0.25": {
+      "mean_rho_team_identity": 0.7670646935991302,
+      "n_years": 3
+    },
+    "w=0.50": {
+      "mean_rho_team_identity": 0.6270468042930867,
+      "n_years": 3
+    },
+    "w=0.75": {
+      "mean_rho_team_identity": 0.7177919866300337,
+      "n_years": 3
+    },
+    "w=1.00": {
+      "mean_rho_team_identity": 0.7117067396429055,
+      "n_years": 3
+    }
+  },
+  "comparison_to_shape_baseline": {
+    "w=0.00": {
+      "mean_rho_shape": 0.45736165631805825,
+      "mean_rho_team_identity": 0.7087284010026691,
+      "delta_rho": 0.25136674468461084
+    },
+    "w=0.25": {
+      "mean_rho_shape": 0.45736165631805825,
+      "mean_rho_team_identity": 0.7670646935991302,
+      "delta_rho": 0.30970303728107196
+    },
+    "w=0.50": {
+      "mean_rho_shape": 0.45736165631805825,
+      "mean_rho_team_identity": 0.6270468042930867,
+      "delta_rho": 0.16968514797502843
+    },
+    "w=0.75": {
+      "mean_rho_shape": 0.42291522894594535,
+      "mean_rho_team_identity": 0.7177919866300337,
+      "delta_rho": 0.2948767576840884
+    },
+    "w=1.00": {
+      "mean_rho_shape": 0.42291522894594535,
+      "mean_rho_team_identity": 0.7117067396429055,
+      "delta_rho": 0.2887915106969602
+    }
+  }
+}

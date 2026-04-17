@@ -1,0 +1,308 @@
+{
+  "generated": "2026-04-17",
+  "purpose": "O26-G2c \u2014 D12 stoch-vs-argmax under team-identity (N=31)",
+  "config": {
+    "modes": [
+      "champ_first_tv",
+      "det_champ_tv"
+    ],
+    "n_pool_opponents": 30,
+    "n_model_brackets": 50,
+    "n_repeats": 50,
+    "years": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "scoring": "team-identity",
+    "opponent_source": "pool-history (falls back to ESPN then seed)"
+  },
+  "per_year_mode": [
+    {
+      "year": 2011,
+      "mode": "champ_first_tv",
+      "best_rank": 3.58,
+      "mean_rank": 22.894799999999996,
+      "p_first": 0.004,
+      "p_top5": 0.0044,
+      "pool_size": 31
+    },
+    {
+      "year": 2011,
+      "mode": "det_champ_tv",
+      "best_rank": 13.59,
+      "mean_rank": 24.9848,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2012,
+      "mode": "champ_first_tv",
+      "best_rank": 1.12,
+      "mean_rank": 13.2234,
+      "p_first": 0.088,
+      "p_top5": 0.0932,
+      "pool_size": 31
+    },
+    {
+      "year": 2012,
+      "mode": "det_champ_tv",
+      "best_rank": 1.69,
+      "mean_rank": 9.783399999999999,
+      "p_first": 0.054,
+      "p_top5": 0.0588,
+      "pool_size": 31
+    },
+    {
+      "year": 2013,
+      "mode": "champ_first_tv",
+      "best_rank": 2.75,
+      "mean_rank": 19.5728,
+      "p_first": 0.0028,
+      "p_top5": 0.0032,
+      "pool_size": 31
+    },
+    {
+      "year": 2013,
+      "mode": "det_champ_tv",
+      "best_rank": 16.28,
+      "mean_rank": 22.3624,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2014,
+      "mode": "champ_first_tv",
+      "best_rank": 1.06,
+      "mean_rank": 21.915399999999998,
+      "p_first": 0.0248,
+      "p_top5": 0.0264,
+      "pool_size": 31
+    },
+    {
+      "year": 2014,
+      "mode": "det_champ_tv",
+      "best_rank": 12.22,
+      "mean_rank": 25.072,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2015,
+      "mode": "champ_first_tv",
+      "best_rank": 2.97,
+      "mean_rank": 21.4282,
+      "p_first": 0.004,
+      "p_top5": 0.006,
+      "pool_size": 31
+    },
+    {
+      "year": 2015,
+      "mode": "det_champ_tv",
+      "best_rank": 6.2,
+      "mean_rank": 17.471600000000002,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2016,
+      "mode": "champ_first_tv",
+      "best_rank": 1.48,
+      "mean_rank": 17.877200000000002,
+      "p_first": 0.05,
+      "p_top5": 0.0524,
+      "pool_size": 31
+    },
+    {
+      "year": 2016,
+      "mode": "det_champ_tv",
+      "best_rank": 2.78,
+      "mean_rank": 16.872,
+      "p_first": 0.0208,
+      "p_top5": 0.0252,
+      "pool_size": 31
+    },
+    {
+      "year": 2017,
+      "mode": "champ_first_tv",
+      "best_rank": 2.28,
+      "mean_rank": 18.235,
+      "p_first": 0.0068,
+      "p_top5": 0.0084,
+      "pool_size": 31
+    },
+    {
+      "year": 2017,
+      "mode": "det_champ_tv",
+      "best_rank": 6.44,
+      "mean_rank": 12.0876,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2018,
+      "mode": "champ_first_tv",
+      "best_rank": 1.99,
+      "mean_rank": 21.4346,
+      "p_first": 0.0148,
+      "p_top5": 0.0168,
+      "pool_size": 31
+    },
+    {
+      "year": 2018,
+      "mode": "det_champ_tv",
+      "best_rank": 12.32,
+      "mean_rank": 23.0016,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2019,
+      "mode": "champ_first_tv",
+      "best_rank": 1.0,
+      "mean_rank": 13.751600000000002,
+      "p_first": 0.0796,
+      "p_top5": 0.0872,
+      "pool_size": 31
+    },
+    {
+      "year": 2019,
+      "mode": "det_champ_tv",
+      "best_rank": 1.24,
+      "mean_rank": 3.4989999999999997,
+      "p_first": 0.3916,
+      "p_top5": 0.4264,
+      "pool_size": 31
+    },
+    {
+      "year": 2021,
+      "mode": "champ_first_tv",
+      "best_rank": 1.17,
+      "mean_rank": 19.470200000000002,
+      "p_first": 0.0168,
+      "p_top5": 0.0168,
+      "pool_size": 31
+    },
+    {
+      "year": 2021,
+      "mode": "det_champ_tv",
+      "best_rank": 7.07,
+      "mean_rank": 15.0908,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 31
+    },
+    {
+      "year": 2022,
+      "mode": "champ_first_tv",
+      "best_rank": 1.12,
+      "mean_rank": 14.611,
+      "p_first": 0.0452,
+      "p_top5": 0.0488,
+      "pool_size": 31
+    },
+    {
+      "year": 2022,
+      "mode": "det_champ_tv",
+      "best_rank": 5.51,
+      "mean_rank": 17.6848,
+      "p_first": 0.0048,
+      "p_top5": 0.0048,
+      "pool_size": 31
+    },
+    {
+      "year": 2023,
+      "mode": "champ_first_tv",
+      "best_rank": 1.0,
+      "mean_rank": 13.0288,
+      "p_first": 0.114,
+      "p_top5": 0.114,
+      "pool_size": 19
+    },
+    {
+      "year": 2023,
+      "mode": "det_champ_tv",
+      "best_rank": 2.19,
+      "mean_rank": 12.201199999999998,
+      "p_first": 0.0184,
+      "p_top5": 0.0184,
+      "pool_size": 19
+    },
+    {
+      "year": 2024,
+      "mode": "champ_first_tv",
+      "best_rank": 1.2,
+      "mean_rank": 15.209800000000003,
+      "p_first": 0.0156,
+      "p_top5": 0.0156,
+      "pool_size": 25
+    },
+    {
+      "year": 2024,
+      "mode": "det_champ_tv",
+      "best_rank": 7.44,
+      "mean_rank": 14.2292,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 25
+    },
+    {
+      "year": 2025,
+      "mode": "champ_first_tv",
+      "best_rank": 2.28,
+      "mean_rank": 21.3288,
+      "p_first": 0.0084,
+      "p_top5": 0.0104,
+      "pool_size": 33
+    },
+    {
+      "year": 2025,
+      "mode": "det_champ_tv",
+      "best_rank": 9.19,
+      "mean_rank": 16.2016,
+      "p_first": 0.0,
+      "p_top5": 0.0,
+      "pool_size": 33
+    }
+  ],
+  "aggregate": {
+    "champ_first_tv": {
+      "best_rank_mean": 1.7857142857142858,
+      "mean_rank_mean": 18.141542857142856,
+      "p_first_mean": 0.033914285714285716,
+      "p_top5_mean": 0.03597142857142858,
+      "n_years": 14
+    },
+    "det_champ_tv": {
+      "best_rank_mean": 7.44,
+      "mean_rank_mean": 16.467285714285712,
+      "p_first_mean": 0.03497142857142858,
+      "p_top5_mean": 0.03811428571428571,
+      "n_years": 14
+    }
+  },
+  "best_rank_winners": {
+    "stochastic_wins": 14,
+    "argmax_wins": 0,
+    "ties": 0,
+    "n_years": 14
+  },
+  "d12_verdict_holds": true
+}
