@@ -27,11 +27,13 @@ jobs:
       - name: Run ruff linter
         run: pipx run ruff check src/ tests/ --output-format=github
 
-  # ─── Freeze Check — soft during 2026 post-tournament edits, blocking for 2027 ───
-  # Enforcement flips from warning → blocking on FREEZE_ENFORCE_DATE (see all-gates).
-  # Intent: we edit freely post-2026 tournament without the freeze drift blocking
-  # every merge, but the check still runs (visible red/green) so drift is never
-  # invisible, and it auto-rearms as a critical gate before the 2027 season.
+  # ─── Freeze Check — seasonal gate ───────────────────────────────────────────
+  # Enforcement window (blocking): Jan 1 through Apr 7 each year — the
+  # pre-tournament + tournament weeks when freeze drift would corrupt a live
+  # forecast. Outside that window (Apr 8 – Dec 31) the check still RUNS so
+  # drift stays visible as red/green, but it does not block merges — this is
+  # the experimentation / backtesting / pool-optimization edit window.
+  # Auto-rearms on Jan 1 every year; no manual flip needed.
   freeze-check:
     name: "Freeze Artifact Check"
     runs-on: ubuntu-latest
@@ -192,8 +194,8 @@ jobs:
 
   # ─── Merge Gate ────────────────────────────────────────────────
   # Blocking:     fast-gate (ruff) — always.
-  #               freeze-check    — only on/after FREEZE_ENFORCE_DATE (2027 season).
-  # Non-blocking: freeze-check before the enforce date, full-tests, audit.
+  #               freeze-check    — only Jan 1 – Apr 7 (pre-tournament + tournament window).
+  # Non-blocking: freeze-check Apr 8 – Dec 31 (post-tournament edit window), full-tests, audit.
   all-gates:
     name: "CI"
     if: always()
@@ -204,10 +206,11 @@ jobs:
       - audit
     runs-on: ubuntu-latest
     env:
-      # Flip freeze-check from soft warning to blocking on this date.
-      # Set well before the 2027 tournament (Selection Sunday ~2027-03-14) so we
-      # have margin to re-freeze the pipeline and catch any drift early.
-      FREEZE_ENFORCE_DATE: "2027-01-01"
+      # Freeze-check enforcement window: MM-DD strings inclusive.
+      # Blocking when FREEZE_BLOCK_START <= today <= FREEZE_BLOCK_END.
+      # Covers pre-tournament (Jan) through championship weekend (~first Mon of Apr).
+      FREEZE_BLOCK_START: "01-01"
+      FREEZE_BLOCK_END: "04-07"
     steps:
       - name: Check gates
         run: |
@@ -216,11 +219,11 @@ jobs:
             exit 1
           fi
           if [[ "${{ needs.freeze-check.result }}" == "failure" ]]; then
-            TODAY=$(date -u +%Y-%m-%d)
-            if [[ "$TODAY" < "$FREEZE_ENFORCE_DATE" ]]; then
-              echo "::warning::Freeze artifact check failed — non-blocking until ${FREEZE_ENFORCE_DATE} (post-2026 tournament edit window). Re-freeze the pipeline before 2027 predictions."
+            TODAY_MMDD=$(date -u +%m-%d)
+            if [[ "$TODAY_MMDD" > "$FREEZE_BLOCK_END" ]]; then
+              echo "::warning::Freeze artifact check failed — non-blocking (post-tournament edit window, ${FREEZE_BLOCK_END} < today). Re-freeze the pipeline before the ${FREEZE_BLOCK_START} enforcement window re-opens."
             else
-              echo "::error::Freeze artifact check failed — blocking merge (2027 season enforcement active since ${FREEZE_ENFORCE_DATE})"
+              echo "::error::Freeze artifact check failed — blocking merge (tournament-season enforcement active, ${FREEZE_BLOCK_START} – ${FREEZE_BLOCK_END})"
               exit 1
             fi
           fi
