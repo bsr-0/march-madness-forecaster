@@ -44,6 +44,8 @@ G2C_ARTIFACT = REPO_ROOT / "artifacts" / "o26_g2_d12_team_identity_2026-04-17.js
 G2A_SCRIPT = REPO_ROOT / "scripts" / "o26_g2_o21_team_identity.py"
 G2B_SCRIPT = REPO_ROOT / "scripts" / "o26_g2_o24_team_identity.py"
 G2C_SCRIPT = REPO_ROOT / "scripts" / "o26_g2_d12_team_identity.py"
+G3_ARTIFACT = REPO_ROOT / "artifacts" / "o26_g3_n31_team_identity_2026-04-17.json"
+G3_SCRIPT = REPO_ROOT / "scripts" / "o26_g3_mc_backtest_n31_team_identity.py"
 MEMORY_MD = REPO_ROOT / "MEMORY.md"
 COUNCIL_MD = REPO_ROOT / "COUNCIL_LESSONS.md"
 
@@ -227,3 +229,126 @@ def test_council_lessons_o26_status_advanced_to_g2_complete():
 def test_g2_scripts_present():
     for p in (G2A_SCRIPT, G2B_SCRIPT, G2C_SCRIPT):
         assert p.exists(), f"Required G2 script missing: {p}"
+
+
+# ---------------------------------------------------------------------
+# G3 (narrow, N=31) — production MC backtest under team-identity
+# ---------------------------------------------------------------------
+#
+# G3-narrow triggered the escalation gate: BestRank argmax flipped
+# (f4_first_tv → torvik) and the top-3 ordering rearranged. User
+# deferred N=1000 rerun to §2 O27. These locks hold the N=31 finding
+# in place AND enforce that the P(1st) argmax stays preserved — the
+# single invariant that keeps the `champ_first_tv` recommendation
+# defensible until O27 closes.
+
+# Recorded BestRank envelope from 2026-04-17 G3-narrow run.
+# Per-mode aggregate BestRank (team-identity, N=31, 14 yrs, 50×50).
+G3_BESTRANK_RECORDED = {
+    "seed": 2.30,
+    "torvik": 1.42,
+    "champ_first_tv": 2.67,
+    "champ_first_chalkfade_tv": 1.87,
+    "f4_first_tv": 2.06,
+    "e8_first_tv": 1.87,
+    "det_champ_tv": 7.33,
+    "det_f4_tv": 8.46,
+    "det_e8_tv": 7.30,
+}
+G3_BESTRANK_TOL = 0.25  # ± tolerance per mode (tight but not brittle)
+
+# Pre-committed invariant: P(1st) argmax among the 5 headline modes
+# (seed/torvik/champ_first_tv/f4_first_tv/e8_first_tv) must remain
+# `torvik`. If this flips, §2 O27 MUST be run before any mode
+# recommendation moves.
+G3_HEADLINE_MODES = ["seed", "torvik", "champ_first_tv", "f4_first_tv", "e8_first_tv"]
+G3_PFIRST_ARGMAX_EXPECTED = "torvik"
+
+
+def test_g3_artifact_structure():
+    d = _load(G3_ARTIFACT)
+    assert d["purpose"].startswith("O26-G3")
+    assert d["config"]["scoring"] == "team-identity"
+    assert d["config"]["n_opponents"] == 30
+    assert set(d["aggregate"].keys()) >= set(G3_BESTRANK_RECORDED.keys())
+
+
+def test_g3_bestrank_envelope():
+    """Every mode's team-identity BestRank stays within ±0.25 of the
+    recorded 2026-04-17 value. A drift wider than that is a methodology
+    regression, not stochastic noise (14 yrs × 50×50 is enough to pin
+    BestRank to ~0.1)."""
+    d = _load(G3_ARTIFACT)
+    agg = d["aggregate"]
+    for mode, expected in G3_BESTRANK_RECORDED.items():
+        assert mode in agg, f"G3 artifact missing mode {mode}"
+        actual = agg[mode]["best_rank_mean"]
+        assert abs(actual - expected) <= G3_BESTRANK_TOL, (
+            f"{mode}: BestRank {actual:.2f} drifted outside envelope "
+            f"{expected:.2f} ± {G3_BESTRANK_TOL}. Re-audit before relaxing."
+        )
+
+
+def test_g3_pfirst_argmax_preserved_torvik():
+    """Among the 5 headline modes, torvik must remain P(1st) argmax
+    under team-identity. If this flips, the WTA `champ_first_tv`
+    recommendation in MEMORY §3 is no longer empirically supported —
+    run §2 O27 immediately and do NOT weaken this assertion."""
+    d = _load(G3_ARTIFACT)
+    agg = d["aggregate"]
+    headline_pfirst = {m: agg[m]["p_first_mean"] for m in G3_HEADLINE_MODES}
+    argmax = max(headline_pfirst, key=lambda m: headline_pfirst[m])
+    assert argmax == G3_PFIRST_ARGMAX_EXPECTED, (
+        f"P(1st) argmax across 5 headline modes is {argmax}, expected "
+        f"{G3_PFIRST_ARGMAX_EXPECTED}. Run §2 O27 before relaxing this test."
+    )
+
+
+def test_g3_bestrank_reorder_recorded():
+    """G3-narrow's BestRank reorder is a durable finding. The 2026-04-17
+    top-5 ordering (torvik, e8, f4/chalkfade, seed, champ_first) must
+    remain recorded in the artifact; dropping it loses the escalation
+    evidence that gave rise to O27."""
+    d = _load(G3_ARTIFACT)
+    assert d["best_argmax_flipped_vs_shape"] is True
+    assert d["top3_bestrank_order_preserved"] is False
+    # Confirm torvik is top-1 under team-identity
+    assert d["team_bestrank_order"][0] == "torvik", (
+        f"Team-identity BestRank top-1 is {d['team_bestrank_order'][0]}, "
+        f"expected 'torvik'. Either G3-narrow regressed or drift."
+    )
+    # And f4_first_tv was top-1 under shape
+    assert d["shape_bestrank_order"][0] == "f4_first_tv"
+
+
+def test_g3_noseed_blend_flagged_as_deferred():
+    """Document the sandbox-constrained scope: noseed + blend NOT run.
+    §2 O27 must cover them when N=1000 rerun happens."""
+    d = _load(G3_ARTIFACT)
+    deferred = d["config"].get("modes_deferred_noml", [])
+    assert "noseed" in deferred
+    assert "blend" in deferred
+
+
+def test_memory_md_has_team_identity_caveat():
+    text = MEMORY_MD.read_text()
+    assert "Team-identity caveat" in text, (
+        "MEMORY.md §3 lost the team-identity caveat block. G3-narrow narrative "
+        "no longer flags the N=1000 shape-encoded numbers as scope-limited."
+    )
+    assert "O26-G3-narrow" in text
+
+
+def test_council_lessons_o27_exists():
+    text = COUNCIL_MD.read_text()
+    assert "**O27**" in text, "§2 O27 (G3 escalation to N=1000) is missing — G3 deferral not tracked."
+    assert "G3 escalation" in text
+
+
+def test_council_lessons_o26_status_advanced_to_g3_narrow():
+    text = COUNCIL_MD.read_text()
+    assert "G3 narrow (N=31) complete 2026-04-17" in text, "§2 O26 status row did not advance to G3-narrow complete."
+
+
+def test_g3_script_present():
+    assert G3_SCRIPT.exists(), f"G3 script missing: {G3_SCRIPT}"
