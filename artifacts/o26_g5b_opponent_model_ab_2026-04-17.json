@@ -1,0 +1,436 @@
+{
+  "generated": "2026-04-17",
+  "purpose": "4-regime backtest with real production baseline",
+  "parameters": {
+    "years": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "regimes": [
+      "espn_only",
+      "prod_603010",
+      "blend_pool_espn",
+      "blend_pool_prod"
+    ],
+    "n_tournaments_p1": 2000,
+    "decision_threshold_mean": 0.1,
+    "decision_threshold_mean_soft": 0.05,
+    "decision_threshold_2026_soft": 0.2
+  },
+  "per_regime": {
+    "espn_only": [
+      {
+        "year": 2023,
+        "regime": "espn_only",
+        "n_portfolio": 17,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.968267745092348,
+        "p_value": 1.9313760862819454e-10,
+        "n_placed_first": 1,
+        "portfolio_max_score": 730,
+        "top3_champ_teams": [
+          [
+            "alabama",
+            0.203
+          ],
+          [
+            "houston",
+            0.142
+          ],
+          [
+            "kansas",
+            0.11
+          ]
+        ]
+      },
+      {
+        "year": 2024,
+        "regime": "espn_only",
+        "n_portfolio": 16,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.13739257495783955,
+        "p_value": 0.611868723177279,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1040,
+        "top3_champ_teams": [
+          [
+            "connecticut",
+            0.2471
+          ],
+          [
+            "houston",
+            0.1365
+          ],
+          [
+            "purdue",
+            0.101
+          ]
+        ]
+      },
+      {
+        "year": 2025,
+        "regime": "espn_only",
+        "n_portfolio": 15,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9874208829065748,
+        "p_value": 8.472134062238979e-12,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.2503
+          ],
+          [
+            "florida",
+            0.2128
+          ],
+          [
+            "auburn",
+            0.1057
+          ]
+        ]
+      },
+      {
+        "year": 2026,
+        "regime": "espn_only",
+        "n_portfolio": 19,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.6469745149223868,
+        "p_value": 0.002753787378909952,
+        "n_placed_first": 8,
+        "portfolio_max_score": 1450,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.2837
+          ],
+          [
+            "arizona",
+            0.2192
+          ],
+          [
+            "michigan",
+            0.1429
+          ]
+        ]
+      }
+    ],
+    "prod_603010": [
+      {
+        "year": 2023,
+        "regime": "prod_603010",
+        "n_portfolio": 16,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.8916582368394537,
+        "p_value": 3.512628920765824e-06,
+        "n_placed_first": 3,
+        "portfolio_max_score": 730,
+        "top3_champ_teams": [
+          [
+            "alabama",
+            0.1748
+          ],
+          [
+            "houston",
+            0.1381
+          ],
+          [
+            "kansas",
+            0.1184
+          ]
+        ]
+      },
+      {
+        "year": 2024,
+        "regime": "prod_603010",
+        "n_portfolio": 13,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.0952515488467565,
+        "p_value": 0.7569154641181782,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1040,
+        "top3_champ_teams": [
+          [
+            "connecticut",
+            0.2017
+          ],
+          [
+            "houston",
+            0.1355
+          ],
+          [
+            "purdue",
+            0.114
+          ]
+        ]
+      },
+      {
+        "year": 2025,
+        "regime": "prod_603010",
+        "n_portfolio": 12,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9840982416300723,
+        "p_value": 7.797066716919271e-09,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.2034
+          ],
+          [
+            "florida",
+            0.1808
+          ],
+          [
+            "auburn",
+            0.1167
+          ]
+        ]
+      },
+      {
+        "year": 2026,
+        "regime": "prod_603010",
+        "n_portfolio": 13,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.44700526032341364,
+        "p_value": 0.12566444533016857,
+        "n_placed_first": 8,
+        "portfolio_max_score": 1440,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.2238
+          ],
+          [
+            "arizona",
+            0.1853
+          ],
+          [
+            "michigan",
+            0.1395
+          ]
+        ]
+      }
+    ],
+    "blend_pool_espn": [
+      {
+        "year": 2023,
+        "regime": "blend_pool_espn",
+        "n_portfolio": 21,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.8943555313982852,
+        "p_value": 4.599674974577689e-08,
+        "n_placed_first": 0,
+        "portfolio_max_score": 710,
+        "top3_champ_teams": [
+          [
+            "alabama",
+            0.1284
+          ],
+          [
+            "houston",
+            0.1003
+          ],
+          [
+            "purdue",
+            0.0567
+          ]
+        ]
+      },
+      {
+        "year": 2024,
+        "regime": "blend_pool_espn",
+        "n_portfolio": 18,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.20289137431909893,
+        "p_value": 0.41940835133225957,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1050,
+        "top3_champ_teams": [
+          [
+            "connecticut",
+            0.1266
+          ],
+          [
+            "north_carolina",
+            0.1245
+          ],
+          [
+            "houston",
+            0.1185
+          ]
+        ]
+      },
+      {
+        "year": 2025,
+        "regime": "blend_pool_espn",
+        "n_portfolio": 18,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9537399425316017,
+        "p_value": 9.117656265543464e-10,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.1938
+          ],
+          [
+            "florida",
+            0.1738
+          ],
+          [
+            "st__john_s__ny",
+            0.1034
+          ]
+        ]
+      },
+      {
+        "year": 2026,
+        "regime": "blend_pool_espn",
+        "n_portfolio": 20,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.31913660035140917,
+        "p_value": 0.17021731780582605,
+        "n_placed_first": 7,
+        "portfolio_max_score": 1390,
+        "top3_champ_teams": [
+          [
+            "arizona",
+            0.1922
+          ],
+          [
+            "michigan",
+            0.1254
+          ],
+          [
+            "duke",
+            0.1148
+          ]
+        ]
+      }
+    ],
+    "blend_pool_prod": [
+      {
+        "year": 2023,
+        "regime": "blend_pool_prod",
+        "n_portfolio": 21,
+        "n_opp_actual": 18,
+        "spearman_rho": 0.8819478619793802,
+        "p_value": 1.256452333789641e-07,
+        "n_placed_first": 0,
+        "portfolio_max_score": 710,
+        "top3_champ_teams": [
+          [
+            "alabama",
+            0.123
+          ],
+          [
+            "houston",
+            0.0997
+          ],
+          [
+            "purdue",
+            0.0606
+          ]
+        ]
+      },
+      {
+        "year": 2024,
+        "regime": "blend_pool_prod",
+        "n_portfolio": 17,
+        "n_opp_actual": 25,
+        "spearman_rho": 0.2584193294187903,
+        "p_value": 0.3165956213560337,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1050,
+        "top3_champ_teams": [
+          [
+            "north_carolina",
+            0.1273
+          ],
+          [
+            "houston",
+            0.1183
+          ],
+          [
+            "connecticut",
+            0.1175
+          ]
+        ]
+      },
+      {
+        "year": 2025,
+        "regime": "blend_pool_prod",
+        "n_portfolio": 17,
+        "n_opp_actual": 32,
+        "spearman_rho": 0.9201635290780649,
+        "p_value": 1.6975443342543972e-07,
+        "n_placed_first": 0,
+        "portfolio_max_score": 1330,
+        "top3_champ_teams": [
+          [
+            "duke",
+            0.1844
+          ],
+          [
+            "florida",
+            0.1674
+          ],
+          [
+            "st__john_s__ny",
+            0.1043
+          ]
+        ]
+      },
+      {
+        "year": 2026,
+        "regime": "blend_pool_prod",
+        "n_portfolio": 19,
+        "n_opp_actual": 30,
+        "spearman_rho": -0.4423138575935479,
+        "p_value": 0.05792452415750828,
+        "n_placed_first": 8,
+        "portfolio_max_score": 1390,
+        "top3_champ_teams": [
+          [
+            "arizona",
+            0.1854
+          ],
+          [
+            "michigan",
+            0.1247
+          ],
+          [
+            "duke",
+            0.1028
+          ]
+        ]
+      }
+    ]
+  },
+  "aggregate": {
+    "mean_rho": {
+      "espn_only": 0.3615266720085939,
+      "prod_603010": 0.3810006917482172,
+      "blend_pool_espn": 0.43296256197439414,
+      "blend_pool_prod": 0.4045542157206719
+    },
+    "rho_2026": {
+      "espn_only": -0.6469745149223868,
+      "prod_603010": -0.44700526032341364,
+      "blend_pool_espn": -0.31913660035140917,
+      "blend_pool_prod": -0.4423138575935479
+    },
+    "lift_D_vs_B_mean": 0.023553523972454693,
+    "lift_D_vs_B_2026": 0.004691402729865735,
+    "lift_C_vs_B_mean": 0.05196187022617693,
+    "lift_C_vs_B_2026": 0.12786865997200447,
+    "verdict_D": "D (pool+prod): HOLD",
+    "verdict_C": "C (pool+espn): HOLD"
+  }
+}
