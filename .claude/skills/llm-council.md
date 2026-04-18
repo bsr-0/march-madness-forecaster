@@ -1,6 +1,6 @@
 ---
 name: llm-council
-description: "Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other anonymously, and synthesize a final verdict. Based on Karpathy's LLM Council methodology. MANDATORY TRIGGERS: 'council this', 'run the council', 'war room this', 'pressure-test this', 'stress-test this', 'debate this'. STRONG TRIGGERS (use when combined with a real decision or tradeoff): 'should I X or Y', 'which option', 'what would you do', 'is this the right move', 'validate this', 'get multiple perspectives', 'I can't decide', 'I'm torn between'. Do NOT trigger on simple yes/no questions, factual lookups, or casual 'should I' without a meaningful tradeoff (e.g. 'should I use markdown' is not a council question). DO trigger when the user presents a genuine decision with stakes, multiple options, and context that suggests they want it pressure-tested from multiple angles."
+description: "Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other anonymously, and surface a lightweight summary of where they agree, where they clash, and suggested actions — without a chairman agent picking sides. Adapted from Karpathy's LLM Council methodology. MANDATORY TRIGGERS: 'council this', 'run the council', 'war room this', 'pressure-test this', 'stress-test this', 'debate this'. STRONG TRIGGERS (use when combined with a real decision or tradeoff): 'should I X or Y', 'which option', 'what would you do', 'is this the right move', 'validate this', 'get multiple perspectives', 'I can't decide', 'I'm torn between'. Do NOT trigger on simple yes/no questions, factual lookups, or casual 'should I' without a meaningful tradeoff (e.g. 'should I use markdown' is not a council question). DO trigger when the user presents a genuine decision with stakes, multiple options, and context that suggests they want it pressure-tested from multiple angles."
 ---
 
 # LLM Council
@@ -60,9 +60,11 @@ Only cares about one thing: can this actually be done, and what's the fastest pa
 
 ### Step 0: Pre-Council Duplicate Check (MANDATORY — do NOT skip)
 
-**The council is expensive. Ten sub-agents per session at full scale
-(5 advisor drafts + 5 peer reviews; the chairman agent has been
-removed and replaced by a lightweight in-thread summary in Step 4).
+**The council is expensive. Eight sub-agents per session at full scale
+(5 advisor drafts + 3 peer reviews; peer review was downsized from 5
+reviewers to 3 because blind-spot detection saturates quickly, and the
+chairman agent has been removed entirely in favor of a lightweight
+in-thread summary in Step 4).
 Prior sessions on this repo repeated the same question 6× in
 different wording ("biggest limitation?", "most critical gap?",
 "single most critical limitation?" were all the same question). The
@@ -137,7 +139,7 @@ Save the framed question for the transcript.
 ### Step 1.5: Choose the Panel Size (bucket-driven)
 
 The 5-advisor panel is the full treatment. It is not always the right tool.
-The council is expensive — 10 sub-agents at full scale (5 drafts + 5
+The council is expensive — 8 sub-agents at full scale (5 drafts + 3
 peer reviews; the chairman sub-agent has been replaced by an in-thread
 summary, see Step 4). Use the bucket classification from Step 0 /
 `COUNCIL_LESSONS.md §4` to pick the right size:
@@ -178,8 +180,8 @@ Each advisor gets:
 3. A clear instruction: respond independently. Do not hedge. Do not try
    to be balanced. Lean fully into your assigned perspective. If you see
    a fatal flaw, say it. If you see massive upside, say it. Your job is
-   to represent your angle as strongly as possible. The synthesis comes
-   later.
+   to represent your angle as strongly as possible. A summary step will
+   surface agreements and clashes later — no chairman will pick a side.
 
 Each advisor should produce a response of **150-250 words**. Tight
 enough to force a top-3 thesis rather than an enumeration. If an
@@ -234,7 +236,7 @@ Record the convergence decision in the transcript so later Step 0
 duplicate-checks can see whether the verdict came from a peer-reviewed
 deliberation or a short-circuited unanimous first pass.
 
-### Step 3: Peer Review (5 sub-agents in parallel, ONLY on divergence)
+### Step 3: Peer Review (3 sub-agents in parallel, ONLY on divergence)
 
 **Run this step only if Step 2.5 determined that the 5-advisor panel
 has material disagreement.** Otherwise skip to Step 4.
@@ -243,7 +245,9 @@ This is the step that makes the council more than just "ask 5 times." It's the c
 
 Collect all 5 advisor responses. Anonymize them as Response A through E (randomize which advisor maps to which letter so there's no positional bias).
 
-Spawn 5 new sub-agents, one for each advisor. Each reviewer sees all 5 anonymized responses and answers three questions:
+**Why 3 reviewers, not 5:** blind-spot detection saturates fast — after 3 independent reads of the same 5 anonymized drafts, the 4th and 5th reviewer typically echo what the first 3 already flagged. Dropping from 5 → 3 reviewers saves 2 sub-agents on every diverged bucket-E session at the cost of a small probability that a 4th or 5th reviewer would have surfaced an outlier blind spot. The tradeoff is worth it; in the rare case the summary feels thin, a follow-up turn can spawn additional reviewers on demand.
+
+Spawn 3 new sub-agents. Each reviewer sees all 5 anonymized responses and answers three questions:
 
 1. Which response is the strongest and why? (pick one)
 2. Which response has the biggest blind spot and what is it?
@@ -283,50 +287,56 @@ Answer these three questions. Be specific. Reference responses by letter.
 Keep your review under 200 words. Be direct.
 ```
 
-### Step 4: Council Summary (lightweight, in the main thread — no sub-agent)
+### Step 4: Write the Council Report (summary + transcript in one file, no sub-agent)
 
-The chairman sub-agent has been removed. The main agent produces a
-short summary directly from the advisor drafts (and peer reviews, if
-Step 3 ran) that are already in its context. No sub-agent is
-dispatched, no extra prompt template is rendered — the summary is
-mechanical extraction.
+The chairman sub-agent has been removed. Instead of producing a summary
+in-thread first and then re-serializing it into a report file, the
+main agent writes **one** markdown file directly, with the summary
+sections rendered straight into the document. This is the single
+final step — no intermediate in-thread summary, no HTML, no PDF, no
+separate `council-transcript-*.md`.
+
+**File:** `council-report-[timestamp].md`
 
 **What the summary deliberately does NOT do:**
 
 - It does NOT take a side on clashes. Surfacing both positions is
-  enough; the user picks. If the user wants an opinionated call, they
-  can ask in a follow-up (e.g., "of those clashes, which would you
+  enough; the user picks. If the user wants an opinionated call,
+  they ask in a follow-up (e.g., "of those clashes, which would you
   lean?") — opting in beats always paying for a chairman agent.
 - It does NOT re-argue advisor points or add independent analysis.
   Anything the main agent wants to add goes in a separate follow-up
-  turn, not in the summary block.
+  turn, not in the report.
 
-**Required structure (produce inline, exactly once per session):**
+**Required structure (top-to-bottom, each section exactly once):**
 
-1. **Per-advisor bottom line** — one bullet per advisor, 2-3
+1. `# Council Report — YYYY-MM-DD [topic slug]` (H1)
+2. **Question** — the user's raw question, one short paragraph.
+3. **Metadata block** — bucket (A/B/C/D/E), panel size + composition,
+   peer-review status (`ran (3 reviewers)` / `skipped (convergence)` /
+   `skipped (panel size)`), timestamp.
+4. **Suggested Actions** — rendered as a blockquote callout (`>`
+   prefix) near the top. Up to 3 concrete actions that follow from
+   the agreement themes below, dependency-ordered, one sentence each.
+   No rationale; the agreement/clash sections carry it. List one if
+   one is enough — do not pad to three.
+5. **Per-Advisor Bottom Line** (H2) — one bullet per advisor, 2-3
    sentences. Name the advisor, state their bottom-line recommendation
-   in their own words, and the single strongest reason they gave.
-   Extract from the draft; do NOT paraphrase for flavor or embellish.
-
-2. **Where advisors agree most** — the 2-3 themes that 3+ advisors (or
-   both, on a 2-advisor panel) converged on independently. One line
-   each. If fewer than 2 themes meet the bar, list only those. Do not
-   invent agreement to fill space.
-
-3. **Where advisors clash** — the material disagreements, one line
+   in their own words, and the single strongest reason. Extract from
+   the draft; do NOT paraphrase for flavor or embellish.
+6. **Where Advisors Agree Most** (H2) — the 2-3 themes that 3+
+   advisors (or both, on a 2-advisor panel) converged on
+   independently. One line each. If fewer than 2 themes meet the bar,
+   list only those. Do not invent agreement to fill space. On a
+   1-advisor panel, omit this section entirely.
+7. **Where Advisors Clash** (H2) — material disagreements, one line
    each, naming which advisor argued which side. If there is no
-   material clash, write exactly `No material clash.`
-
-4. **Blind spots flagged in peer review** — include ONLY if Step 3
-   ran. One line per item flagged by 2+ reviewers. Skip this section
-   entirely when peer review was skipped.
-
-5. **Suggested actions** — up to 3 concrete actions that follow from
-   the agreement themes, dependency-ordered. Each action is one
-   sentence. No rationale — the agreement/clash sections above carry
-   it. List one if one is enough; do not pad to three.
-
-6. **Load-bearing assumptions** — one line each on the categories
+   material clash, write exactly `No material clash.` On a 1-advisor
+   panel, omit this section entirely.
+8. **Blind Spots from Peer Review** (H2) — include ONLY when Step 3
+   ran. One line per item flagged by ≥ 2 of the 3 reviewers. Omit
+   this section entirely when peer review was skipped.
+9. **Load-Bearing Assumptions** (H2) — one line each on the categories
    below. Use `N/A` inline for categories that are truly unrelated;
    do NOT omit the category. MEMORY.md and
    `tests/test_lesson_citations.py` grep these rows to detect
@@ -341,111 +351,84 @@ mechanical extraction.
    - **Year scope**: e.g., `2011–2025 ex. 2020`.
    - **Baseline anchor**: e.g., `vs champ_first_tv` or `vs IID`.
    - **Data sources**: file paths for load-bearing artifacts (must survive the stale-citation gate in `tests/test_lesson_citations.py`).
+10. **Framed Question + Prior Art** (H2) — the enriched prompt that
+    was sent to every advisor, plus the `Ox`/lessons block that was
+    injected.
+11. **Advisor Responses** (H2) — each advisor's full 150-250 word
+    draft under an H3 (`### The Contrarian`, etc.). Use
+    `<details><summary>` only if you want them collapsed by default;
+    otherwise plain H3s are fine.
+12. **Peer Review** (H2) — either all 3 reviewer outputs, or a single
+    line `_Peer review skipped (convergence)._` / `_Peer review
+    skipped (panel size = N)._`
+13. **Footer** — one-line timestamp + what was counciled.
 
 **Panel-size adjustments:**
 
-| Panel | Sections to produce |
+| Panel | Sections to include |
 |---|---|
-| 5-advisor, peer-reviewed (Step 3 ran) | 1, 2, 3, 4, 5, 6 |
-| 5-advisor, converged (Step 2.5 short-circuited) | 1, 2, 3, 5, 6 + one line: `Convergence: ≥4/5 advisors aligned; peer review skipped — calibrate confidence accordingly.` |
-| 2-advisor (bucket A / D) | 1, 2 (or `No agreement — both positions stand`), 3, 5 (max 2 actions), 6 |
-| 1-advisor (bucket B) | 1, 5 (max 2 actions), 6. Skip 2/3/4 — no panel to compare |
+| 5-advisor, peer-reviewed (Step 3 ran) | all 13 |
+| 5-advisor, converged (Step 2.5 short-circuited) | all except 8; add one line above section 9: `_Convergence: ≥4/5 advisors aligned; peer review skipped — calibrate confidence accordingly._` |
+| 2-advisor (bucket A / D) | all except 8; if advisors disagree, section 6 is `_No agreement — both positions stand._` |
+| 1-advisor (bucket B) | 1, 2, 3, 4, 5, 9, 10, 11, 13 (omit 6, 7, 8, 12 — no panel to compare, no peer review) |
 
-**No chairman sub-agent is dispatched.** The main agent reads the
-advisor drafts that are already in its context and writes the summary
-block directly. This is the step that replaces the previous
-`Agent(subagent_type=...)` chairman call, so the per-session
-sub-agent budget drops by one (11 → 10 at full scale; 6 → 5 when
-peer review ran; 2 → 1 on bucket-A / D; 1 → 0 on bucket B).
+**Deduplication rule:** every piece of information appears exactly
+once. Suggested Actions live only in the callout (section 4). Advisor
+drafts live only in section 11. Sections 5-8 (summary) never re-state
+advisor drafts verbatim. There is no longer an "agreement /
+disagreement" table — section 5 already carries the per-advisor
+bottom lines in a scannable form, and a second table rendering the
+same data in different syntax was redundant.
 
-### Step 5: Write the Council Report (single markdown file)
-
-After the Step 4 summary is produced in the main thread, write **one**
-markdown file that serves as both the scannable report AND the full
-transcript. Do not generate HTML, PDF, or any other format. Do not
-write a second `council-transcript-*.md` file — this single file is
-the artifact.
-
-**File:** `council-report-[timestamp].md`
-
-**Why one markdown file, not an HTML report + markdown transcript:** the
-old flow streamed a self-contained HTML document with inline CSS,
-collapsible `<details>` scaffolding, and visual grids, then wrote the
-same advisor drafts/peer reviews/verdict a second time as a
-`council-transcript-*.md`. Every byte of that HTML boilerplate and every
-duplicated sentence is emitted token-by-token. Markdown renders natively
-in the terminal and in every editor the user opens it in, needs no CSS,
-and only has to be serialized once.
-
-**Required structure (top-to-bottom, in this order):**
-
-1. `# Council Report — YYYY-MM-DD [topic slug]` (H1)
-2. **Question** — the user's raw question, one short paragraph.
-3. **Metadata block** — bucket (A/B/C/D/E), panel size + composition,
-   peer review status (`ran` / `skipped (convergence)` / `skipped (panel
-   size)`), timestamp.
-4. **Suggested Actions** — rendered as a blockquote callout (`>`
-   prefix) near the top. Extract verbatim from the Step 4 summary's
-   `Suggested actions` section. This appears exactly once — do NOT
-   repeat it inside the summary body below.
-5. **Council Summary** — the Step 4 output. Render the sections
-   `Per-advisor bottom line`, `Where advisors agree most`, `Where
-   advisors clash`, and (when peer review ran) `Blind spots flagged in
-   peer review` as H2s, followed by a final **Load-Bearing
-   Assumptions** H2 with the categories from Step 4 (Scoring encoding,
-   Opponent field, RNG / sample count, Year scope, Baseline anchor,
-   Data sources — `N/A` rows kept explicit). Omit the Suggested
-   Actions subsection here since it is already rendered in section 4.
-6. **Agreement / Disagreement Table** — a small markdown table with
-   one row per advisor: name, one-line bottom-line recommendation,
-   aligned/dissenting marker. Keep it to 5 short rows (or N for
-   smaller panels). This is a compact re-render of section 5's
-   per-advisor bullets; repeat is OK here because the format differs.
-7. **Framed Question + Prior Art** — the enriched prompt that was sent
-   to every advisor, plus the `Ox`/lessons block that was injected.
-8. **Advisor Responses** — each advisor's full 150-250 word draft under
-   an H3 (`### The Contrarian`, etc.). Use `<details><summary>` only if
-   you want them collapsed by default; otherwise plain H3s are fine.
-9. **Peer Review** — either all reviewer outputs under an H2, or a
-   single line `_Peer review skipped (convergence)._` / `_Peer review
-   skipped (panel size = N)._` with the justification.
-10. **Footer** — one-line timestamp + what was counciled.
-
-**Deduplication rule (unchanged, now enforced in one file):** every
-piece of information appears exactly once with one explicit exception:
-the agreement/disagreement table (section 6) re-renders section 5's
-per-advisor bullets in table form. Suggested Actions live only in the
-callout (section 4). Advisor drafts live only in section 8. The
-summary in section 5 never re-states advisor drafts verbatim.
+**Why writing the summary straight into the file:** producing the
+summary as in-thread output first and then re-serializing it into a
+`council-report-*.md` meant emitting the same bullets twice (once as
+main-thread text, once as file contents). Writing directly to the
+file cuts that duplication, shaves tokens from the context window,
+and collapses two user-visible "steps" into one.
 
 **What NOT to do:**
 - Do not emit any `<style>`, inline `style="..."`, or CSS.
 - Do not wrap the document in `<html>` / `<body>`.
 - Do not write a second file. `council-transcript-*.md` is deprecated —
   this single `council-report-*.md` replaces both.
+- Do not produce the summary as in-thread output before writing the
+  file; write directly to the file.
 - Do not open the file in a browser; the user reads markdown inline.
 
-### Step 6: Update the Lessons Index
+**Sub-agent budget (after these optimizations):**
 
-The single markdown file from Step 5 already contains the full
+| Path | Sub-agents |
+|---|---|
+| 5-advisor, peer-reviewed (bucket E, diverged) | 8 (5 drafts + 3 peer reviews) |
+| 5-advisor, converged (bucket E, Step 2.5 short-circuit) | 5 (drafts only) |
+| 2-advisor (bucket A / D) | 2 |
+| 1-advisor (bucket B) | 1 |
+
+Compare to the pre-optimization full scale of 11 (5 drafts + 5 peer
+reviews + 1 chairman).
+
+### Step 5: Update the Lessons Index
+
+The single markdown file from Step 4 already contains the full
 transcript content (framed question, bucket, panel size, advisor
 drafts, peer review, summary). The only remaining housekeeping is
 updating the consolidated lessons index.
 
 Recording the panel size and peer-review decision in the report's
 metadata block lets future Step 0 dedup-checks tell whether a prior
-verdict came from a full 5-advisor peer-reviewed deliberation, a
-converged-no-review short-circuit, or a 2-advisor re-litigation. That
-distinction matters when the user says "the council said X" — a
-2-advisor bucket-A verdict has different evidentiary weight than an
-11-sub-agent bucket-E verdict.
+verdict came from a full peer-reviewed deliberation (8 sub-agents), a
+converged-no-review short-circuit (5 sub-agents), or a 2-advisor
+re-litigation. That distinction matters when the user says "the
+council said X" — a 2-advisor bucket-A verdict has different
+evidentiary weight than a full bucket-E verdict.
 
 **A. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
 4 update rule:
 
 - Append one row to §3 with: next sequential `#`, date, one-line framed
-  question, one-line verdict (extracted from the Step 4 summary's
-  Suggested Actions).
+  question, one-line verdict (extracted from the report's Suggested
+  Actions callout).
 - If the verdict closes an open `Ox` item in §2 → move the item to §1 and
   leave `[closed <date>]` in §2.
 - If the verdict opens a new unresolved item → add a new `Ox` row with
@@ -489,11 +472,14 @@ council-report-[timestamp].md   # single markdown artifact: report + transcript
 ```
 
 The top of the file is the scannable verdict (question, suggested
-actions, per-advisor bottom lines, agreement / clash sections,
-agreement table). The bottom holds the framed question, advisor
-drafts, and peer review for later reference. No HTML, no PDF, no
-second transcript file — the old `council-report-*.html` +
-`council-transcript-*.md` split is deprecated.
+actions, per-advisor bottom lines, agreement and clash sections,
+peer-review blind spots when applicable, load-bearing assumptions).
+The bottom holds the framed question, advisor drafts, and peer review
+for later reference. No HTML, no PDF, no second transcript file — the
+old `council-report-*.html` + `council-transcript-*.md` split is
+deprecated, and the redundant agreement/disagreement table has been
+removed now that the per-advisor bottom-line section covers the same
+data.
 
 ---
 
