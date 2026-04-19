@@ -1,12 +1,9 @@
-# Pool Optimizer Backtest — Development Companion
-
-When to use: Any coding session in this repo, but especially when modifying
-pool optimizer logic, bracket construction, leverage analysis, or running
-MC pool backtests. Trigger explicitly with "backtest mode" or automatically
-when touching files under `src/optimization/`, `src/evaluation/`, or
-`scripts/mc_pool_backtest.py`.
-
 ---
+name: pool-optimizer-backtest
+description: Use when modifying pool optimizer logic, bracket construction, leverage analysis, or running MC pool backtests — auto-trigger when touching src/optimization/, src/evaluation/, or scripts/mc_pool_backtest.py
+---
+
+# Pool Optimizer Backtest — Development Companion
 
 ## Quick Reference
 
@@ -25,8 +22,11 @@ pytest tests/test_pool_strategy.py -v           # Strategy validation
 ```bash
 python scripts/mc_pool_backtest.py              # All modes, 2011-2025
 python scripts/mc_pool_backtest.py --modes seed noseed blend  # Specific modes
+python scripts/mc_pool_backtest.py --save-brackets --years 2023 2024 2025 2026  # Save pick-level brackets
 ```
 Results auto-log to `artifacts/backtest_runs/mc_pool_backtest_<ts>.txt`.
+`--save-brackets` writes per-year JSON to `artifacts/backtest_brackets/backtest_brackets_{year}.json`
+with full pick-level data, team-identity scores, and ranker mean_rank for each of 50 brackets per mode.
 
 ### Useful Pytest Markers
 ```bash
