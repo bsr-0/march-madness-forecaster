@@ -57,6 +57,9 @@ from src.prediction.seed_probabilities import (
 from src.simulation.pool_competition import (
     generate_opponent_brackets,
     score_brackets_against_outcome,
+    score_brackets_team_identity,
+    actual_winners_by_round,
+    picks_by_round,
     build_scoring_vector,
     ROUND_NAMES,
     GAMES_PER_ROUND,
@@ -1275,6 +1278,7 @@ def run_backtest(
     n_model=N_MODEL_BRACKETS,
     opponent_source="pool",
     hparam_fitter: HparamFitter = default_pool_hyperparameters,
+    save_brackets=False,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -1330,6 +1334,7 @@ def run_backtest(
     print(f"  {'-' * 90}")
 
     results = []
+    saved_brackets = {}  # year -> list of per-mode bracket dicts
 
     for year in years:
         # Walk-forward train window: every entry strictly < year. Single
@@ -1597,12 +1602,48 @@ def run_backtest(
                 }
             )
 
+            # Serialize pick-level brackets when --save-brackets is active.
+            if save_brackets:
+                winners_by_rnd = actual_winners_by_round(games)
+                ti_scores = score_brackets_team_identity(
+                    model_brackets, winners_by_rnd, first_round, ESPN_SCORING,
+                )
+                mode_bracket_records = []
+                for m in range(n_model):
+                    picks = picks_by_round(model_brackets[m], first_round)
+                    champion = list(picks["CHAMP"])[0] if picks["CHAMP"] else None
+                    final_four = sorted(picks["F4"]) if picks["F4"] else []
+                    mode_bracket_records.append({
+                        "bracket_idx": m,
+                        "score_team_identity": float(ti_scores[m]),
+                        "score_shape": float(model_scores[m]),
+                        "mean_rank": float(bracket_mean_ranks[m]),
+                        "champion": champion,
+                        "final_four": final_four,
+                        "picks": {rnd: sorted(teams) for rnd, teams in picks.items()},
+                    })
+                mode_bracket_records.sort(key=lambda x: -x["score_team_identity"])
+                saved_brackets.setdefault(year, []).append({
+                    "mode": mode_name,
+                    "brackets": mode_bracket_records,
+                })
+
         # opt_seed, opt_blend, opt_torvik, hedge_tv: DEPRECATED 2026-04-12.
         # See MEMORY.md §2 D6 and COUNCIL_LESSONS.md §3 rows 23-25 for evidence.
 
     if not results:
         print("\nNo results.")
         return 1
+
+    # --- Write saved brackets ---
+    if save_brackets and saved_brackets:
+        bracket_dir = Path("artifacts/backtest_brackets")
+        bracket_dir.mkdir(parents=True, exist_ok=True)
+        for yr, modes_data in saved_brackets.items():
+            out_path = bracket_dir / f"backtest_brackets_{yr}.json"
+            with open(out_path, "w") as f:
+                json.dump({"year": yr, "modes": modes_data}, f, indent=2)
+            print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
     # --- Aggregates ---
     print(f"\n{'=' * 100}")
@@ -1728,6 +1769,11 @@ def main():
         "strict — fails if missing), or seed (SEED_PICK_RATES fallback).",
     )
     parser.add_argument(
+        "--save-brackets",
+        action="store_true",
+        help="Save pick-level brackets to artifacts/backtest_brackets/ (JSON per year).",
+    )
+    parser.add_argument(
         "--no-log",
         action="store_true",
         help="Skip auto-logging to artifacts/backtest_runs/ (default: log every run).",
@@ -1802,6 +1848,7 @@ def main():
             n_model=args.n_model,
             opponent_source=args.opponent,
             hparam_fitter=fitter,
+            save_brackets=args.save_brackets,
         )
     finally:
         if log_file is not None:

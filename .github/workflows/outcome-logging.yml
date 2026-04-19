@@ -1,11 +1,12 @@
 name: Tournament Outcome Logging
 
 on:
-  schedule:
-    # Run twice daily during tournament (mid-afternoon and late night ET)
-    # March 18 - April 8 covers First Four through Championship
-    - cron: "0 20 * 3-4 *"    # 20:00 UTC = 4pm ET
-    - cron: "0 6 * 3-4 *"     # 06:00 UTC = 2am ET (catch late games)
+  # schedule:
+  #   # Re-enable during 2027 tournament window (mid-March through early April).
+  #   # Disabled 2026-04-18: tournament ended April 8; cron was firing daily
+  #   # through end of April creating empty outcome-log branches.
+  #   - cron: "0 20 * 3-4 *"    # 20:00 UTC = 4pm ET
+  #   - cron: "0 6 * 3-4 *"     # 06:00 UTC = 2am ET (catch late games)
   workflow_dispatch:
     inputs:
       year:
