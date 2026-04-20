@@ -1192,7 +1192,6 @@ def compute_bracket_win_probability(
         rng = np.random.default_rng(42)
 
     scoring_system = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
-    scoring_vector = build_scoring_vector(scoring_system)
 
     # Generate one set of opponent brackets (fixed field per estimation)
     opponents = generate_opponent_brackets(
@@ -1219,9 +1218,15 @@ def compute_bracket_win_probability(
         rng=rng,
     )
 
+    # Use team-identity scoring (real ESPN payout rules) rather than
+    # shape-encoded scoring.  O26 (§2) showed shape vs team-identity
+    # produces materially different bracket rankings (mean |Δρ| = 0.252).
     wins = 0
     for t in range(n_tournaments):
-        scores = score_brackets_against_outcome(all_brackets, outcomes[t], scoring_vector)
+        outcome_winners = picks_by_round(outcomes[t], first_round_matchups)
+        scores = score_brackets_team_identity(
+            all_brackets, outcome_winners, first_round_matchups, scoring_system,
+        )
         if scores[0] >= scores[1:].max():
             wins += 1
 

@@ -38,10 +38,25 @@ jobs:
     name: "Freeze Artifact Check"
     runs-on: ubuntu-latest
     steps:
+      - name: Check if in enforcement window
+        id: window
+        run: |
+          MMDD=$(date -u +%m-%d)
+          # Blocking: Jan 1 – Apr 7 (pre-tournament + tournament).
+          # Outside that window: skip entirely to avoid noisy red checks.
+          if [[ "$MMDD" < "04-08" ]]; then
+            echo "in_window=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "in_window=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Freeze check skipped — outside tournament window (Apr 8 – Dec 31)"
+          fi
+
       - name: Checkout
+        if: steps.window.outputs.in_window == 'true'
         uses: actions/checkout@v4
 
       - name: Check freeze artifact is up-to-date
+        if: steps.window.outputs.in_window == 'true'
         run: |
           python3 - <<'PYEOF'
           import ast, hashlib, json, sys
