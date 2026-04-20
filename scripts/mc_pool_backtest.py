@@ -60,6 +60,7 @@ from src.simulation.pool_competition import (
     score_brackets_team_identity,
     actual_winners_by_round,
     picks_by_round,
+    simulate_tournament_outcomes,
     build_scoring_vector,
     ROUND_NAMES,
     GAMES_PER_ROUND,
@@ -1279,6 +1280,7 @@ def run_backtest(
     opponent_source="pool",
     hparam_fitter: HparamFitter = default_pool_hyperparameters,
     save_brackets=False,
+    team_identity=False,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -1324,6 +1326,7 @@ def run_backtest(
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
     print(f"  Years: {len(years)}")
     print(f"  Hparam fitter: {hparam_fitter.__module__}.{hparam_fitter.__name__}")
+    print(f"  Scoring: {'team-identity (real ESPN, §2 O26/O27)' if team_identity else 'shape-encoded'}")
     print()
 
     header = (
@@ -1393,6 +1396,8 @@ def run_backtest(
         # Build actual outcome. Now that region_order matches reality, every
         # F4 and CHAMP lookup must succeed — any miss is a hard error.
         actual = build_actual_outcome(first_round, games)
+        # Team-identity scoring needs per-round winner sets (not the bool vector).
+        winners_by_rnd = actual_winners_by_round(games) if team_identity else None
 
         # Build pairwise probs for opponent bracket generation
         seed_pw = build_seed_probabilities(seeds)
@@ -1541,11 +1546,23 @@ def run_backtest(
             # Sample stochastic model brackets using the mode's sampler
             model_brackets = sampler(first_round, rp, n_model, rng)
 
-            # Score all model brackets against actual outcome
-            model_scores = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
+            # Score all model brackets against actual outcome (for reporting
+            # BestScr / MeanScr and for --save-brackets).
+            if team_identity:
+                model_scores_actual = score_brackets_team_identity(
+                    model_brackets, winners_by_rnd, first_round, ESPN_SCORING,
+                )
+            else:
+                model_scores_actual = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
 
-            # For each repeat: generate opponents, score everything, rank
-            # Track ranks for each model bracket across repeats
+            # For each repeat: simulate a tournament outcome, generate
+            # opponents, score everything against that SIMULATED outcome,
+            # rank.  Under --team-identity the ranking uses simulated
+            # outcomes (not the actual result) so that mean_rank reflects
+            # the pre-tournament information the ranker would actually
+            # have — fixing the ρ = −1.000 artifact where ranking against
+            # the known actual outcome trivially agreed with
+            # score_team_identity.
             all_ranks = np.zeros((n_model, n_repeats))
 
             for rep in range(n_repeats):
@@ -1557,13 +1574,35 @@ def run_backtest(
                     seeds,
                     rng,
                 )
-                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+                if team_identity:
+                    # Simulate one tournament outcome for this repeat.
+                    sim_outcomes, sim_by_round = simulate_tournament_outcomes(
+                        n_tournaments=1,
+                        first_round_matchups=first_round,
+                        matchup_probs=seed_pw,
+                        seeds=seeds,
+                        noise_std=0.16,
+                        rng=rng,
+                    )
+                    sim_winners = {
+                        rnd: set(sim_by_round[0][ri])
+                        for ri, rnd in enumerate(ROUND_NAMES)
+                    }
+                    model_scores_sim = score_brackets_team_identity(
+                        model_brackets, sim_winners, first_round, ESPN_SCORING,
+                    )
+                    opp_scores = score_brackets_team_identity(
+                        opp, sim_winners, first_round, ESPN_SCORING,
+                    )
+                else:
+                    model_scores_sim = model_scores_actual
+                    opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
 
                 # Rank each model bracket against this opponent field
                 for m in range(n_model):
                     # How many opponents scored strictly higher + 1
-                    better = np.sum(opp_scores > model_scores[m])
-                    tied = np.sum(opp_scores == model_scores[m])
+                    better = np.sum(opp_scores > model_scores_sim[m])
+                    tied = np.sum(opp_scores == model_scores_sim[m])
                     # Average rank among ties (model is 1 of the tied group)
                     all_ranks[m, rep] = better + 1 + tied / 2.0
 
@@ -1579,8 +1618,8 @@ def run_backtest(
             p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
             p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
 
-            best_score = float(model_scores[best_bracket_idx])
-            mean_score = float(model_scores.mean())
+            best_score = float(model_scores_actual[best_bracket_idx])
+            mean_score = float(model_scores_actual.mean())
 
             print(
                 f"  {year:<6} {mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
@@ -1616,7 +1655,7 @@ def run_backtest(
                     mode_bracket_records.append({
                         "bracket_idx": m,
                         "score_team_identity": float(ti_scores[m]),
-                        "score_shape": float(model_scores[m]),
+                        "score_shape": float(model_scores_actual[m]),
                         "mean_rank": float(bracket_mean_ranks[m]),
                         "champion": champion,
                         "final_four": final_four,
@@ -1774,6 +1813,12 @@ def main():
         help="Save pick-level brackets to artifacts/backtest_brackets/ (JSON per year).",
     )
     parser.add_argument(
+        "--team-identity",
+        action="store_true",
+        help="Use team-identity scoring (real ESPN) instead of shape-encoded scoring. "
+        "Slower but matches actual pool payouts. See §2 O26/O27.",
+    )
+    parser.add_argument(
         "--no-log",
         action="store_true",
         help="Skip auto-logging to artifacts/backtest_runs/ (default: log every run).",
@@ -1849,6 +1894,7 @@ def main():
             opponent_source=args.opponent,
             hparam_fitter=fitter,
             save_brackets=args.save_brackets,
+            team_identity=args.team_identity,
         )
     finally:
         if log_file is not None:
