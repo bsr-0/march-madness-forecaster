@@ -16,15 +16,35 @@ or run directly:  python mcp_server.py
 
 from __future__ import annotations
 
+import io
 import json
+import os
+import zipfile
 from pathlib import Path
 from typing import Optional
 
+import requests
 from mcp.server.fastmcp import FastMCP
 
 ROOT = Path(__file__).parent
 
 mcp = FastMCP("march-madness-forecaster")
+
+_GITHUB_REPO = "bsr-0/march-madness-forecaster"
+_GITHUB_API = "https://api.github.com"
+
+
+def _gh(method: str, path: str, **kwargs) -> requests.Response:
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GITHUB_TOKEN environment variable is not set")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    return requests.request(method, f"{_GITHUB_API}{path}", headers=headers, **kwargs)
+
 
 # Pool report files by mode
 _POOL_REPORTS: dict[str, str] = {
@@ -410,6 +430,195 @@ def run_pool_optimization(
             f"Tip: use get_leverage_picks(mode='{mode}') to read the last "
             f"pre-computed result instead."
         )
+
+
+# ---------------------------------------------------------------------------
+# GitHub tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def list_branches(pattern: Optional[str] = None) -> str:
+    """
+    List remote branches for this repository, optionally filtered by a prefix.
+
+    Args:
+        pattern: Optional substring to filter branch names (e.g. "claude/").
+
+    Returns:
+        Newline-separated list of matching branch names.
+    """
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/branches", params={"per_page": 100})
+    r.raise_for_status()
+    names = [b["name"] for b in r.json()]
+    if pattern:
+        names = [n for n in names if pattern in n]
+    return "\n".join(names) if names else "No branches found."
+
+
+@mcp.tool()
+def delete_branch(branch_name: str, confirm: bool = False) -> str:
+    """
+    Delete a remote branch. Restricted to claude/* branches only.
+
+    Args:
+        branch_name: Branch to delete — must start with "claude/".
+        confirm: Must be True to execute; prevents accidental deletion.
+
+    Returns:
+        Success or refusal message.
+    """
+    if not branch_name.startswith("claude/"):
+        return f"Refused: only claude/* branches may be deleted. Got '{branch_name}'."
+    if not confirm:
+        return f"Refused: set confirm=True to delete '{branch_name}'."
+    r = _gh("DELETE", f"/repos/{_GITHUB_REPO}/git/refs/heads/{branch_name}")
+    if r.status_code == 204:
+        return f"Deleted branch '{branch_name}'."
+    return f"Failed ({r.status_code}): {r.text}"
+
+
+@mcp.tool()
+def list_pull_requests(state: str = "open") -> str:
+    """
+    List pull requests for this repository.
+
+    Args:
+        state: Filter by state — "open" (default), "closed", or "all".
+
+    Returns:
+        Formatted list of PRs with number, title, branches, and author.
+    """
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/pulls", params={"state": state, "per_page": 30})
+    r.raise_for_status()
+    prs = r.json()
+    if not prs:
+        return f"No {state} pull requests."
+    lines = [
+        f"PR #{pr['number']} [{pr['state']}] {pr['title']} "
+        f"— {pr['head']['ref']} → {pr['base']['ref']} (@{pr['user']['login']})"
+        for pr in prs
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_workflow_runs(workflow: Optional[str] = None, limit: int = 10) -> str:
+    """
+    List recent CI workflow runs for this repository.
+
+    Args:
+        workflow: Optional workflow filename or ID to filter by (e.g. "auto-merge-claude.yml").
+        limit: Max runs to return (default 10).
+
+    Returns:
+        Formatted list of runs with ID, name, status, conclusion, branch, and timestamp.
+    """
+    params = {"per_page": limit}
+    if workflow:
+        r = _gh("GET", f"/repos/{_GITHUB_REPO}/actions/workflows/{workflow}/runs", params=params)
+    else:
+        r = _gh("GET", f"/repos/{_GITHUB_REPO}/actions/runs", params=params)
+    r.raise_for_status()
+    runs = r.json().get("workflow_runs", [])
+    if not runs:
+        return "No workflow runs found."
+    lines = [
+        f"#{run['id']}  {run['name']}  [{run['status']}/{run['conclusion']}]"
+        f"  branch={run['head_branch']}  {run['created_at']}"
+        for run in runs
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def create_pull_request(
+    title: str,
+    head: str,
+    body: str = "",
+    base: str = "main",
+) -> str:
+    """
+    Create a pull request from a head branch into base (default: main).
+
+    Args:
+        title: PR title.
+        head: Source branch name.
+        body: Optional PR description (markdown supported).
+        base: Target branch (default "main").
+
+    Returns:
+        PR number and URL on success, or error message.
+    """
+    r = _gh(
+        "POST",
+        f"/repos/{_GITHUB_REPO}/pulls",
+        json={"title": title, "body": body, "head": head, "base": base},
+    )
+    if r.status_code == 201:
+        pr = r.json()
+        return f"Created PR #{pr['number']}: {pr['html_url']}"
+    return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
+
+
+@mcp.tool()
+def get_workflow_run_logs(run_id: int) -> str:
+    """
+    Fetch logs for a CI workflow run. Returns the last 20 000 characters.
+
+    Args:
+        run_id: Numeric workflow run ID (visible in get_workflow_runs output).
+
+    Returns:
+        Concatenated log content from all jobs, truncated to last 20 000 chars.
+    """
+    # GitHub returns a 302 redirect to a pre-signed zip download URL.
+    r = _gh(
+        "GET",
+        f"/repos/{_GITHUB_REPO}/actions/runs/{run_id}/logs",
+        allow_redirects=False,
+    )
+    if r.status_code == 302:
+        r = requests.get(r.headers["Location"])
+    if r.status_code != 200:
+        return f"Failed to fetch logs ({r.status_code}): {r.text}"
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+            parts = [
+                f"=== {name} ===\n{zf.read(name).decode('utf-8', errors='replace')}" for name in sorted(zf.namelist())
+            ]
+        combined = "\n\n".join(parts)
+        max_chars = 20_000
+        if len(combined) > max_chars:
+            return combined[-max_chars:] + "\n\n[truncated — showing last 20 000 chars]"
+        return combined
+    except Exception as e:
+        return f"Log parse error: {e}"
+
+
+@mcp.tool()
+def merge_pull_request(pr_number: int, merge_method: str = "rebase") -> str:
+    """
+    Merge a pull request. Defaults to rebase to preserve linear history.
+
+    Args:
+        pr_number: PR number to merge.
+        merge_method: "rebase" (default), "squash", or "merge".
+
+    Returns:
+        Success message or error details.
+    """
+    if merge_method not in ("rebase", "squash", "merge"):
+        return f"Invalid merge_method '{merge_method}'. Use: rebase, squash, merge."
+    r = _gh(
+        "PUT",
+        f"/repos/{_GITHUB_REPO}/pulls/{pr_number}/merge",
+        json={"merge_method": merge_method},
+    )
+    if r.status_code == 200:
+        return f"PR #{pr_number} merged via {merge_method}."
+    return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
 
 
 if __name__ == "__main__":
