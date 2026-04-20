@@ -125,6 +125,24 @@ march-madness list-snapshots
 march-madness restore-snapshot --name <snapshot-name>
 ```
 
+## Production Path (Frozen 2026)
+
+The 2026 tournament predictor is a frozen, governance-locked pipeline. It validates config hashes, source tree hashes, dependency versions, and freeze artifacts before execution. No code or config changes are permitted after the freeze date.
+
+```bash
+march-madness run-production-2026
+```
+
+For future years, use the year-parameterized runner:
+
+```bash
+march-madness run-production --year 2027
+```
+
+### Research Modules Not Used in Production
+
+GNN, transformer, embedding projections, and stacking modules exist in the codebase for research purposes but are disabled in production (`enable_gnn=False`, `enable_transformer=False`, etc.). The production path hard-fails if any experimental module is enabled.
+
 ## Development
 
 ```bash

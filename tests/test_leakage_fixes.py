@@ -909,7 +909,7 @@ class TestHardTournamentDateCutoff:
         """Years not in TOURNAMENT_START_DATES use March 14 fallback."""
         from src.pipeline.sota import TOURNAMENT_START_DATES
 
-        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2030, random_seed=42))
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2030, random_seed=42, enforce_production_path=False))
 
         # 2030 is not in the dict — should fall back to March 14
         assert 2030 not in TOURNAMENT_START_DATES

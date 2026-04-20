@@ -919,65 +919,36 @@ class SOTAPipelineConfig:
             violations.append("enable_transformer=True")
         if self.enable_embedding_projections:
             violations.append("enable_embedding_projections=True")
+        # Year partition validation: dynamic for year >= 2027, hardcoded for <= 2026
+        if self.year >= 2027:
+            _expected_holdout = [self.year - 1]
+            _expected_dev = sorted(y for y in range(2008, self.year - 1) if y != 2020)
+        else:
+            _expected_holdout = [2025]
+            _expected_dev = sorted(y for y in range(2008, 2025) if y != 2020)
         if not self.holdout_years:
             violations.append("holdout_years is empty")
-        elif sorted(set(self.holdout_years)) != [2025]:
-            violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
-        expected_dev_years = [
-            2008,
-            2009,
-            2010,
-            2011,
-            2012,
-            2013,
-            2014,
-            2015,
-            2016,
-            2017,
-            2018,
-            2019,
-            2021,
-            2022,
-            2023,
-            2024,
-        ]
+        elif sorted(set(self.holdout_years)) != _expected_holdout:
+            violations.append(f"holdout_years={self.holdout_years} (expected {_expected_holdout})")
         if not self.dev_years:
             violations.append("dev_years is empty")
-        elif sorted(set(self.dev_years)) != expected_dev_years:
-            violations.append("dev_years must be 2008-2019 and 2021-2024 for locked production path")
+        elif sorted(set(self.dev_years)) != _expected_dev:
+            violations.append(f"dev_years mismatch (expected 2008-{self.year - 2} excluding 2020)")
         cal_years = self.resolve_calibration_years()
-        # Valid options for production calibration years:
-        #   [2025]                     — holdout-only (production default)
-        #   full historical list       — all tournament years (also valid)
-        _full_cal = [
-            2008,
-            2009,
-            2010,
-            2011,
-            2012,
-            2013,
-            2014,
-            2015,
-            2016,
-            2017,
-            2018,
-            2019,
-            2021,
-            2022,
-            2023,
-            2024,
-            2025,
-        ]
-        _holdout_only = sorted(self.holdout_years) if self.holdout_years else [2025]
+        # For year <= 2026, accept the legacy default calibration_years (up to 2025)
+        # For year >= 2027, derive from self.year
+        _cal_upper = self.year if self.year >= 2027 else 2026
+        _full_cal = sorted(y for y in range(2008, _cal_upper) if y != 2020)
+        _holdout_only = sorted(self.holdout_years) if self.holdout_years else _expected_holdout
         if cal_years not in (_holdout_only, _full_cal):
             violations.append(f"calibration_years={cal_years} (expected holdout years or full historical list)")
 
         if violations:
             raise ValueError(
-                "Locked production path violation. Expected shipped tournament path: "
-                "simple model, production probability profile, calibrated-only probabilities, "
-                "no agent orchestration, no GNN/transformer/stacking/market blend, "
-                "dev years 2016-2024, holdout/calibration year 2025. "
+                f"Locked production path violation for year {self.year}. "
+                "Expected: simple model, production probability profile, "
+                "calibrated-only probabilities, no GNN/transformer/stacking. "
+                f"Holdout=[{self.year - 1}], dev=2008-{self.year - 2} (excl 2020). "
                 f"Violations: {', '.join(violations)}"
             )
 

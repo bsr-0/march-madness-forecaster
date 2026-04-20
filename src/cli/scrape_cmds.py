@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from ._helpers import _default_year
+
 
 def scrape_rosters(args):
     """Scrape cbbpy box scores to build per-season roster payloads."""
@@ -139,7 +141,7 @@ def register(subparsers):
         "--start-year", type=int, default=2005, help="First season to scrape (inclusive, default: 2005)"
     )
     roster_parser.add_argument(
-        "--end-year", type=int, default=2026, help="Last season to scrape (inclusive, default: 2026)"
+        "--end-year", type=int, default=_default_year(), help="Last season to scrape (inclusive, default: current year)"
     )
     roster_parser.add_argument(
         "--cache-dir",
@@ -174,8 +176,8 @@ def register(subparsers):
         help="First season to process (inclusive, default: 2005)",
     )
     enrich_parser.add_argument(
-        "--end-year", type=int, default=2026,
-        help="Last season to process (inclusive, default: 2026)",
+        "--end-year", type=int, default=_default_year(),
+        help="Last season to process (inclusive, default: current year)",
     )
     enrich_parser.set_defaults(func=enrich_rosters)
 
@@ -197,8 +199,8 @@ def register(subparsers):
         help="Scrape conference tournament seeds from ESPN API",
     )
     seed_scrape_parser.add_argument(
-        "--year", type=int, default=2026,
-        help="Season year (default: 2026)",
+        "--year", type=int, default=_default_year(),
+        help="Season year (default: current year)",
     )
     seed_scrape_parser.add_argument(
         "--output", "-o", default=None,

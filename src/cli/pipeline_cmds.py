@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ._helpers import (
     _build_pipeline_config,
+    _default_year,
     _run_pipeline_and_report,
     _guard_production_2026,
     _load_manifest,
@@ -40,6 +41,49 @@ def run_sota_from_manifest(args):
     _guard_production_2026(config)
     exit_code, _ = _run_pipeline_and_report(config, args.output)
     return exit_code
+
+
+def _run_production_cmd_with_defaults(args):
+    """Fill year-dependent defaults, then delegate to run_production_cmd."""
+    year = args.year
+    if args.output is None:
+        args.output = f"artifacts/production_report_{year}.json"
+    if args.governance_report is None:
+        args.governance_report = f"artifacts/production_governance_report_{year}.json"
+    return run_production_cmd(args)
+
+
+def run_production_cmd(args):
+    """Run the year-parameterized production path."""
+    from ..governance.production_runner_generic import run_production
+    from ..governance.production_validator import ProductionValidationError
+    from ..pipeline.sota import DataRequirementError
+
+    year = args.year
+    config_path = args.config or f"configs/production_{year}.json"
+
+    try:
+        report, governance_report = run_production(
+            year=year,
+            config_path=config_path,
+            output_report_path=args.output,
+            governance_report_path=args.governance_report,
+            production_manifest_path=getattr(args, "production_manifest", None),
+        )
+    except ProductionValidationError as exc:
+        print(f"Production validation error: {exc}")
+        return 1
+    except DataRequirementError as exc:
+        print(f"Production data requirement error: {exc}")
+        return 1
+
+    print(f"\u2713 Production run complete for {year}: {args.output}")
+    print(f"\u2713 Governance report: {args.governance_report}")
+    print(
+        "Production path verification: "
+        f"{report.get('production_path_verification', {}).get('probability_profile', 'unknown')}"
+    )
+    return 0
 
 
 def run_production_2026_cmd(args):
@@ -108,7 +152,7 @@ def register(subparsers):
         help="Generate diverse bracket portfolio (1000 brackets for Kaggle 2024+ format)",
     )
     add_common_pipeline_args(sota_parser)
-    sota_parser.set_defaults(year=2026)
+    sota_parser.set_defaults(year=_default_year())
     sota_parser.set_defaults(func=run_sota)
 
     # sota-from-manifest
@@ -148,3 +192,31 @@ def register(subparsers):
         help="Output human-readable governance report path",
     )
     production_parser.set_defaults(func=run_production_2026_cmd)
+
+    # run-production (year-parameterized)
+    generic_prod_parser = subparsers.add_parser(
+        "run-production",
+        help="Run the production predictor for any year (year-parameterized)",
+    )
+    generic_prod_parser.add_argument(
+        "--year",
+        type=int,
+        required=True,
+        help="Target tournament year (e.g. 2027)",
+    )
+    generic_prod_parser.add_argument(
+        "--config",
+        default=None,
+        help="Production config JSON (default: configs/production_{year}.json)",
+    )
+    generic_prod_parser.add_argument(
+        "--output",
+        default=None,
+        help="Output production report path (default: artifacts/production_report_{year}.json)",
+    )
+    generic_prod_parser.add_argument(
+        "--governance-report",
+        default=None,
+        help="Output governance report path (default: artifacts/production_governance_report_{year}.json)",
+    )
+    generic_prod_parser.set_defaults(func=_run_production_cmd_with_defaults)

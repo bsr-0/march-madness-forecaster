@@ -34,6 +34,8 @@ import logging
 import sys
 from pathlib import Path
 
+from ._helpers import _default_year
+
 logger = logging.getLogger(__name__)
 
 # Standard ESPN bracket pool scoring
@@ -45,6 +47,24 @@ _DEFAULT_SCORING = {
     "F4": 160,
     "CHAMP": 320,
 }
+
+
+def _write_submission(bracket: dict, year: int, submission_path: str) -> None:
+    """Extract the #1 bracket and write a standalone submission JSON."""
+    submission = {
+        "year": year,
+        "champion": bracket["champion"],
+        "final_four": bracket["final_four"],
+        "picks": bracket["picks"],
+        "win_probability": bracket.get("win_probability"),
+        "expected_points": bracket.get("expected_points"),
+        "prob_mode": bracket.get("prob_mode"),
+        "construction_mode": bracket.get("construction_mode"),
+        "risk_level": bracket.get("risk_level"),
+    }
+    with open(submission_path, "w") as f:
+        json.dump(submission, f, indent=2, default=str)
+    print(f"\nSubmission bracket saved to {submission_path}")
 
 
 def run_optimize_pool(args):
@@ -67,6 +87,7 @@ def run_optimize_pool(args):
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
+    submission_path = getattr(args, "submission", None)
     mode = getattr(args, "mode", "auto")
 
     # --- Step 1: Load tournament seeds ---
@@ -120,6 +141,7 @@ def run_optimize_pool(args):
             scoring_name=args.scoring,
             data_dir=args.data_dir,
             walk_forward=walk_forward,
+            submission_path=submission_path,
         )
 
     # --- Step 2b: Single-mode probability build ---
@@ -204,6 +226,7 @@ def run_optimize_pool(args):
             output_path=output_path,
             payout=payout,
             scoring_name=args.scoring,
+            submission_path=submission_path,
         )
 
     include_champion_augmentation = getattr(args, "include_champion_augmentation", False)
@@ -362,6 +385,10 @@ def run_optimize_pool(args):
             )
 
     print(f"\nReport saved to {output_path}")
+
+    if submission_path and recommended_bracket is not None:
+        _write_submission(recommended_bracket.to_dict(), year, submission_path)
+
     return 0
 
 
@@ -496,6 +523,7 @@ def _run_det_construction(
     output_path,
     payout,
     scoring_name,
+    submission_path=None,
 ):
     """Generate brackets via direct construct_bracket() risk-level sweep.
 
@@ -606,6 +634,10 @@ def _run_det_construction(
         print(f"    Final Four: {f4_str}")
 
     print(f"\nReport saved to {output_path}")
+
+    if submission_path and brackets:
+        _write_submission(brackets[0], year, submission_path)
+
     return 0
 
 
@@ -622,6 +654,7 @@ def _run_auto_mode(
     data_dir,
     walk_forward,
     construction_modes=None,
+    submission_path=None,
 ):
     """Generate brackets from ALL probability modes, deduplicate, rank by P(1st).
 
@@ -779,6 +812,10 @@ def _run_auto_mode(
         print(f"    Final Four: {f4_str}")
 
     print(f"\nReport saved to {output_path}")
+
+    if submission_path and brackets:
+        _write_submission(brackets[0], year, submission_path)
+
     return 0
 
 
@@ -1076,8 +1113,8 @@ def register(subparsers):
         "--year",
         "-y",
         type=int,
-        default=2026,
-        help="Tournament year (default: 2026)",
+        default=_default_year(),
+        help="Tournament year (default: current year)",
     )
     parser.add_argument(
         "--pool-size",
@@ -1113,6 +1150,12 @@ def register(subparsers):
         "-o",
         default="pool_report.json",
         help="Output report path (default: pool_report.json)",
+    )
+    parser.add_argument(
+        "--submission",
+        "-s",
+        default=None,
+        help="Write the #1 ranked bracket as a standalone submission JSON (e.g. bracket_2027_submission.json)",
     )
     parser.add_argument(
         "--no-walk-forward",

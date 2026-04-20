@@ -1,7 +1,13 @@
 """Shared CLI helpers used by multiple command modules."""
 
+import datetime
 import json
 from pathlib import Path
+
+
+def _default_year() -> int:
+    """Current calendar year — used as the default --year across CLI commands."""
+    return datetime.date.today().year
 
 from ..pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
 from ..governance.production_validator import ProductionValidationError
@@ -63,7 +69,7 @@ def _build_pipeline_config(args, path_overrides=None):
         transfer_portal_json=path_overrides.get("transfer_portal_json", getattr(args, "transfer_portal", None)),
         scoring_rules_json=path_overrides.get("scoring_rules_json", getattr(args, "scoring_rules", None)),
         calibration_method=getattr(args, "calibration", "temperature"),
-        random_seed=getattr(args, "seed", 2026),
+        random_seed=getattr(args, "seed", _default_year()),
         scrape_live=getattr(args, "scrape_live", False),
         data_cache_dir=getattr(args, "cache_dir", "data/raw"),
         injury_noise_samples=getattr(args, "injury_noise_samples", 10000),
@@ -182,12 +188,12 @@ def _resolve_manifest_paths(args, manifest, base_dir):
 
 def add_common_pipeline_args(parser):
     """Add the CLI arguments shared by sota and sota-from-manifest."""
-    parser.add_argument("--year", type=int, default=None, help="Season year (default: 2026)")
+    parser.add_argument("--year", type=int, default=None, help="Season year (default: current year)")
     parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     parser.add_argument("--pool-size", type=int, default=100, help="Bracket pool size")
     parser.add_argument("--injury-noise-samples", type=int, default=10000,
                         help="Player-level injury/noise MC samples per matchup")
-    parser.add_argument("--seed", type=int, default=2026, help="Random seed")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed (default: current year)")
     parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"],
                         default="temperature")
     parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping")
