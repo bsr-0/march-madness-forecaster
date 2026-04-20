@@ -621,5 +621,162 @@ def merge_pull_request(pr_number: int, merge_method: str = "rebase") -> str:
     return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
 
 
+@mcp.tool()
+def create_branch(branch_name: str, from_ref: str = "main") -> str:
+    """
+    Create a new remote branch from an existing ref.
+
+    Args:
+        branch_name: Name for the new branch.
+        from_ref: Branch, tag, or commit SHA to branch from (default "main").
+
+    Returns:
+        Success message with the new branch SHA, or error details.
+    """
+    # Resolve the ref to a SHA first
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/git/ref/heads/{from_ref}")
+    if r.status_code != 200:
+        # Try as a tag
+        r = _gh("GET", f"/repos/{_GITHUB_REPO}/git/ref/tags/{from_ref}")
+    if r.status_code != 200:
+        return f"Could not resolve ref '{from_ref}' ({r.status_code}): {r.json().get('message', r.text)}"
+    sha = r.json()["object"]["sha"]
+
+    r = _gh(
+        "POST",
+        f"/repos/{_GITHUB_REPO}/git/refs",
+        json={"ref": f"refs/heads/{branch_name}", "sha": sha},
+    )
+    if r.status_code == 201:
+        return f"Created branch '{branch_name}' at {sha[:7]} (from {from_ref})."
+    return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
+
+
+@mcp.tool()
+def trigger_workflow(workflow_id: str, ref: str = "main", inputs: Optional[dict] = None) -> str:
+    """
+    Trigger a workflow_dispatch event for a GitHub Actions workflow.
+
+    Args:
+        workflow_id: Workflow filename (e.g. "data-ingestion.yml") or numeric ID.
+        ref: Branch or tag to run the workflow on (default "main").
+        inputs: Optional dict of workflow input parameters.
+
+    Returns:
+        Success message or error details.
+    """
+    r = _gh(
+        "POST",
+        f"/repos/{_GITHUB_REPO}/actions/workflows/{workflow_id}/dispatches",
+        json={"ref": ref, "inputs": inputs or {}},
+    )
+    if r.status_code == 204:
+        return f"Triggered workflow '{workflow_id}' on ref '{ref}'."
+    return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
+
+
+@mcp.tool()
+def get_pr_review_comments(pr_number: int) -> str:
+    """
+    Fetch review comments (inline code comments) on a pull request.
+
+    Args:
+        pr_number: PR number.
+
+    Returns:
+        Formatted list of review comments with author, file, line, and body.
+    """
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/pulls/{pr_number}/comments", params={"per_page": 50})
+    r.raise_for_status()
+    comments = r.json()
+    if not comments:
+        return f"No review comments on PR #{pr_number}."
+    lines = [f"PR #{pr_number} review comments ({len(comments)} total)", ""]
+    for c in comments:
+        path = c.get("path", "?")
+        line = c.get("line") or c.get("original_line", "?")
+        author = c["user"]["login"]
+        body = c["body"].strip()
+        lines.append(f"@{author}  {path}:{line}")
+        lines.append(f"  {body}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def add_pr_comment(pr_number: int, body: str) -> str:
+    """
+    Post a top-level comment on a pull request.
+
+    Args:
+        pr_number: PR number.
+        body: Comment text (markdown supported).
+
+    Returns:
+        URL of the created comment, or error details.
+    """
+    r = _gh(
+        "POST",
+        f"/repos/{_GITHUB_REPO}/issues/{pr_number}/comments",
+        json={"body": body},
+    )
+    if r.status_code == 201:
+        return f"Comment posted: {r.json()['html_url']}"
+    return f"Failed ({r.status_code}): {r.json().get('message', r.text)}"
+
+
+@mcp.tool()
+def get_file_contents(path: str, ref: str = "main") -> str:
+    """
+    Read a file from the repository without a local checkout.
+
+    Args:
+        path: File path relative to repo root (e.g. "configs/production_2026.json").
+        ref: Branch, tag, or commit SHA (default "main").
+
+    Returns:
+        Decoded file contents, truncated to 20 000 chars if large.
+    """
+    import base64
+
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/contents/{path}", params={"ref": ref})
+    if r.status_code == 404:
+        return f"File not found: '{path}' on ref '{ref}'."
+    r.raise_for_status()
+    data = r.json()
+    if data.get("type") != "file":
+        return f"'{path}' is not a file (type={data.get('type')})."
+    content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
+    max_chars = 20_000
+    if len(content) > max_chars:
+        return content[:max_chars] + f"\n\n[truncated — file is {len(content)} chars]"
+    return content
+
+
+@mcp.tool()
+def list_issues(state: str = "open") -> str:
+    """
+    List issues for this repository.
+
+    Args:
+        state: Filter by state — "open" (default), "closed", or "all".
+
+    Returns:
+        Formatted list of issues with number, title, labels, and author.
+    """
+    r = _gh("GET", f"/repos/{_GITHUB_REPO}/issues", params={"state": state, "per_page": 30})
+    r.raise_for_status()
+    # GitHub issues endpoint also returns PRs; filter them out
+    issues = [i for i in r.json() if "pull_request" not in i]
+    if not issues:
+        return f"No {state} issues."
+    lines = []
+    for i in issues:
+        labels = ", ".join(lb["name"] for lb in i.get("labels", []))
+        label_str = f"  [{labels}]" if labels else ""
+        lines.append(f"#{i['number']} {i['title']}{label_str} (@{i['user']['login']})")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run()
