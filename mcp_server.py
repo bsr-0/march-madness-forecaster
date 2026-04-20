@@ -778,5 +778,48 @@ def list_issues(state: str = "open") -> str:
     return "\n".join(lines)
 
 
+@mcp.tool()
+def run_python(code: str, timeout: int = 30) -> str:
+    """
+    Execute Python code in the project environment and return stdout + stderr.
+
+    Runs in a subprocess with cwd set to the repo root so imports like
+    `from src.optimization.pool_optimizer import ...` work out of the box.
+    Output is capped at 20 000 chars. File writes are not blocked but the
+    subprocess has no elevated permissions beyond the current user.
+
+    Args:
+        code: Python source code to execute.
+        timeout: Max seconds before the subprocess is killed (default 30).
+
+    Returns:
+        Combined stdout and stderr output, or a timeout/error message.
+    """
+    import subprocess
+    import sys
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(ROOT),
+        )
+        output = result.stdout
+        if result.stderr:
+            output += ("\n" if output else "") + "--- stderr ---\n" + result.stderr
+        if not output:
+            return f"(no output, exit code {result.returncode})"
+        max_chars = 20_000
+        if len(output) > max_chars:
+            return output[:max_chars] + f"\n\n[truncated — {len(output)} chars total]"
+        return output
+    except subprocess.TimeoutExpired:
+        return f"Timed out after {timeout}s."
+    except Exception as e:
+        return f"Failed to run subprocess: {e}"
+
+
 if __name__ == "__main__":
     mcp.run()
