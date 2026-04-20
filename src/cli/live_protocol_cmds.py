@@ -1,5 +1,7 @@
 """Phase 7/8 workflow commands: reproducible pipelines and 2026 live protocol."""
 
+from ._helpers import _default_year
+
 
 def handle_train_historical_snapshot(args):
     from ..workflows.reproducible import train_historical_snapshot
@@ -170,7 +172,7 @@ def register(subparsers):
         help="Quasi-prospective (Level 2) evaluation against frozen pipeline",
     )
     ep_parser.add_argument("--freeze-file", default="artifacts/freeze_manifest_2026.json", help="Freeze artifact")
-    ep_parser.add_argument("--year", type=int, default=2026, help="Tournament year to evaluate")
+    ep_parser.add_argument("--year", type=int, default=_default_year(), help="Tournament year to evaluate")
     ep_parser.add_argument("--historical-dir", default="data/raw/historical", help="Historical data dir")
     ep_parser.add_argument("--output-dir", default="artifacts", help="Output directory")
     ep_parser.set_defaults(func=handle_evaluate_prospective)
@@ -184,7 +186,7 @@ def register(subparsers):
     ek_parser.add_argument("--sample-submission", required=True, help="Kaggle SampleSubmission CSV")
     ek_parser.add_argument("--kaggle-teams", required=True, help="Kaggle MTeams CSV")
     ek_parser.add_argument("--output", "-o", default="artifacts/kaggle_submission.csv", help="Output CSV")
-    ek_parser.add_argument("--year", type=int, default=2026, help="Season year")
+    ek_parser.add_argument("--year", type=int, default=_default_year(), help="Season year")
     ek_parser.set_defaults(func=handle_export_kaggle)
 
     # ===================================================================
@@ -227,7 +229,7 @@ def register(subparsers):
     )
     st_parser.add_argument("--predictions-report", default="artifacts/predictions_2026_latest.json", help="Frozen predictions")
     st_parser.add_argument("--results-dir", default="data/raw/historical", help="Tournament results directory")
-    st_parser.add_argument("--year", type=int, default=2026, help="Tournament year")
+    st_parser.add_argument("--year", type=int, default=_default_year(), help="Tournament year")
     st_parser.add_argument("--output-dir", default="artifacts", help="Output directory")
     st_parser.set_defaults(func=handle_score_tournament)
 

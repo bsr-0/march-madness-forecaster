@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from ._helpers import _parse_year_list, _parse_float_list
+from ._helpers import _default_year, _parse_year_list, _parse_float_list
 
 
 # ---------------------------------------------------------------------------
@@ -630,8 +630,8 @@ def register(subparsers):
     conf_parser.add_argument(
         "--year",
         type=int,
-        default=2026,
-        help="Season year (default: 2026)",
+        default=_default_year(),
+        help="Season year (default: current year)",
     )
     conf_parser.add_argument(
         "--list-conferences",

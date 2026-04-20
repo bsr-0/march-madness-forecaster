@@ -29,7 +29,7 @@ from .cli._helpers import (  # noqa: F401
     _build_pipeline_config,
     _guard_production_2026,
 )
-from .cli.pipeline_cmds import run_production_2026_cmd  # noqa: F401
+from .cli.pipeline_cmds import run_production_2026_cmd, run_production_cmd  # noqa: F401
 
 
 # ---------------------------------------------------------------------------

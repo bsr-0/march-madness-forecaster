@@ -4,6 +4,7 @@ import json
 
 from ._helpers import (
     _build_pipeline_config,
+    _default_year,
     _guard_production_2026,
     _load_manifest,
     _resolve_manifest_paths,
@@ -284,7 +285,7 @@ def register(subparsers):
     espn_export_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
     espn_export_parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     espn_export_parser.add_argument("--pool-size", type=int, default=30, help="Pool size for ESPN-style optimization")
-    espn_export_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
+    espn_export_parser.add_argument("--seed", type=int, default=_default_year(), help="Random seed (default: current year)")
     espn_export_parser.add_argument(
         "--require-freeze",
         action="store_true",
