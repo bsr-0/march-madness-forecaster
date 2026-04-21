@@ -802,10 +802,10 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
     """
     try:
         from ...data.scrapers.betting_markets import (
-            TheOddsAPIScraper,
             MarketConsensus,
             compute_market_consensus,
         )
+        from ...data.scrapers.sportsbookreview import SportsBookReviewScraper
     except ImportError:
         logger.debug("betting_markets module not available")
         return None
@@ -838,9 +838,8 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
         except Exception as e:
             logger.warning("Failed to load betting odds cache: %s", e)
 
-    # Try live scraper (The Odds API aggregates 40+ bookmakers including
-    # FanDuel and DraftKings via a stable, documented JSON API)
-    for ScraperCls in [TheOddsAPIScraper]:
+    # Try SBR scraper for game-level odds
+    for ScraperCls in [SportsBookReviewScraper]:
         try:
             scraper = ScraperCls(cache_dir=cache_dir)
             odds = scraper.scrape(pipeline.config.year)

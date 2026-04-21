@@ -2319,6 +2319,220 @@ features:
     revision_behavior: latest_forbidden
     late_arrival_policy: exclude_if_available_after_prediction_time
 
+  # ==========================================================================
+  # Conference Tournament Performance (3 features)
+  # ==========================================================================
+  - feature_name: conf_tourney_champion
+    owner: data-platform
+    source:
+      system: tournament_context
+      dataset: conf_champions
+      field: conf_tourney_champion
+    event_timestamp_field: selection_sunday
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/scrapers/tournament_context.py::TournamentContextScraper._scrape_conf_tourney_champions"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: conf_tourney_games
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: conf_tourney_games
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: conf_tourney_margin
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: conf_tourney_margin
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: late_season_games
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: late_season_games
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: late_season_margin
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: late_season_margin
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: late_season_win_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: late_season_win_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::IncrementalMetricsEngine._compute_conf_tourney_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-012"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Market-Implied Features (2 features) — source: unified_odds
+  # ==========================================================================
+  - feature_name: market_implied_prob
+    owner: data-platform
+    source:
+      system: unified_odds
+      dataset: game_odds
+      field: implied_prob
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/scrapers/unified_odds.py::compute_team_market_features"
+    transformation_logic_ref: "src/data/scrapers/unified_odds.py::compute_team_market_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-013"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: market_spread
+    owner: data-platform
+    source:
+      system: unified_odds
+      dataset: game_odds
+      field: spread
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/scrapers/unified_odds.py::compute_team_market_features"
+    transformation_logic_ref: "src/data/scrapers/unified_odds.py::compute_team_market_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-013"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
   - feature_name: massey_rank_std
     deprecated: true
     owner: data-platform
