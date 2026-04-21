@@ -4,10 +4,10 @@ from .betting_markets import (
     BettingMarketOdds,
     BettingMarketScraper,
     MarketConsensus,
-    TheOddsAPIScraper,
     blend_with_model,
     compute_market_consensus,
 )
+from .sportsbookreview import SportsBookReviewScraper, GameOdds
 from .bracket_ingestion import BracketIngestionPipeline, BracketTeam, TournamentBracketData
 from .espn_picks import CBSPicksScraper, ESPNPicksScraper, YahooPicksScraper, aggregate_consensus
 from .cbbpy_rosters import CBBpyRosterScraper
@@ -28,7 +28,6 @@ __all__ = [
     "BracketIngestionPipeline",
     "BracketTeam",
     "CBBpyRosterScraper",
-    "TheOddsAPIScraper",
     "InjuryReportScraper",
     "InjurySeverityModel",
     "MarketConsensus",
@@ -41,6 +40,8 @@ __all__ = [
     "TournamentContextScraper",
     "TournamentSeedScraper",
     "TransferPortalScraper",
+    "GameOdds",
+    "SportsBookReviewScraper",
     "ESPNPicksScraper",
     "YahooPicksScraper",
     "CBSPicksScraper",
