@@ -34,6 +34,8 @@ Thumbs.db
 # Data caches (large / regenerable)
 data/raw/cache/
 data/raw/prospective_eval_*.json
+data/raw/betting_odds/
+data/processed/betting_odds/
 # data/kaggle/ - tracked: contains nishaanamin dataset as compact JSON
 data/kaggle/.kaggle_download_attempted
 
