@@ -267,6 +267,15 @@ class ProprietaryTeamMetrics:
     # Conference tournament champion flag (auto-bid context)
     conf_tourney_champion: bool = False
 
+    # Conference tournament performance (date-window heuristic)
+    conf_tourney_games: int = 0
+    conf_tourney_margin: float = 0.0
+
+    # Late-season recency (all games in same window, not conference-filtered)
+    late_season_games: int = 0
+    late_season_margin: float = 0.0
+    late_season_win_pct: float = 0.0
+
     # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
     pace_variance: float = 0.0
 
@@ -2733,8 +2742,81 @@ class IncrementalMetricsEngine:
             if tid in elo_snap:
                 results[tid].elo_rating = elo_snap[tid]
 
+        # Conference tournament performance features.
+        if self._conference_map:
+            self._compute_conf_tourney_features(results, by_team, self._conference_map, as_of_date)
+
         self._cache[as_of_date] = results
         return results
+
+    @staticmethod
+    def _compute_conf_tourney_features(
+        results: Dict[str, "ProprietaryTeamMetrics"],
+        by_team: Dict[str, List["GameRecord"]],
+        conference_map: Dict[str, str],
+        as_of_date: str,
+    ) -> None:
+        """Populate conference tournament + late-season recency features.
+
+        Uses a 12-day window before the NCAA tournament start date.
+        Computes two feature groups from the same window:
+        - Conference tournament: same-conference games only
+        - Late-season recency: all games regardless of conference
+        """
+        from datetime import timedelta
+
+        try:
+            from ...pipeline.config import TOURNAMENT_START_DATES
+        except ImportError:
+            return  # standalone use without pipeline
+
+        year = int(as_of_date[:4])
+        tourney_start = TOURNAMENT_START_DATES.get(year)
+        if tourney_start is None:
+            return
+
+        window_start = (tourney_start - timedelta(days=12)).isoformat()
+        window_end = (tourney_start - timedelta(days=1)).isoformat()
+
+        # If as_of_date is before the window, features stay at defaults.
+        if as_of_date <= window_start:
+            return
+
+        for tid, metrics in results.items():
+            conf = conference_map.get(tid)
+
+            conf_games = []
+            all_window_games = []
+
+            for g in by_team.get(tid, []):
+                if g.game_date < window_start or g.game_date > window_end:
+                    continue
+                if g.game_date >= as_of_date:
+                    continue
+
+                all_window_games.append(g)
+
+                if conf and conference_map.get(g.opponent_id) == conf:
+                    conf_games.append(g)
+
+            # Conference tournament features (same-conference only).
+            n_conf = min(len(conf_games), 5)
+            metrics.conf_tourney_games = n_conf
+            if n_conf > 0:
+                metrics.conf_tourney_margin = sum(
+                    g.points - g.opp_points for g in conf_games
+                ) / n_conf
+
+            # Late-season recency features (all games in window).
+            n_all = len(all_window_games)
+            metrics.late_season_games = n_all
+            if n_all > 0:
+                metrics.late_season_margin = sum(
+                    g.points - g.opp_points for g in all_window_games
+                ) / n_all
+                metrics.late_season_win_pct = sum(
+                    1 for g in all_window_games if g.points > g.opp_points
+                ) / n_all
 
     def compute_h2h_record(self, team1_id: str, team2_id: str) -> float:
         """Compute team1 win rate vs team2 from current point-in-time games."""
@@ -2863,6 +2945,17 @@ class IncrementalMetricsEngine:
             v[45] = float(np.log1p(17 - seed) / np.log1p(16))
         else:
             v[45] = 0.0
+        # Conference tournament performance.
+        v[46] = float(m.conf_tourney_champion)
+        v[47] = float(m.conf_tourney_games)
+        v[48] = m.conf_tourney_margin
+        # Late-season recency (all games in same window).
+        v[49] = float(m.late_season_games)
+        v[50] = m.late_season_margin
+        v[51] = m.late_season_win_pct
+        # Market features (overlaid later from unified odds data).
+        v[52] = 0.0
+        v[53] = 0.0
 
         # NaN/inf guard — convert inf→NaN but preserve NaN for tree models
         inf_mask = np.isinf(v)

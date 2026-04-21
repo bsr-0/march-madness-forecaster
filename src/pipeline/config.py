@@ -870,6 +870,7 @@ class SOTAPipelineConfig:
     enable_vegas_calibration_anchor: bool = False  # Use Vegas closing spreads as calibration anchor
     vegas_spreads_json: Optional[str] = None  # Path to per-game Vegas spreads JSON (auto-resolved if None)
     vegas_anchor_sigma: float = 13.5  # Spread-to-probability sigma for Vegas lines
+    use_market_features: bool = False  # Add market-implied features to training vectors (for A/B testing)
 
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0

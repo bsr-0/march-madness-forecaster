@@ -69,7 +69,7 @@ REMOVED_REDUNDANCIES = [
 # Canonical team feature dimension after observation-rate pruning.
 # Any feature below the 80% real-observation threshold across 2012-2026
 # tournament-team vectors was removed from the model-facing vector.
-TEAM_FEATURE_DIM = 46
+TEAM_FEATURE_DIM = 54
 
 # Normalization constants for interaction features in create_matchup_features()
 TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
@@ -319,8 +319,19 @@ class TeamFeatures:
     # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
     pace_variance: float = 0.0
 
-    # Conference tournament champion flag (1.0 or 0.0)
+    # Conference tournament performance
     conf_tourney_champion: float = 0.0
+    conf_tourney_games: float = 0.0
+    conf_tourney_margin: float = 0.0
+
+    # Late-season recency (all games in pre-tournament window)
+    late_season_games: float = 0.0
+    late_season_margin: float = 0.0
+    late_season_win_pct: float = 0.0
+
+    # Market-implied features (from betting odds, overlaid in sample_loading)
+    market_implied_prob: float = 0.0
+    market_spread: float = 0.0
 
     # --- KenPom / ShotQuality replacement metrics ---
 
@@ -556,6 +567,14 @@ class TeamFeatures:
             self.backcourt_rapm,
             self.frontcourt_rapm,
             float(np.log1p(17 - self.seed) / np.log1p(16)),
+            self.conf_tourney_champion,
+            self.conf_tourney_games,
+            self.conf_tourney_margin,
+            self.late_season_games,
+            self.late_season_margin,
+            self.late_season_win_pct,
+            self.market_implied_prob,
+            self.market_spread,
         ]
 
         result = np.array(features, dtype=np.float64)
@@ -633,6 +652,9 @@ class TeamFeatures:
             'pace_variance', 'neutral_site_win_pct',
             'tournament_resume', 'backcourt_rapm', 'frontcourt_rapm',
             'seed_strength',
+            'conf_tourney_champion', 'conf_tourney_games', 'conf_tourney_margin',
+            'late_season_games', 'late_season_margin', 'late_season_win_pct',
+            'market_implied_prob', 'market_spread',
         ]
 
         # FIX #10: Static assertion at call time
@@ -969,6 +991,11 @@ class FeatureEngineer:
             features.coach_s16_appearances = int(pm.get('coach_s16_appearances', 0))
             features.pace_variance = float(pm.get('pace_variance', 0.0))
             features.conf_tourney_champion = float(pm.get('conf_tourney_champion', False))
+            features.conf_tourney_games = float(pm.get('conf_tourney_games', 0))
+            features.conf_tourney_margin = float(pm.get('conf_tourney_margin', 0.0))
+            features.late_season_games = float(pm.get('late_season_games', 0))
+            features.late_season_margin = float(pm.get('late_season_margin', 0.0))
+            features.late_season_win_pct = float(pm.get('late_season_win_pct', 0.0))
 
             # KenPom / ShotQuality replacement metrics
             features.true_shooting_pct = pm.get('true_shooting_pct', 0.54)

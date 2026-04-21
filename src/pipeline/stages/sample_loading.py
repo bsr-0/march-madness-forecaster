@@ -358,6 +358,23 @@ def _load_year_samples_incremental_core(
         roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
     team_roster_overlay = load_roster_overlay(roster_path, year=year)
 
+    # Market odds data (unified odds layer).
+    unified_odds_by_team = {}
+    if getattr(config, "use_market_features", False):
+        try:
+            from ...data.scrapers.unified_odds import load_unified_odds_by_team
+            for _odds_dir in [
+                os.path.join(os.path.dirname(games_path), "..", "betting_odds"),
+                "data/processed/betting_odds",
+            ]:
+                _odds_data = load_unified_odds_by_team(year, data_dir=_odds_dir)
+                if _odds_data:
+                    unified_odds_by_team = _odds_data
+                    logger.info("Market odds: %d teams for year %d", len(unified_odds_by_team), year)
+                    break
+        except Exception as _odds_err:
+            logger.debug("Market odds not available for year %d: %s", year, _odds_err)
+
     # ── 3. Create incremental engine ──────────────────────────────────
     inc_engine = IncrementalMetricsEngine(
         game_records,
@@ -497,6 +514,14 @@ def _load_year_samples_incremental_core(
             _overlay = team_roster_overlay.get(_tid, {})
             for _idx, _val in _overlay.items():
                 _v[_idx] = _val
+
+        # Overlay market features from unified odds (PIT-safe: games before g.game_date).
+        if unified_odds_by_team:
+            from ...data.scrapers.unified_odds import compute_team_market_features
+            for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
+                _mf = compute_team_market_features(_tid, g.game_date, unified_odds_by_team.get(_tid, []))
+                _v[52] = _mf["market_implied_prob"]
+                _v[53] = _mf["market_spread"]
 
         matchup = IncrementalMetricsEngine.build_matchup_vector(
             v1,
