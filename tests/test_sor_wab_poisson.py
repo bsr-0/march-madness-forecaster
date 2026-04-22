@@ -352,7 +352,7 @@ class TestFeatureVectorIntegration:
 
     def test_feature_dim_updated(self):
         """TEAM_FEATURE_DIM should match the pruned production vector."""
-        assert TEAM_FEATURE_DIM == 54
+        assert TEAM_FEATURE_DIM == 55
 
     def test_to_vector_length(self):
         """to_vector() output length should match TEAM_FEATURE_DIM."""

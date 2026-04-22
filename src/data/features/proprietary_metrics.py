@@ -1870,6 +1870,7 @@ class IncrementalMetricsEngine:
         v[51] = m.late_season_win_pct
         v[52] = 0.0
         v[53] = 0.0
+        v[54] = 0.0
 
         inf_mask = np.isinf(v)
         if inf_mask.any():
