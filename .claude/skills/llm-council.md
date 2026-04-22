@@ -73,7 +73,7 @@ user lost agent-time and cycles re-debating settled ground.**
 Before doing ANYTHING else, check whether this question has already been
 answered or is already identified as an open item.
 
-**A. If the workspace has a `COUNCIL_LESSONS.md` file** (or equivalent
+**A. If the workspace has a `docs/COUNCIL_LESSONS.md` file** (or equivalent
 consolidated-council-lessons doc), the protocol is defined in that file's
 `§4 Pre-Council Duplicate-Check Protocol`. Read that section and follow
 it literally. It classifies the user's question into one of five buckets
@@ -81,8 +81,8 @@ it literally. It classifies the user's question into one of five buckets
 prerequisite, D = locked decision, E = genuinely novel) and tells you
 whether to abort or continue.
 
-**B. If the workspace has no `COUNCIL_LESSONS.md`** but there are
-`council-transcript-*.md` files present, scan their headings/questions
+**B. If the workspace has no `docs/COUNCIL_LESSONS.md`** but there are
+`docs/council-transcript-*.md` files present, scan their headings/questions
 for obvious duplicates (same wording, same semantic shape) before
 proceeding. If you find 2+ transcripts asking the same question, flag to
 the user: "You've counciled this on `<dates>`. Summarise prior verdicts
@@ -109,14 +109,14 @@ evidence), do two things before framing:
 **A. Scan the workspace for context.** The user's question is often just the tip of the iceberg. Their Claude setup likely contains files that would dramatically improve the council's output. Before framing, quickly scan for and read any relevant context files:
 
 - `CLAUDE.md` or `claude.md` in the project root or workspace (business context, preferences, constraints)
-- `COUNCIL_LESSONS.md` or `MEMORY.md` (consolidated past decisions, locks, open items — these bound the space of acceptable proposals)
+- `docs/COUNCIL_LESSONS.md` or `MEMORY.md` (consolidated past decisions, locks, open items — these bound the space of acceptable proposals)
 - Any `memory/` folder (audience profiles, voice docs, business details, past decisions)
 - Any files the user explicitly referenced or attached
 - Any other context files that seem relevant to the specific question (e.g., if they're asking about pricing, look for revenue data, past launch results, audience research)
 
 Use `Glob` and quick `Read` calls to find these. Don't spend more than 30 seconds on this. You're looking for the 2-3 files that would give advisors the context they need to give specific, grounded advice instead of generic takes.
 
-**Prior-art injection (per §4 Step 3 of `COUNCIL_LESSONS.md`, when
+**Prior-art injection (per §4 Step 3 of `docs/COUNCIL_LESSONS.md`, when
 present):** when framing the question for the 5 advisors, include a
 "Prior art" block listing related `Ox` open items, locked lessons from
 §1, and the 2-3 most related §3 rows by keyword match. This prevents
@@ -423,7 +423,7 @@ re-litigation. That distinction matters when the user says "the
 council said X" — a 2-advisor bucket-A verdict has different
 evidentiary weight than a full bucket-E verdict.
 
-**A. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
+**A. Append to `docs/COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
 4 update rule:
 
 - Append one row to §3 with: next sequential `#`, date, one-line framed
@@ -450,25 +450,25 @@ NOT add to `BASELINE_UNVERIFIED` to silence a failure; fix the closure
 to cite real evidence instead.
 
 This keeps the duplicate-check protocol (Step 0) effective for the next
-session. A `COUNCIL_LESSONS.md` that isn't updated after each council
+session. A `docs/COUNCIL_LESSONS.md` that isn't updated after each council
 quickly loses its value as a dedup index.
 
 **B. Periodic report consolidation (user-initiated).** Raw reports
 accumulate fast. When the user asks to prune / consolidate / clean up
 council artifacts, the consolidation pattern is: extract lessons + open
-questions into `COUNCIL_LESSONS.md`, then delete the raw
-`council-report-*.md` files (plus any legacy
-`council-transcript-*.md` or `council-report-*.html` left over from the
-old two-file flow). This is user-initiated, not automatic.
+questions into `docs/COUNCIL_LESSONS.md`, then delete the raw
+`docs/council-report-*.md` files (plus any legacy
+`docs/council-transcript-*.md` or `docs/council-report-*.html` left over
+from the old two-file flow). This is user-initiated, not automatic.
 
 ---
 
 ## Output Format
 
-Every council session produces exactly one file:
+Every council session produces exactly one file in the `docs/` directory:
 
 ```
-council-report-[timestamp].md   # single markdown artifact: report + transcript
+docs/council-report-[timestamp].md   # single markdown artifact: report + transcript
 ```
 
 The top of the file is the scannable verdict (question, suggested
