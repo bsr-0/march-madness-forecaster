@@ -303,3 +303,49 @@ Total: 6 focused weeks, no detours into GNN/transformers/ensembles
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Appendix A — Data Sources
+
+### Currently Ingested
+
+| Source | Ingest | Signal | Access |
+|---|---|---|---|
+| Bart Torvik | `src/data/scrapers/torvik.py` | AdjEM, AdjO, AdjD, tempo, Four Factors | Scraped (Cloudflare) |
+| Massey Ordinals (Kaggle) | `src/data/kaggle_downloader.py` | 50+ ranking systems: KenPom (POM), Sagarin, Massey, Colley, Wolfe, AP, Coaches, RPI | Kaggle API |
+| ESPN public picks | `src/data/scrapers/espn_picks.py` | Round-by-round pick % — core for leverage | Scraped |
+| Sports Reference | `src/data/scrapers/sports_reference.py` | Season stats, possessions | Scraped |
+| cbbpy / sportsdataverse / sportsipy | `src/data/ingestion/game_fetchers.py` | Box scores, rosters | Free libs |
+| Betting markets (unified) | `src/data/scrapers/unified_odds.py` | Spreads, totals, moneylines (SBRO/Covers/SBR + Odds API) | Archive + API |
+| Injury reports | `src/data/scrapers/injury_report.py` | Status, severity, return date | Scraped |
+| NCAA stats | `src/data/scrapers/ncaa_stats.py` | Seeds, historical outcomes | Scraped |
+| Women's (NET / HerHoopStats) | `src/data/scrapers/womens/` | Women's bracket data | Scraped |
+| Travel distance | `src/data/features/travel_distance.py` | Haversine school → venue | Embedded |
+
+### Referenced but Not Ingested
+- Direct KenPom scraper (only via Massey snapshot)
+- EvanMiya, Haslametrics (mentioned in `external_ratings.py` docs, no impl)
+- FanDuel / DraftKings scrapers — deleted per MEMORY D10
+- `conference_seeds.py` — experimental stub
+
+### Gaps vs. What Successful Bracket Models Use
+
+**Free / cheap, worth evaluating:**
+- **EvanMiya** — Bayesian performance ratings; complementary signal to Torvik
+- **Haslametrics** — alternative efficiency ratings
+- **ESPN BPI** — tournament-tuned, free
+- **Hoop-Math** — shot location / rim & three rates; predictive beyond Four Factors
+- **Returning production / transfer portal %** — Torvik exposes this on the site we already scrape; portal-era churn is a real feature
+- **Coach / program tourney experience** — small but cited edge in upset modeling
+
+**Paid:**
+- **KenPom direct** (~$20/yr) — daily updates, luck, SoS components, home/away splits that Massey strips
+- **ShotQuality** — shot-quality-adjusted efficiency, documented OOS lift over raw eFG%
+- **Synergy** — play-type efficiency (expensive, mostly staff-tier)
+
+**Market-side:**
+- **Tournament futures** (region / F4 / champion prices) — market-implied prior distinct from game lines
+- **Live line movement** during the tournament — for live-update modes
+
+**Recommended next adds (if any):** EvanMiya (free, independent signal) and Torvik returning-production fields (already on a scraped host). KenPom direct is the obvious paid pickup but likely duplicative with Massey POM for tournament-eve modeling.
