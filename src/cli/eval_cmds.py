@@ -733,21 +733,6 @@ def register(subparsers):
     prospective_parser.add_argument("--output", "-o", default=None, help="Path to write evaluation report JSON")
     prospective_parser.set_defaults(func=prospective_eval)
 
-    # --- baseline-experiment ---
-    from .baseline_experiment import run_baseline_experiment
-
-    be_parser = subparsers.add_parser(
-        "baseline-experiment",
-        help="Run tournament-only baseline experiment (logistic vs seeds)",
-    )
-    be_parser.add_argument(
-        "--historical-dir", default="data/raw/historical", help="Directory with historical game/metric JSONs"
-    )
-    be_parser.add_argument(
-        "--output", "-o", default=None, help="Output JSON report path (default: artifacts/baseline_experiment.json)"
-    )
-    be_parser.set_defaults(func=run_baseline_experiment)
-
     # --- backtest-harness ---
     bh_parser = subparsers.add_parser(
         "backtest-harness",
