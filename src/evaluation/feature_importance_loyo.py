@@ -237,10 +237,10 @@ def _extract_coefficients(
 
 
 def run_analysis():
-    from src.pipeline.config import SOTAPipelineConfig
+    from src.pipeline.config import ForecastConfig
     from src.data.features.feature_engineering import MATCHUP_DIM
 
-    config = SOTAPipelineConfig(
+    config = ForecastConfig(
         year=2026,
         multi_year_games_dir=GAMES_DIR,
         kaggle_dir="data/kaggle",

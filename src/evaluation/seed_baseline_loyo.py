@@ -440,13 +440,13 @@ def run_comparison(
     Both model and seed baseline are evaluated on the EXACT SAME
     game set: NCAA tournament games where both teams have seeds.
     """
-    from src.pipeline.config import SOTAPipelineConfig
+    from src.pipeline.config import ForecastConfig
     from src.data.features.feature_engineering import MATCHUP_DIM
 
     if model_types is None:
         model_types = ["logistic", "lightgbm"]
 
-    config = SOTAPipelineConfig(
+    config = ForecastConfig(
         year=2026,
         multi_year_games_dir=GAMES_DIR,
         kaggle_dir="data/kaggle",

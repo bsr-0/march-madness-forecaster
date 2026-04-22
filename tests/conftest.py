@@ -165,10 +165,10 @@ def sample_loyo_briers():
 
 @pytest.fixture
 def minimal_pipeline_config():
-    """Minimal SOTAPipelineConfig for unit tests (no file I/O)."""
-    from src.pipeline.sota import SOTAPipelineConfig
+    """Minimal ForecastConfig for unit tests (no file I/O)."""
+    from src.pipeline.tournament_pipeline import ForecastConfig
 
-    return SOTAPipelineConfig(
+    return ForecastConfig(
         year=2025,
         num_simulations=100,
         pool_size=10,
@@ -182,9 +182,9 @@ def minimal_pipeline_config():
 @pytest.fixture
 def strict_pipeline_config():
     """Pipeline config with strict leakage mode for leakage-tagged tests."""
-    from src.pipeline.sota import SOTAPipelineConfig
+    from src.pipeline.tournament_pipeline import ForecastConfig
 
-    return SOTAPipelineConfig(
+    return ForecastConfig(
         year=2025,
         num_simulations=100,
         pool_size=10,

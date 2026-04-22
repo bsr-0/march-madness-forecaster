@@ -2,7 +2,7 @@
 
 Contains pure functions for game outcome computation, date parsing,
 team ID normalization, and tournament game detection.  These are
-extracted from SOTAPipeline to enable reuse without importing the
+extracted from TournamentPipeline to enable reuse without importing the
 full orchestrator.
 
 Implements Agent Directive V7 S2 (shared utilities decomposition).

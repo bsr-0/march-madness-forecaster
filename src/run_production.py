@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         _require_explicit_paths,
     )
     from src.governance.production_validator import ProductionValidationError
-    from src.pipeline.config import SOTAPipelineConfig
+    from src.pipeline.config import ForecastConfig
     import dataclasses
 
     try:
@@ -74,11 +74,11 @@ def main(argv: list[str] | None = None) -> int:
 
         merged = dict(raw_config)
         merged.update(resolved_paths)
-        valid_fields = {f.name for f in dataclasses.fields(SOTAPipelineConfig)}
+        valid_fields = {f.name for f in dataclasses.fields(ForecastConfig)}
         for key in list(merged):
             if key not in valid_fields:
                 del merged[key]
-        config = SOTAPipelineConfig(**merged)
+        config = ForecastConfig(**merged)
         validate_production_config(config, year)
 
         if args.dry_run:

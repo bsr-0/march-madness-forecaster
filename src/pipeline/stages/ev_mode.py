@@ -1,4 +1,4 @@
-"""EV (Expected Value) mode utilities extracted from SOTAPipeline.
+"""EV (Expected Value) mode utilities extracted from TournamentPipeline.
 
 Contains helper functions for EV-mode bracket pool analysis that can
 be used independently of the full pipeline orchestrator.

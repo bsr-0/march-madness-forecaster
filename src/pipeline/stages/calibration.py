@@ -1,11 +1,11 @@
-"""Calibration fitting — extracted from SOTAPipeline.
+"""Calibration fitting — extracted from TournamentPipeline.
 
 Contains calibration-related methods: temperature scaling, Massey predictor
 fitting, and tournament sigma calibration.
 
-Each function takes a ``pipeline`` parameter (SOTAPipeline instance)
+Each function takes a ``pipeline`` parameter (TournamentPipeline instance)
 to access config and mutable state. This is a pragmatic extraction
-that reduces sota.py line count while maintaining exact behavioral
+that reduces tournament_pipeline line count while maintaining exact behavioral
 equivalence.
 
 Implements Agent Directive V7 S2 (modular architecture decomposition).
@@ -27,7 +27,7 @@ from ...ml.calibration.calibration import (
 )
 from ..config import (
     DataRequirementError,
-    SOTAPipelineConfig,
+    ForecastConfig,
 )
 
 # Optional imports — accessed via pipeline._optional_imports pattern

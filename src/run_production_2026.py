@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         ProductionValidationError,
         validate_production_2026,
     )
-    from src.pipeline.config import SOTAPipelineConfig
+    from src.pipeline.config import ForecastConfig
     import dataclasses
 
     try:
@@ -66,11 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         merged = dict(raw_config)
         merged.update(resolved_paths)
         # Filter out unknown keys not in the dataclass definition
-        valid_fields = {f.name for f in dataclasses.fields(SOTAPipelineConfig)}
+        valid_fields = {f.name for f in dataclasses.fields(ForecastConfig)}
         for key in list(merged):
             if key not in valid_fields:
                 del merged[key]
-        config = SOTAPipelineConfig(**merged)
+        config = ForecastConfig(**merged)
         validate_production_2026(config, check_paths_on_disk=True, base_dir=str(repo_root))
 
         # Derive freeze artifact path from config (freeze_file field).

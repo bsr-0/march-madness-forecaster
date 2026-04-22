@@ -1,12 +1,12 @@
-"""EV analysis methods — extracted from SOTAPipeline.
+"""EV analysis methods — extracted from TournamentPipeline.
 
 Contains: refresh_ev_analysis, _build_ev_analysis, _get_ev_scoring_system,
 _run_pool_competition_simulation, _pareto_brackets_to_winner_lists,
 _generate_chalk_winners, _select_ev_bracket, _load_scoring_rules.
 
-Each function takes a ``pipeline`` parameter (SOTAPipeline instance)
+Each function takes a ``pipeline`` parameter (TournamentPipeline instance)
 to access config and mutable state. This is a pragmatic extraction
-that reduces sota.py line count while maintaining exact behavioral
+that reduces tournament_pipeline line count while maintaining exact behavioral
 equivalence.
 
 Implements Agent Directive V7 S2 (modular architecture decomposition).
@@ -21,7 +21,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from ..config import (
     EVModeReport,
     DataRequirementError,
-    SOTAPipelineConfig,
+    ForecastConfig,
 )
 from ...optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ...simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
@@ -776,7 +776,7 @@ def _optimize_pareto_brackets_with_search(
     expected value), then converts the result back.
 
     Args:
-        pipeline: SOTAPipeline instance with predict_probability and team_struct.
+        pipeline: TournamentPipeline instance with predict_probability and team_struct.
         pool_analysis: PoolAnalysis whose pareto_brackets are used as seeds.
         public_picks: Per-round public pick rates (team_id -> {round: pct}).
         scoring_system: Round -> points mapping.

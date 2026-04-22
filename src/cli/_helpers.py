@@ -9,14 +9,14 @@ def _default_year() -> int:
     """Current calendar year — used as the default --year across CLI commands."""
     return datetime.date.today().year
 
-from ..pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
+from ..pipeline.tournament_pipeline import DataRequirementError, TournamentPipeline, ForecastConfig, run_pipeline_to_file
 from ..governance import ProductionValidationError
 
 
 def _resolve_multi_year_dir(raw_value):
     """Resolve the --multi-year-games-dir CLI value.
 
-    'auto' -> pass through to SOTAPipelineConfig (resolved at pipeline init).
+    'auto' -> pass through to ForecastConfig (resolved at pipeline init).
     'none' or None -> None (disabled).
     Anything else -> literal path.
     """
@@ -46,7 +46,7 @@ def _parse_float_list(raw_value):
 
 
 def _build_pipeline_config(args, path_overrides=None):
-    """Build SOTAPipelineConfig from CLI args with optional path overrides."""
+    """Build ForecastConfig from CLI args with optional path overrides."""
     path_overrides = path_overrides or {}
     dev_years = _parse_year_list(getattr(args, "dev_years", None))
     holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
@@ -103,13 +103,13 @@ def _build_pipeline_config(args, path_overrides=None):
         config_kwargs["holdout_years"] = holdout_years
     if calibration_years is not None:
         config_kwargs["calibration_years"] = calibration_years
-    return SOTAPipelineConfig(**config_kwargs)
+    return ForecastConfig(**config_kwargs)
 
 
 def _run_pipeline_and_report(config, output_path):
     """Run the SOTA pipeline and print results. Returns (exit_code, report)."""
     try:
-        report = run_sota_pipeline_to_file(config, output_path)
+        report = run_pipeline_to_file(config, output_path)
     except DataRequirementError as exc:
         print(f"Error: {exc}")
         return 1, None
@@ -187,7 +187,7 @@ def _resolve_manifest_paths(args, manifest, base_dir):
 
 
 def add_common_pipeline_args(parser):
-    """Add the CLI arguments shared by sota and sota-from-manifest."""
+    """Add the CLI arguments shared by forecast and forecast-from-manifest."""
     parser.add_argument("--year", type=int, default=None, help="Season year (default: current year)")
     parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     parser.add_argument("--pool-size", type=int, default=100, help="Bracket pool size")

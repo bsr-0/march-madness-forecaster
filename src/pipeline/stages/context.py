@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ...monitoring.phase_timer import PhaseTimer
     from ...monitoring.resource_tracker import ResourceTracker
     from ...ml.evaluation.experiment_registry import ExperimentRegistry
-    from ..sota import SOTAPipelineConfig
+    from ..tournament_pipeline import ForecastConfig
 
 
 @dataclass
@@ -30,7 +30,7 @@ class PipelineContext:
         logger: Stage-specific logger.
     """
 
-    config: Any  # SOTAPipelineConfig
+    config: Any  # ForecastConfig
     phase_timer: Optional[Any] = None  # PhaseTimer
     resource_tracker: Optional[Any] = None  # ResourceTracker
     experiment_registry: Optional[Any] = None  # ExperimentRegistry
@@ -38,7 +38,7 @@ class PipelineContext:
 
     @classmethod
     def from_pipeline(cls, pipeline: Any) -> PipelineContext:
-        """Create a context from an existing SOTAPipeline instance."""
+        """Create a context from an existing TournamentPipeline instance."""
         return cls(
             config=pipeline.config,
             phase_timer=getattr(pipeline, "_phase_timer", None),

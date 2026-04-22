@@ -32,46 +32,46 @@ class TestPoolProfileConfig:
 
     def test_pool_profile_accepted(self):
         """Config construction with probability_profile='pool' should not raise."""
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(probability_profile="pool")
+        config = ForecastConfig(probability_profile="pool")
         assert config.probability_profile == "pool"
 
     def test_production_profile_still_accepted(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(probability_profile="production")
+        config = ForecastConfig(probability_profile="production")
         assert config.probability_profile == "production"
 
     def test_experimental_profile_still_accepted(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(probability_profile="experimental")
+        config = ForecastConfig(probability_profile="experimental")
         assert config.probability_profile == "experimental"
 
     def test_invalid_profile_rejected(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
         with pytest.raises(ValueError, match="must be 'production', 'pool', or 'experimental'"):
-            SOTAPipelineConfig(probability_profile="turbo")
+            ForecastConfig(probability_profile="turbo")
 
 
 class TestESPNProfileRoutingGuard:
     """ESPN mode is incompatible with production probability profile."""
 
     def test_espn_with_production_raises(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
         with pytest.raises(ValueError, match="ESPN pool optimization.*incompatible"):
-            SOTAPipelineConfig(
+            ForecastConfig(
                 probability_profile="production",
                 espn_mode=True,
             )
 
     def test_espn_with_pool_accepted(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(
+        config = ForecastConfig(
             probability_profile="pool",
             espn_mode=True,
         )
@@ -79,18 +79,18 @@ class TestESPNProfileRoutingGuard:
         assert config.probability_profile == "pool"
 
     def test_espn_with_experimental_accepted(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(
+        config = ForecastConfig(
             probability_profile="experimental",
             espn_mode=True,
         )
         assert config.espn_mode is True
 
     def test_production_without_espn_still_fine(self):
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
-        config = SOTAPipelineConfig(
+        config = ForecastConfig(
             probability_profile="production",
             espn_mode=False,
         )
@@ -102,10 +102,10 @@ class TestLockedProductionPathIgnoresPool:
 
     def test_pool_profile_skips_locked_validation(self):
         """validate_locked_production_path only fires for production profile."""
-        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.config import ForecastConfig
 
         # Pool profile with non-standard dev_years should NOT raise
-        config = SOTAPipelineConfig(
+        config = ForecastConfig(
             probability_profile="pool",
             dev_years=[2020, 2021],
             holdout_years=[2024],

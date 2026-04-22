@@ -1,7 +1,7 @@
-"""Pipeline configuration, data classes, and constants extracted from sota.py.
+"""Pipeline configuration, data classes, and constants extracted from tournament_pipeline.
 
 This module contains:
-- SOTAPipelineConfig: All pipeline configuration knobs
+- ForecastConfig: All pipeline configuration knobs
 - EVModeReport: EV mode optimization report structure
 - _TrainedBaselineModel: Ensemble model wrapper
 - Constants: TOURNAMENT_START_DATES, FIXED_FEATURE_SET, etc.
@@ -333,7 +333,7 @@ class DataRequirementError(ValueError):
 
 
 @dataclass
-class SOTAPipelineConfig:
+class ForecastConfig:
     """Pipeline configuration knobs."""
 
     year: int = 2026

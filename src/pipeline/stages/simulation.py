@@ -1,12 +1,12 @@
-"""Simulation and inference helpers — extracted from SOTAPipeline.
+"""Simulation and inference helpers — extracted from TournamentPipeline.
 
 Contains Monte Carlo simulation, round-probability conversion, public pick
 loading, betting market integration, injury noise modeling, and model
 confidence interval estimation.
 
-Each function takes a ``pipeline`` parameter (SOTAPipeline instance)
+Each function takes a ``pipeline`` parameter (TournamentPipeline instance)
 to access config and mutable state.  This is a pragmatic extraction
-that reduces sota.py line count while maintaining exact behavioral
+that reduces tournament_pipeline line count while maintaining exact behavioral
 equivalence.
 
 Implements Agent Directive V7 S2 (modular architecture decomposition).
@@ -93,7 +93,7 @@ def run_monte_carlo(
 ):
     """Run full-bracket Monte Carlo simulation.
 
-    Translated from ``SOTAPipeline._run_monte_carlo``.
+    Translated from ``TournamentPipeline._run_monte_carlo``.
     """
     teams_by_region: Dict[str, List[TournamentTeam]] = {r: [] for r in ["East", "West", "South", "Midwest"]}
 
@@ -296,7 +296,7 @@ def run_monte_carlo(
 def to_round_probabilities(pipeline, sim_results) -> Dict[str, Dict[str, float]]:
     """Convert simulation results to per-team round probabilities.
 
-    Translated from ``SOTAPipeline._to_round_probabilities``.
+    Translated from ``TournamentPipeline._to_round_probabilities``.
     """
     model_probs: Dict[str, Dict[str, float]] = {}
     team_ids = set(pipeline.team_struct.keys())
@@ -327,7 +327,7 @@ def to_round_probabilities_from_sim(pipeline, sim_data: Dict) -> Dict[str, Dict[
     ``AggregatedResults`` object.  Used by ``_build_ev_analysis`` which
     receives the report dict, not the raw simulation object.
 
-    Translated from ``SOTAPipeline._to_round_probabilities_from_sim``.
+    Translated from ``TournamentPipeline._to_round_probabilities_from_sim``.
     """
     championship_odds = sim_data.get("championship_odds", {})
     final_four_odds = sim_data.get("final_four_odds", {})
@@ -360,7 +360,7 @@ def to_round_probabilities_from_sim(pipeline, sim_data: Dict) -> Dict[str, Dict[
 def load_public_picks(pipeline, model_probs: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
     """Load and aggregate public bracket pick percentages.
 
-    Translated from ``SOTAPipeline._load_public_picks``.
+    Translated from ``TournamentPipeline._load_public_picks``.
     """
     if pipeline.config.public_picks_json:
         with open(pipeline.config.public_picks_json, "r") as f:
@@ -473,7 +473,7 @@ def load_public_picks(pipeline, model_probs: Dict[str, Dict[str, float]]) -> Dic
 def extract_public_pick_rows(pipeline, payload: Dict) -> Dict[str, Dict[str, float]]:
     """Extract per-team pick rows from a public picks payload.
 
-    Translated from ``SOTAPipeline._extract_public_pick_rows``.
+    Translated from ``TournamentPipeline._extract_public_pick_rows``.
     """
     if not isinstance(payload, dict):
         return {}
@@ -502,7 +502,7 @@ def extract_public_pick_rows(pipeline, payload: Dict) -> Dict[str, Dict[str, flo
 def normalize_public_pick_row(row: Dict[str, float]) -> Dict[str, float]:
     """Normalize a single row of public pick percentages.
 
-    Translated from ``SOTAPipeline._normalize_public_pick_row``.
+    Translated from ``TournamentPipeline._normalize_public_pick_row``.
     """
     return {
         "R64": normalize_pick_probability(row.get("R64", 0.0)),
@@ -561,7 +561,7 @@ def normalize_pick_probability(value) -> float:
 def unique_games(pipeline, game_flows: Dict[str, List[GameFlow]]) -> List[GameFlow]:
     """Return deduplicated list of games from game flow dict.
 
-    Translated from ``SOTAPipeline._unique_games``.
+    Translated from ``TournamentPipeline._unique_games``.
     """
     if pipeline.all_game_flows:
         return list(pipeline.all_game_flows)
@@ -588,7 +588,7 @@ def estimate_model_confidence_intervals(pipeline, game_flows: Dict[str, List[Gam
     confidence, it would leak validation data into CFA base weights that
     are later optimized on a subset of the same validation era.
 
-    Translated from ``SOTAPipeline._estimate_model_confidence_intervals``.
+    Translated from ``TournamentPipeline._estimate_model_confidence_intervals``.
     """
     try:
         from .._optional_imports import (
@@ -693,7 +693,7 @@ def bootstrap_brier_interval(
 ) -> Tuple[float, float, float]:
     """Compute bootstrap confidence interval for Brier score.
 
-    Translated from ``SOTAPipeline._bootstrap_brier_interval``.
+    Translated from ``TournamentPipeline._bootstrap_brier_interval``.
     """
     n = len(predictions)
     if n == 0:
@@ -729,7 +729,7 @@ def build_injury_noise_table(
     Returns empty dict when no injury data is provided, preventing
     uninformed N(0, 0.03) random perturbation of all probabilities.
 
-    Translated from ``SOTAPipeline._build_injury_noise_table``.
+    Translated from ``TournamentPipeline._build_injury_noise_table``.
     """
     # E3: Only generate injury noise when injury data is available.
     # Without real injury reports, random perturbation adds noise
@@ -772,7 +772,7 @@ def injury_adjusted_probability(
 ) -> float:
     """Adjust win probability for injury noise.
 
-    Translated from ``SOTAPipeline._injury_adjusted_probability``.
+    Translated from ``TournamentPipeline._injury_adjusted_probability``.
     """
     if team1_noise is None or team2_noise is None:
         return float(np.clip(base_probability, 0.01, 0.99))
@@ -798,7 +798,7 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
     Tries JSON cache first, then live scrapers.  Returns None if
     no betting data is available.
 
-    Translated from ``SOTAPipeline._load_betting_markets``.
+    Translated from ``TournamentPipeline._load_betting_markets``.
     """
     try:
         from ...data.scrapers.betting_markets import (
@@ -877,7 +877,7 @@ def apply_market_blend(
     the model's MC-derived championship probabilities with sportsbook
     implied probabilities using the configured blend weight.
 
-    Translated from ``SOTAPipeline._apply_market_blend``.
+    Translated from ``TournamentPipeline._apply_market_blend``.
     """
     from ...data.scrapers.betting_markets import blend_with_model
 
@@ -912,7 +912,7 @@ def exclude_tournament_games(pipeline, games: List[GameFlow], year: Optional[int
     This is a hard safety guard to ensure tournament results never
     leak into regular-season training features.
 
-    Translated from ``SOTAPipeline._exclude_tournament_games``.
+    Translated from ``TournamentPipeline._exclude_tournament_games``.
     """
     yr = year or pipeline.config.year
     t_start = TOURNAMENT_START_DATES.get(yr, date(yr, 3, 14))

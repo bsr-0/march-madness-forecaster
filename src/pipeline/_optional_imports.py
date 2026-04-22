@@ -1,6 +1,6 @@
 """Centralized optional dependency checks for the SOTA pipeline.
 
-All try/except import guards live here to keep sota.py clean.
+All try/except import guards live here to keep tournament_pipeline clean.
 Each optional dependency exposes:
   - The imported symbol (or None if unavailable)
   - A boolean flag (e.g., TORCH_AVAILABLE)

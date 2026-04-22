@@ -27,7 +27,7 @@ _os.environ.setdefault("MKL_NUM_THREADS", "1")
 logger = logging.getLogger(__name__)
 
 from .config import (  # noqa: F401
-    SOTAPipelineConfig,
+    ForecastConfig,
     EVModeReport,
     _TrainedBaselineModel,
     DataRequirementError,
@@ -42,8 +42,8 @@ from .config import (  # noqa: F401
     _infer_tournament_round_weight,
 )
 
-# ForecastConfig is the production-grade alias for SOTAPipelineConfig.
-ForecastConfig = SOTAPipelineConfig
+# ForecastConfig is the production-grade alias for ForecastConfig.
+ForecastConfig = ForecastConfig
 
 from ..data.features.feature_engineering import (
     FeatureEngineer,
