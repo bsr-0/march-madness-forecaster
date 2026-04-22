@@ -1,0 +1,534 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem:
+          - generic
+  - navigation [ref=e31]:
+    - button "more arrow" [ref=e32] [cursor=pointer]:
+      - img "more arrow" [ref=e34]
+    - list [ref=e35]:
+      - listitem [ref=e36]:
+        - link "NCAAB" [ref=e37] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+      - listitem [ref=e38]:
+        - link "Scores & Matchups" [ref=e39] [cursor=pointer]:
+          - /url: https://www.covers.com/sports/ncaab/matchups
+      - listitem [ref=e40]:
+        - link "Free Picks" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e42]:
+        - link "Odds" [ref=e43] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+      - listitem [ref=e44]:
+        - link "Futures" [ref=e45] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds/futures
+      - listitem [ref=e46]:
+        - link "News & Analysis" [ref=e47] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/betting-news
+      - listitem [ref=e48]:
+        - link "NCAAB Contest" [ref=e49] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e50]:
+        - link "March Madness" [ref=e51] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/march-madness
+      - listitem [ref=e52]:
+        - link "Injuries" [ref=e53] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/injuries
+      - listitem [ref=e54]:
+        - link "Teams" [ref=e55] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/teams
+      - listitem [ref=e56]:
+        - link "Players" [ref=e57] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/players
+  - main [ref=e58]:
+    - article [ref=e59]:
+      - generic [ref=e60]:
+        - link "Kalshi Sports Logo" [ref=e61] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner
+          - img "Kalshi Sports Logo" [ref=e62]
+        - generic [ref=e63]:
+          - generic [ref=e64]
+          - link "Claim $10" [ref=e69] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner&location=flex
+    - generic [ref=e70]:
+      - heading "NCAAB Scores & Matchups" [level=1] [ref=e71]
+      - button "NCAAB" [ref=e73] [cursor=pointer]:
+        - img [ref=e74]
+        - generic [ref=e75]: NCAAB
+        - img [ref=e76]
+    - navigation [ref=e78]:
+      - generic [ref=e79]:
+        - link [ref=e80] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-15
+          - img [ref=e81]
+        - link "Tue Mar 14" [ref=e83] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-14
+          - text: Tue
+          - generic [ref=e84]: Mar 14
+        - link "Wed Mar 15" [ref=e85] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-15
+          - text: Wed
+          - generic [ref=e86]: Mar 15
+        - generic [ref=e87]:
+          - generic [ref=e88]: Thu
+          - generic [ref=e89]: Mar 16
+        - link "Fri Mar 17" [ref=e90] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-17
+          - text: Fri
+          - generic [ref=e91]: Mar 17
+        - link "Sat Mar 18" [ref=e92] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-18
+          - text: Sat
+          - generic [ref=e93]: Mar 18
+        - link [ref=e94] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2023-03-17
+          - img [ref=e95]
+      - button [ref=e98] [cursor=pointer]:
+        - img [ref=e99]
+        - img [ref=e101]
+      - button "Conferences Filter" [ref=e104] [cursor=pointer]:
+        - generic [ref=e105]: Conferences
+        - img [ref=e106]
+        - generic [ref=e108]: Filter
+        - img [ref=e109]
+      - generic [ref=e111]:
+        - textbox "Search" [ref=e112]
+        - button "clear search" [ref=e113] [cursor=pointer]:
+          - generic [ref=e114]: clear search
+    - generic [ref=e115]:
+      - article [ref=e116]:
+        - paragraph [ref=e117]:
+          - strong [ref=e118]: West Virginia @ Maryland
+          - text: (N)
+          - generic [ref=e119]: March Madness
+        - generic [ref=e120]:
+          - generic [ref=e121]
+          - generic [ref=e138]
+          - generic [ref=e141]
+          - generic [ref=e164]
+      - article [ref=e168]:
+        - paragraph [ref=e169]:
+          - strong [ref=e170]: Furman @ Virginia
+          - text: (N)
+          - generic [ref=e171]: March Madness
+        - generic [ref=e172]:
+          - generic [ref=e173]
+          - generic [ref=e190]
+          - generic [ref=e193]
+          - generic [ref=e216]
+      - article [ref=e220]:
+        - paragraph [ref=e221]:
+          - strong [ref=e222]: Utah St. @ Missouri
+          - text: (N)
+          - generic [ref=e223]: March Madness
+        - generic [ref=e224]:
+          - generic [ref=e225]
+          - generic [ref=e242]
+          - generic [ref=e245]
+          - generic [ref=e268]
+      - article [ref=e272]:
+        - paragraph [ref=e273]:
+          - strong [ref=e274]: Howard @ Kansas
+          - text: (N)
+          - generic [ref=e275]: March Madness
+        - generic [ref=e276]:
+          - generic [ref=e277]
+          - generic [ref=e294]
+          - generic [ref=e297]
+          - generic [ref=e320]
+      - article [ref=e324]:
+        - generic [ref=e325]:
+          - heading "Featured Apps" [level=2] [ref=e327]
+          - link "Best betting sites" [ref=e328] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+        - generic [ref=e331]:
+          - group "1 / 5" [ref=e332]
+          - group "2 / 5" [ref=e349]
+          - group "3 / 5" [ref=e366]
+          - group "4 / 5" [ref=e383]
+          - group "5 / 5" [ref=e400]
+      - article [ref=e414]:
+        - paragraph [ref=e415]:
+          - strong [ref=e416]: Texas A&M-CC @ Alabama
+          - text: (N)
+          - generic [ref=e417]: March Madness
+        - generic [ref=e418]:
+          - generic [ref=e419]
+          - generic [ref=e436]
+          - generic [ref=e439]
+          - generic [ref=e462]
+      - article [ref=e466]:
+        - paragraph [ref=e467]:
+          - strong [ref=e468]: Charleston @ San Diego St.
+          - text: (N)
+          - generic [ref=e469]: March Madness
+        - generic [ref=e470]:
+          - generic [ref=e471]
+          - generic [ref=e488]
+          - generic [ref=e491]
+          - generic [ref=e514]
+      - article [ref=e518]:
+        - paragraph [ref=e519]:
+          - strong [ref=e520]: Princeton @ Arizona
+          - text: (N)
+          - generic [ref=e521]: March Madness
+        - generic [ref=e522]:
+          - generic [ref=e523]
+          - generic [ref=e540]
+          - generic [ref=e543]
+          - generic [ref=e566]
+      - article [ref=e570]:
+        - paragraph [ref=e571]:
+          - strong [ref=e572]: Illinois @ Arkansas
+          - text: (N)
+          - generic [ref=e573]: March Madness
+        - generic [ref=e574]:
+          - generic [ref=e575]
+          - generic [ref=e592]
+          - generic [ref=e595]
+          - generic [ref=e618]
+      - article [ref=e622]:
+        - paragraph [ref=e623]:
+          - strong [ref=e624]: Auburn @ Iowa
+          - text: (N)
+          - generic [ref=e625]: March Madness
+        - generic [ref=e626]:
+          - generic [ref=e627]
+          - generic [ref=e644]
+          - generic [ref=e647]
+          - generic [ref=e670]
+      - article [ref=e674]:
+        - paragraph [ref=e675]:
+          - strong [ref=e676]: Oral Roberts @ Duke
+          - text: (N)
+          - generic [ref=e677]: March Madness
+        - generic [ref=e678]:
+          - generic [ref=e679]
+          - generic [ref=e696]
+          - generic [ref=e699]
+          - generic [ref=e722]
+      - article [ref=e726]:
+        - paragraph [ref=e727]:
+          - strong [ref=e728]: Boise St. @ Northwestern
+          - text: (N)
+          - generic [ref=e729]: March Madness
+        - generic [ref=e730]:
+          - generic [ref=e731]
+          - generic [ref=e748]
+          - generic [ref=e751]
+          - generic [ref=e774]
+      - article [ref=e778]:
+        - paragraph [ref=e779]:
+          - strong [ref=e780]: Colgate @ Texas
+          - text: (N)
+          - generic [ref=e781]: March Madness
+        - generic [ref=e782]:
+          - generic [ref=e783]
+          - generic [ref=e800]
+          - generic [ref=e803]
+          - generic [ref=e826]
+      - article [ref=e830]:
+        - paragraph [ref=e831]:
+          - strong [ref=e832]: UL Lafayette @ Tennessee
+          - text: (N)
+          - generic [ref=e833]: March Madness
+        - generic [ref=e834]:
+          - generic [ref=e835]
+          - generic [ref=e852]
+          - generic [ref=e855]
+          - generic [ref=e878]
+      - article [ref=e882]:
+        - paragraph [ref=e883]:
+          - strong [ref=e884]: Northern KY @ Houston
+          - text: (N)
+          - generic [ref=e885]: March Madness
+        - generic [ref=e886]:
+          - generic [ref=e887]
+          - generic [ref=e904]
+          - generic [ref=e907]
+          - generic [ref=e930]
+      - article [ref=e934]:
+        - paragraph [ref=e935]:
+          - strong [ref=e936]: UNC Asheville @ UCLA
+          - text: (N)
+          - generic [ref=e937]: March Madness
+        - generic [ref=e938]:
+          - generic [ref=e939]
+          - generic [ref=e956]
+          - generic [ref=e959]
+          - generic [ref=e982]
+      - article [ref=e986]:
+        - paragraph [ref=e987]:
+          - strong [ref=e988]: Penn St. @ Texas A&M
+          - text: (N)
+          - generic [ref=e989]: March Madness
+        - generic [ref=e990]:
+          - generic [ref=e991]
+          - generic [ref=e1008]
+          - generic [ref=e1011]
+          - generic [ref=e1034]
+    - generic:
+      - heading "Latest headlines Checkout latest headlines Read more" [level=2] [ref=e1039]:
+        - text: Latest headlines
+        - link "Checkout latest headlines Read more" [ref=e1040] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1041]: Checkout latest headlines
+          - text: Read more
+      - generic [ref=e1042]:
+        - article [ref=e1043]:
+          - generic [ref=e1045]
+        - article [ref=e1057]:
+          - generic [ref=e1059]
+        - article [ref=e1071]:
+          - generic [ref=e1073]
+        - article [ref=e1085]:
+          - generic [ref=e1087]
+    - generic:
+      - heading "Daily betting offers Checkout sportsbook promos Sportsbook promos" [level=2] [ref=e1100]:
+        - text: Daily betting offers
+        - link "Checkout sportsbook promos Sportsbook promos" [ref=e1101] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1102]: Checkout sportsbook promos
+          - text: Sportsbook promos
+      - generic:
+        - article [ref=e1103]:
+          - generic [ref=e1104]
+        - article [ref=e1118]:
+          - generic [ref=e1119]
+        - article [ref=e1133]:
+          - generic [ref=e1134]
+        - article [ref=e1148]:
+          - generic [ref=e1149]
+    - article [ref=e1163]:
+      - heading "College Basketball Scores and Matchups" [level=2] [ref=e1165]:
+        - generic [ref=e1166]: College Basketball Scores and Matchups
+      - paragraph [ref=e1168]:
+        - generic [ref=e1169]: This page serves as the foundational platform for
+        - link "NCAAB" [ref=e1170] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1171]: NCAAB
+        - generic [ref=e1172]: bettors to initiate their handicapping process. It is where you delve into essential betting data that will shape your decision-making.
+      - paragraph [ref=e1174]:
+        - generic [ref=e1175]: Presented here are all forthcoming matchups, coupled with live scores and outcomes. Before the game, bettors can view odds for each matchup and upon the game's conclusion, we give you a glance over the scores, fractionated by quarter.
+      - heading "What are the main types of bets for college basketball matchups?" [level=3] [ref=e1177]:
+        - generic [ref=e1178]: What are the main types of bets for college basketball matchups?
+      - paragraph [ref=e1180]:
+        - generic [ref=e1181]:
+          - text: After deciding your bets, the next step
+          - generic [ref=e1182]
+        - link "college basketball odds" [ref=e1184] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+          - generic [ref=e1185]: college basketball odds
+        - generic [ref=e1186]: comparison tool. This platform reveals the odds for each game's point spread, moneyline, and total. Point
+        - generic [ref=e1187]: spread betting
+        - generic [ref=e1188]: is gambling on the predictive point gap between the two teams, while
+        - link "moneyline betting" [ref=e1189] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/how-to-bet-moneylines
+          - generic [ref=e1190]: moneyline betting
+        - generic [ref=e1191]: entails wagering on the team that is expected to triumph. Totals or
+        - link "Over/Under betting" [ref=e1192] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/over-under-totals-betting
+          - generic [ref=e1193]: Over/Under betting
+        - generic [ref=e1194]: involves staking Over or Under on the amalgamated point total estimated to be scored in a specific game.
+      - generic [ref=e1195]:
+        - paragraph [ref=e1196]:
+          - generic [ref=e1197]: Covers also have
+          - link "March Madness odds" [ref=e1198] [cursor=pointer]:
+            - /url: https://www.covers.com/ncaab/march-madness/odds
+          - generic [ref=e1200]: from a full suite of the best
+          - link "March Madness betting sites" [ref=e1201] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+          - generic [ref=e1203]: "!"
+        - heading "Why use Covers NCAAB Scoreboard" [level=3] [ref=e1204]:
+          - generic [ref=e1205]: Why use Covers NCAAB Scoreboard
+      - paragraph [ref=e1207]:
+        - generic [ref=e1208]: Covers’ NCAAB scoreboard is a great place for bettors to start researching their
+        - link "college basketball picks" [ref=e1209] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+          - generic [ref=e1210]: college basketball picks
+        - generic [ref=e1211]: .
+      - paragraph [ref=e1213]:
+        - generic [ref=e1214]: The live and up-to-date odds come from the absolute best
+        - link "basketball betting sites" [ref=e1215] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+          - generic [ref=e1216]: basketball betting sites
+        - generic [ref=e1217]: and the matchup pages are a gateway into a huge array of NCAAB stats. Whether you are betting on the tournament or looking for a good matchup to use a new
+        - link "March Madness betting promos" [ref=e1218] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+          - generic [ref=e1219]: March Madness betting promos
+        - generic [ref=e1220]: or
+        - link "sportsbook promo" [ref=e1221] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1222]: sportsbook promo
+        - generic [ref=e1223]: with, this page is where you need to start!
+      - heading "How frequently is the NCAAB scoreboard updated?" [level=3] [ref=e1226]:
+        - generic [ref=e1227]: How frequently is the NCAAB scoreboard updated?
+      - paragraph [ref=e1229]:
+        - generic [ref=e1230]: Our live scores update in real-time, and our pre-games odds are refreshed every five minutes, so you see the best odds for betting on upcoming NCAAB games.
+    - article [ref=e1231]:
+      - heading "FAQs" [level=2] [ref=e1232]
+      - button "How are college basketball matchups scheduled?" [ref=e1234] [cursor=pointer]:
+        - generic [ref=e1235]: How are college basketball matchups scheduled?
+      - button "How do injuries affect college basketball matchups and betting odds?" [ref=e1240] [cursor=pointer]:
+        - generic [ref=e1241]: How do injuries affect college basketball matchups and betting odds?
+      - button "What's the average score of the college basketball game?" [ref=e1246] [cursor=pointer]:
+        - generic [ref=e1247]: What's the average score of the college basketball game?
+    - article [ref=e1251]:
+      - heading "Pages related to this topic" [level=2] [ref=e1252]
+      - generic [ref=e1254]:
+        - link "Basketball Betting Sites" [ref=e1256] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+        - link "March Madness Betting Sites" [ref=e1258] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-sites
+        - link "March Madness Betting Promos" [ref=e1260] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+  - iframe [ref=e1261]:
+    
+  - generic [ref=e1263]:
+    - generic [ref=e1264]:
+      - generic [ref=e1266]:
+        - generic [ref=e1267]:
+          - link "About Us" [ref=e1269] [cursor=pointer]:
+            - /url: https://www.covers.com/about
+          - link "Contact Us" [ref=e1270] [cursor=pointer]:
+            - /url: https://www.covers.com/contact
+          - link "Careers" [ref=e1271] [cursor=pointer]:
+            - /url: https://www.covers.com/careers
+          - link "Our Team" [ref=e1272] [cursor=pointer]:
+            - /url: https://www.covers.com/writers
+          - link "Brand" [ref=e1273] [cursor=pointer]:
+            - /url: https://www.covers.com/brand
+          - link "Testimonials" [ref=e1274] [cursor=pointer]:
+            - /url: https://www.covers.com/testimonials
+        - generic [ref=e1275]:
+          - link "Betting Guides" [ref=e1277] [cursor=pointer]:
+            - /url: https://www.covers.com/guides
+          - link "Sportsbook Reviews" [ref=e1278] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/reviews
+          - link "Sports Betting News" [ref=e1279] [cursor=pointer]:
+            - /url: https://www.covers.com/betting-news
+          - link "Podcasts" [ref=e1280] [cursor=pointer]:
+            - /url: https://www.covers.com/podcasts
+          - link "Responsible Gaming" [ref=e1281] [cursor=pointer]:
+            - /url: https://www.covers.com/guides/help
+        - generic [ref=e1282]:
+          - link "Betting Sites" [ref=e1284] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "Canada Betting Sites" [ref=e1285] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/canada
+          - link "Canada Casinos" [ref=e1286] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada
+          - link "Best Betting Apps" [ref=e1287] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/best-betting-apps
+        - generic [ref=e1288]:
+          - link "Contests" [ref=e1290] [cursor=pointer]:
+            - /url: https://contests.covers.com
+          - link "Streak Survivor" [ref=e1291] [cursor=pointer]:
+            - /url: https://contests.covers.com/survivor
+          - link "King of Covers" [ref=e1292] [cursor=pointer]:
+            - /url: https://contests.covers.com/kingofcovers
+          - link "Office Pools" [ref=e1293] [cursor=pointer]:
+            - /url: https://contests.covers.com/officepools
+      - generic [ref=e1295]:
+        - generic [ref=e1296]: The Covers community has
+        - generic [ref=e1297]: 810,221
+        - generic [ref=e1298]: lifetime members worldwide
+        - link "Join our community today" [ref=e1300] [cursor=pointer]:
+          - /url: https://www.covers.com/forum
+    - generic [ref=e1304]:
+      - generic [ref=e1305]:
+        - img "Covers 30 Years Logo" [ref=e1306]
+        - generic [ref=e1307]:
+          - text: Established in 1995,
+          - text: Covers is the world
+          - text: leader in sports
+          - text: betting information.
+      - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e1309] [cursor=pointer]:
+        - /url: https://www.covers.com/guides/help
+        - generic [ref=e1310]:
+          - generic [ref=e1311]: 21+
+          - generic [ref=e1312]: Gambling problem? Call 1-800-GAMBLER
+    - generic [ref=e1316]:
+      - generic [ref=e1317]:
+        - link "Site Map" [ref=e1318] [cursor=pointer]:
+          - /url: https://www.covers.com/sitemap
+        - link "Help" [ref=e1319] [cursor=pointer]:
+          - /url: https://www.covers.com/help
+        - link "Privacy" [ref=e1320] [cursor=pointer]:
+          - /url: https://www.covers.com/privacy
+        - link "Terms of Service" [ref=e1321] [cursor=pointer]:
+          - /url: https://www.covers.com/terms
+      - generic [ref=e1322]:
+        - link "youtube logo" [ref=e1323] [cursor=pointer]:
+          - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+          - img "youtube logo" [ref=e1324]
+        - link "facebook logo" [ref=e1325] [cursor=pointer]:
+          - /url: https://www.facebook.com/CoversSports/
+          - img "facebook logo" [ref=e1326]
+        - link "twitter logo" [ref=e1327] [cursor=pointer]:
+          - /url: https://twitter.com/Covers
+          - img "twitter logo" [ref=e1328]
+        - link "instagram logo" [ref=e1329] [cursor=pointer]:
+          - /url: https://www.instagram.com/covers_sports/
+          - img "instagram logo" [ref=e1330]
+        - link "linkedin logo" [ref=e1331] [cursor=pointer]:
+          - /url: https://www.linkedin.com/company/2632327/
+          - img "linkedin logo" [ref=e1332]
+        - link "google news logo" [ref=e1333] [cursor=pointer]:
+          - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+          - img "google news logo" [ref=e1334]
+  - generic [ref=e1336]:
+    - generic [ref=e1341]:
+      - text: "Covers is verified safe by:"
+      - img "Evalon Logo" [ref=e1342]
+      - link "GPWA Logo" [ref=e1343] [cursor=pointer]:
+        - /url: https://certify.gpwa.org/verify/covers.com
+        - img "GPWA Logo" [ref=e1344]
+      - img "GDPR Logo" [ref=e1345]
+      - img "GeoTrust Logo" [ref=e1346]
+      - img "Evalon Logo" [ref=e1347]
+    - generic [ref=e1348]:
+      - img "Covers Logo" [ref=e1350]
+      - generic [ref=e1351]:
+        - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+        - paragraph [ref=e1352]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img

@@ -1,0 +1,561 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - text: LOG IN
+                  - img "Chevron"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph:
+                        - button "Continue with Google":
+                          - img
+                          - text: Continue with Google
+                  - generic:
+                    - textbox "Display Name Display Name":
+                      - /placeholder: Display Name
+                    - textbox "Password passwordCreate":
+                      - /placeholder: Password
+                    - checkbox "Stay Logged In"
+                    - text: Stay Logged In
+                    - button "SIGN IN"
+                    - generic:
+                      - text: Forgot your
+                      - link "display name":
+                        - /url: https://www.covers.com/account/forgotusername
+                      - text: or
+                      - link "password":
+                        - /url: https://www.covers.com/account/forgotpassword
+                      - text: "?"
+              - generic:
+                - generic:
+                  - generic:
+                    - mark: or
+              - generic:
+                - generic:
+                  - text: CREATE ACCOUNT
+                  - img "Chevron"
+  - iframe [ref=e29]:
+    
+  - navigation [ref=e32]:
+    - button "more arrow" [ref=e33] [cursor=pointer]:
+      - img "more arrow" [ref=e35]
+    - list [ref=e36]:
+      - listitem [ref=e37]:
+        - link "NCAAB" [ref=e38] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+      - listitem [ref=e39]:
+        - link "Scores & Matchups" [ref=e40] [cursor=pointer]:
+          - /url: https://www.covers.com/sports/ncaab/matchups
+      - listitem [ref=e41]:
+        - link "Free Picks" [ref=e42] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e43]:
+        - link "Odds" [ref=e44] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+      - listitem [ref=e45]:
+        - link "Futures" [ref=e46] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds/futures
+      - listitem [ref=e47]:
+        - link "News & Analysis" [ref=e48] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/betting-news
+      - listitem [ref=e49]:
+        - link "NCAAB Contest" [ref=e50] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e51]:
+        - link "March Madness" [ref=e52] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/march-madness
+      - listitem [ref=e53]:
+        - link "Injuries" [ref=e54] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/injuries
+      - listitem [ref=e55]:
+        - link "Teams" [ref=e56] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/teams
+      - listitem [ref=e57]:
+        - link "Players" [ref=e58] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/players
+  - main [ref=e59]:
+    - article [ref=e60]:
+      - generic [ref=e61]:
+        - link "Kalshi Sports Logo" [ref=e62] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner
+          - img "Kalshi Sports Logo" [ref=e63]
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - text: $10 Trading Bonus
+              - img "tooltip icon" [ref=e68] [cursor=pointer]
+            - generic [ref=e69]: "CODE: COVERS"
+          - link "Claim $10" [ref=e70] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner&location=flex
+    - generic [ref=e71]:
+      - heading "NCAAB Scores & Matchups" [level=1] [ref=e72]
+      - button "NCAAB" [ref=e74] [cursor=pointer]:
+        - img [ref=e75]
+        - generic [ref=e76]: NCAAB
+        - img [ref=e77]
+    - navigation [ref=e79]:
+      - generic [ref=e80]:
+        - link [ref=e81] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2026-04-05
+          - img [ref=e82]
+        - link "Sat Apr 04" [ref=e84] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2026-04-04
+          - text: Sat
+          - generic [ref=e85]: Apr 04
+        - link "Sun Apr 05" [ref=e86] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2026-04-05
+          - text: Sun
+          - generic [ref=e87]: Apr 05
+        - generic [ref=e88]:
+          - generic [ref=e89]: Mon
+          - generic [ref=e90]: Apr 06
+      - button [ref=e92] [cursor=pointer]:
+        - img [ref=e93]
+        - img [ref=e95]
+      - button "Conferences Filter" [ref=e98] [cursor=pointer]:
+        - generic [ref=e99]: Conferences
+        - img [ref=e100]
+        - generic [ref=e102]: Filter
+        - img [ref=e103]
+      - generic [ref=e105]:
+        - textbox "Search" [ref=e106]
+        - button "clear search" [ref=e107] [cursor=pointer]:
+          - generic [ref=e108]: clear search
+    - generic [ref=e109]:
+      - article [ref=e110]:
+        - paragraph [ref=e111]:
+          - strong [ref=e112]: Connecticut @ Michigan
+          - text: (N)
+          - generic [ref=e113]: March Madness
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - link "UConn CONN (2)" [ref=e116] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+              - img "UConn" [ref=e117]
+              - generic [ref=e119]:
+                - text: CONN
+                - generic [ref=e120]: (2)
+            - generic [ref=e122]:
+              - strong [ref=e123]: "63"
+              - strong [ref=e125]: Final
+              - strong [ref=e126]: "69"
+            - link "(1) MICH Michigan" [ref=e127] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+              - generic [ref=e129]:
+                - generic [ref=e130]: (1)
+                - text: MICH
+              - img "Michigan" [ref=e131]
+          - generic [ref=e132]:
+            - paragraph [ref=e133]:
+              - text: Cover By +0.5
+              - text: CONN +6.5
+            - paragraph [ref=e134]:
+              - text: o/u Margin
+              - text: u15
+          - generic [ref=e135]:
+            - table [ref=e136]:
+              - rowgroup [ref=e137]:
+                - row "Team 1 2 Score" [ref=e138]:
+                  - columnheader "Team" [ref=e139]:
+                    - generic [ref=e140]: Team
+                  - columnheader "1" [ref=e141]
+                  - columnheader "2" [ref=e142]
+                  - columnheader "Score" [ref=e143]
+              - rowgroup [ref=e144]:
+                - row "CONN 29 34 63" [ref=e145]:
+                  - rowheader "CONN" [ref=e146]
+                  - cell "29" [ref=e147]
+                  - cell "34" [ref=e148]
+                  - cell "63" [ref=e149]
+                - row "MICH 33 36 69" [ref=e150]:
+                  - rowheader "MICH" [ref=e151]
+                  - cell "33" [ref=e152]
+                  - cell "36" [ref=e153]
+                  - cell "69" [ref=e154]
+            - paragraph [ref=e155]:
+              - text: Connecticut covered the spread of
+              - strong [ref=e156]: "+6.5"
+              - text: . The total score of 132 was
+              - strong [ref=e157]: under 147
+              - text: .
+          - generic [ref=e158]:
+            - link "Boxscore" [ref=e159] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/377166
+            - button "Bet graph" [ref=e161] [cursor=pointer]
+      - article [ref=e162]:
+        - heading "Top-Rated Sportsbooks" [level=2] [ref=e167]
+    - generic:
+      - heading "Latest headlines Checkout latest headlines Read more" [level=2] [ref=e228]:
+        - text: Latest headlines
+        - link "Checkout latest headlines Read more" [ref=e229] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e230]: Checkout latest headlines
+          - text: Read more
+      - generic [ref=e231]:
+        - article [ref=e232]:
+          - generic [ref=e234]:
+            - generic [ref=e235]:
+              - generic [ref=e236]: NCAAB
+              - generic [ref=e237]:
+                - generic [ref=e238]: 04/09/2026
+                - generic [ref=e240]: 07:40 ET
+            - paragraph [ref=e241]:
+              - 'link "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e242] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/props
+            - paragraph [ref=e243]:
+              - link "Best March Madness prop bets. Read more" [ref=e244] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/props
+                - generic [ref=e245]: Best March Madness prop bets.
+                - text: Read more
+        - article [ref=e246]:
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]: NCAAB
+              - generic [ref=e251]:
+                - generic [ref=e252]: 04/08/2026
+                - generic [ref=e254]: 02:03 ET
+            - paragraph [ref=e255]:
+              - 'link "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e256] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+            - paragraph [ref=e257]:
+              - link "Huskies favored to reclaim title. Read more" [ref=e258] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+                - generic [ref=e259]: Huskies favored to reclaim title.
+                - text: Read more
+        - article [ref=e260]:
+          - generic [ref=e262]:
+            - generic [ref=e263]:
+              - generic [ref=e264]: NCAAB
+              - generic [ref=e265]:
+                - generic [ref=e266]: 04/08/2026
+                - generic [ref=e268]: 01:55 ET
+            - paragraph [ref=e269]:
+              - 'link "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e270] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+            - paragraph [ref=e271]:
+              - link "How long before your bracket busts? Read more" [ref=e272] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+                - generic [ref=e273]: How long before your bracket busts?
+                - text: Read more
+        - article [ref=e274]:
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - generic [ref=e278]: NCAAB
+              - generic [ref=e279]:
+                - generic [ref=e280]: 04/08/2026
+                - generic [ref=e282]: 01:30 ET
+            - paragraph [ref=e283]:
+              - 'link "March Madness Expert Picks: Daily Best Bets and Predictions" [ref=e284] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+            - paragraph [ref=e285]:
+              - link "Best bets and SGPs for the National Championship. Read more" [ref=e286] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+                - generic [ref=e287]: Best bets and SGPs for the National Championship.
+                - text: Read more
+    - generic:
+      - heading "Daily betting offers Checkout sportsbook promos Sportsbook promos" [level=2] [ref=e289]:
+        - text: Daily betting offers
+        - link "Checkout sportsbook promos Sportsbook promos" [ref=e290] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e291]: Checkout sportsbook promos
+          - text: Sportsbook promos
+      - generic:
+        - article [ref=e292]:
+          - generic [ref=e293]:
+            - link [ref=e294] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e295]:
+              - generic [ref=e296]:
+                - generic [ref=e297]: PROMO
+                - generic [ref=e298]:
+                  - generic [ref=e299]: 04/21/2026
+                  - generic [ref=e301]: 07:45 ET
+              - paragraph [ref=e302]:
+                - 'link "Novig Promo Code COVERS100: Get 10% Off MLB, NBA, and NHL Prediction Markets on Tuesday" [ref=e303] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e304]:
+                - link "Claim 10% off up to $100 using Novig promo code COVERS100. Read more" [ref=e305] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e306]: Claim 10% off up to $100 using Novig promo code COVERS100.
+                  - text: Read more
+        - article [ref=e307]:
+          - generic [ref=e308]:
+            - link [ref=e309] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e310]:
+              - generic [ref=e311]:
+                - generic [ref=e312]: PROMO
+                - generic [ref=e313]:
+                  - generic [ref=e314]: 04/21/2026
+                  - generic [ref=e316]: 07:40 ET
+              - paragraph [ref=e317]:
+                - 'link "Polymarket Promo Code COVERS: Get $20 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e318] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e319]:
+                - link "$20 deposit bonus with Polymarket promo code COVERS. Read more" [ref=e320] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e321]: $20 deposit bonus with Polymarket promo code COVERS.
+                  - text: Read more
+        - article [ref=e322]:
+          - generic [ref=e323]:
+            - link [ref=e324] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e325]:
+              - generic [ref=e326]:
+                - generic [ref=e327]: PROMO
+                - generic [ref=e328]:
+                  - generic [ref=e329]: 04/21/2026
+                  - generic [ref=e331]: 07:35 ET
+              - paragraph [ref=e332]:
+                - 'link "Kalshi Promo Code COVERS: Get $10 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e333] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e334]:
+                - link "$10 bonus with Kalshi Refferal Code COVERS Read more" [ref=e335] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e336]: $10 bonus with Kalshi Refferal Code COVERS
+                  - text: Read more
+        - article [ref=e337]:
+          - generic [ref=e338]:
+            - link [ref=e339] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e340]:
+              - generic [ref=e341]:
+                - generic [ref=e342]: PROMO
+                - generic [ref=e343]:
+                  - generic [ref=e344]: 04/21/2026
+                  - generic [ref=e346]: 07:30 ET
+              - paragraph [ref=e347]:
+                - 'link "Betr Picks Promo COVERSBONUS: Claim $200 Bonus for MLB, NBA, NHL Playoffs" [ref=e348] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e349]:
+                - link "Free Pick + $200 Bonus Cash Read more" [ref=e350] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e351]: Free Pick + $200 Bonus Cash
+                  - text: Read more
+    - article [ref=e352]:
+      - heading "College Basketball Scores and Matchups" [level=2] [ref=e354]:
+        - generic [ref=e355]: College Basketball Scores and Matchups
+      - paragraph [ref=e357]:
+        - generic [ref=e358]: This page serves as the foundational platform for
+        - link "NCAAB" [ref=e359] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e360]: NCAAB
+        - generic [ref=e361]: bettors to initiate their handicapping process. It is where you delve into essential betting data that will shape your decision-making.
+      - paragraph [ref=e363]:
+        - generic [ref=e364]: Presented here are all forthcoming matchups, coupled with live scores and outcomes. Before the game, bettors can view odds for each matchup and upon the game's conclusion, we give you a glance over the scores, fractionated by quarter.
+      - heading "What are the main types of bets for college basketball matchups?" [level=3] [ref=e366]:
+        - generic [ref=e367]: What are the main types of bets for college basketball matchups?
+      - paragraph [ref=e369]:
+        - generic [ref=e370]:
+          - text: After deciding your bets, the next step
+          - generic [ref=e371]:
+            - text: of the process involves scouring legal
+            - link "betting sites" [ref=e372] [cursor=pointer]:
+              - /url: https://www.covers.com/betting
+            - text: for the most favorable lines via our
+        - link "college basketball odds" [ref=e373] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+          - generic [ref=e374]: college basketball odds
+        - generic [ref=e375]: comparison tool. This platform reveals the odds for each game's point spread, moneyline, and total. Point
+        - generic [ref=e376]: spread betting
+        - generic [ref=e377]: is gambling on the predictive point gap between the two teams, while
+        - link "moneyline betting" [ref=e378] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/how-to-bet-moneylines
+          - generic [ref=e379]: moneyline betting
+        - generic [ref=e380]: entails wagering on the team that is expected to triumph. Totals or
+        - link "Over/Under betting" [ref=e381] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/over-under-totals-betting
+          - generic [ref=e382]: Over/Under betting
+        - generic [ref=e383]: involves staking Over or Under on the amalgamated point total estimated to be scored in a specific game.
+      - generic [ref=e384]:
+        - paragraph [ref=e385]:
+          - generic [ref=e386]: Covers also have
+          - link "March Madness odds" [ref=e387] [cursor=pointer]:
+            - /url: https://www.covers.com/ncaab/march-madness/odds
+            - generic [ref=e388]: March Madness odds
+          - generic [ref=e389]: from a full suite of the best
+          - link "March Madness betting sites" [ref=e390] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+            - generic [ref=e391]: March Madness betting sites
+          - generic [ref=e392]: "!"
+        - heading "Why use Covers NCAAB Scoreboard" [level=3] [ref=e393]:
+          - generic [ref=e394]: Why use Covers NCAAB Scoreboard
+      - paragraph [ref=e396]:
+        - generic [ref=e397]: Covers’ NCAAB scoreboard is a great place for bettors to start researching their
+        - link "college basketball picks" [ref=e398] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+          - generic [ref=e399]: college basketball picks
+        - generic [ref=e400]: .
+      - paragraph [ref=e402]:
+        - generic [ref=e403]: The live and up-to-date odds come from the absolute best
+        - link "basketball betting sites" [ref=e404] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+          - generic [ref=e405]: basketball betting sites
+        - generic [ref=e406]: and the matchup pages are a gateway into a huge array of NCAAB stats. Whether you are betting on the tournament or looking for a good matchup to use a new
+        - link "March Madness betting promos" [ref=e407] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+          - generic [ref=e408]: March Madness betting promos
+        - generic [ref=e409]: or
+        - link "sportsbook promo" [ref=e410] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e411]: sportsbook promo
+        - generic [ref=e412]: with, this page is where you need to start!
+      - heading "How frequently is the NCAAB scoreboard updated?" [level=3] [ref=e415]:
+        - generic [ref=e416]: How frequently is the NCAAB scoreboard updated?
+      - paragraph [ref=e418]:
+        - generic [ref=e419]: Our live scores update in real-time, and our pre-games odds are refreshed every five minutes, so you see the best odds for betting on upcoming NCAAB games.
+    - article [ref=e420]:
+      - heading "FAQs" [level=2] [ref=e421]
+      - button "How are college basketball matchups scheduled?" [ref=e423] [cursor=pointer]:
+        - generic [ref=e424]: How are college basketball matchups scheduled?
+      - button "How do injuries affect college basketball matchups and betting odds?" [ref=e429] [cursor=pointer]:
+        - generic [ref=e430]: How do injuries affect college basketball matchups and betting odds?
+      - button "What's the average score of the college basketball game?" [ref=e435] [cursor=pointer]:
+        - generic [ref=e436]: What's the average score of the college basketball game?
+    - article [ref=e440]:
+      - heading "Pages related to this topic" [level=2] [ref=e441]
+      - generic [ref=e443]:
+        - link "Basketball Betting Sites" [ref=e445] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+        - link "March Madness Betting Sites" [ref=e447] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-sites
+        - link "March Madness Betting Promos" [ref=e449] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+  - generic [ref=e451]:
+    - generic [ref=e452]:
+      - generic [ref=e454]:
+        - generic [ref=e455]:
+          - link "About Us" [ref=e457] [cursor=pointer]:
+            - /url: https://www.covers.com/about
+          - link "Contact Us" [ref=e458] [cursor=pointer]:
+            - /url: https://www.covers.com/contact
+          - link "Careers" [ref=e459] [cursor=pointer]:
+            - /url: https://www.covers.com/careers
+          - link "Our Team" [ref=e460] [cursor=pointer]:
+            - /url: https://www.covers.com/writers
+          - link "Brand" [ref=e461] [cursor=pointer]:
+            - /url: https://www.covers.com/brand
+          - link "Testimonials" [ref=e462] [cursor=pointer]:
+            - /url: https://www.covers.com/testimonials
+        - generic [ref=e463]:
+          - link "Betting Guides" [ref=e465] [cursor=pointer]:
+            - /url: https://www.covers.com/guides
+          - link "Sportsbook Reviews" [ref=e466] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/reviews
+          - link "Sports Betting News" [ref=e467] [cursor=pointer]:
+            - /url: https://www.covers.com/betting-news
+          - link "Podcasts" [ref=e468] [cursor=pointer]:
+            - /url: https://www.covers.com/podcasts
+          - link "Responsible Gaming" [ref=e469] [cursor=pointer]:
+            - /url: https://www.covers.com/guides/help
+        - generic [ref=e470]:
+          - link "Betting Sites" [ref=e472] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "Canada Betting Sites" [ref=e473] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/canada
+          - link "Canada Casinos" [ref=e474] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada
+          - link "Best Betting Apps" [ref=e475] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/best-betting-apps
+        - generic [ref=e476]:
+          - link "Contests" [ref=e478] [cursor=pointer]:
+            - /url: https://contests.covers.com
+          - link "Streak Survivor" [ref=e479] [cursor=pointer]:
+            - /url: https://contests.covers.com/survivor
+          - link "King of Covers" [ref=e480] [cursor=pointer]:
+            - /url: https://contests.covers.com/kingofcovers
+          - link "Office Pools" [ref=e481] [cursor=pointer]:
+            - /url: https://contests.covers.com/officepools
+      - generic [ref=e483]:
+        - generic [ref=e484]: The Covers community has
+        - generic [ref=e485]: 810,221
+        - generic [ref=e486]: lifetime members worldwide
+        - link "Join our community today" [ref=e488] [cursor=pointer]:
+          - /url: https://www.covers.com/forum
+    - generic [ref=e492]:
+      - generic [ref=e493]:
+        - img "Covers 30 Years Logo" [ref=e494]
+        - generic [ref=e495]:
+          - text: Established in 1995,
+          - text: Covers is the world
+          - text: leader in sports
+          - text: betting information.
+      - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e497] [cursor=pointer]:
+        - /url: https://www.covers.com/guides/help
+        - generic [ref=e498]:
+          - generic [ref=e499]: 21+
+          - generic [ref=e500]: Gambling problem? Call 1-800-GAMBLER
+    - generic [ref=e504]:
+      - generic [ref=e505]:
+        - link "Site Map" [ref=e506] [cursor=pointer]:
+          - /url: https://www.covers.com/sitemap
+        - link "Help" [ref=e507] [cursor=pointer]:
+          - /url: https://www.covers.com/help
+        - link "Privacy" [ref=e508] [cursor=pointer]:
+          - /url: https://www.covers.com/privacy
+        - link "Terms of Service" [ref=e509] [cursor=pointer]:
+          - /url: https://www.covers.com/terms
+      - generic [ref=e510]:
+        - link "youtube logo" [ref=e511] [cursor=pointer]:
+          - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+          - img "youtube logo" [ref=e512]
+        - link "facebook logo" [ref=e513] [cursor=pointer]:
+          - /url: https://www.facebook.com/CoversSports/
+          - img "facebook logo" [ref=e514]
+        - link "twitter logo" [ref=e515] [cursor=pointer]:
+          - /url: https://twitter.com/Covers
+          - img "twitter logo" [ref=e516]
+        - link "instagram logo" [ref=e517] [cursor=pointer]:
+          - /url: https://www.instagram.com/covers_sports/
+          - img "instagram logo" [ref=e518]
+        - link "linkedin logo" [ref=e519] [cursor=pointer]:
+          - /url: https://www.linkedin.com/company/2632327/
+          - img "linkedin logo" [ref=e520]
+        - link "google news logo" [ref=e521] [cursor=pointer]:
+          - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+          - img "google news logo" [ref=e522]
+  - generic [ref=e524]:
+    - generic [ref=e529]:
+      - text: "Covers is verified safe by:"
+      - img "Evalon Logo" [ref=e530]
+      - link "GPWA Logo" [ref=e531] [cursor=pointer]:
+        - /url: https://certify.gpwa.org/verify/covers.com
+        - img "GPWA Logo" [ref=e532]
+      - img "GDPR Logo" [ref=e533]
+      - img "GeoTrust Logo" [ref=e534]
+      - img "Evalon Logo" [ref=e535]
+    - generic [ref=e536]:
+      - img "Covers Logo" [ref=e538]
+      - generic [ref=e539]:
+        - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+        - paragraph [ref=e540]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - img
+  - img

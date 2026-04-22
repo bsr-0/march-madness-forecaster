@@ -1,0 +1,2817 @@
+{
+  "description": "Bracket archetype analysis: property \u2192 actual score correlation",
+  "timestamp": "2026-04-20T04:23:03Z",
+  "config": {
+    "n_brackets": 500,
+    "gen_seed": 12345,
+    "decay": 0.85,
+    "scoring": "team_identity",
+    "years": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ]
+  },
+  "per_year": {
+    "2011": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.17671222998396918,
+          "pval": 7.10257433205908e-05
+        },
+        "r64_upsets": {
+          "rho": -0.17671222998396918,
+          "pval": 7.10257433205908e-05
+        },
+        "late_upsets": {
+          "rho": -0.23671296452775192,
+          "pval": 8.502710640130395e-08
+        },
+        "champ_seed": {
+          "rho": 0.046843235518251015,
+          "pval": 0.2958386470922165
+        },
+        "expected_score": {
+          "rho": -0.02673813764208902,
+          "pval": 0.5508458244110467
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 32,
+            "mean_score": 415.3125,
+            "median_score": 410.0,
+            "max_score": 590.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 160,
+            "mean_score": 453.0,
+            "median_score": 450.0,
+            "max_score": 740.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 237,
+            "mean_score": 467.51054852320675,
+            "median_score": 460.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 68,
+            "mean_score": 491.7647058823529,
+            "median_score": 480.0,
+            "max_score": 720.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 3,
+            "mean_score": 460.0,
+            "median_score": 500.0,
+            "max_score": 520.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 10,
+            "mean_score": 487.0,
+            "median_score": 505.0,
+            "max_score": 630.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 61,
+            "mean_score": 490.9836065573771,
+            "median_score": 480.0,
+            "max_score": 720.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 144,
+            "mean_score": 473.6111111111111,
+            "median_score": 470.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 253,
+            "mean_score": 454.8616600790514,
+            "median_score": 450.0,
+            "max_score": 740.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 32,
+            "mean_score": 415.3125,
+            "median_score": 410.0,
+            "max_score": 590.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 399,
+            "mean_score": 461.7794486215539,
+            "median_score": 450.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 41,
+            "mean_score": 458.5365853658537,
+            "median_score": 470.0,
+            "max_score": 660.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 26,
+            "mean_score": 462.3076923076923,
+            "median_score": 470.0,
+            "max_score": 650.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 30,
+            "mean_score": 484.6666666666667,
+            "median_score": 495.0,
+            "max_score": 680.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 4,
+            "mean_score": 445.0,
+            "median_score": 455.0,
+            "max_score": 540.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[465.2, 575.7)",
+            "n": 50,
+            "mean_score": 452.0,
+            "median_score": 465.0,
+            "max_score": 640.0
+          },
+          {
+            "range": "[575.7, 641.9)",
+            "n": 100,
+            "mean_score": 473.0,
+            "median_score": 475.0,
+            "max_score": 730.0
+          },
+          {
+            "range": "[641.9, 689.4)",
+            "n": 100,
+            "mean_score": 465.4,
+            "median_score": 450.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[689.4, 728.4)",
+            "n": 100,
+            "mean_score": 461.0,
+            "median_score": 460.0,
+            "max_score": 740.0
+          },
+          {
+            "range": "[728.4, 770.4)",
+            "n": 100,
+            "mean_score": 454.6,
+            "median_score": 440.0,
+            "max_score": 650.0
+          },
+          {
+            "range": "[770.4, 841.7)",
+            "n": 50,
+            "mean_score": 467.8,
+            "median_score": 460.0,
+            "max_score": 650.0
+          }
+        ]
+      },
+      "best_of_500": 780.0,
+      "median_bracket": 460.0,
+      "n_brackets": 500
+    },
+    "2012": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.013245389488218755,
+          "pval": 0.7676519902086979
+        },
+        "r64_upsets": {
+          "rho": -0.013245389488218755,
+          "pval": 0.7676519902086979
+        },
+        "late_upsets": {
+          "rho": -0.22867260217383373,
+          "pval": 2.3519409512402543e-07
+        },
+        "champ_seed": {
+          "rho": -0.4269012919217907,
+          "pval": 1.452722467013805e-23
+        },
+        "expected_score": {
+          "rho": 0.6668225998146308,
+          "pval": 1.3325478287666425e-65
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 47,
+            "mean_score": 805.9574468085107,
+            "median_score": 730.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 177,
+            "mean_score": 888.0790960451977,
+            "median_score": 850.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 220,
+            "mean_score": 871.3181818181819,
+            "median_score": 850.0,
+            "max_score": 1490.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 56,
+            "mean_score": 868.75,
+            "median_score": 860.0,
+            "max_score": 1420.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 8,
+            "mean_score": 880.0,
+            "median_score": 860.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 48,
+            "mean_score": 866.875,
+            "median_score": 855.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 119,
+            "mean_score": 859.6638655462185,
+            "median_score": 800.0,
+            "max_score": 1490.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 278,
+            "mean_score": 886.9784172661871,
+            "median_score": 870.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 47,
+            "mean_score": 805.9574468085107,
+            "median_score": 730.0,
+            "max_score": 1470.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 268,
+            "mean_score": 987.3880597014926,
+            "median_score": 1070.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 213,
+            "mean_score": 747.793427230047,
+            "median_score": 740.0,
+            "max_score": 1180.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 5,
+            "mean_score": 598.0,
+            "median_score": 580.0,
+            "max_score": 830.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 12,
+            "mean_score": 609.1666666666666,
+            "median_score": 640.0,
+            "max_score": 830.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 2,
+            "mean_score": 605.0,
+            "median_score": 605.0,
+            "max_score": 670.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[452.5, 585.1)",
+            "n": 50,
+            "mean_score": 554.6,
+            "median_score": 510.0,
+            "max_score": 1030.0
+          },
+          {
+            "range": "[585.1, 650.4)",
+            "n": 100,
+            "mean_score": 676.1,
+            "median_score": 655.0,
+            "max_score": 1130.0
+          },
+          {
+            "range": "[650.4, 699.0)",
+            "n": 100,
+            "mean_score": 814.6,
+            "median_score": 760.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[699.0, 738.7)",
+            "n": 100,
+            "mean_score": 956.7,
+            "median_score": 970.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[738.7, 788.5)",
+            "n": 100,
+            "mean_score": 1073.6,
+            "median_score": 1085.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[788.5, 851.0)",
+            "n": 50,
+            "mean_score": 1111.6,
+            "median_score": 1170.0,
+            "max_score": 1440.0
+          }
+        ]
+      },
+      "best_of_500": 1550.0,
+      "median_bracket": 840.0,
+      "n_brackets": 500
+    },
+    "2013": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.03224986358025346,
+          "pval": 0.4718260388428339
+        },
+        "r64_upsets": {
+          "rho": -0.03224986358025346,
+          "pval": 0.4718260388428339
+        },
+        "late_upsets": {
+          "rho": -0.1132628828181708,
+          "pval": 0.011262192010557063
+        },
+        "champ_seed": {
+          "rho": -0.21150147179338913,
+          "pval": 1.8280119770412038e-06
+        },
+        "expected_score": {
+          "rho": 0.21392139214567496,
+          "pval": 1.3829279683779454e-06
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 14,
+            "mean_score": 591.4285714285714,
+            "median_score": 570.0,
+            "max_score": 1090.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 146,
+            "mean_score": 700.6164383561644,
+            "median_score": 635.0,
+            "max_score": 1290.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 237,
+            "mean_score": 739.57805907173,
+            "median_score": 670.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 99,
+            "mean_score": 707.5757575757576,
+            "median_score": 620.0,
+            "max_score": 1450.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 4,
+            "mean_score": 775.0,
+            "median_score": 690.0,
+            "max_score": 1150.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 25,
+            "mean_score": 712.8,
+            "median_score": 620.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 78,
+            "mean_score": 709.3589743589744,
+            "median_score": 630.0,
+            "max_score": 1450.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 167,
+            "mean_score": 732.0958083832336,
+            "median_score": 660.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 216,
+            "mean_score": 719.0277777777778,
+            "median_score": 650.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 14,
+            "mean_score": 591.4285714285714,
+            "median_score": 570.0,
+            "max_score": 1090.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 339,
+            "mean_score": 768.0825958702065,
+            "median_score": 700.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 47,
+            "mean_score": 565.7446808510638,
+            "median_score": 550.0,
+            "max_score": 820.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 89,
+            "mean_score": 625.6179775280899,
+            "median_score": 590.0,
+            "max_score": 1030.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 22,
+            "mean_score": 669.5454545454545,
+            "median_score": 665.0,
+            "max_score": 1070.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 3,
+            "mean_score": 540.0,
+            "median_score": 520.0,
+            "max_score": 630.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[443.8, 593.9)",
+            "n": 50,
+            "mean_score": 583.4,
+            "median_score": 555.0,
+            "max_score": 1230.0
+          },
+          {
+            "range": "[593.9, 675.3)",
+            "n": 100,
+            "mean_score": 723.6,
+            "median_score": 615.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[675.3, 714.7)",
+            "n": 100,
+            "mean_score": 690.4,
+            "median_score": 600.0,
+            "max_score": 1450.0
+          },
+          {
+            "range": "[714.7, 751.2)",
+            "n": 100,
+            "mean_score": 741.0,
+            "median_score": 635.0,
+            "max_score": 1290.0
+          },
+          {
+            "range": "[751.2, 794.9)",
+            "n": 100,
+            "mean_score": 764.6,
+            "median_score": 720.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[794.9, 865.7)",
+            "n": 50,
+            "mean_score": 757.4,
+            "median_score": 715.0,
+            "max_score": 1200.0
+          }
+        ]
+      },
+      "best_of_500": 1560.0,
+      "median_bracket": 640.0,
+      "n_brackets": 500
+    },
+    "2014": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.0975472658442751,
+          "pval": 0.029185827167186897
+        },
+        "r64_upsets": {
+          "rho": -0.0975472658442751,
+          "pval": 0.029185827167186897
+        },
+        "late_upsets": {
+          "rho": -0.19082495833316507,
+          "pval": 1.7403808517675674e-05
+        },
+        "champ_seed": {
+          "rho": -0.09594805544729447,
+          "pval": 0.03194925806027182
+        },
+        "expected_score": {
+          "rho": 0.18491769223240764,
+          "pval": 3.175934715822165e-05
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 23,
+            "mean_score": 474.3478260869565,
+            "median_score": 480.0,
+            "max_score": 670.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 145,
+            "mean_score": 528.0689655172414,
+            "median_score": 530.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 243,
+            "mean_score": 534.6502057613169,
+            "median_score": 520.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 88,
+            "mean_score": 541.7045454545455,
+            "median_score": 535.0,
+            "max_score": 790.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 1,
+            "mean_score": 720.0,
+            "median_score": 720.0,
+            "max_score": 720.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 1,
+            "mean_score": 720.0,
+            "median_score": 720.0,
+            "max_score": 720.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 7,
+            "mean_score": 508.57142857142856,
+            "median_score": 500.0,
+            "max_score": 600.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 81,
+            "mean_score": 544.5679012345679,
+            "median_score": 540.0,
+            "max_score": 790.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 177,
+            "mean_score": 539.2090395480226,
+            "median_score": 530.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 211,
+            "mean_score": 526.303317535545,
+            "median_score": 530.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 23,
+            "mean_score": 474.3478260869565,
+            "median_score": 480.0,
+            "max_score": 670.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 223,
+            "mean_score": 542.9147982062781,
+            "median_score": 540.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 82,
+            "mean_score": 540.2439024390244,
+            "median_score": 540.0,
+            "max_score": 800.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 51,
+            "mean_score": 488.4313725490196,
+            "median_score": 500.0,
+            "max_score": 760.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 139,
+            "mean_score": 525.2517985611511,
+            "median_score": 520.0,
+            "max_score": 770.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 5,
+            "mean_score": 500.0,
+            "median_score": 470.0,
+            "max_score": 720.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[436.5, 570.1)",
+            "n": 50,
+            "mean_score": 485.0,
+            "median_score": 470.0,
+            "max_score": 700.0
+          },
+          {
+            "range": "[570.1, 624.6)",
+            "n": 100,
+            "mean_score": 528.3,
+            "median_score": 530.0,
+            "max_score": 800.0
+          },
+          {
+            "range": "[624.6, 665.7)",
+            "n": 100,
+            "mean_score": 523.8,
+            "median_score": 520.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[665.7, 703.3)",
+            "n": 100,
+            "mean_score": 536.7,
+            "median_score": 540.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[703.3, 741.5)",
+            "n": 100,
+            "mean_score": 549.4,
+            "median_score": 545.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[741.5, 811.0)",
+            "n": 50,
+            "mean_score": 554.4,
+            "median_score": 550.0,
+            "max_score": 730.0
+          }
+        ]
+      },
+      "best_of_500": 860.0,
+      "median_bracket": 530.0,
+      "n_brackets": 500
+    },
+    "2015": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.06371320582481377,
+          "pval": 0.1548665217503933
+        },
+        "r64_upsets": {
+          "rho": -0.06371320582481377,
+          "pval": 0.1548665217503933
+        },
+        "late_upsets": {
+          "rho": -0.2856242047831163,
+          "pval": 7.676824743521993e-11
+        },
+        "champ_seed": {
+          "rho": -0.34541040104683934,
+          "pval": 1.860916224215435e-15
+        },
+        "expected_score": {
+          "rho": 0.15352491139810143,
+          "pval": 0.0005715409064770634
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 8,
+            "mean_score": 695.0,
+            "median_score": 670.0,
+            "max_score": 1090.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 73,
+            "mean_score": 790.9589041095891,
+            "median_score": 760.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 272,
+            "mean_score": 818.7132352941177,
+            "median_score": 780.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 139,
+            "mean_score": 812.3741007194244,
+            "median_score": 790.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 8,
+            "mean_score": 872.5,
+            "median_score": 870.0,
+            "max_score": 1360.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 34,
+            "mean_score": 837.0588235294117,
+            "median_score": 830.0,
+            "max_score": 1360.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 113,
+            "mean_score": 809.2035398230089,
+            "median_score": 790.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 200,
+            "mean_score": 820.65,
+            "median_score": 780.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 145,
+            "mean_score": 802.0689655172414,
+            "median_score": 780.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 8,
+            "mean_score": 695.0,
+            "median_score": 670.0,
+            "max_score": 1090.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 387,
+            "mean_score": 848.0361757105943,
+            "median_score": 820.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 101,
+            "mean_score": 697.4257425742575,
+            "median_score": 660.0,
+            "max_score": 1020.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 4,
+            "mean_score": 600.0,
+            "median_score": 585.0,
+            "max_score": 690.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 8,
+            "mean_score": 607.5,
+            "median_score": 660.0,
+            "max_score": 770.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[487.3, 693.5)",
+            "n": 50,
+            "mean_score": 646.8,
+            "median_score": 590.0,
+            "max_score": 1220.0
+          },
+          {
+            "range": "[693.5, 779.0)",
+            "n": 100,
+            "mean_score": 863.4,
+            "median_score": 790.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[779.0, 839.1)",
+            "n": 100,
+            "mean_score": 870.0,
+            "median_score": 855.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[839.1, 886.8)",
+            "n": 100,
+            "mean_score": 763.4,
+            "median_score": 750.0,
+            "max_score": 1260.0
+          },
+          {
+            "range": "[886.8, 930.4)",
+            "n": 100,
+            "mean_score": 795.6,
+            "median_score": 765.0,
+            "max_score": 1310.0
+          },
+          {
+            "range": "[930.4, 982.1)",
+            "n": 50,
+            "mean_score": 886.2,
+            "median_score": 885.0,
+            "max_score": 1110.0
+          }
+        ]
+      },
+      "best_of_500": 1560.0,
+      "median_bracket": 780.0,
+      "n_brackets": 500
+    },
+    "2016": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.031426500228139524,
+          "pval": 0.4832204659806173
+        },
+        "r64_upsets": {
+          "rho": -0.031426500228139524,
+          "pval": 0.4832204659806173
+        },
+        "late_upsets": {
+          "rho": -0.22258222625488855,
+          "pval": 4.960320723385629e-07
+        },
+        "champ_seed": {
+          "rho": -0.04068381141187868,
+          "pval": 0.36397509652869864
+        },
+        "expected_score": {
+          "rho": 0.2890163739539584,
+          "pval": 4.472156705813082e-11
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 30,
+            "mean_score": 680.0,
+            "median_score": 645.0,
+            "max_score": 1110.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 169,
+            "mean_score": 694.3195266272189,
+            "median_score": 630.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 236,
+            "mean_score": 686.7796610169491,
+            "median_score": 620.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 63,
+            "mean_score": 740.4761904761905,
+            "median_score": 670.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 2,
+            "mean_score": 640.0,
+            "median_score": 640.0,
+            "max_score": 760.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 11,
+            "mean_score": 835.4545454545455,
+            "median_score": 760.0,
+            "max_score": 1210.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 54,
+            "mean_score": 717.4074074074074,
+            "median_score": 670.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 153,
+            "mean_score": 679.4771241830065,
+            "median_score": 620.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 252,
+            "mean_score": 696.2698412698413,
+            "median_score": 630.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 30,
+            "mean_score": 680.0,
+            "median_score": 645.0,
+            "max_score": 1110.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 242,
+            "mean_score": 650.5785123966942,
+            "median_score": 630.0,
+            "max_score": 1160.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 164,
+            "mean_score": 843.5365853658536,
+            "median_score": 820.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 52,
+            "mean_score": 559.4230769230769,
+            "median_score": 530.0,
+            "max_score": 850.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 38,
+            "mean_score": 552.1052631578947,
+            "median_score": 520.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 4,
+            "mean_score": 475.0,
+            "median_score": 495.0,
+            "max_score": 580.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[466.2, 563.0)",
+            "n": 50,
+            "mean_score": 551.8,
+            "median_score": 490.0,
+            "max_score": 1250.0
+          },
+          {
+            "range": "[563.0, 612.7)",
+            "n": 100,
+            "mean_score": 638.7,
+            "median_score": 580.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[612.7, 641.7)",
+            "n": 100,
+            "mean_score": 698.2,
+            "median_score": 625.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[641.7, 665.2)",
+            "n": 100,
+            "mean_score": 749.1,
+            "median_score": 680.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[665.2, 697.6)",
+            "n": 100,
+            "mean_score": 750.3,
+            "median_score": 710.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[697.6, 755.5)",
+            "n": 50,
+            "mean_score": 730.6,
+            "median_score": 720.0,
+            "max_score": 1280.0
+          }
+        ]
+      },
+      "best_of_500": 1430.0,
+      "median_bracket": 635.0,
+      "n_brackets": 500
+    },
+    "2017": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.062396297206875694,
+          "pval": 0.16359280633299378
+        },
+        "r64_upsets": {
+          "rho": -0.062396297206875694,
+          "pval": 0.16359280633299378
+        },
+        "late_upsets": {
+          "rho": -0.22748407404604684,
+          "pval": 2.725123674995466e-07
+        },
+        "champ_seed": {
+          "rho": -0.5481249822519779,
+          "pval": 1.4910477240367213e-40
+        },
+        "expected_score": {
+          "rho": 0.6051468620785413,
+          "pval": 2.8536297075290775e-51
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 7,
+            "mean_score": 784.2857142857143,
+            "median_score": 910.0,
+            "max_score": 1070.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 72,
+            "mean_score": 764.8611111111111,
+            "median_score": 740.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 253,
+            "mean_score": 791.6600790513834,
+            "median_score": 780.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 160,
+            "mean_score": 798.0625,
+            "median_score": 780.0,
+            "max_score": 1390.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 8,
+            "mean_score": 1022.5,
+            "median_score": 1055.0,
+            "max_score": 1390.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 2,
+            "mean_score": 800.0,
+            "median_score": 800.0,
+            "max_score": 1100.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 39,
+            "mean_score": 851.2820512820513,
+            "median_score": 810.0,
+            "max_score": 1390.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 127,
+            "mean_score": 795.8267716535433,
+            "median_score": 780.0,
+            "max_score": 1390.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 178,
+            "mean_score": 788.9887640449438,
+            "median_score": 790.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 147,
+            "mean_score": 781.7687074829932,
+            "median_score": 770.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 7,
+            "mean_score": 784.2857142857143,
+            "median_score": 910.0,
+            "max_score": 1070.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 330,
+            "mean_score": 891.6969696969697,
+            "median_score": 880.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 90,
+            "mean_score": 602.1111111111111,
+            "median_score": 585.0,
+            "max_score": 940.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 13,
+            "mean_score": 646.9230769230769,
+            "median_score": 600.0,
+            "max_score": 860.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 55,
+            "mean_score": 613.4545454545455,
+            "median_score": 600.0,
+            "max_score": 960.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 12,
+            "mean_score": 510.0,
+            "median_score": 475.0,
+            "max_score": 780.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[483.8, 564.7)",
+            "n": 50,
+            "mean_score": 539.4,
+            "median_score": 495.0,
+            "max_score": 1150.0
+          },
+          {
+            "range": "[564.7, 618.1)",
+            "n": 100,
+            "mean_score": 620.9,
+            "median_score": 560.0,
+            "max_score": 1260.0
+          },
+          {
+            "range": "[618.1, 656.0)",
+            "n": 100,
+            "mean_score": 782.2,
+            "median_score": 705.0,
+            "max_score": 1280.0
+          },
+          {
+            "range": "[656.0, 700.3)",
+            "n": 100,
+            "mean_score": 882.1,
+            "median_score": 830.0,
+            "max_score": 1560.0
+          },
+          {
+            "range": "[700.3, 740.3)",
+            "n": 100,
+            "mean_score": 930.9,
+            "median_score": 890.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[740.3, 791.6)",
+            "n": 50,
+            "mean_score": 962.8,
+            "median_score": 965.0,
+            "max_score": 1390.0
+          }
+        ]
+      },
+      "best_of_500": 1560.0,
+      "median_bracket": 780.0,
+      "n_brackets": 500
+    },
+    "2018": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.08877487772419793,
+          "pval": 0.047253955322993715
+        },
+        "r64_upsets": {
+          "rho": -0.08877487772419793,
+          "pval": 0.047253955322993715
+        },
+        "late_upsets": {
+          "rho": -0.28986040690876347,
+          "pval": 3.905155987342427e-11
+        },
+        "champ_seed": {
+          "rho": -0.38250969225349485,
+          "pval": 7.2247119914362925e-19
+        },
+        "expected_score": {
+          "rho": 0.3847941723068974,
+          "pval": 4.305545917157039e-19
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 11,
+            "mean_score": 635.4545454545455,
+            "median_score": 570.0,
+            "max_score": 1050.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 106,
+            "mean_score": 640.7547169811321,
+            "median_score": 565.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 237,
+            "mean_score": 665.1476793248945,
+            "median_score": 600.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 135,
+            "mean_score": 672.074074074074,
+            "median_score": 610.0,
+            "max_score": 1370.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 11,
+            "mean_score": 695.4545454545455,
+            "median_score": 650.0,
+            "max_score": 1130.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 2,
+            "mean_score": 590.0,
+            "median_score": 590.0,
+            "max_score": 600.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 31,
+            "mean_score": 699.0322580645161,
+            "median_score": 660.0,
+            "max_score": 1130.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 113,
+            "mean_score": 668.4070796460177,
+            "median_score": 600.0,
+            "max_score": 1370.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 167,
+            "mean_score": 661.6766467065868,
+            "median_score": 600.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 176,
+            "mean_score": 653.75,
+            "median_score": 570.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 11,
+            "mean_score": 635.4545454545455,
+            "median_score": 570.0,
+            "max_score": 1050.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 297,
+            "mean_score": 749.5959595959596,
+            "median_score": 700.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 170,
+            "mean_score": 530.3529411764706,
+            "median_score": 530.0,
+            "max_score": 920.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 19,
+            "mean_score": 583.1578947368421,
+            "median_score": 570.0,
+            "max_score": 830.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 9,
+            "mean_score": 533.3333333333334,
+            "median_score": 480.0,
+            "max_score": 820.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 5,
+            "mean_score": 452.0,
+            "median_score": 420.0,
+            "max_score": 580.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[476.1, 600.4)",
+            "n": 50,
+            "mean_score": 500.8,
+            "median_score": 485.0,
+            "max_score": 740.0
+          },
+          {
+            "range": "[600.4, 657.7)",
+            "n": 100,
+            "mean_score": 602.4,
+            "median_score": 550.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[657.7, 701.4)",
+            "n": 100,
+            "mean_score": 610.6,
+            "median_score": 550.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[701.4, 743.1)",
+            "n": 100,
+            "mean_score": 695.4,
+            "median_score": 600.0,
+            "max_score": 1370.0
+          },
+          {
+            "range": "[743.1, 787.0)",
+            "n": 100,
+            "mean_score": 739.3,
+            "median_score": 680.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[787.0, 846.0)",
+            "n": 50,
+            "mean_score": 822.4,
+            "median_score": 780.0,
+            "max_score": 1190.0
+          }
+        ]
+      },
+      "best_of_500": 1400.0,
+      "median_bracket": 600.0,
+      "n_brackets": 500
+    },
+    "2019": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": -0.05372721743187747,
+          "pval": 0.23043599515339186
+        },
+        "r64_upsets": {
+          "rho": 0.05372721743187747,
+          "pval": 0.23043599515339186
+        },
+        "late_upsets": {
+          "rho": -0.06629513221290527,
+          "pval": 0.13878711483596892
+        },
+        "champ_seed": {
+          "rho": -0.36542303442341284,
+          "pval": 3.0547624078855584e-17
+        },
+        "expected_score": {
+          "rho": 0.7145222489067236,
+          "pval": 2.737760528629793e-79
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 9,
+            "mean_score": 805.5555555555555,
+            "median_score": 720.0,
+            "max_score": 1250.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 88,
+            "mean_score": 936.9318181818181,
+            "median_score": 910.0,
+            "max_score": 1480.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 234,
+            "mean_score": 930.5555555555555,
+            "median_score": 855.0,
+            "max_score": 1670.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 157,
+            "mean_score": 872.6114649681529,
+            "median_score": 810.0,
+            "max_score": 1490.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 12,
+            "mean_score": 877.5,
+            "median_score": 780.0,
+            "max_score": 1180.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 3,
+            "mean_score": 866.6666666666666,
+            "median_score": 740.0,
+            "max_score": 1180.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 43,
+            "mean_score": 894.6511627906976,
+            "median_score": 840.0,
+            "max_score": 1340.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 123,
+            "mean_score": 865.5284552845528,
+            "median_score": 790.0,
+            "max_score": 1490.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 169,
+            "mean_score": 941.0650887573964,
+            "median_score": 890.0,
+            "max_score": 1670.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 153,
+            "mean_score": 922.6143790849674,
+            "median_score": 870.0,
+            "max_score": 1490.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 9,
+            "mean_score": 805.5555555555555,
+            "median_score": 720.0,
+            "max_score": 1250.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 389,
+            "mean_score": 965.5526992287918,
+            "median_score": 950.0,
+            "max_score": 1670.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 88,
+            "mean_score": 695.3409090909091,
+            "median_score": 685.0,
+            "max_score": 990.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 17,
+            "mean_score": 845.2941176470588,
+            "median_score": 810.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 6,
+            "mean_score": 636.6666666666666,
+            "median_score": 655.0,
+            "max_score": 770.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[510.2, 651.1)",
+            "n": 50,
+            "mean_score": 636.6,
+            "median_score": 635.0,
+            "max_score": 1080.0
+          },
+          {
+            "range": "[651.1, 714.6)",
+            "n": 100,
+            "mean_score": 727.2,
+            "median_score": 680.0,
+            "max_score": 1480.0
+          },
+          {
+            "range": "[714.6, 770.1)",
+            "n": 100,
+            "mean_score": 819.4,
+            "median_score": 755.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[770.1, 806.9)",
+            "n": 100,
+            "mean_score": 945.6,
+            "median_score": 890.0,
+            "max_score": 1670.0
+          },
+          {
+            "range": "[806.9, 848.4)",
+            "n": 100,
+            "mean_score": 1123.0,
+            "median_score": 1170.0,
+            "max_score": 1500.0
+          },
+          {
+            "range": "[848.4, 908.5)",
+            "n": 50,
+            "mean_score": 1232.6,
+            "median_score": 1265.0,
+            "max_score": 1440.0
+          }
+        ]
+      },
+      "best_of_500": 1670.0,
+      "median_bracket": 840.0,
+      "n_brackets": 500
+    },
+    "2021": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.04705569296069925,
+          "pval": 0.2936511997446682
+        },
+        "r64_upsets": {
+          "rho": -0.04705569296069925,
+          "pval": 0.2936511997446682
+        },
+        "late_upsets": {
+          "rho": -0.26922502393154824,
+          "pval": 9.457152013909067e-10
+        },
+        "champ_seed": {
+          "rho": -0.456121423197479,
+          "pval": 4.64480375019275e-27
+        },
+        "expected_score": {
+          "rho": 0.619579164471672,
+          "pval": 2.4354544093798155e-54
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 19,
+            "mean_score": 773.6842105263158,
+            "median_score": 810.0,
+            "max_score": 1010.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 129,
+            "mean_score": 802.8682170542636,
+            "median_score": 760.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 254,
+            "mean_score": 834.5275590551181,
+            "median_score": 810.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 94,
+            "mean_score": 782.3404255319149,
+            "median_score": 745.0,
+            "max_score": 1340.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 4,
+            "mean_score": 1117.5,
+            "median_score": 1230.0,
+            "max_score": 1420.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 1,
+            "mean_score": 1420.0,
+            "median_score": 1420.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 16,
+            "mean_score": 834.375,
+            "median_score": 840.0,
+            "max_score": 1370.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 81,
+            "mean_score": 780.7407407407408,
+            "median_score": 740.0,
+            "max_score": 1340.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 177,
+            "mean_score": 846.2146892655368,
+            "median_score": 830.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 206,
+            "mean_score": 804.6601941747573,
+            "median_score": 760.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 19,
+            "mean_score": 773.6842105263158,
+            "median_score": 810.0,
+            "max_score": 1010.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 355,
+            "mean_score": 880.9295774647887,
+            "median_score": 850.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 124,
+            "mean_score": 672.741935483871,
+            "median_score": 645.0,
+            "max_score": 1100.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 4,
+            "mean_score": 527.5,
+            "median_score": 500.0,
+            "max_score": 760.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 10,
+            "mean_score": 601.0,
+            "median_score": 540.0,
+            "max_score": 800.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 7,
+            "mean_score": 568.5714285714286,
+            "median_score": 550.0,
+            "max_score": 690.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[455.7, 582.4)",
+            "n": 50,
+            "mean_score": 532.2,
+            "median_score": 515.0,
+            "max_score": 1040.0
+          },
+          {
+            "range": "[582.4, 671.1)",
+            "n": 100,
+            "mean_score": 715.1,
+            "median_score": 625.0,
+            "max_score": 1390.0
+          },
+          {
+            "range": "[671.1, 742.2)",
+            "n": 100,
+            "mean_score": 798.7,
+            "median_score": 730.0,
+            "max_score": 1430.0
+          },
+          {
+            "range": "[742.2, 790.5)",
+            "n": 100,
+            "mean_score": 894.7,
+            "median_score": 820.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[790.5, 839.6)",
+            "n": 100,
+            "mean_score": 899.9,
+            "median_score": 865.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[839.6, 898.4)",
+            "n": 50,
+            "mean_score": 1016.0,
+            "median_score": 1025.0,
+            "max_score": 1230.0
+          }
+        ]
+      },
+      "best_of_500": 1430.0,
+      "median_bracket": 790.0,
+      "n_brackets": 500
+    },
+    "2022": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": -0.007425599249170236,
+          "pval": 0.8684495938978911
+        },
+        "r64_upsets": {
+          "rho": 0.007425599249170236,
+          "pval": 0.8684495938978911
+        },
+        "late_upsets": {
+          "rho": -0.26700430399817954,
+          "pval": 1.311980104850532e-09
+        },
+        "champ_seed": {
+          "rho": -0.14008189918331712,
+          "pval": 0.001689580638460395
+        },
+        "expected_score": {
+          "rho": 0.13452197721505202,
+          "pval": 0.0025767024633469443
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 24,
+            "mean_score": 600.4166666666666,
+            "median_score": 580.0,
+            "max_score": 1200.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 147,
+            "mean_score": 623.1972789115646,
+            "median_score": 560.0,
+            "max_score": 1260.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 256,
+            "mean_score": 624.84375,
+            "median_score": 560.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 73,
+            "mean_score": 621.7808219178082,
+            "median_score": 580.0,
+            "max_score": 1230.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 11,
+            "mean_score": 549.0909090909091,
+            "median_score": 540.0,
+            "max_score": 720.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 62,
+            "mean_score": 634.6774193548387,
+            "median_score": 590.0,
+            "max_score": 1230.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 173,
+            "mean_score": 624.6820809248555,
+            "median_score": 560.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 230,
+            "mean_score": 623.9130434782609,
+            "median_score": 560.0,
+            "max_score": 1260.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 24,
+            "mean_score": 600.4166666666666,
+            "median_score": 580.0,
+            "max_score": 1200.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 313,
+            "mean_score": 658.3386581469648,
+            "median_score": 570.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 87,
+            "mean_score": 582.9885057471264,
+            "median_score": 560.0,
+            "max_score": 940.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 39,
+            "mean_score": 523.3333333333334,
+            "median_score": 520.0,
+            "max_score": 870.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 59,
+            "mean_score": 564.5762711864406,
+            "median_score": 570.0,
+            "max_score": 810.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 2,
+            "mean_score": 435.0,
+            "median_score": 435.0,
+            "max_score": 490.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[491.7, 588.8)",
+            "n": 50,
+            "mean_score": 532.2,
+            "median_score": 505.0,
+            "max_score": 1060.0
+          },
+          {
+            "range": "[588.8, 645.2)",
+            "n": 100,
+            "mean_score": 609.8,
+            "median_score": 570.0,
+            "max_score": 1220.0
+          },
+          {
+            "range": "[645.2, 699.9)",
+            "n": 100,
+            "mean_score": 666.5,
+            "median_score": 585.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[699.9, 748.5)",
+            "n": 100,
+            "mean_score": 630.9,
+            "median_score": 550.0,
+            "max_score": 1260.0
+          },
+          {
+            "range": "[748.5, 795.9)",
+            "n": 100,
+            "mean_score": 610.3,
+            "median_score": 550.0,
+            "max_score": 1250.0
+          },
+          {
+            "range": "[795.9, 853.7)",
+            "n": 50,
+            "mean_score": 660.2,
+            "median_score": 685.0,
+            "max_score": 870.0
+          }
+        ]
+      },
+      "best_of_500": 1320.0,
+      "median_bracket": 560.0,
+      "n_brackets": 500
+    },
+    "2023": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.23549994535475366,
+          "pval": 9.936876610030038e-08
+        },
+        "r64_upsets": {
+          "rho": -0.23549994535475366,
+          "pval": 9.936876610030038e-08
+        },
+        "late_upsets": {
+          "rho": -0.3946254635040748,
+          "pval": 4.428812742639044e-20
+        },
+        "champ_seed": {
+          "rho": -0.21076990468313384,
+          "pval": 1.9876326578506074e-06
+        },
+        "expected_score": {
+          "rho": 0.5308529355987915,
+          "pval": 1.0723166500647861e-37
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 16,
+            "mean_score": 520.625,
+            "median_score": 515.0,
+            "max_score": 680.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 147,
+            "mean_score": 547.8231292517007,
+            "median_score": 530.0,
+            "max_score": 1210.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 245,
+            "mean_score": 582.2448979591836,
+            "median_score": 570.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 90,
+            "mean_score": 600.4444444444445,
+            "median_score": 575.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 1,
+            "mean_score": 560.0,
+            "median_score": 560.0,
+            "max_score": 560.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[2.5, 4.5)",
+            "n": 11,
+            "mean_score": 620.0,
+            "median_score": 610.0,
+            "max_score": 830.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 80,
+            "mean_score": 597.25,
+            "median_score": 570.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 158,
+            "mean_score": 587.4050632911392,
+            "median_score": 590.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 234,
+            "mean_score": 557.1367521367522,
+            "median_score": 530.0,
+            "max_score": 1210.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 17,
+            "mean_score": 521.7647058823529,
+            "median_score": 520.0,
+            "max_score": 680.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 289,
+            "mean_score": 589.5847750865051,
+            "median_score": 580.0,
+            "max_score": 940.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 134,
+            "mean_score": 503.65671641791045,
+            "median_score": 500.0,
+            "max_score": 710.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 8,
+            "mean_score": 560.0,
+            "median_score": 535.0,
+            "max_score": 960.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 63,
+            "mean_score": 656.1904761904761,
+            "median_score": 570.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 6,
+            "mean_score": 491.6666666666667,
+            "median_score": 435.0,
+            "max_score": 720.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[398.8, 550.6)",
+            "n": 50,
+            "mean_score": 449.6,
+            "median_score": 420.0,
+            "max_score": 970.0
+          },
+          {
+            "range": "[550.6, 608.4)",
+            "n": 100,
+            "mean_score": 543.3,
+            "median_score": 490.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[608.4, 650.8)",
+            "n": 100,
+            "mean_score": 543.9,
+            "median_score": 530.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[650.8, 689.2)",
+            "n": 100,
+            "mean_score": 615.3,
+            "median_score": 570.0,
+            "max_score": 1240.0
+          },
+          {
+            "range": "[689.2, 732.8)",
+            "n": 100,
+            "mean_score": 614.0,
+            "median_score": 600.0,
+            "max_score": 940.0
+          },
+          {
+            "range": "[732.8, 783.4)",
+            "n": 50,
+            "mean_score": 650.4,
+            "median_score": 630.0,
+            "max_score": 830.0
+          }
+        ]
+      },
+      "best_of_500": 1240.0,
+      "median_bracket": 555.0,
+      "n_brackets": 500
+    },
+    "2024": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": -0.015457641250486718,
+          "pval": 0.7302455877544838
+        },
+        "r64_upsets": {
+          "rho": 0.015457641250486718,
+          "pval": 0.7302455877544838
+        },
+        "late_upsets": {
+          "rho": -0.19316714720389036,
+          "pval": 1.3640482359122403e-05
+        },
+        "champ_seed": {
+          "rho": -0.4423084461159981,
+          "pval": 2.2987010292259444e-25
+        },
+        "expected_score": {
+          "rho": 0.26960106916370663,
+          "pval": 8.944531360360611e-10
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 9,
+            "mean_score": 760.0,
+            "median_score": 720.0,
+            "max_score": 1110.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 98,
+            "mean_score": 814.5918367346939,
+            "median_score": 795.0,
+            "max_score": 1400.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 245,
+            "mean_score": 825.1020408163265,
+            "median_score": 810.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 138,
+            "mean_score": 800.072463768116,
+            "median_score": 735.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 10,
+            "mean_score": 792.0,
+            "median_score": 770.0,
+            "max_score": 970.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 2,
+            "mean_score": 770.0,
+            "median_score": 770.0,
+            "max_score": 780.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 26,
+            "mean_score": 826.9230769230769,
+            "median_score": 780.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 120,
+            "mean_score": 794.0833333333334,
+            "median_score": 730.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 179,
+            "mean_score": 834.245810055866,
+            "median_score": 820.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 164,
+            "mean_score": 808.8414634146342,
+            "median_score": 775.0,
+            "max_score": 1450.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 9,
+            "mean_score": 760.0,
+            "median_score": 720.0,
+            "max_score": 1110.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 360,
+            "mean_score": 876.8055555555555,
+            "median_score": 850.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 101,
+            "mean_score": 672.0792079207921,
+            "median_score": 670.0,
+            "max_score": 1000.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 9,
+            "mean_score": 546.6666666666666,
+            "median_score": 550.0,
+            "max_score": 820.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 28,
+            "mean_score": 630.7142857142857,
+            "median_score": 625.0,
+            "max_score": 900.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 2,
+            "mean_score": 520.0,
+            "median_score": 520.0,
+            "max_score": 600.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[481.1, 630.1)",
+            "n": 50,
+            "mean_score": 591.2,
+            "median_score": 525.0,
+            "max_score": 1120.0
+          },
+          {
+            "range": "[630.1, 713.7)",
+            "n": 100,
+            "mean_score": 760.8,
+            "median_score": 735.0,
+            "max_score": 1380.0
+          },
+          {
+            "range": "[713.7, 757.9)",
+            "n": 100,
+            "mean_score": 882.9,
+            "median_score": 850.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[757.9, 796.6)",
+            "n": 100,
+            "mean_score": 875.5,
+            "median_score": 840.0,
+            "max_score": 1450.0
+          },
+          {
+            "range": "[796.6, 846.2)",
+            "n": 100,
+            "mean_score": 839.2,
+            "median_score": 795.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[846.2, 904.0)",
+            "n": 50,
+            "mean_score": 835.0,
+            "median_score": 850.0,
+            "max_score": 1360.0
+          }
+        ]
+      },
+      "best_of_500": 1470.0,
+      "median_bracket": 780.0,
+      "n_brackets": 500
+    },
+    "2025": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.0645909202755421,
+          "pval": 0.14924926994940846
+        },
+        "r64_upsets": {
+          "rho": -0.0645909202755421,
+          "pval": 0.14924926994940846
+        },
+        "late_upsets": {
+          "rho": -0.31479653335839414,
+          "pval": 5.785718594629946e-13
+        },
+        "champ_seed": {
+          "rho": -0.4002063705273063,
+          "pval": 1.1766915241796924e-20
+        },
+        "expected_score": {
+          "rho": 0.6212718023395392,
+          "pval": 1.0378602584904165e-54
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 4,
+            "mean_score": 960.0,
+            "median_score": 990.0,
+            "max_score": 1140.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 60,
+            "mean_score": 937.1666666666666,
+            "median_score": 945.0,
+            "max_score": 1470.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 224,
+            "mean_score": 985.8482142857143,
+            "median_score": 960.0,
+            "max_score": 1690.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 199,
+            "mean_score": 977.6884422110553,
+            "median_score": 970.0,
+            "max_score": 1610.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 13,
+            "mean_score": 977.6923076923077,
+            "median_score": 980.0,
+            "max_score": 1280.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 1,
+            "mean_score": 810.0,
+            "median_score": 810.0,
+            "max_score": 810.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 51,
+            "mean_score": 980.5882352941177,
+            "median_score": 960.0,
+            "max_score": 1530.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 160,
+            "mean_score": 977.8125,
+            "median_score": 980.0,
+            "max_score": 1610.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 168,
+            "mean_score": 998.8690476190476,
+            "median_score": 975.0,
+            "max_score": 1690.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 116,
+            "mean_score": 941.8103448275862,
+            "median_score": 930.0,
+            "max_score": 1540.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 4,
+            "mean_score": 960.0,
+            "median_score": 990.0,
+            "max_score": 1140.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 424,
+            "mean_score": 1012.7830188679245,
+            "median_score": 1000.0,
+            "max_score": 1690.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 51,
+            "mean_score": 777.2549019607843,
+            "median_score": 780.0,
+            "max_score": 1190.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 17,
+            "mean_score": 802.9411764705883,
+            "median_score": 760.0,
+            "max_score": 1180.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 7,
+            "mean_score": 712.8571428571429,
+            "median_score": 710.0,
+            "max_score": 930.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 1,
+            "mean_score": 470.0,
+            "median_score": 470.0,
+            "max_score": 470.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[493.4, 651.7)",
+            "n": 50,
+            "mean_score": 741.6,
+            "median_score": 705.0,
+            "max_score": 1200.0
+          },
+          {
+            "range": "[651.7, 727.4)",
+            "n": 100,
+            "mean_score": 834.8,
+            "median_score": 785.0,
+            "max_score": 1440.0
+          },
+          {
+            "range": "[727.4, 775.7)",
+            "n": 100,
+            "mean_score": 995.8,
+            "median_score": 920.0,
+            "max_score": 1540.0
+          },
+          {
+            "range": "[775.7, 816.2)",
+            "n": 100,
+            "mean_score": 1020.1,
+            "median_score": 985.0,
+            "max_score": 1630.0
+          },
+          {
+            "range": "[816.2, 854.2)",
+            "n": 100,
+            "mean_score": 1087.4,
+            "median_score": 1070.0,
+            "max_score": 1690.0
+          },
+          {
+            "range": "[854.2, 905.6)",
+            "n": 50,
+            "mean_score": 1145.6,
+            "median_score": 1160.0,
+            "max_score": 1410.0
+          }
+        ]
+      },
+      "best_of_500": 1690.0,
+      "median_bracket": 960.0,
+      "n_brackets": 500
+    },
+    "2026": {
+      "correlations": {
+        "chalk_fraction": {
+          "rho": 0.02340062609514589,
+          "pval": 0.6016593642965682
+        },
+        "r64_upsets": {
+          "rho": -0.02340062609514589,
+          "pval": 0.6016593642965682
+        },
+        "late_upsets": {
+          "rho": -0.13863941619468448,
+          "pval": 0.0018878489950263518
+        },
+        "champ_seed": {
+          "rho": -0.32412837061327626,
+          "pval": 1.0766241432921595e-13
+        },
+        "expected_score": {
+          "rho": 0.5014733190540716,
+          "pval": 3.369859572613606e-33
+        }
+      },
+      "bins": {
+        "chalk_fraction": [
+          {
+            "range": "[0.5, 0.6)",
+            "n": 1,
+            "mean_score": 1110.0,
+            "median_score": 1110.0,
+            "max_score": 1110.0
+          },
+          {
+            "range": "[0.6, 0.7)",
+            "n": 24,
+            "mean_score": 934.1666666666666,
+            "median_score": 930.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[0.7, 0.8)",
+            "n": 188,
+            "mean_score": 892.1808510638298,
+            "median_score": 820.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[0.8, 0.9)",
+            "n": 245,
+            "mean_score": 916.0,
+            "median_score": 840.0,
+            "max_score": 1530.0
+          },
+          {
+            "range": "[0.9, 1.0)",
+            "n": 42,
+            "mean_score": 925.7142857142857,
+            "median_score": 920.0,
+            "max_score": 1420.0
+          }
+        ],
+        "r64_upsets": [
+          {
+            "range": "[-0.5, 2.5)",
+            "n": 11,
+            "mean_score": 955.4545454545455,
+            "median_score": 880.0,
+            "max_score": 1420.0
+          },
+          {
+            "range": "[2.5, 4.5)",
+            "n": 90,
+            "mean_score": 925.0,
+            "median_score": 905.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[4.5, 6.5)",
+            "n": 186,
+            "mean_score": 911.505376344086,
+            "median_score": 835.0,
+            "max_score": 1530.0
+          },
+          {
+            "range": "[6.5, 8.5)",
+            "n": 152,
+            "mean_score": 883.8815789473684,
+            "median_score": 810.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[8.5, 12.5)",
+            "n": 60,
+            "mean_score": 930.0,
+            "median_score": 910.0,
+            "max_score": 1510.0
+          },
+          {
+            "range": "[12.5, 20.5)",
+            "n": 1,
+            "mean_score": 1110.0,
+            "median_score": 1110.0,
+            "max_score": 1110.0
+          }
+        ],
+        "champ_seed": [
+          {
+            "range": "[0.5, 1.5)",
+            "n": 365,
+            "mean_score": 965.8630136986301,
+            "median_score": 930.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[1.5, 2.5)",
+            "n": 103,
+            "mean_score": 744.4660194174758,
+            "median_score": 740.0,
+            "max_score": 1320.0
+          },
+          {
+            "range": "[2.5, 3.5)",
+            "n": 27,
+            "mean_score": 812.5925925925926,
+            "median_score": 870.0,
+            "max_score": 1070.0
+          },
+          {
+            "range": "[3.5, 5.5)",
+            "n": 2,
+            "mean_score": 700.0,
+            "median_score": 700.0,
+            "max_score": 800.0
+          },
+          {
+            "range": "[5.5, 16.5)",
+            "n": 3,
+            "mean_score": 666.6666666666666,
+            "median_score": 710.0,
+            "max_score": 720.0
+          }
+        ],
+        "expected_score": [
+          {
+            "range": "[540.3, 680.1)",
+            "n": 50,
+            "mean_score": 688.0,
+            "median_score": 670.0,
+            "max_score": 950.0
+          },
+          {
+            "range": "[680.1, 750.3)",
+            "n": 100,
+            "mean_score": 767.9,
+            "median_score": 700.0,
+            "max_score": 1410.0
+          },
+          {
+            "range": "[750.3, 785.6)",
+            "n": 100,
+            "mean_score": 891.0,
+            "median_score": 840.0,
+            "max_score": 1550.0
+          },
+          {
+            "range": "[785.6, 823.3)",
+            "n": 100,
+            "mean_score": 978.8,
+            "median_score": 895.0,
+            "max_score": 1530.0
+          },
+          {
+            "range": "[823.3, 867.8)",
+            "n": 100,
+            "mean_score": 991.5,
+            "median_score": 930.0,
+            "max_score": 1460.0
+          },
+          {
+            "range": "[867.8, 926.9)",
+            "n": 50,
+            "mean_score": 1144.8,
+            "median_score": 1210.0,
+            "max_score": 1430.0
+          }
+        ]
+      },
+      "best_of_500": 1550.0,
+      "median_bracket": 845.0,
+      "n_brackets": 500
+    }
+  }
+}

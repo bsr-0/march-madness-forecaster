@@ -44,12 +44,12 @@ Algorithm
 Computational complexity
 ------------------------
 O(n_tournaments × (n_opponents + n_model_brackets) × 63) for scoring.
-With defaults (5000 tournaments × 200 opponents × 63 games) this is
-~63M operations — completes in ~10 seconds on modern hardware.
-n_tournaments=5000 is the MEMORY.md §1 Pool-strategy lock (see
-COUNCIL_LESSONS.md §2 O5): at 1000 sims the rank order of the top-20
-brackets was unstable under small input perturbation; 5000 gives
-sampling SE ≈ 0.7% on P(top-5%) and is rank-order-stable.
+With defaults (20000 tournaments × 200 opponents × 63 games) this is
+~252M operations — completes in ~30 seconds on modern hardware.
+n_tournaments=20000 is the MEMORY.md §1 Pool-strategy lock: 5000 was
+rank-order-stable at fixed seed (O5) but UNSTABLE across independent
+seeds (rank_stability_check Jaccard=0.19, Spearman=0.51). 20000 cuts
+SE from ~0.35% to ~0.17%, resolving the ~1% P(rank=1) spread.
 """
 
 from __future__ import annotations
@@ -88,9 +88,13 @@ class PoolSimulationConfig:
         random_seed: Base seed for reproducibility.
         scoring_system: Round-point mapping for bracket scoring.
         upset_bonus_enabled: Whether to add seed-difference bonus points.
+        use_team_identity_scoring: Use team-identity scoring (real ESPN
+            payout rules) instead of shape-encoded scoring. O26 showed
+            shape vs team-identity produces materially different bracket
+            rankings (mean |Δρ| = 0.252). Default True for production.
     """
 
-    n_tournaments: int = 5000  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
+    n_tournaments: int = 20000  # rank-stable across seeds at 20K; see rank_stability_check
     n_opponents: int = 200
     noise_std: float = 0.16
     random_seed: int = 42
@@ -105,6 +109,7 @@ class PoolSimulationConfig:
         }
     )
     upset_bonus_enabled: bool = False
+    use_team_identity_scoring: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -841,12 +846,40 @@ class PoolCompetitionSimulator:
             rng,
         )
 
+        use_ti = self.config.use_team_identity_scoring
+
+        # Pre-decode bracket picks once if using team-identity scoring
+        if use_ti:
+            all_picks_decoded = [
+                picks_by_round(all_brackets[i], self.first_round_matchups)
+                for i in range(pool_size)
+            ]
+            round_pts = [
+                (rnd, self.config.scoring_system.get(rnd, 0))
+                for rnd in ROUND_NAMES
+                if self.config.scoring_system.get(rnd, 0)
+            ]
+
         for sim in range(n_tourn):
-            scores = score_brackets_against_outcome(
-                all_brackets,
-                outcomes[sim],
-                scoring_vector,
-            )
+            if use_ti:
+                outcome_winners = picks_by_round(
+                    outcomes[sim], self.first_round_matchups,
+                )
+                scores = np.zeros(pool_size, dtype=np.float64)
+                for b_idx in range(pool_size):
+                    bp = all_picks_decoded[b_idx]
+                    total = 0.0
+                    for rnd, pts in round_pts:
+                        total += pts * len(
+                            bp[rnd] & outcome_winners.get(rnd, set())
+                        )
+                    scores[b_idx] = total
+            else:
+                scores = score_brackets_against_outcome(
+                    all_brackets,
+                    outcomes[sim],
+                    scoring_vector,
+                )
 
             # Add upset bonus if enabled
             if self.config.upset_bonus_enabled:
@@ -1095,10 +1128,11 @@ def run_pool_simulation(
     pool_size: int = 100,
     scoring_system: Optional[Dict[str, int]] = None,
     target_percentiles: Optional[List[float]] = None,
-    n_tournaments: int = 5000,  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
+    n_tournaments: int = 20000,  # rank-stable across seeds at 20K; see rank_stability_check
     noise_std: float = 0.16,
     random_seed: int = 42,
     upset_bonus_enabled: bool = False,
+    use_team_identity_scoring: bool = True,
 ) -> PoolSimulationResult:
     """Convenience function to run pool competition simulation.
 
@@ -1116,6 +1150,7 @@ def run_pool_simulation(
         noise_std: Logit noise for tournament simulation.
         random_seed: For reproducibility.
         upset_bonus_enabled: Add seed-diff bonus for upset picks.
+        use_team_identity_scoring: Team-identity (True) vs shape (False).
 
     Returns:
         PoolSimulationResult.
@@ -1138,6 +1173,7 @@ def run_pool_simulation(
             "CHAMP": 320,
         },
         upset_bonus_enabled=upset_bonus_enabled,
+        use_team_identity_scoring=use_team_identity_scoring,
     )
 
     simulator = PoolCompetitionSimulator(
@@ -1167,7 +1203,7 @@ def compute_bracket_win_probability(
     pick_distribution: Dict[str, Dict[str, float]],
     seeds: Dict[str, int],
     n_opponents: int = 30,
-    n_tournaments: int = 5000,
+    n_tournaments: int = 20000,
     noise_std: float = 0.16,
     chalk_noise_std: float = 0.4,
     rng: Optional[np.random.Generator] = None,

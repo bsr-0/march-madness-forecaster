@@ -928,7 +928,12 @@ class TestStatisticalProperties:
         assert top_25_prob > 0.15, f"Chalk bracket should have reasonable top-25% probability, got {top_25_prob:.3f}"
 
     def test_larger_pool_harder_to_win(self):
-        """P(top-1%) should decrease as pool size grows."""
+        """P(top-5%) should decrease as pool size grows.
+
+        Uses shape-encoded scoring to isolate the pool-size effect from
+        scoring-method differences. Team-identity scoring changes the
+        per-bracket score distribution and is tested separately.
+        """
         first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
         chalk_winners = _build_chalk_bracket(first_round, matchup_probs)
 
@@ -944,6 +949,7 @@ class TestStatisticalProperties:
                 target_percentiles=[0.05],
                 n_tournaments=500,
                 random_seed=42,
+                use_team_identity_scoring=False,
             )
             results[pool_size] = result.bracket_performances[0].percentile_estimates[0].probability
 
@@ -1115,7 +1121,7 @@ class TestPicksDictToBoolArray:
 
 
 # ---------------------------------------------------------------------------
-# COUNCIL_LESSONS §2 O5: rank stability at n_tournaments=5000, fixed seed.
+# Rank stability at n_tournaments=20000 (cross-seed stable; see rank_stability_check).
 # ---------------------------------------------------------------------------
 
 
@@ -1156,7 +1162,7 @@ def _build_20_variants(first_round, matchup_probs):
 
 
 class TestRankStability:
-    """COUNCIL_LESSONS §2 O5 gate: at n_tournaments=5000 and a fixed seed,
+    """Deterministic rank stability: at n_tournaments=20000 and a fixed seed,
     running the optimizer 3× on identical inputs must produce identical
     top-20 rank-order. If this test flakes, the bug is an un-seeded RNG
     path in the opponent sampler or tournament-outcome loop — fix by
@@ -1176,7 +1182,7 @@ class TestRankStability:
                 model_brackets=variants,
                 model_bracket_metadata=[{"id": v["id"]} for v in variants],
                 pool_size=100,
-                n_tournaments=5000,
+                n_tournaments=20000,
                 random_seed=42,
             )
 
@@ -1199,6 +1205,61 @@ class TestRankStability:
         assert order_1 == order_2 == order_3, (
             "Rank order is not stable across 3 runs at fixed seed. "
             "Likely cause: an un-seeded RNG path in opponent sampling or "
-            "tournament outcome simulation. See COUNCIL_LESSONS.md §2 O5."
+            "tournament outcome simulation."
         )
         assert len(order_1) == 20
+
+
+class TestCrossSeedRankStability:
+    """Cross-seed stability: rankings should be correlated across different
+    RNG seeds at n_tournaments=20000. The existing TestRankStability only
+    checks determinism (same seed = same output). This test checks that
+    different seeds produce similar rankings — the property that matters
+    for bracket selection.
+
+    Uses the synthetic _build_64_team_bracket fixture (not real data), so
+    the gate is looser than the real-data stability check script."""
+
+    @pytest.mark.slow
+    def test_spearman_across_seeds(self):
+        from scipy.stats import spearmanr
+
+        first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
+        variants = _build_20_variants(first_round, matchup_probs)
+
+        def _run_with_seed(seed):
+            result = run_pool_simulation(
+                first_round_matchups=first_round,
+                matchup_probs=matchup_probs,
+                pick_distribution=pick_dist,
+                seeds=seeds,
+                model_brackets=variants,
+                model_bracket_metadata=[{"id": v["id"]} for v in variants],
+                pool_size=100,
+                n_tournaments=20000,
+                random_seed=seed,
+            )
+            # Extract P(top_1pct) for each bracket, ordered by bracket ID
+            perfs = sorted(result.bracket_performances, key=lambda bp: bp.bracket_id)
+            return np.array([
+                next(
+                    (p.probability for p in bp.percentile_estimates if p.label == "top_1pct"),
+                    0.0,
+                )
+                for bp in perfs
+            ])
+
+        p_vectors = [_run_with_seed(s) for s in (42, 99, 777)]
+
+        rhos = []
+        for i in range(len(p_vectors)):
+            for j in range(i + 1, len(p_vectors)):
+                rho, _ = spearmanr(p_vectors[i], p_vectors[j])
+                rhos.append(rho)
+
+        mean_rho = float(np.mean(rhos))
+        assert mean_rho >= 0.50, (
+            f"Cross-seed Spearman ρ = {mean_rho:.3f} < 0.50. "
+            f"Rankings are not stable across independent seeds at n_tournaments=20000. "
+            f"Per-pair ρ: {[f'{r:.3f}' for r in rhos]}"
+        )

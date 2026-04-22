@@ -1,0 +1,1228 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem
+  - navigation [ref=e31]:
+    - button "more arrow" [ref=e32] [cursor=pointer]:
+      - img "more arrow" [ref=e34]
+    - list [ref=e35]:
+      - listitem [ref=e36]:
+        - link "NCAAB" [ref=e37] [cursor=pointer]:
+          - /url: /ncaab
+      - listitem [ref=e38]:
+        - link "Scores & Matchups" [ref=e39] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups
+      - listitem [ref=e40]:
+        - link "Free Picks" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e42]:
+        - link "Odds" [ref=e43] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/odds
+      - listitem [ref=e44]:
+        - link "Futures" [ref=e45] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/odds/futures
+      - listitem [ref=e46]:
+        - link "News & Analysis" [ref=e47] [cursor=pointer]:
+          - /url: /ncaab/betting-news
+      - listitem [ref=e48]:
+        - link "NCAAB Contest" [ref=e49] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e50]:
+        - link "March Madness" [ref=e51] [cursor=pointer]:
+          - /url: /ncaab/march-madness
+      - listitem [ref=e52]:
+        - link "Injuries" [ref=e53] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/injuries
+      - listitem [ref=e54]:
+        - link "Teams" [ref=e55] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/teams
+      - listitem [ref=e56]:
+        - link "Players" [ref=e57] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/players
+      - listitem [ref=e58]:
+        - link "Standings" [ref=e59] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/standings
+  - article [ref=e61]
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - img "UConn Huskies logo" [ref=e69]
+          - generic [ref=e70]:
+            - link "UConn" [ref=e72] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+            - generic [ref=e73]:
+              - text: 2nd Big East
+              - text: 34-6
+        - generic [ref=e75]:
+          - img "Michigan Wolverines logo" [ref=e76]
+          - generic [ref=e77]:
+            - link "Michigan" [ref=e79] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+            - generic [ref=e80]:
+              - text: 1st Big Ten
+              - text: 37-3
+        - time [ref=e83]:
+          - generic [ref=e84]: 63 FINAL 69
+          - generic [ref=e85]: Apr 06, 2026
+      - tablist [ref=e87]:
+        - tab "Stats" [ref=e88] [cursor=pointer]
+        - tab "Picks" [ref=e89] [cursor=pointer]
+        - tab "Odds" [ref=e90] [cursor=pointer]
+      - heading "UConn vs Michigan Results, Match Player Stats & Records" [level=1] [ref=e92]:
+        - text: UConn vs Michigan
+        - text: Results, Match Player Stats & Records
+      - generic [ref=e95]:
+        - navigation "Jump Links Navigation" [ref=e97]:
+          - link "Boxscore" [ref=e98] [cursor=pointer]:
+            - /url: "#boxscore"
+          - link "Records" [ref=e99] [cursor=pointer]:
+            - /url: "#records"
+          - link "Preview" [ref=e100] [cursor=pointer]:
+            - /url: "#preview"
+          - link "Injuries" [ref=e101] [cursor=pointer]:
+            - /url: "#injuries"
+        - generic [ref=e102]:
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - table "Livescore details" [ref=e105]:
+                - caption: Livescore details
+                - rowgroup [ref=e106]:
+                  - row "Team 1 2 Total" [ref=e107]:
+                    - columnheader "Team" [ref=e108]
+                    - columnheader "1" [ref=e109]
+                    - columnheader "2" [ref=e110]
+                    - columnheader "Total" [ref=e111]
+                - rowgroup [ref=e112]:
+                  - row "UConn Huskies Connecticut 29 34 63" [ref=e113]:
+                    - cell "UConn Huskies Connecticut" [ref=e114]:
+                      - img "UConn Huskies" [ref=e115]
+                      - link "Connecticut" [ref=e116] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+                        - generic [ref=e117]: Connecticut
+                    - cell "29" [ref=e118]
+                    - cell "34" [ref=e119]
+                    - cell "63" [ref=e120]
+                  - row "Michigan Wolverines Michigan 33 36 69" [ref=e121]:
+                    - cell "Michigan Wolverines Michigan" [ref=e122]:
+                      - img "Michigan Wolverines" [ref=e123]
+                      - link "Michigan" [ref=e124] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+                        - generic [ref=e125]: Michigan
+                    - cell "33" [ref=e126]
+                    - cell "36" [ref=e127]
+                    - cell "69" [ref=e128]
+              - separator [ref=e129]
+              - link "Player Stats" [ref=e130] [cursor=pointer]:
+                - /url: "#player-stats"
+            - generic [ref=e131]:
+              - table "Betting Information" [ref=e132]:
+                - caption: Betting Information
+                - rowgroup [ref=e133]:
+                  - row "Team ATS (Margin) O/U (Margin)" [ref=e134]:
+                    - columnheader "Team" [ref=e135]
+                    - columnheader "ATS (Margin)" [ref=e136]
+                    - columnheader "O/U (Margin)" [ref=e137]
+                - rowgroup [ref=e138]:
+                  - row "UConn Huskies Connecticut +6.5 (0.5) 146.5o" [ref=e139]:
+                    - cell "UConn Huskies Connecticut" [ref=e140]:
+                      - link "UConn Huskies Connecticut" [ref=e141] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+                        - img "UConn Huskies" [ref=e142]
+                        - generic [ref=e143]: Connecticut
+                    - cell "+6.5 (0.5)" [ref=e144]:
+                      - generic [ref=e145]: +6.5 (0.5)
+                    - cell "146.5o" [ref=e146]
+                  - row "Michigan Wolverines Michigan -6.5 146.5u (14.5)" [ref=e147]:
+                    - cell "Michigan Wolverines Michigan" [ref=e148]:
+                      - link "Michigan Wolverines Michigan" [ref=e149] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+                        - img "Michigan Wolverines" [ref=e150]
+                        - generic [ref=e151]: Michigan
+                    - cell "-6.5" [ref=e152]
+                    - cell "146.5u (14.5)" [ref=e153]:
+                      - generic [ref=e154]: 146.5u (14.5)
+              - separator [ref=e155]
+              - button "Line Movement" [ref=e156] [cursor=pointer]
+          - generic [ref=e157]:
+            - heading "Bet Graph" [level=2] [ref=e158]
+            - img "Betgraph loading..." [ref=e159]
+          - generic [ref=e160]:
+            - heading "Player Stats" [level=2] [ref=e161]
+            - tablist [ref=e162]:
+              - tab "UConn Huskies Connecticut" [ref=e163]:
+                - img "UConn Huskies" [ref=e164]
+                - text: Connecticut
+              - tab "Michigan Wolverines Michigan" [ref=e165] [cursor=pointer]:
+                - img "Michigan Wolverines" [ref=e166]
+                - text: Michigan
+            - tabpanel [ref=e168]:
+              - table [ref=e170]:
+                - rowgroup [ref=e171]:
+                  - row "Player POS MIN FGM-A 3PM-A FTM-A +/- OFF DEF TOT A PF STL TO BLK PTS" [ref=e172]:
+                    - columnheader "Player" [ref=e173]
+                    - columnheader "POS" [ref=e174]
+                    - columnheader "MIN" [ref=e175]
+                    - columnheader "FGM-A" [ref=e176]
+                    - columnheader "3PM-A" [ref=e177]
+                    - columnheader "FTM-A" [ref=e178]
+                    - columnheader "+/-" [ref=e179]
+                    - columnheader "OFF" [ref=e180]
+                    - columnheader "DEF" [ref=e181]
+                    - columnheader "TOT" [ref=e182]
+                    - columnheader "A" [ref=e183]
+                    - columnheader "PF" [ref=e184]
+                    - columnheader "STL" [ref=e185]
+                    - columnheader "TO" [ref=e186]
+                    - columnheader "BLK" [ref=e187]
+                    - columnheader "PTS" [ref=e188]
+                - rowgroup [ref=e189]:
+                  - row "A. Karaban 40:00 5-14 3-10 4-6 0 3 8 11 2 1 2 1 0 17" [ref=e190]:
+                    - cell "A. Karaban" [ref=e191]:
+                      - link "A. Karaban" [ref=e192] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/257485/alex-karaban
+                    - cell [ref=e193]
+                    - cell "40:00" [ref=e194]
+                    - cell "5-14" [ref=e195]
+                    - cell "3-10" [ref=e196]
+                    - cell "4-6" [ref=e197]
+                    - cell "0" [ref=e198]
+                    - cell "3" [ref=e199]
+                    - cell "8" [ref=e200]
+                    - cell "11" [ref=e201]
+                    - cell "2" [ref=e202]
+                    - cell "1" [ref=e203]
+                    - cell "2" [ref=e204]
+                    - cell "1" [ref=e205]
+                    - cell "0" [ref=e206]
+                    - cell "17" [ref=e207]
+                  - row "B. Mullins 36:00 4-17 3-10 0-0 0 3 4 7 2 2 0 1 1 11" [ref=e208]:
+                    - cell "B. Mullins" [ref=e209]:
+                      - link "B. Mullins" [ref=e210] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374741/braylon-mullins
+                    - cell [ref=e211]
+                    - cell "36:00" [ref=e212]
+                    - cell "4-17" [ref=e213]
+                    - cell "3-10" [ref=e214]
+                    - cell "0-0" [ref=e215]
+                    - cell "0" [ref=e216]
+                    - cell "3" [ref=e217]
+                    - cell "4" [ref=e218]
+                    - cell "7" [ref=e219]
+                    - cell "2" [ref=e220]
+                    - cell "2" [ref=e221]
+                    - cell "0" [ref=e222]
+                    - cell "1" [ref=e223]
+                    - cell "1" [ref=e224]
+                    - cell "11" [ref=e225]
+                  - row "T. Reed 33:00 4-12 0-1 5-6 0 7 7 14 0 3 1 3 0 13" [ref=e226]:
+                    - cell "T. Reed" [ref=e227]:
+                      - link "T. Reed" [ref=e228] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/258790/tarris-reed-jr
+                    - cell [ref=e229]
+                    - cell "33:00" [ref=e230]
+                    - cell "4-12" [ref=e231]
+                    - cell "0-1" [ref=e232]
+                    - cell "5-6" [ref=e233]
+                    - cell "0" [ref=e234]
+                    - cell "7" [ref=e235]
+                    - cell "7" [ref=e236]
+                    - cell "14" [ref=e237]
+                    - cell "0" [ref=e238]
+                    - cell "3" [ref=e239]
+                    - cell "1" [ref=e240]
+                    - cell "3" [ref=e241]
+                    - cell "0" [ref=e242]
+                    - cell "13" [ref=e243]
+                  - row "S. Demary 21:00 1-4 0-1 0-0 0 2 0 2 2 5 0 1 1 2" [ref=e244]:
+                    - cell "S. Demary" [ref=e245]:
+                      - link "S. Demary" [ref=e246] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/286968/silas-demary-jr
+                    - cell [ref=e247]
+                    - cell "21:00" [ref=e248]
+                    - cell "1-4" [ref=e249]
+                    - cell "0-1" [ref=e250]
+                    - cell "0-0" [ref=e251]
+                    - cell "0" [ref=e252]
+                    - cell "2" [ref=e253]
+                    - cell "0" [ref=e254]
+                    - cell "2" [ref=e255]
+                    - cell "2" [ref=e256]
+                    - cell "5" [ref=e257]
+                    - cell "0" [ref=e258]
+                    - cell "1" [ref=e259]
+                    - cell "1" [ref=e260]
+                    - cell "2" [ref=e261]
+                  - row "S. Ball 16:00 4-10 3-7 0-0 0 0 0 0 0 4 0 1 0 11" [ref=e262]:
+                    - cell "S. Ball" [ref=e263]:
+                      - link "S. Ball" [ref=e264] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/285978/solo-ball
+                    - cell [ref=e265]
+                    - cell "16:00" [ref=e266]
+                    - cell "4-10" [ref=e267]
+                    - cell "3-7" [ref=e268]
+                    - cell "0-0" [ref=e269]
+                    - cell "0" [ref=e270]
+                    - cell "0" [ref=e271]
+                    - cell "0" [ref=e272]
+                    - cell "0" [ref=e273]
+                    - cell "0" [ref=e274]
+                    - cell "4" [ref=e275]
+                    - cell "0" [ref=e276]
+                    - cell "1" [ref=e277]
+                    - cell "0" [ref=e278]
+                    - cell "11" [ref=e279]
+                  - row "J. Ross 20:00 0-2 0-1 3-4 0 2 2 4 0 2 0 1 0 3" [ref=e280]:
+                    - cell "J. Ross" [ref=e281]:
+                      - link "J. Ross" [ref=e282] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/285980/jayden-ross
+                    - cell [ref=e283]
+                    - cell "20:00" [ref=e284]
+                    - cell "0-2" [ref=e285]
+                    - cell "0-1" [ref=e286]
+                    - cell "3-4" [ref=e287]
+                    - cell "0" [ref=e288]
+                    - cell "2" [ref=e289]
+                    - cell "2" [ref=e290]
+                    - cell "4" [ref=e291]
+                    - cell "0" [ref=e292]
+                    - cell "2" [ref=e293]
+                    - cell "0" [ref=e294]
+                    - cell "1" [ref=e295]
+                    - cell "0" [ref=e296]
+                    - cell "3" [ref=e297]
+                  - row "M. Smith 19:00 3-6 0-2 0-0 0 2 1 3 3 2 1 1 0 6" [ref=e298]:
+                    - cell "M. Smith" [ref=e299]:
+                      - link "M. Smith" [ref=e300] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/238504/malachi-smith
+                    - cell [ref=e301]
+                    - cell "19:00" [ref=e302]
+                    - cell "3-6" [ref=e303]
+                    - cell "0-2" [ref=e304]
+                    - cell "0-0" [ref=e305]
+                    - cell "0" [ref=e306]
+                    - cell "2" [ref=e307]
+                    - cell "1" [ref=e308]
+                    - cell "3" [ref=e309]
+                    - cell "3" [ref=e310]
+                    - cell "2" [ref=e311]
+                    - cell "1" [ref=e312]
+                    - cell "1" [ref=e313]
+                    - cell "0" [ref=e314]
+                    - cell "6" [ref=e315]
+                  - row "J. Stewart 9:00 0-3 0-1 0-0 0 1 1 2 0 3 0 0 0 0" [ref=e316]:
+                    - cell "J. Stewart" [ref=e317]:
+                      - link "J. Stewart" [ref=e318] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/285982/jaylin-stewart
+                    - cell [ref=e319]
+                    - cell "9:00" [ref=e320]
+                    - cell "0-3" [ref=e321]
+                    - cell "0-1" [ref=e322]
+                    - cell "0-0" [ref=e323]
+                    - cell "0" [ref=e324]
+                    - cell "1" [ref=e325]
+                    - cell "1" [ref=e326]
+                    - cell "2" [ref=e327]
+                    - cell "0" [ref=e328]
+                    - cell "3" [ref=e329]
+                    - cell "0" [ref=e330]
+                    - cell "0" [ref=e331]
+                    - cell "0" [ref=e332]
+                    - cell "0" [ref=e333]
+                  - row "E. Reibe 6:00 0-0 0-0 0-0 0 0 0 0 0 0 0 1 0 0" [ref=e334]:
+                    - cell "E. Reibe" [ref=e335]:
+                      - link "E. Reibe" [ref=e336] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374740/eric-reibe
+                    - cell [ref=e337]
+                    - cell "6:00" [ref=e338]
+                    - cell "0-0" [ref=e339]
+                    - cell "0-0" [ref=e340]
+                    - cell "0-0" [ref=e341]
+                    - cell "0" [ref=e342]
+                    - cell "0" [ref=e343]
+                    - cell "0" [ref=e344]
+                    - cell "0" [ref=e345]
+                    - cell "0" [ref=e346]
+                    - cell "0" [ref=e347]
+                    - cell "0" [ref=e348]
+                    - cell "1" [ref=e349]
+                    - cell "0" [ref=e350]
+                    - cell "0" [ref=e351]
+                  - row "U. Paunovic DNP" [ref=e352]:
+                    - cell "U. Paunovic" [ref=e353]:
+                      - link "U. Paunovic" [ref=e354] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374737/uros-paunovic
+                    - cell [ref=e355]
+                    - cell "DNP" [ref=e356]
+                  - row "J. Ross DNP" [ref=e357]:
+                    - cell "J. Ross" [ref=e358]:
+                      - link "J. Ross" [ref=e359] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374739/jacob-ross
+                    - cell [ref=e360]
+                    - cell "DNP" [ref=e361]
+                  - row "R. Elezaj DNP" [ref=e362]:
+                    - cell "R. Elezaj" [ref=e363]:
+                      - link "R. Elezaj" [ref=e364] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374738/rrezon-elezaj
+                    - cell [ref=e365]
+                    - cell "DNP" [ref=e366]
+                  - row "A. Millender DNP" [ref=e367]:
+                    - cell "A. Millender" [ref=e368]:
+                      - link "A. Millender" [ref=e369] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/313850/alec-millender
+                    - cell [ref=e370]
+                    - cell "DNP" [ref=e371]
+                  - row "J. Furphy DNP" [ref=e372]:
+                    - cell "J. Furphy" [ref=e373]:
+                      - link "J. Furphy" [ref=e374] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/374742/jacob-furphy
+                    - cell [ref=e375]
+                    - cell "DNP" [ref=e376]
+                  - row "D. Koroma DNP" [ref=e377]:
+                    - cell "D. Koroma" [ref=e378]:
+                      - link "D. Koroma" [ref=e379] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/players/223303/dwayne-koroma
+                    - cell [ref=e380]
+                    - cell "DNP" [ref=e381]
+                  - row "Total 200:00 21-68 9-33 12-16 20 23 43 9 22 4 10 2 63" [ref=e382]:
+                    - cell "Total" [ref=e383]
+                    - cell "200:00" [ref=e384]
+                    - cell "21-68" [ref=e385]
+                    - cell "9-33" [ref=e386]
+                    - cell "12-16" [ref=e387]
+                    - cell [ref=e388]
+                    - cell "20" [ref=e389]
+                    - cell "23" [ref=e390]
+                    - cell "43" [ref=e391]
+                    - cell "9" [ref=e392]
+                    - cell "22" [ref=e393]
+                    - cell "4" [ref=e394]
+                    - cell "10" [ref=e395]
+                    - cell "2" [ref=e396]
+                    - cell "63" [ref=e397]
+                  - row "31% 27% 75%" [ref=e398]:
+                    - cell [ref=e399]
+                    - cell "31%" [ref=e400]
+                    - cell "27%" [ref=e401]
+                    - cell "75%" [ref=e402]
+                    - cell [ref=e403]
+          - region "Game Info" [ref=e404]:
+            - heading "Game Info" [level=2] [ref=e405]
+            - generic [ref=e406]:
+              - paragraph [ref=e407]:
+                - generic [ref=e408]: Location
+                - img [ref=e409]
+                - generic [ref=e416]: Lucas Oil Stadium
+              - paragraph [ref=e417]:
+                - generic [ref=e418]: Attendance
+                - img [ref=e419]
+                - text: 70,720 attendance
+        - generic [ref=e429]:
+          - heading "CONN vs MICH Records" [level=2] [ref=e431]:
+            - text: CONN vs MICH
+            - text: Records
+          - article "Team record, ats" [ref=e433]:
+            - table "Team Table" [ref=e436]:
+              - caption: Team Table
+              - rowgroup [ref=e437]:
+                - row "Team Record ATS O/U Away Home" [ref=e438]:
+                  - columnheader "Team" [ref=e439]
+                  - columnheader "Record" [ref=e440]
+                  - columnheader "ATS" [ref=e441]
+                  - columnheader "O/U" [ref=e442]
+                  - columnheader "Away" [ref=e443]
+                  - columnheader "Home" [ref=e444]
+              - rowgroup [ref=e445]:
+                - row "Connecticut logo CONN 34-5 17-22-0 18-21-0 9-2 15-2" [ref=e446]:
+                  - cell "Connecticut logo CONN" [ref=e447]:
+                    - generic [ref=e448]:
+                      - img "Connecticut logo" [ref=e449]
+                      - link "CONN" [ref=e450] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+                  - cell "34-5" [ref=e451]
+                  - cell "17-22-0" [ref=e452]
+                  - cell "18-21-0" [ref=e453]
+                  - cell "9-2" [ref=e454]
+                  - cell "15-2" [ref=e455]
+                - row "Michigan logo MICH 36-3 19-20-0 17-22-0 11-0 14-1" [ref=e456]:
+                  - cell "Michigan logo MICH" [ref=e457]:
+                    - generic [ref=e458]:
+                      - img "Michigan logo" [ref=e459]
+                      - link "MICH" [ref=e460] [cursor=pointer]:
+                        - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+                  - cell "36-3" [ref=e461]
+                  - cell "19-20-0" [ref=e462]
+                  - cell "17-22-0" [ref=e463]
+                  - cell "11-0" [ref=e464]
+                  - cell "14-1" [ref=e465]
+        - region "Head-To-Head and Teams - Last 10" [ref=e466]:
+          - list [ref=e467]:
+            - button "HEAD-TO-HEAD" [ref=e468] [cursor=pointer]:
+              - generic [ref=e469]: HEAD-TO-HEAD
+            - button "Connecticut logo CONNECTICUT" [ref=e470] [cursor=pointer]:
+              - img "Connecticut logo" [ref=e471]
+              - generic [ref=e472]: CONNECTICUT
+            - button "Michigan logo MICHIGAN" [ref=e473] [cursor=pointer]:
+              - img "Michigan logo" [ref=e474]
+              - generic [ref=e475]: MICHIGAN
+          - region "Head-To-Head Record" [ref=e476]:
+            - article "Head-To-Head - Last 10" [ref=e477]:
+              - generic [ref=e478]:
+                - heading "Head-To-Head Last 10" [level=2] [ref=e479]:
+                  - text: Head-To-Head
+                  - text: Last 10
+                - button "Betting Terms" [ref=e481] [cursor=pointer]:
+                  - text: Betting Terms
+                  - img [ref=e482]
+              - generic [ref=e487]:
+                - generic [ref=e488]:
+                  - generic [ref=e489]: Win / Loss
+                  - generic [ref=e490]: 2-1
+                - generic [ref=e491]:
+                  - generic [ref=e492]: ATS
+                  - generic [ref=e493]: 1-2-0
+                - generic [ref=e494]:
+                  - generic [ref=e495]: Over / Under
+                  - generic [ref=e496]:
+                    - text: 0-3-0
+                    - img [ref=e497]
+              - table "Head-To-Head" [ref=e502]:
+                - caption: Head-To-Head
+                - rowgroup [ref=e503]:
+                  - row "Date Home Result ATS O/U" [ref=e504]:
+                    - columnheader "Date" [ref=e505]
+                    - columnheader "Home" [ref=e506]
+                    - columnheader "Result" [ref=e507]
+                    - columnheader "ATS" [ref=e508]
+                    - columnheader "O/U" [ref=e509]
+                - rowgroup [ref=e510]:
+                  - row "Nov 25, '15 MICH UConn logo 74 - 60 CONN -4.5 u137.0" [ref=e511]:
+                    - cell "Nov 25, '15" [ref=e512]
+                    - cell "MICH" [ref=e513]
+                    - cell "UConn logo 74 - 60" [ref=e514]:
+                      - img "UConn logo" [ref=e515]
+                      - link "74 - 60" [ref=e516] [cursor=pointer]:
+                        - /url: https://www.covers.com/sport/basketball/ncaab/matchup/132463
+                    - cell "CONN -4.5" [ref=e517]
+                    - cell "u137.0" [ref=e518]
+                  - row "Jan 17, '10 MICH Michigan logo 68 - 63 MICH 1.0 u133.5" [ref=e519]:
+                    - cell "Jan 17, '10" [ref=e520]
+                    - cell "MICH" [ref=e521]
+                    - cell "Michigan logo 68 - 63" [ref=e522]:
+                      - img "Michigan logo" [ref=e523]
+                      - link "68 - 63" [ref=e524] [cursor=pointer]:
+                        - /url: https://www.covers.com/sport/basketball/ncaab/matchup/99674
+                    - cell "MICH 1.0" [ref=e525]
+                    - cell "u133.5" [ref=e526]
+                  - row "Feb 07, '09 CONN UConn logo 69 - 61 MICH 16.5 u136.5" [ref=e527]:
+                    - cell "Feb 07, '09" [ref=e528]
+                    - cell "CONN" [ref=e529]
+                    - cell "UConn logo 69 - 61" [ref=e530]:
+                      - img "UConn logo" [ref=e531]
+                      - link "69 - 61" [ref=e532] [cursor=pointer]:
+                        - /url: https://www.covers.com/sport/basketball/ncaab/matchup/94828
+                    - cell "MICH 16.5" [ref=e533]
+                    - cell "u136.5" [ref=e534]
+        - generic [ref=e536]:
+          - heading "CONN vs MICH Preview" [level=2] [ref=e537]:
+            - generic [ref=e538]: CONN vs MICH
+            - text: Preview
+          - generic [ref=e540]:
+            - generic [ref=e541]:
+              - link [ref=e542] [cursor=pointer]:
+                - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+              - link "Connecticut" [ref=e543] [cursor=pointer]:
+                - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+            - generic [ref=e544]: at
+            - generic [ref=e545]:
+              - link [ref=e546] [cursor=pointer]:
+                - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+              - link "Michigan" [ref=e547] [cursor=pointer]:
+                - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+          - paragraph [ref=e548]:
+            - text: Last Meeting ( Nov 25, 2015 )
+            - link "Connecticut 74, Michigan 60" [ref=e549] [cursor=pointer]:
+              - /url: https://www.covers.com/sport/basketball/ncaab/matchup/132463
+          - paragraph [ref=e550]: INDIANAPOLIS -- For the third time in his decorated college career, Alex Karaban and UConn are in the Final Four. And on the eve of the 2026 national championship game, Karaban knows only one way to leave the court on Monday night when the Huskies play Michigan in the main event of the NCAA Tournament.
+          - button "View full article" [ref=e551] [cursor=pointer]:
+            - generic [ref=e552]: View full article
+            - img [ref=e553]
+        - generic [ref=e555]:
+          - heading "CONN vs MICH Injury report" [level=2] [ref=e557]:
+            - text: CONN vs MICH
+            - text: Injury report
+          - tabpanel [ref=e559]:
+            - list [ref=e560]:
+              - button "UConn logo UCONN" [ref=e561] [cursor=pointer]:
+                - img "UConn logo" [ref=e562]
+                - text: UCONN
+              - button "MICHIGAN" [ref=e563] [cursor=pointer]
+            - article [ref=e564]:
+              - generic [ref=e565]:
+                - heading "UConn logo UConn's Injuries" [level=2] [ref=e567]:
+                  - img "UConn logo" [ref=e568]
+                  - text: UConn's Injuries
+                - table [ref=e569]:
+                  - rowgroup [ref=e570]:
+                    - row "Player POS Status Date Note" [ref=e571]:
+                      - columnheader "Player" [ref=e572]
+                      - columnheader "POS" [ref=e573]
+                      - columnheader "Status" [ref=e574]
+                      - columnheader "Date" [ref=e575]
+                      - columnheader "Note" [ref=e576]
+                  - rowgroup [ref=e577]:
+                    - row "S. Ball G Out - Wrist Apr 19, '26" [ref=e578]:
+                      - cell "S. Ball" [ref=e579]:
+                        - strong [ref=e580]:
+                          - link "S. Ball" [ref=e581] [cursor=pointer]:
+                            - /url: /sport/basketball/ncaab/players/285978/solo-ball
+                      - cell "G" [ref=e582]
+                      - cell "Out - Wrist" [ref=e583]
+                      - cell "Apr 19, '26" [ref=e584]
+                      - cell [ref=e585]:
+                        - button [ref=e586] [cursor=pointer]
+              - generic [ref=e587]:
+                - heading "Michigan's Injuries" [level=2] [ref=e589]
+                - table [ref=e590]:
+                  - rowgroup [ref=e591]:
+                    - row "Player POS Status Date Note" [ref=e592]:
+                      - columnheader "Player" [ref=e593]
+                      - columnheader "POS" [ref=e594]
+                      - columnheader "Status" [ref=e595]
+                      - columnheader "Date" [ref=e596]
+                      - columnheader "Note" [ref=e597]
+                  - rowgroup [ref=e598]:
+                    - row "No injuries to report." [ref=e599]:
+                      - cell "No injuries to report." [ref=e600]
+          - button "View last game’s starters" [ref=e601] [cursor=pointer]:
+            - generic [ref=e602]: View last game’s starters
+            - img [ref=e603]
+        - region "Offense vs Defense" [ref=e605]:
+          - heading "CONN vs MICH Stats" [level=2] [ref=e607]:
+            - text: CONN vs MICH
+            - text: Stats
+          - generic [ref=e609]:
+            - heading "Offense vs Defense" [level=2] [ref=e610]
+            - button "Betting Terms" [ref=e611] [cursor=pointer]:
+              - text: Betting Terms
+              - img [ref=e612]
+          - generic [ref=e616]:
+            - tablist [ref=e617]:
+              - tab "Connecticut logo Connecticut Offense" [expanded] [ref=e618]:
+                - img "Connecticut logo" [ref=e619]
+                - generic [ref=e620]: Connecticut
+                - text: Offense
+              - tab "Michigan logo Michigan Offense" [expanded] [ref=e621] [cursor=pointer]:
+                - img "Michigan logo" [ref=e622]
+                - generic [ref=e623]: Michigan
+                - text: Offense
+            - list "list of split types" [ref=e625]:
+              - button "Overall" [ref=e626] [cursor=pointer]:
+                - generic [ref=e627]: Overall
+                - img [ref=e628]
+          - tabpanel "Connecticut Offense stats" [ref=e631]:
+            - region "Key Stats League ranks in parenthesis" [ref=e632]:
+              - heading "Key Stats League ranks in parenthesis" [level=3] [ref=e633]:
+                - text: Key Stats
+                - generic [ref=e634]: League ranks in parenthesis
+              - generic [ref=e635]:
+                - table "Key Stats" [ref=e636]:
+                  - caption: Key Stats
+                  - rowgroup [ref=e637]:
+                    - row "CO logo OFFENSE Off. Rank Stat Def. Rank DEFENSE MI logo" [ref=e638]:
+                      - columnheader "CO logo OFFENSE" [ref=e639]:
+                        - generic [ref=e640]:
+                          - img "CO logo" [ref=e641]
+                          - text: OFFENSE
+                      - columnheader "Off. Rank" [ref=e642]:
+                        - generic [ref=e643]: Off. Rank
+                      - columnheader "Stat" [ref=e644]
+                      - columnheader "Def. Rank" [ref=e645]:
+                        - generic [ref=e646]: Def. Rank
+                      - columnheader "DEFENSE MI logo" [ref=e647]:
+                        - generic [ref=e648]:
+                          - text: DEFENSE
+                          - img "MI logo" [ref=e649]
+                  - rowgroup [ref=e650]:
+                    - row "47.7 (36) FG% (1) 38.4" [ref=e651]:
+                      - cell "47.7" [ref=e652]:
+                        - generic [ref=e653]: "47.7"
+                      - cell "(36)" [ref=e654]:
+                        - generic [ref=e655]:
+                          - img [ref=e656]
+                          - text: (36)
+                      - cell "FG%" [ref=e658]:
+                        - generic [ref=e659]: FG%
+                      - cell "(1)" [ref=e660]:
+                        - generic [ref=e661]:
+                          - text: (1)
+                          - img [ref=e662]
+                      - cell "38.4" [ref=e664]:
+                        - generic [ref=e665]: "38.4"
+                    - row "28.0 (80) FGM (67) 24.5" [ref=e666]:
+                      - cell "28.0" [ref=e667]:
+                        - generic [ref=e668]: "28.0"
+                      - cell "(80)" [ref=e669]:
+                        - generic [ref=e670]:
+                          - img [ref=e671]
+                          - text: (80)
+                      - cell "FGM" [ref=e673]:
+                        - generic [ref=e674]: FGM
+                      - cell "(67)" [ref=e675]:
+                        - generic [ref=e676]:
+                          - text: (67)
+                          - img [ref=e677]
+                      - cell "24.5" [ref=e679]:
+                        - generic [ref=e680]: "24.5"
+                    - row "58.6 (227) FGA (337) 64.0" [ref=e681]:
+                      - cell "58.6" [ref=e682]:
+                        - generic [ref=e683]: "58.6"
+                      - cell "(227)" [ref=e684]:
+                        - generic [ref=e685]:
+                          - img [ref=e686]
+                          - text: (227)
+                      - cell "FGA" [ref=e688]:
+                        - generic [ref=e689]: FGA
+                      - cell "(337)" [ref=e690]:
+                        - generic [ref=e691]:
+                          - text: (337)
+                          - img [ref=e692]
+                      - cell "64.0" [ref=e694]:
+                        - generic [ref=e695]: "64.0"
+                    - row "34.6 (86) 3P% (8) 30.5" [ref=e696]:
+                      - cell "34.6" [ref=e697]:
+                        - generic [ref=e698]: "34.6"
+                      - cell "(86)" [ref=e699]:
+                        - generic [ref=e700]:
+                          - img [ref=e701]
+                          - text: (86)
+                      - cell "3P%" [ref=e703]:
+                        - generic [ref=e704]: 3P%
+                      - cell "(8)" [ref=e705]:
+                        - generic [ref=e706]:
+                          - text: (8)
+                          - img [ref=e707]
+                      - cell "30.5" [ref=e709]:
+                        - generic [ref=e710]: "30.5"
+                    - row "8.3 (136) 3PM (180) 8.2" [ref=e711]:
+                      - cell "8.3" [ref=e712]:
+                        - generic [ref=e713]: "8.3"
+                      - cell "(136)" [ref=e714]:
+                        - generic [ref=e715]:
+                          - img [ref=e716]
+                          - text: (136)
+                      - cell "3PM" [ref=e718]:
+                        - generic [ref=e719]: 3PM
+                      - cell "(180)" [ref=e720]:
+                        - generic [ref=e721]:
+                          - text: (180)
+                          - img [ref=e722]
+                      - cell "8.2" [ref=e724]:
+                        - generic [ref=e725]: "8.2"
+                    - row "23.8 (172) 3PA (323) 27.0" [ref=e726]:
+                      - cell "23.8" [ref=e727]:
+                        - generic [ref=e728]: "23.8"
+                      - cell "(172)" [ref=e729]:
+                        - generic [ref=e730]:
+                          - img [ref=e731]
+                          - text: (172)
+                      - cell "3PA" [ref=e733]:
+                        - generic [ref=e734]: 3PA
+                      - cell "(323)" [ref=e735]:
+                        - generic [ref=e736]:
+                          - text: (323)
+                          - img [ref=e737]
+                      - cell "27.0" [ref=e739]:
+                        - generic [ref=e740]: "27.0"
+                    - row "72.3 (234) FT% (322) 74.0" [ref=e741]:
+                      - cell "72.3" [ref=e742]:
+                        - generic [ref=e743]: "72.3"
+                      - cell "(234)" [ref=e744]:
+                        - generic [ref=e745]:
+                          - img [ref=e746]
+                          - text: (234)
+                      - cell "FT%" [ref=e748]:
+                        - generic [ref=e749]: FT%
+                      - cell "(322)" [ref=e750]:
+                        - generic [ref=e751]:
+                          - text: (322)
+                          - img [ref=e752]
+                      - cell "74.0" [ref=e754]:
+                        - generic [ref=e755]: "74.0"
+                    - row "12.7 (285) FTM (55) 12.4" [ref=e756]:
+                      - cell "12.7" [ref=e757]:
+                        - generic [ref=e758]: "12.7"
+                      - cell "(285)" [ref=e759]:
+                        - generic [ref=e760]:
+                          - img [ref=e761]
+                          - text: (285)
+                      - cell "FTM" [ref=e763]:
+                        - generic [ref=e764]: FTM
+                      - cell "(55)" [ref=e765]:
+                        - generic [ref=e766]:
+                          - text: (55)
+                          - img [ref=e767]
+                      - cell "12.4" [ref=e769]:
+                        - generic [ref=e770]: "12.4"
+                    - row "17.6 (290) FTA (35) 16.7" [ref=e771]:
+                      - cell "17.6" [ref=e772]:
+                        - generic [ref=e773]: "17.6"
+                      - cell "(290)" [ref=e774]:
+                        - generic [ref=e775]:
+                          - img [ref=e776]
+                          - text: (290)
+                      - cell "FTA" [ref=e778]:
+                        - generic [ref=e779]: FTA
+                      - cell "(35)" [ref=e780]:
+                        - generic [ref=e781]:
+                          - text: (35)
+                          - img [ref=e782]
+                      - cell "16.7" [ref=e784]:
+                        - generic [ref=e785]: "16.7"
+                - table "League Average" [ref=e786]:
+                  - caption: League Average
+                  - rowgroup [ref=e787]:
+                    - row "League Avg." [ref=e788]:
+                      - columnheader "League Avg." [ref=e789]
+                  - rowgroup [ref=e790]:
+                    - row "44.7" [ref=e791]:
+                      - cell "44.7" [ref=e792]
+                    - row "26.3" [ref=e793]:
+                      - cell "26.3" [ref=e794]
+                    - row "58.8" [ref=e795]:
+                      - cell "58.8" [ref=e796]
+                    - row "33.8" [ref=e797]:
+                      - cell "33.8" [ref=e798]
+                    - row "7.9" [ref=e799]:
+                      - cell "7.9" [ref=e800]
+                    - row "23.3" [ref=e801]:
+                      - cell "23.3" [ref=e802]
+                    - row "72.2" [ref=e803]:
+                      - cell "72.2" [ref=e804]
+                    - row "14.6" [ref=e805]:
+                      - cell "14.6" [ref=e806]
+                    - row "20.2" [ref=e807]:
+                      - cell "20.2" [ref=e808]
+            - region "More Stats" [ref=e809]:
+              - heading "More Stats" [level=3] [ref=e810]
+              - generic [ref=e811]:
+                - table "More Stats" [ref=e812]:
+                  - caption: More Stats
+                  - rowgroup [ref=e813]:
+                    - row "CO logo OFFENSE Off. Rank Stat Def. Rank DEFENSE MI logo" [ref=e814]:
+                      - columnheader "CO logo OFFENSE" [ref=e815]:
+                        - generic [ref=e816]:
+                          - img "CO logo" [ref=e817]
+                          - text: OFFENSE
+                      - columnheader "Off. Rank" [ref=e818]:
+                        - generic [ref=e819]: Off. Rank
+                      - columnheader "Stat" [ref=e820]
+                      - columnheader "Def. Rank" [ref=e821]:
+                        - generic [ref=e822]: Def. Rank
+                      - columnheader "DEFENSE MI logo" [ref=e823]:
+                        - generic [ref=e824]:
+                          - text: DEFENSE
+                          - img "MI logo" [ref=e825]
+                  - rowgroup [ref=e826]:
+                    - row "33.0 (137) REB (9) 27.5" [ref=e827]:
+                      - cell "33.0" [ref=e828]:
+                        - generic [ref=e829]: "33.0"
+                      - cell "(137)" [ref=e830]:
+                        - generic [ref=e831]:
+                          - img [ref=e832]
+                          - text: (137)
+                      - cell "REB" [ref=e834]:
+                        - generic [ref=e835]: REB
+                      - cell "(9)" [ref=e836]:
+                        - generic [ref=e837]:
+                          - text: (9)
+                          - img [ref=e838]
+                      - cell "27.5" [ref=e840]:
+                        - generic [ref=e841]: "27.5"
+                    - row "10.0 (134) OREB (220) 9.1" [ref=e842]:
+                      - cell "10.0" [ref=e843]:
+                        - generic [ref=e844]: "10.0"
+                      - cell "(134)" [ref=e845]:
+                        - generic [ref=e846]:
+                          - img [ref=e847]
+                          - text: (134)
+                      - cell "OREB" [ref=e849]:
+                        - generic [ref=e850]: OREB
+                      - cell "(220)" [ref=e851]:
+                        - generic [ref=e852]:
+                          - text: (220)
+                          - img [ref=e853]
+                      - cell "9.1" [ref=e855]:
+                        - generic [ref=e856]: "9.1"
+                    - row "23.0 (22) DREB (11) 18.4" [ref=e857]:
+                      - cell "23.0" [ref=e858]:
+                        - generic [ref=e859]: "23.0"
+                      - cell "(22)" [ref=e860]:
+                        - generic [ref=e861]:
+                          - img [ref=e862]
+                          - text: (22)
+                      - cell "DREB" [ref=e864]:
+                        - generic [ref=e865]: DREB
+                      - cell "(11)" [ref=e866]:
+                        - generic [ref=e867]:
+                          - text: (11)
+                          - img [ref=e868]
+                      - cell "18.4" [ref=e870]:
+                        - generic [ref=e871]: "18.4"
+                    - row "18.3 (10) AST (22) 11.5" [ref=e872]:
+                      - cell "18.3" [ref=e873]:
+                        - generic [ref=e874]: "18.3"
+                      - cell "(10)" [ref=e875]:
+                        - generic [ref=e876]:
+                          - img [ref=e877]
+                          - text: (10)
+                      - cell "AST" [ref=e879]:
+                        - generic [ref=e880]: AST
+                      - cell "(22)" [ref=e881]:
+                        - generic [ref=e882]:
+                          - text: (22)
+                          - img [ref=e883]
+                      - cell "11.5" [ref=e885]:
+                        - generic [ref=e886]: "11.5"
+                    - row "10.9 (122) TO (224) 10.8" [ref=e887]:
+                      - cell "10.9" [ref=e888]:
+                        - generic [ref=e889]: "10.9"
+                      - cell "(122)" [ref=e890]:
+                        - generic [ref=e891]:
+                          - img [ref=e892]
+                          - text: (122)
+                      - cell "TO" [ref=e894]:
+                        - generic [ref=e895]: TO
+                      - cell "(224)" [ref=e896]:
+                        - generic [ref=e897]:
+                          - text: (224)
+                          - img [ref=e898]
+                      - cell "10.8" [ref=e900]:
+                        - generic [ref=e901]: "10.8"
+                    - row "1.7 (20) AST/TO (56) 1.1" [ref=e902]:
+                      - cell "1.7" [ref=e903]:
+                        - generic [ref=e904]: "1.7"
+                      - cell "(20)" [ref=e905]:
+                        - generic [ref=e906]:
+                          - img [ref=e907]
+                          - text: (20)
+                      - cell "AST/TO" [ref=e909]:
+                        - generic [ref=e910]: AST/TO
+                      - cell "(56)" [ref=e911]:
+                        - generic [ref=e912]:
+                          - text: (56)
+                          - img [ref=e913]
+                      - cell "1.1" [ref=e915]:
+                        - generic [ref=e916]: "1.1"
+                    - row "6.9 (64) STL (286) 6.4" [ref=e917]:
+                      - cell "6.9" [ref=e918]:
+                        - generic [ref=e919]: "6.9"
+                      - cell "(64)" [ref=e920]:
+                        - generic [ref=e921]:
+                          - img [ref=e922]
+                          - text: (64)
+                      - cell "STL" [ref=e924]:
+                        - generic [ref=e925]: STL
+                      - cell "(286)" [ref=e926]:
+                        - generic [ref=e927]:
+                          - text: (286)
+                          - img [ref=e928]
+                      - cell "6.4" [ref=e930]:
+                        - generic [ref=e931]: "6.4"
+                    - row "5.1 (205) BLK (5) 3.0" [ref=e932]:
+                      - cell "5.1" [ref=e933]:
+                        - generic [ref=e934]: "5.1"
+                      - cell "(205)" [ref=e935]:
+                        - generic [ref=e936]:
+                          - img [ref=e937]
+                          - text: (205)
+                      - cell "BLK" [ref=e939]:
+                        - generic [ref=e940]: BLK
+                      - cell "(5)" [ref=e941]:
+                        - generic [ref=e942]:
+                          - text: (5)
+                          - img [ref=e943]
+                      - cell "3.0" [ref=e945]:
+                        - generic [ref=e946]: "3.0"
+                - table "League Average" [ref=e947]:
+                  - caption: League Average
+                  - rowgroup [ref=e948]:
+                    - row "League Avg." [ref=e949]:
+                      - columnheader "League Avg." [ref=e950]
+                  - rowgroup [ref=e951]:
+                    - row "31.7" [ref=e952]:
+                      - cell "31.7" [ref=e953]
+                    - row "9.0" [ref=e954]:
+                      - cell "9.0" [ref=e955]
+                    - row "22.6" [ref=e956]:
+                      - cell "22.6" [ref=e957]
+                    - row "13.9" [ref=e958]:
+                      - cell "13.9" [ref=e959]
+                    - row "11.8" [ref=e960]:
+                      - cell "11.8" [ref=e961]
+                    - row "1.2" [ref=e962]:
+                      - cell "1.2" [ref=e963]
+                    - row "6.7" [ref=e964]:
+                      - cell "6.7" [ref=e965]
+                    - row "3.3" [ref=e966]:
+                      - cell "3.3" [ref=e967]
+            - region "Points" [ref=e968]:
+              - heading "Points" [level=3] [ref=e969]
+              - generic [ref=e970]:
+                - table "Points" [ref=e971]:
+                  - caption: Points
+                  - rowgroup [ref=e972]:
+                    - row "CO logo OFFENSE Off. Rank Stat Def. Rank DEFENSE MI logo" [ref=e973]:
+                      - columnheader "CO logo OFFENSE" [ref=e974]:
+                        - generic [ref=e975]:
+                          - img "CO logo" [ref=e976]
+                          - text: OFFENSE
+                      - columnheader "Off. Rank" [ref=e977]:
+                        - generic [ref=e978]: Off. Rank
+                      - columnheader "Stat" [ref=e979]
+                      - columnheader "Def. Rank" [ref=e980]:
+                        - generic [ref=e981]: Def. Rank
+                      - columnheader "DEFENSE MI logo" [ref=e982]:
+                        - generic [ref=e983]:
+                          - text: DEFENSE
+                          - img "MI logo" [ref=e984]
+                  - rowgroup [ref=e985]:
+                    - row "76.9 (144) Points (45) 69.7" [ref=e986]:
+                      - cell "76.9" [ref=e987]:
+                        - generic [ref=e988]: "76.9"
+                      - cell "(144)" [ref=e989]:
+                        - generic [ref=e990]:
+                          - img [ref=e991]
+                          - text: (144)
+                      - cell "Points" [ref=e993]:
+                        - generic [ref=e994]: Points
+                      - cell "(45)" [ref=e995]:
+                        - generic [ref=e996]:
+                          - text: (45)
+                          - img [ref=e997]
+                      - cell "69.7" [ref=e999]:
+                        - generic [ref=e1000]: "69.7"
+                    - row "38.6 (236) 1st Half (184) 34.0" [ref=e1001]:
+                      - cell "38.6" [ref=e1002]:
+                        - generic [ref=e1003]: "38.6"
+                      - cell "(236)" [ref=e1004]:
+                        - generic [ref=e1005]:
+                          - img [ref=e1006]
+                          - text: (236)
+                      - cell "1st Half" [ref=e1008]:
+                        - generic [ref=e1009]: 1st Half
+                      - cell "(184)" [ref=e1010]:
+                        - generic [ref=e1011]:
+                          - text: (184)
+                          - img [ref=e1012]
+                      - cell "34.0" [ref=e1014]:
+                        - generic [ref=e1015]: "34.0"
+                    - row "37.7 (236) 2nd Half (184) 35.6" [ref=e1016]:
+                      - cell "37.7" [ref=e1017]:
+                        - generic [ref=e1018]: "37.7"
+                      - cell "(236)" [ref=e1019]:
+                        - generic [ref=e1020]:
+                          - img [ref=e1021]
+                          - text: (236)
+                      - cell "2nd Half" [ref=e1023]:
+                        - generic [ref=e1024]: 2nd Half
+                      - cell "(184)" [ref=e1025]:
+                        - generic [ref=e1026]:
+                          - text: (184)
+                          - img [ref=e1027]
+                      - cell "35.6" [ref=e1029]:
+                        - generic [ref=e1030]: "35.6"
+                - table "League Average" [ref=e1031]:
+                  - caption: League Average
+                  - rowgroup [ref=e1032]:
+                    - row "League Avg." [ref=e1033]:
+                      - columnheader "League Avg." [ref=e1034]
+                  - rowgroup [ref=e1035]:
+                    - row "75.1" [ref=e1036]:
+                      - cell "75.1" [ref=e1037]
+                    - row "35.3" [ref=e1038]:
+                      - cell "35.3" [ref=e1039]
+                    - row "39.1" [ref=e1040]:
+                      - cell "39.1" [ref=e1041]
+          - button "View all stats" [ref=e1042] [cursor=pointer]:
+            - generic [ref=e1043]: View all stats
+            - img [ref=e1044]
+      - generic [ref=e1046]:
+        - heading "Pages Related to This Topic" [level=2] [ref=e1047]
+        - generic [ref=e1049]:
+          - link "Michigan Sports Betting" [ref=e1051] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/usa/michigan
+          - link "Basketball Betting Sites" [ref=e1053] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/basketball-sites
+          - link "March Madness Betting Sites" [ref=e1055] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+          - link "Best Michigan Sportsbook Promotions" [ref=e1057] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/bonuses/michigan-best-bonuses-promo-codes
+          - link "Online Casinos" [ref=e1059] [cursor=pointer]:
+            - /url: https://www.covers.com/casino
+          - link "Online Slots Canada" [ref=e1061] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada/slots
+          - link "Fastest Payout Online Casinos in the US" [ref=e1063] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/payment/fast-payout
+          - link "Fastest Payout Online Casinos in Canada" [ref=e1065] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada/payment/fast-payout
+          - link "March Madness Betting Promos" [ref=e1067] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-promos
+    - complementary [ref=e1068]:
+      - generic [ref=e1069]:
+        - generic [ref=e1070]:
+          - heading "Know Who'll Cover Between:" [level=2] [ref=e1072]
+          - paragraph [ref=e1073]: Connecticut -vs- Michigan?
+        - generic [ref=e1074]:
+          - generic [ref=e1075]:
+            - heading "News & Analysis" [level=2] [ref=e1076]
+            - link "More News" [ref=e1077] [cursor=pointer]:
+              - /url: https://www.covers.com/ncaab
+          - generic [ref=e1079]:
+            - generic [ref=e1080]:
+              - 'img "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1081]'
+              - 'link "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1082] [cursor=pointer]':
+                - /url: /ncaab/march-madness/props
+            - generic [ref=e1083]:
+              - 'img "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1084]'
+              - 'link "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1085] [cursor=pointer]':
+                - /url: /ncaab/womens-march-madness-odds
+            - generic [ref=e1086]:
+              - 'img "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1087]'
+              - 'link "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1088] [cursor=pointer]':
+                - /url: /ncaab/march-madness/bracket
+  - contentinfo [ref=e1089]:
+    - generic [ref=e1091]:
+      - generic [ref=e1092]:
+        - generic [ref=e1094]:
+          - generic [ref=e1095]:
+            - link "About Us" [ref=e1097] [cursor=pointer]:
+              - /url: https://www.covers.com/about
+            - link "Contact Us" [ref=e1098] [cursor=pointer]:
+              - /url: https://www.covers.com/contact
+            - link "Careers" [ref=e1099] [cursor=pointer]:
+              - /url: https://www.covers.com/careers
+            - link "Our Team" [ref=e1100] [cursor=pointer]:
+              - /url: https://www.covers.com/writers
+            - link "Brand" [ref=e1101] [cursor=pointer]:
+              - /url: https://www.covers.com/brand
+            - link "Testimonials" [ref=e1102] [cursor=pointer]:
+              - /url: https://www.covers.com/testimonials
+          - generic [ref=e1103]:
+            - link "Betting Guides" [ref=e1105] [cursor=pointer]:
+              - /url: https://www.covers.com/guides
+            - link "Sportsbook Reviews" [ref=e1106] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/reviews
+            - link "Sports Betting News" [ref=e1107] [cursor=pointer]:
+              - /url: https://www.covers.com/betting-news
+            - link "Podcasts" [ref=e1108] [cursor=pointer]:
+              - /url: https://www.covers.com/podcasts
+            - link "Responsible Gaming" [ref=e1109] [cursor=pointer]:
+              - /url: https://www.covers.com/guides/help
+          - generic [ref=e1110]:
+            - link "Betting Sites" [ref=e1112] [cursor=pointer]:
+              - /url: https://www.covers.com/betting
+            - link "Canada Betting Sites" [ref=e1113] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/canada
+            - link "Canada Casinos" [ref=e1114] [cursor=pointer]:
+              - /url: https://www.covers.com/casino/canada
+            - link "Best Betting Apps" [ref=e1115] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/best-betting-apps
+          - generic [ref=e1116]:
+            - link "Contests" [ref=e1118] [cursor=pointer]:
+              - /url: https://contests.covers.com
+            - link "Streak Survivor" [ref=e1119] [cursor=pointer]:
+              - /url: https://contests.covers.com/survivor
+            - link "King of Covers" [ref=e1120] [cursor=pointer]:
+              - /url: https://contests.covers.com/kingofcovers
+            - link "Office Pools" [ref=e1121] [cursor=pointer]:
+              - /url: https://contests.covers.com/officepools
+        - generic [ref=e1123]:
+          - generic [ref=e1124]: The Covers community has
+          - generic [ref=e1125]: 810,221
+          - generic [ref=e1126]: lifetime members worldwide
+          - link "Join our community today" [ref=e1128] [cursor=pointer]:
+            - /url: https://www.covers.com/forum
+      - generic [ref=e1132]:
+        - generic [ref=e1133]:
+          - img "Covers 30 Years Logo" [ref=e1134]
+          - generic [ref=e1135]:
+            - text: Established in 1995,
+            - text: Covers is the world
+            - text: leader in sports
+            - text: betting information.
+        - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e1137] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/help
+          - generic [ref=e1138]:
+            - generic [ref=e1139]: 21+
+            - generic [ref=e1140]: Gambling problem? Call 1-800-GAMBLER
+      - generic [ref=e1144]:
+        - generic [ref=e1145]:
+          - link "Site Map" [ref=e1146] [cursor=pointer]:
+            - /url: https://www.covers.com/sitemap
+          - link "Help" [ref=e1147] [cursor=pointer]:
+            - /url: https://www.covers.com/help
+          - link "Privacy" [ref=e1148] [cursor=pointer]:
+            - /url: https://www.covers.com/privacy
+          - link "Terms of Service" [ref=e1149] [cursor=pointer]:
+            - /url: https://www.covers.com/terms
+        - generic [ref=e1150]:
+          - link "youtube logo" [ref=e1151] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+            - img "youtube logo" [ref=e1152]
+          - link "facebook logo" [ref=e1153] [cursor=pointer]:
+            - /url: https://www.facebook.com/CoversSports/
+            - img "facebook logo" [ref=e1154]
+          - link "twitter logo" [ref=e1155] [cursor=pointer]:
+            - /url: https://twitter.com/Covers
+            - img "twitter logo" [ref=e1156]
+          - link "instagram logo" [ref=e1157] [cursor=pointer]:
+            - /url: https://www.instagram.com/covers_sports/
+            - img "instagram logo" [ref=e1158]
+          - link "linkedin logo" [ref=e1159] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/2632327/
+            - img "linkedin logo" [ref=e1160]
+          - link "google news logo" [ref=e1161] [cursor=pointer]:
+            - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+            - img "google news logo" [ref=e1162]
+    - generic [ref=e1164]:
+      - generic [ref=e1169]:
+        - text: "Covers is verified safe by:"
+        - img "Evalon Logo" [ref=e1170]
+        - link "GPWA Logo" [ref=e1171] [cursor=pointer]:
+          - /url: https://certify.gpwa.org/verify/covers.com
+          - img "GPWA Logo" [ref=e1172]
+        - img "GDPR Logo" [ref=e1173]
+        - img "GeoTrust Logo" [ref=e1174]
+        - img "Evalon Logo" [ref=e1175]
+      - generic [ref=e1176]:
+        - img "Covers Logo" [ref=e1178]
+        - generic [ref=e1179]:
+          - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+          - paragraph [ref=e1180]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - iframe [ref=e1181]:
+    
+  - img

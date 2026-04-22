@@ -1,0 +1,1589 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - text: LOG IN
+                  - img "Chevron"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph:
+                        - button "Continue with Google":
+                          - img
+                          - text: Continue with Google
+                  - generic:
+                    - textbox "Display Name Display Name":
+                      - /placeholder: Display Name
+                    - textbox "Password passwordCreate":
+                      - /placeholder: Password
+                    - checkbox "Stay Logged In"
+                    - text: Stay Logged In
+                    - button "SIGN IN"
+                    - generic:
+                      - text: Forgot your
+                      - link "display name":
+                        - /url: https://www.covers.com/account/forgotusername
+                      - text: or
+                      - link "password":
+                        - /url: https://www.covers.com/account/forgotpassword
+                      - text: "?"
+              - generic:
+                - generic:
+                  - generic:
+                    - mark: or
+              - generic:
+                - generic:
+                  - text: CREATE ACCOUNT
+                  - img "Chevron"
+  - navigation [ref=e31]:
+    - button "more arrow" [ref=e32] [cursor=pointer]:
+      - img "more arrow" [ref=e34]
+    - list [ref=e35]:
+      - listitem [ref=e36]:
+        - link "NCAAB" [ref=e37] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+      - listitem [ref=e38]:
+        - link "Scores & Matchups" [ref=e39] [cursor=pointer]:
+          - /url: https://www.covers.com/sports/ncaab/matchups
+      - listitem [ref=e40]:
+        - link "Free Picks" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e42]:
+        - link "Odds" [ref=e43] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+      - listitem [ref=e44]:
+        - link "Futures" [ref=e45] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds/futures
+      - listitem [ref=e46]:
+        - link "News & Analysis" [ref=e47] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/betting-news
+      - listitem [ref=e48]:
+        - link "NCAAB Contest" [ref=e49] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e50]:
+        - link "March Madness" [ref=e51] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/march-madness
+      - listitem [ref=e52]:
+        - link "Injuries" [ref=e53] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/injuries
+      - listitem [ref=e54]:
+        - link "Teams" [ref=e55] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/teams
+      - listitem [ref=e56]:
+        - link "Players" [ref=e57] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/players
+  - main [ref=e58]:
+    - article [ref=e59]:
+      - generic [ref=e60]:
+        - link "Kalshi Sports Logo" [ref=e61] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner
+          - img "Kalshi Sports Logo" [ref=e62]
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - text: $10 Trading Bonus
+              - img "tooltip icon" [ref=e67] [cursor=pointer]
+            - generic [ref=e68]: "CODE: COVERS"
+          - link "Claim $10" [ref=e69] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner&location=flex
+    - generic [ref=e70]:
+      - heading "NCAAB Scores & Matchups" [level=1] [ref=e71]
+      - button "NCAAB" [ref=e73] [cursor=pointer]:
+        - img [ref=e74]
+        - generic [ref=e75]: NCAAB
+        - img [ref=e76]
+    - navigation [ref=e78]:
+      - generic [ref=e79]:
+        - link [ref=e80] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-20
+          - img [ref=e81]
+        - link "Tue Mar 19" [ref=e83] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-19
+          - text: Tue
+          - generic [ref=e84]: Mar 19
+        - link "Wed Mar 20" [ref=e85] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-20
+          - text: Wed
+          - generic [ref=e86]: Mar 20
+        - generic [ref=e87]:
+          - generic [ref=e88]: Thu
+          - generic [ref=e89]: Mar 21
+        - link "Fri Mar 22" [ref=e90] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-22
+          - text: Fri
+          - generic [ref=e91]: Mar 22
+        - link "Sat Mar 23" [ref=e92] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-23
+          - text: Sat
+          - generic [ref=e93]: Mar 23
+        - link [ref=e94] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2019-03-22
+          - img [ref=e95]
+      - button [ref=e98] [cursor=pointer]:
+        - img [ref=e99]
+        - img [ref=e101]
+      - button "Conferences Filter" [ref=e104] [cursor=pointer]:
+        - generic [ref=e105]: Conferences
+        - img [ref=e106]
+        - generic [ref=e108]: Filter
+        - img [ref=e109]
+      - generic [ref=e111]:
+        - textbox "Search" [ref=e112]
+        - button "clear search" [ref=e113] [cursor=pointer]:
+          - generic [ref=e114]: clear search
+    - generic [ref=e115]:
+      - article [ref=e116]:
+        - paragraph [ref=e117]:
+          - strong [ref=e118]: Minnesota @ Louisville
+          - text: (N)
+          - generic [ref=e119]: March Madness
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - link "Minnesota MINN (10)" [ref=e122] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/minnesota-golden-gophers
+              - img "Minnesota" [ref=e123]
+              - generic [ref=e125]:
+                - text: MINN
+                - generic [ref=e126]: (10)
+            - generic [ref=e128]:
+              - strong [ref=e129]: "86"
+              - strong [ref=e131]: Final
+              - strong [ref=e132]: "76"
+            - link "(7) LOU Louisville" [ref=e133] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/louisville-cardinals
+              - generic [ref=e135]:
+                - generic [ref=e136]: (7)
+                - text: LOU
+              - img "Louisville" [ref=e137]
+          - generic [ref=e138]:
+            - paragraph [ref=e139]: "-"
+            - paragraph [ref=e140]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e142]:
+            - rowgroup [ref=e143]:
+              - row "Team 1 2 Score" [ref=e144]:
+                - columnheader "Team" [ref=e145]:
+                  - generic [ref=e146]: Team
+                - columnheader "1" [ref=e147]
+                - columnheader "2" [ref=e148]
+                - columnheader "Score" [ref=e149]
+            - rowgroup [ref=e150]:
+              - row "MINN 38 48 86" [ref=e151]:
+                - rowheader "MINN" [ref=e152]
+                - cell "38" [ref=e153]
+                - cell "48" [ref=e154]
+                - cell "86" [ref=e155]
+              - row "LOU 33 43 76" [ref=e156]:
+                - rowheader "LOU" [ref=e157]
+                - cell "33" [ref=e158]
+                - cell "43" [ref=e159]
+                - cell "76" [ref=e160]
+          - link "Boxscore" [ref=e162] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137790
+      - article [ref=e163]:
+        - paragraph [ref=e164]:
+          - strong [ref=e165]: Yale @ Louisiana State
+          - text: (N)
+          - generic [ref=e166]: March Madness
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - link "Yale YALE (14)" [ref=e169] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/yale-bulldogs
+              - img "Yale" [ref=e170]
+              - generic [ref=e172]:
+                - text: YALE
+                - generic [ref=e173]: (14)
+            - generic [ref=e175]:
+              - strong [ref=e176]: "74"
+              - strong [ref=e178]: Final
+              - strong [ref=e179]: "79"
+            - link "(3) LSU LSU" [ref=e180] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/lsu-tigers
+              - generic [ref=e182]:
+                - generic [ref=e183]: (3)
+                - text: LSU
+              - img "LSU" [ref=e184]
+          - generic [ref=e185]:
+            - paragraph [ref=e186]: "-"
+            - paragraph [ref=e187]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e189]:
+            - rowgroup [ref=e190]:
+              - row "Team 1 2 Score" [ref=e191]:
+                - columnheader "Team" [ref=e192]:
+                  - generic [ref=e193]: Team
+                - columnheader "1" [ref=e194]
+                - columnheader "2" [ref=e195]
+                - columnheader "Score" [ref=e196]
+            - rowgroup [ref=e197]:
+              - row "YALE 29 45 74" [ref=e198]:
+                - rowheader "YALE" [ref=e199]
+                - cell "29" [ref=e200]
+                - cell "45" [ref=e201]
+                - cell "74" [ref=e202]
+              - row "LSU 45 34 79" [ref=e203]:
+                - rowheader "LSU" [ref=e204]
+                - cell "45" [ref=e205]
+                - cell "34" [ref=e206]
+                - cell "79" [ref=e207]
+          - link "Boxscore" [ref=e209] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137789
+      - article [ref=e210]:
+        - paragraph [ref=e211]:
+          - strong [ref=e212]: New Mexico St. @ Auburn
+          - text: (N)
+          - generic [ref=e213]: March Madness
+        - generic [ref=e214]:
+          - generic [ref=e215]:
+            - link "New Mexico State NMSU (12)" [ref=e216] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/new-mexico-state-aggies
+              - img "New Mexico State" [ref=e217]
+              - generic [ref=e219]:
+                - text: NMSU
+                - generic [ref=e220]: (12)
+            - generic [ref=e222]:
+              - strong [ref=e223]: "77"
+              - strong [ref=e225]: Final
+              - strong [ref=e226]: "78"
+            - link "(5) AUB Auburn" [ref=e227] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/auburn-tigers
+              - generic [ref=e229]:
+                - generic [ref=e230]: (5)
+                - text: AUB
+              - img "Auburn" [ref=e231]
+          - generic [ref=e232]:
+            - paragraph [ref=e233]: "-"
+            - paragraph [ref=e234]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e236]:
+            - rowgroup [ref=e237]:
+              - row "Team 1 2 Score" [ref=e238]:
+                - columnheader "Team" [ref=e239]:
+                  - generic [ref=e240]: Team
+                - columnheader "1" [ref=e241]
+                - columnheader "2" [ref=e242]
+                - columnheader "Score" [ref=e243]
+            - rowgroup [ref=e244]:
+              - row "NMSU 29 48 77" [ref=e245]:
+                - rowheader "NMSU" [ref=e246]
+                - cell "29" [ref=e247]
+                - cell "48" [ref=e248]
+                - cell "77" [ref=e249]
+              - row "AUB 32 46 78" [ref=e250]:
+                - rowheader "AUB" [ref=e251]
+                - cell "32" [ref=e252]
+                - cell "46" [ref=e253]
+                - cell "78" [ref=e254]
+          - link "Boxscore" [ref=e256] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137787
+      - article [ref=e257]:
+        - paragraph [ref=e258]:
+          - strong [ref=e259]: Vermont @ Florida State
+          - text: (N)
+          - generic [ref=e260]: March Madness
+        - generic [ref=e261]:
+          - generic [ref=e262]:
+            - link "Vermont UVM (13)" [ref=e263] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/vermont-catamounts
+              - img "Vermont" [ref=e264]
+              - generic [ref=e266]:
+                - text: UVM
+                - generic [ref=e267]: (13)
+            - generic [ref=e269]:
+              - strong [ref=e270]: "69"
+              - strong [ref=e272]: Final
+              - strong [ref=e273]: "76"
+            - link "(4) FSU Florida State" [ref=e274] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/florida-state-seminoles
+              - generic [ref=e276]:
+                - generic [ref=e277]: (4)
+                - text: FSU
+              - img "Florida State" [ref=e278]
+          - generic [ref=e279]:
+            - paragraph [ref=e280]: "-"
+            - paragraph [ref=e281]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e283]:
+            - rowgroup [ref=e284]:
+              - row "Team 1 2 Score" [ref=e285]:
+                - columnheader "Team" [ref=e286]:
+                  - generic [ref=e287]: Team
+                - columnheader "1" [ref=e288]
+                - columnheader "2" [ref=e289]
+                - columnheader "Score" [ref=e290]
+            - rowgroup [ref=e291]:
+              - row "UVM 27 42 69" [ref=e292]:
+                - rowheader "UVM" [ref=e293]
+                - cell "27" [ref=e294]
+                - cell "42" [ref=e295]
+                - cell "69" [ref=e296]
+              - row "FSU 27 49 76" [ref=e297]:
+                - rowheader "FSU" [ref=e298]
+                - cell "27" [ref=e299]
+                - cell "49" [ref=e300]
+                - cell "76" [ref=e301]
+          - link "Boxscore" [ref=e303] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137808
+      - article [ref=e304]:
+        - generic [ref=e305]:
+          - heading "Featured Apps" [level=2] [ref=e307]
+          - link "Best betting sites" [ref=e308] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+        - generic [ref=e311]:
+          - group "1 / 5" [ref=e312]:
+            - generic [ref=e313]:
+              - generic [ref=e314]:
+                - link "Kalshi Sports Logo" [ref=e315] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=covers_featured_partners
+                  - img "Kalshi Sports Logo" [ref=e316]
+                - generic [ref=e317]:
+                  - generic [ref=e318]: ★
+                  - generic [ref=e319]: 4.9/5
+              - text: Sign up bonus
+              - generic [ref=e321]:
+                - text: $10 Trading Bonus
+                - img [ref=e323] [cursor=pointer]
+            - generic [ref=e324]:
+              - button "Click to copy promo code COVERS" [ref=e325]:
+                - generic [ref=e326]: Click to copy promo code
+                - generic [ref=e327]: COVERS
+              - link "Claim $10" [ref=e328] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "2 / 5" [ref=e329]:
+            - generic [ref=e330]:
+              - generic [ref=e331]:
+                - link "Polymarket Logo" [ref=e332] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=polymarket&sportsbookId=403&lang=en&vertical=dfs&location=covers_featured_partners
+                  - img "Polymarket Logo" [ref=e333]
+                - generic [ref=e334]:
+                  - generic [ref=e335]: ★
+                  - generic [ref=e336]: 4.9/5
+              - text: Sign up bonus
+              - generic [ref=e338]:
+                - text: Deposit $10, Get $20 Trading Bonus
+                - img [ref=e340] [cursor=pointer]
+            - generic [ref=e341]:
+              - button "Click to copy promo code COVERS" [ref=e342]:
+                - generic [ref=e343]: Click to copy promo code
+                - generic [ref=e344]: COVERS
+              - link "Claim $20" [ref=e345] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=polymarket&sportsbookId=403&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "3 / 5" [ref=e346]:
+            - generic [ref=e347]:
+              - generic [ref=e348]:
+                - link "Underdog Logo" [ref=e349] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=underdog&sportsbookId=313&lang=en&vertical=dfs&location=covers_featured_partners
+                  - img "Underdog Logo" [ref=e350]
+                - generic [ref=e351]:
+                  - generic [ref=e352]: ★
+                  - generic [ref=e353]: 4.8/5
+              - text: Sign up bonus
+              - generic [ref=e355]:
+                - text: Play $5, Get $50 in Bonus Entries
+                - img [ref=e357] [cursor=pointer]
+            - generic [ref=e358]:
+              - button "Click to copy promo code COVERS" [ref=e359]:
+                - generic [ref=e360]: Click to copy promo code
+                - generic [ref=e361]: COVERS
+              - link "Claim $50" [ref=e362] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=underdog&sportsbookId=313&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "4 / 5" [ref=e363]:
+            - generic [ref=e364]:
+              - generic [ref=e365]:
+                - link "Novig Logo" [ref=e366] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=novig&sportsbookId=285&lang=en&vertical=dfs&location=covers_featured_partners
+                  - img "Novig Logo" [ref=e367]
+                - generic [ref=e368]:
+                  - generic [ref=e369]: ★
+                  - generic [ref=e370]: 4.8/5
+              - text: Sign up bonus
+              - generic [ref=e372]:
+                - text: Up to $100 Bonus
+                - img [ref=e374] [cursor=pointer]
+            - generic [ref=e375]:
+              - button "Click to copy promo code COVERS100" [ref=e376]:
+                - generic [ref=e377]: Click to copy promo code
+                - generic [ref=e378]: COVERS100
+              - link "Claim $100" [ref=e379] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=novig&sportsbookId=285&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "5 / 5" [ref=e380]:
+            - generic [ref=e381]:
+              - generic [ref=e382]:
+                - link "DraftKings Pick6 Logo" [ref=e383] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=draftkings-pick6&sportsbookId=318&lang=en&vertical=dfs&location=covers_featured_partners
+                  - img "DraftKings Pick6 Logo" [ref=e384]
+                - generic [ref=e385]:
+                  - generic [ref=e386]: ★
+                  - generic [ref=e387]: 4.7/5
+              - text: Sign up bonus
+              - generic [ref=e389]:
+                - text: Play $5, Get $50 Instantly in Bonus Picks
+                - img [ref=e391] [cursor=pointer]
+            - generic [ref=e392]:
+              - button "No Code Needed" [disabled]:
+                - generic: No Code Needed
+              - link "Claim $50" [ref=e393] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=draftkings-pick6&sportsbookId=318&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+      - article [ref=e394]:
+        - paragraph [ref=e395]:
+          - strong [ref=e396]: Bradley @ Michigan St.
+          - text: (N)
+          - generic [ref=e397]: March Madness
+        - generic [ref=e398]:
+          - generic [ref=e399]:
+            - link "Bradley BRAD (15)" [ref=e400] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/bradley-braves
+              - img "Bradley" [ref=e401]
+              - generic [ref=e403]:
+                - text: BRAD
+                - generic [ref=e404]: (15)
+            - generic [ref=e406]:
+              - strong [ref=e407]: "65"
+              - strong [ref=e409]: Final
+              - strong [ref=e410]: "76"
+            - link "(2) MSU Michigan State" [ref=e411] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-state-spartans
+              - generic [ref=e413]:
+                - generic [ref=e414]: (2)
+                - text: MSU
+              - img "Michigan State" [ref=e415]
+          - generic [ref=e416]:
+            - paragraph [ref=e417]: "-"
+            - paragraph [ref=e418]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e420]:
+            - rowgroup [ref=e421]:
+              - row "Team 1 2 Score" [ref=e422]:
+                - columnheader "Team" [ref=e423]:
+                  - generic [ref=e424]: Team
+                - columnheader "1" [ref=e425]
+                - columnheader "2" [ref=e426]
+                - columnheader "Score" [ref=e427]
+            - rowgroup [ref=e428]:
+              - row "BRAD 35 30 65" [ref=e429]:
+                - rowheader "BRAD" [ref=e430]
+                - cell "35" [ref=e431]
+                - cell "30" [ref=e432]
+                - cell "65" [ref=e433]
+              - row "MSU 34 42 76" [ref=e434]:
+                - rowheader "MSU" [ref=e435]
+                - cell "34" [ref=e436]
+                - cell "42" [ref=e437]
+                - cell "76" [ref=e438]
+          - link "Boxscore" [ref=e440] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137791
+      - article [ref=e441]:
+        - paragraph [ref=e442]:
+          - strong [ref=e443]: Belmont @ Maryland
+          - text: (N)
+          - generic [ref=e444]: March Madness
+        - generic [ref=e445]:
+          - generic [ref=e446]:
+            - link "Belmont BEL (11)" [ref=e447] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/belmont-bruins
+              - img "Belmont" [ref=e448]
+              - generic [ref=e450]:
+                - text: BEL
+                - generic [ref=e451]: (11)
+            - generic [ref=e453]:
+              - strong [ref=e454]: "77"
+              - strong [ref=e456]: Final
+              - strong [ref=e457]: "79"
+            - link "(6) MD Maryland" [ref=e458] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/maryland-terrapins
+              - generic [ref=e460]:
+                - generic [ref=e461]: (6)
+                - text: MD
+              - img "Maryland" [ref=e462]
+          - generic [ref=e463]:
+            - paragraph [ref=e464]: "-"
+            - paragraph [ref=e465]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e467]:
+            - rowgroup [ref=e468]:
+              - row "Team 1 2 Score" [ref=e469]:
+                - columnheader "Team" [ref=e470]:
+                  - generic [ref=e471]: Team
+                - columnheader "1" [ref=e472]
+                - columnheader "2" [ref=e473]
+                - columnheader "Score" [ref=e474]
+            - rowgroup [ref=e475]:
+              - row "BEL 40 37 77" [ref=e476]:
+                - rowheader "BEL" [ref=e477]
+                - cell "40" [ref=e478]
+                - cell "37" [ref=e479]
+                - cell "77" [ref=e480]
+              - row "MD 34 45 79" [ref=e481]:
+                - rowheader "MD" [ref=e482]
+                - cell "34" [ref=e483]
+                - cell "45" [ref=e484]
+                - cell "79" [ref=e485]
+          - link "Boxscore" [ref=e487] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/174545
+      - article [ref=e488]:
+        - paragraph [ref=e489]:
+          - strong [ref=e490]: Northeastern @ Kansas
+          - text: (N)
+          - generic [ref=e491]: March Madness
+        - generic [ref=e492]:
+          - generic [ref=e493]:
+            - link "Northeastern NE (13)" [ref=e494] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/northeastern-huskies
+              - img "Northeastern" [ref=e495]
+              - generic [ref=e497]:
+                - text: NE
+                - generic [ref=e498]: (13)
+            - generic [ref=e500]:
+              - strong [ref=e501]: "53"
+              - strong [ref=e503]: Final
+              - strong [ref=e504]: "87"
+            - link "(4) KU Kansas" [ref=e505] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/kansas-jayhawks
+              - generic [ref=e507]:
+                - generic [ref=e508]: (4)
+                - text: KU
+              - img "Kansas" [ref=e509]
+          - generic [ref=e510]:
+            - paragraph [ref=e511]: "-"
+            - paragraph [ref=e512]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e514]:
+            - rowgroup [ref=e515]:
+              - row "Team 1 2 Score" [ref=e516]:
+                - columnheader "Team" [ref=e517]:
+                  - generic [ref=e518]: Team
+                - columnheader "1" [ref=e519]
+                - columnheader "2" [ref=e520]
+                - columnheader "Score" [ref=e521]
+            - rowgroup [ref=e522]:
+              - row "NE 25 28 53" [ref=e523]:
+                - rowheader "NE" [ref=e524]
+                - cell "25" [ref=e525]
+                - cell "28" [ref=e526]
+                - cell "53" [ref=e527]
+              - row "KU 37 50 87" [ref=e528]:
+                - rowheader "KU" [ref=e529]
+                - cell "37" [ref=e530]
+                - cell "50" [ref=e531]
+                - cell "87" [ref=e532]
+          - link "Boxscore" [ref=e534] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137792
+      - article [ref=e535]:
+        - paragraph [ref=e536]:
+          - strong [ref=e537]: Murray St. @ Marquette
+          - text: (N)
+          - generic [ref=e538]: March Madness
+        - generic [ref=e539]:
+          - generic [ref=e540]:
+            - link "Murray State MURR (12)" [ref=e541] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/murray-state-racers
+              - img "Murray State" [ref=e542]
+              - generic [ref=e544]:
+                - text: MURR
+                - generic [ref=e545]: (12)
+            - generic [ref=e547]:
+              - strong [ref=e548]: "83"
+              - strong [ref=e550]: Final
+              - strong [ref=e551]: "64"
+            - link "(5) MARQ Marquette" [ref=e552] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/marquette-golden-eagles
+              - generic [ref=e554]:
+                - generic [ref=e555]: (5)
+                - text: MARQ
+              - img "Marquette" [ref=e556]
+          - generic [ref=e557]:
+            - paragraph [ref=e558]: "-"
+            - paragraph [ref=e559]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e561]:
+            - rowgroup [ref=e562]:
+              - row "Team 1 2 Score" [ref=e563]:
+                - columnheader "Team" [ref=e564]:
+                  - generic [ref=e565]: Team
+                - columnheader "1" [ref=e566]
+                - columnheader "2" [ref=e567]
+                - columnheader "Score" [ref=e568]
+            - rowgroup [ref=e569]:
+              - row "MURR 42 41 83" [ref=e570]:
+                - rowheader "MURR" [ref=e571]
+                - cell "42" [ref=e572]
+                - cell "41" [ref=e573]
+                - cell "83" [ref=e574]
+              - row "MARQ 35 29 64" [ref=e575]:
+                - rowheader "MARQ" [ref=e576]
+                - cell "35" [ref=e577]
+                - cell "29" [ref=e578]
+                - cell "64" [ref=e579]
+          - link "Boxscore" [ref=e581] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137807
+      - article [ref=e582]:
+        - paragraph [ref=e583]:
+          - strong [ref=e584]: Florida @ Nevada
+          - text: (N)
+          - generic [ref=e585]: March Madness
+        - generic [ref=e586]:
+          - generic [ref=e587]:
+            - link "Florida FLA (10)" [ref=e588] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/florida-gators
+              - img "Florida" [ref=e589]
+              - generic [ref=e591]:
+                - text: FLA
+                - generic [ref=e592]: (10)
+            - generic [ref=e594]:
+              - strong [ref=e595]: "70"
+              - strong [ref=e597]: Final
+              - strong [ref=e598]: "61"
+            - link "(7) NEV Nevada" [ref=e599] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/nevada-wolf-pack
+              - generic [ref=e601]:
+                - generic [ref=e602]: (7)
+                - text: NEV
+              - img "Nevada" [ref=e603]
+          - generic [ref=e604]:
+            - paragraph [ref=e605]: "-"
+            - paragraph [ref=e606]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e608]:
+            - rowgroup [ref=e609]:
+              - row "Team 1 2 Score" [ref=e610]:
+                - columnheader "Team" [ref=e611]:
+                  - generic [ref=e612]: Team
+                - columnheader "1" [ref=e613]
+                - columnheader "2" [ref=e614]
+                - columnheader "Score" [ref=e615]
+            - rowgroup [ref=e616]:
+              - row "FLA 37 33 70" [ref=e617]:
+                - rowheader "FLA" [ref=e618]
+                - cell "37" [ref=e619]
+                - cell "33" [ref=e620]
+                - cell "70" [ref=e621]
+              - row "NEV 28 33 61" [ref=e622]:
+                - rowheader "NEV" [ref=e623]
+                - cell "28" [ref=e624]
+                - cell "33" [ref=e625]
+                - cell "61" [ref=e626]
+          - link "Boxscore" [ref=e628] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137802
+      - article [ref=e629]:
+        - paragraph [ref=e630]:
+          - strong [ref=e631]: SFBK @ Hampton
+          - generic [ref=e632]: Conf Tourn.
+        - generic [ref=e633]:
+          - generic [ref=e634]:
+            - link "St. Francis (BKN) SFNY" [ref=e635] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/st.-francis-bkn-terriers
+              - img "St. Francis (BKN)" [ref=e636]
+              - generic [ref=e638]: SFNY
+            - generic [ref=e640]:
+              - strong [ref=e641]: "72"
+              - strong [ref=e643]: Final
+              - strong [ref=e644]: "81"
+            - link "HAMP Hampton" [ref=e645] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/hampton-pirates
+              - generic [ref=e647]: HAMP
+              - img "Hampton" [ref=e648]
+          - generic [ref=e649]:
+            - paragraph [ref=e650]: "-"
+            - paragraph [ref=e651]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e653]:
+            - rowgroup [ref=e654]:
+              - row "Team 1 2 Score" [ref=e655]:
+                - columnheader "Team" [ref=e656]:
+                  - generic [ref=e657]: Team
+                - columnheader "1" [ref=e658]
+                - columnheader "2" [ref=e659]
+                - columnheader "Score" [ref=e660]
+            - rowgroup [ref=e661]:
+              - row "SFNY 32 40 72" [ref=e662]:
+                - rowheader "SFNY" [ref=e663]
+                - cell "32" [ref=e664]
+                - cell "40" [ref=e665]
+                - cell "72" [ref=e666]
+              - row "HAMP 39 42 81" [ref=e667]:
+                - rowheader "HAMP" [ref=e668]
+                - cell "39" [ref=e669]
+                - cell "42" [ref=e670]
+                - cell "81" [ref=e671]
+          - link "Boxscore" [ref=e673] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137839
+      - article [ref=e674]:
+        - paragraph [ref=e675]:
+          - strong [ref=e676]: Florida Atlantic @ Charleston So
+          - generic [ref=e677]: Conf Tourn.
+        - generic [ref=e678]:
+          - generic [ref=e679]:
+            - link "Florida Atlantic FAU" [ref=e680] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/florida-atlantic-owls
+              - img "Florida Atlantic" [ref=e681]
+              - generic [ref=e683]: FAU
+            - generic [ref=e685]:
+              - strong [ref=e686]: "66"
+              - strong [ref=e688]: Final
+              - strong [ref=e689]: "68"
+            - link "CHSO Charleston Southern" [ref=e690] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/charleston-southern-buccaneers
+              - generic [ref=e692]: CHSO
+              - img "Charleston Southern" [ref=e693]
+          - generic [ref=e694]:
+            - paragraph [ref=e695]: "-"
+            - paragraph [ref=e696]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e698]:
+            - rowgroup [ref=e699]:
+              - row "Team 1 2 Score" [ref=e700]:
+                - columnheader "Team" [ref=e701]:
+                  - generic [ref=e702]: Team
+                - columnheader "1" [ref=e703]
+                - columnheader "2" [ref=e704]
+                - columnheader "Score" [ref=e705]
+            - rowgroup [ref=e706]:
+              - row "FAU 30 36 66" [ref=e707]:
+                - rowheader "FAU" [ref=e708]
+                - cell "30" [ref=e709]
+                - cell "36" [ref=e710]
+                - cell "66" [ref=e711]
+              - row "CHSO 34 34 68" [ref=e712]:
+                - rowheader "CHSO" [ref=e713]
+                - cell "34" [ref=e714]
+                - cell "34" [ref=e715]
+                - cell "68" [ref=e716]
+          - link "Boxscore" [ref=e718] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137843
+      - article [ref=e719]:
+        - paragraph [ref=e720]:
+          - strong [ref=e721]: ACU @ Kentucky
+          - text: (N)
+          - generic [ref=e722]: March Madness
+        - generic [ref=e723]:
+          - generic [ref=e724]:
+            - link "Abilene Christian AC (15)" [ref=e725] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/abilene-christian-wildcats
+              - img "Abilene Christian" [ref=e726]
+              - generic [ref=e728]:
+                - text: AC
+                - generic [ref=e729]: (15)
+            - generic [ref=e731]:
+              - strong [ref=e732]: "44"
+              - strong [ref=e734]: Final
+              - strong [ref=e735]: "79"
+            - link "(2) UK Kentucky" [ref=e736] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/kentucky-wildcats
+              - generic [ref=e738]:
+                - generic [ref=e739]: (2)
+                - text: UK
+              - img "Kentucky" [ref=e740]
+          - generic [ref=e741]:
+            - paragraph [ref=e742]: "-"
+            - paragraph [ref=e743]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e745]:
+            - rowgroup [ref=e746]:
+              - row "Team 1 2 Score" [ref=e747]:
+                - columnheader "Team" [ref=e748]:
+                  - generic [ref=e749]: Team
+                - columnheader "1" [ref=e750]
+                - columnheader "2" [ref=e751]
+                - columnheader "Score" [ref=e752]
+            - rowgroup [ref=e753]:
+              - row "AC 13 31 44" [ref=e754]:
+                - rowheader "AC" [ref=e755]
+                - cell "13" [ref=e756]
+                - cell "31" [ref=e757]
+                - cell "44" [ref=e758]
+              - row "UK 39 40 79" [ref=e759]:
+                - rowheader "UK" [ref=e760]
+                - cell "39" [ref=e761]
+                - cell "40" [ref=e762]
+                - cell "79" [ref=e763]
+          - link "Boxscore" [ref=e765] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137798
+      - article [ref=e766]:
+        - paragraph [ref=e767]:
+          - strong [ref=e768]: FDU @ Gonzaga
+          - text: (N)
+          - generic [ref=e769]: March Madness
+        - generic [ref=e770]:
+          - generic [ref=e771]:
+            - link "FDU FDU (16)" [ref=e772] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/fdu-knights
+              - img "FDU" [ref=e773]
+              - generic [ref=e775]:
+                - text: FDU
+                - generic [ref=e776]: (16)
+            - generic [ref=e778]:
+              - strong [ref=e779]: "49"
+              - strong [ref=e781]: Final
+              - strong [ref=e782]: "87"
+            - link "(1) GONZ Gonzaga" [ref=e783] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/gonzaga-bulldogs
+              - generic [ref=e785]:
+                - generic [ref=e786]: (1)
+                - text: GONZ
+              - img "Gonzaga" [ref=e787]
+          - generic [ref=e788]:
+            - paragraph [ref=e789]: "-"
+            - paragraph [ref=e790]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e792]:
+            - rowgroup [ref=e793]:
+              - row "Team 1 2 Score" [ref=e794]:
+                - columnheader "Team" [ref=e795]:
+                  - generic [ref=e796]: Team
+                - columnheader "1" [ref=e797]
+                - columnheader "2" [ref=e798]
+                - columnheader "Score" [ref=e799]
+            - rowgroup [ref=e800]:
+              - row "FDU 17 32 49" [ref=e801]:
+                - rowheader "FDU" [ref=e802]
+                - cell "17" [ref=e803]
+                - cell "32" [ref=e804]
+                - cell "49" [ref=e805]
+              - row "GONZ 53 34 87" [ref=e806]:
+                - rowheader "GONZ" [ref=e807]
+                - cell "53" [ref=e808]
+                - cell "34" [ref=e809]
+                - cell "87" [ref=e810]
+          - link "Boxscore" [ref=e812] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/174544
+      - article [ref=e813]:
+        - paragraph [ref=e814]:
+          - strong [ref=e815]: Saint Mary's @ Villanova
+          - text: (N)
+          - generic [ref=e816]: March Madness
+        - generic [ref=e817]:
+          - generic [ref=e818]:
+            - link "Saint Mary's SMC (11)" [ref=e819] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/saint-mary-s-gaels
+              - img "Saint Mary's" [ref=e820]
+              - generic [ref=e822]:
+                - text: SMC
+                - generic [ref=e823]: (11)
+            - generic [ref=e825]:
+              - strong [ref=e826]: "57"
+              - strong [ref=e828]: Final
+              - strong [ref=e829]: "61"
+            - link "(6) VILL Villanova" [ref=e830] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/villanova-wildcats
+              - generic [ref=e832]:
+                - generic [ref=e833]: (6)
+                - text: VILL
+              - img "Villanova" [ref=e834]
+          - generic [ref=e835]:
+            - paragraph [ref=e836]: "-"
+            - paragraph [ref=e837]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e839]:
+            - rowgroup [ref=e840]:
+              - row "Team 1 2 Score" [ref=e841]:
+                - columnheader "Team" [ref=e842]:
+                  - generic [ref=e843]: Team
+                - columnheader "1" [ref=e844]
+                - columnheader "2" [ref=e845]
+                - columnheader "Score" [ref=e846]
+            - rowgroup [ref=e847]:
+              - row "SMC 30 27 57" [ref=e848]:
+                - rowheader "SMC" [ref=e849]
+                - cell "30" [ref=e850]
+                - cell "27" [ref=e851]
+                - cell "57" [ref=e852]
+              - row "VILL 28 33 61" [ref=e853]:
+                - rowheader "VILL" [ref=e854]
+                - cell "28" [ref=e855]
+                - cell "33" [ref=e856]
+                - cell "61" [ref=e857]
+          - link "Boxscore" [ref=e859] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137781
+      - article [ref=e860]:
+        - paragraph [ref=e861]:
+          - strong [ref=e862]: Kent St. @ UL Monroe
+          - generic [ref=e863]: Conf Tourn.
+        - generic [ref=e864]:
+          - generic [ref=e865]:
+            - link "Kent State KENT" [ref=e866] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/kent-state-golden-flashes
+              - img "Kent State" [ref=e867]
+              - generic [ref=e869]: KENT
+            - generic [ref=e871]:
+              - strong [ref=e872]: "77"
+              - strong [ref=e874]: Final
+              - strong [ref=e875]: "87"
+            - link "ULM Louisiana-Monroe" [ref=e876] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/louisiana-monroe-warhawks
+              - generic [ref=e878]: ULM
+              - img "Louisiana-Monroe" [ref=e879]
+          - generic [ref=e880]:
+            - paragraph [ref=e881]: "-"
+            - paragraph [ref=e882]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e884]:
+            - rowgroup [ref=e885]:
+              - row "Team 1 2 Score" [ref=e886]:
+                - columnheader "Team" [ref=e887]:
+                  - generic [ref=e888]: Team
+                - columnheader "1" [ref=e889]
+                - columnheader "2" [ref=e890]
+                - columnheader "Score" [ref=e891]
+            - rowgroup [ref=e892]:
+              - row "KENT 41 36 77" [ref=e893]:
+                - rowheader "KENT" [ref=e894]
+                - cell "41" [ref=e895]
+                - cell "36" [ref=e896]
+                - cell "77" [ref=e897]
+              - row "ULM 42 45 87" [ref=e898]:
+                - rowheader "ULM" [ref=e899]
+                - cell "42" [ref=e900]
+                - cell "45" [ref=e901]
+                - cell "87" [ref=e902]
+          - link "Boxscore" [ref=e904] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137844
+      - article [ref=e905]:
+        - paragraph [ref=e906]:
+          - strong [ref=e907]: Seton Hall @ Wofford
+          - text: (N)
+          - generic [ref=e908]: March Madness
+        - generic [ref=e909]:
+          - generic [ref=e910]:
+            - link "Seton Hall HALL (10)" [ref=e911] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/seton-hall-pirates
+              - img "Seton Hall" [ref=e912]
+              - generic [ref=e914]:
+                - text: HALL
+                - generic [ref=e915]: (10)
+            - generic [ref=e917]:
+              - strong [ref=e918]: "68"
+              - strong [ref=e920]: Final
+              - strong [ref=e921]: "84"
+            - link "(7) WOF Wofford" [ref=e922] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/wofford-terriers
+              - generic [ref=e924]:
+                - generic [ref=e925]: (7)
+                - text: WOF
+              - img "Wofford" [ref=e926]
+          - generic [ref=e927]:
+            - paragraph [ref=e928]: "-"
+            - paragraph [ref=e929]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e931]:
+            - rowgroup [ref=e932]:
+              - row "Team 1 2 Score" [ref=e933]:
+                - columnheader "Team" [ref=e934]:
+                  - generic [ref=e935]: Team
+                - columnheader "1" [ref=e936]
+                - columnheader "2" [ref=e937]
+                - columnheader "Score" [ref=e938]
+            - rowgroup [ref=e939]:
+              - row "HALL 30 38 68" [ref=e940]:
+                - rowheader "HALL" [ref=e941]
+                - cell "30" [ref=e942]
+                - cell "38" [ref=e943]
+                - cell "68" [ref=e944]
+              - row "WOF 40 44 84" [ref=e945]:
+                - rowheader "WOF" [ref=e946]
+                - cell "40" [ref=e947]
+                - cell "44" [ref=e948]
+                - cell "84" [ref=e949]
+          - link "Boxscore" [ref=e951] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137797
+      - article [ref=e952]:
+        - paragraph [ref=e953]:
+          - strong [ref=e954]: Montana @ Michigan
+          - text: (N)
+          - generic [ref=e955]: March Madness
+        - generic [ref=e956]:
+          - generic [ref=e957]:
+            - link "Montana MONT (15)" [ref=e958] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/montana-grizzlies
+              - img "Montana" [ref=e959]
+              - generic [ref=e961]:
+                - text: MONT
+                - generic [ref=e962]: (15)
+            - generic [ref=e964]:
+              - strong [ref=e965]: "55"
+              - strong [ref=e967]: Final
+              - strong [ref=e968]: "74"
+            - link "(2) MICH Michigan" [ref=e969] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+              - generic [ref=e971]:
+                - generic [ref=e972]: (2)
+                - text: MICH
+              - img "Michigan" [ref=e973]
+          - generic [ref=e974]:
+            - paragraph [ref=e975]: "-"
+            - paragraph [ref=e976]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e978]:
+            - rowgroup [ref=e979]:
+              - row "Team 1 2 Score" [ref=e980]:
+                - columnheader "Team" [ref=e981]:
+                  - generic [ref=e982]: Team
+                - columnheader "1" [ref=e983]
+                - columnheader "2" [ref=e984]
+                - columnheader "Score" [ref=e985]
+            - rowgroup [ref=e986]:
+              - row "MONT 21 34 55" [ref=e987]:
+                - rowheader "MONT" [ref=e988]
+                - cell "21" [ref=e989]
+                - cell "34" [ref=e990]
+                - cell "55" [ref=e991]
+              - row "MICH 34 40 74" [ref=e992]:
+                - rowheader "MICH" [ref=e993]
+                - cell "34" [ref=e994]
+                - cell "40" [ref=e995]
+                - cell "74" [ref=e996]
+          - link "Boxscore" [ref=e998] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137803
+      - article [ref=e999]:
+        - paragraph [ref=e1000]:
+          - strong [ref=e1001]: CSU Bakersfield @ CSU Fullerton
+          - generic [ref=e1002]: Conf Tourn.
+        - generic [ref=e1003]:
+          - generic [ref=e1004]:
+            - link "Cal State Bakersfield CSB" [ref=e1005] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/cal-state-bakersfield-roadrunners
+              - img "Cal State Bakersfield" [ref=e1006]
+              - generic [ref=e1008]: CSB
+            - generic [ref=e1010]:
+              - strong [ref=e1011]: "66"
+              - strong [ref=e1013]: Final
+              - strong [ref=e1014]: "58"
+            - link "CSF Cal State Fullerton" [ref=e1015] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/cal-state-fullerton-titans
+              - generic [ref=e1017]: CSF
+              - img "Cal State Fullerton" [ref=e1018]
+          - generic [ref=e1019]:
+            - paragraph [ref=e1020]: "-"
+            - paragraph [ref=e1021]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e1023]:
+            - rowgroup [ref=e1024]:
+              - row "Team 1 2 Score" [ref=e1025]:
+                - columnheader "Team" [ref=e1026]:
+                  - generic [ref=e1027]: Team
+                - columnheader "1" [ref=e1028]
+                - columnheader "2" [ref=e1029]
+                - columnheader "Score" [ref=e1030]
+            - rowgroup [ref=e1031]:
+              - row "CSB 34 32 66" [ref=e1032]:
+                - rowheader "CSB" [ref=e1033]
+                - cell "34" [ref=e1034]
+                - cell "32" [ref=e1035]
+                - cell "66" [ref=e1036]
+              - row "CSF 16 42 58" [ref=e1037]:
+                - rowheader "CSF" [ref=e1038]
+                - cell "16" [ref=e1039]
+                - cell "42" [ref=e1040]
+                - cell "58" [ref=e1041]
+          - link "Boxscore" [ref=e1043] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137845
+      - article [ref=e1044]:
+        - paragraph [ref=e1045]:
+          - strong [ref=e1046]: Baylor @ Syracuse
+          - text: (N)
+          - generic [ref=e1047]: March Madness
+        - generic [ref=e1048]:
+          - generic [ref=e1049]:
+            - link "Baylor BAY (9)" [ref=e1050] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/baylor-bears
+              - img "Baylor" [ref=e1051]
+              - generic [ref=e1053]:
+                - text: BAY
+                - generic [ref=e1054]: (9)
+            - generic [ref=e1056]:
+              - strong [ref=e1057]: "78"
+              - strong [ref=e1059]: Final
+              - strong [ref=e1060]: "69"
+            - link "(8) SYR Syracuse" [ref=e1061] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/syracuse-orange
+              - generic [ref=e1063]:
+                - generic [ref=e1064]: (8)
+                - text: SYR
+              - img "Syracuse" [ref=e1065]
+          - generic [ref=e1066]:
+            - paragraph [ref=e1067]: "-"
+            - paragraph [ref=e1068]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e1070]:
+            - rowgroup [ref=e1071]:
+              - row "Team 1 2 Score" [ref=e1072]:
+                - columnheader "Team" [ref=e1073]:
+                  - generic [ref=e1074]: Team
+                - columnheader "1" [ref=e1075]
+                - columnheader "2" [ref=e1076]
+                - columnheader "Score" [ref=e1077]
+            - rowgroup [ref=e1078]:
+              - row "BAY 38 40 78" [ref=e1079]:
+                - rowheader "BAY" [ref=e1080]
+                - cell "38" [ref=e1081]
+                - cell "40" [ref=e1082]
+                - cell "78" [ref=e1083]
+              - row "SYR 37 32 69" [ref=e1084]:
+                - rowheader "SYR" [ref=e1085]
+                - cell "37" [ref=e1086]
+                - cell "32" [ref=e1087]
+                - cell "69" [ref=e1088]
+          - link "Boxscore" [ref=e1090] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137800
+      - article [ref=e1091]:
+        - paragraph [ref=e1092]:
+          - strong [ref=e1093]: Old Dominion @ Purdue
+          - text: (N)
+          - generic [ref=e1094]: March Madness
+        - generic [ref=e1095]:
+          - generic [ref=e1096]:
+            - link "Old Dominion ODU (14)" [ref=e1097] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/old-dominion-monarchs
+              - img "Old Dominion" [ref=e1098]
+              - generic [ref=e1100]:
+                - text: ODU
+                - generic [ref=e1101]: (14)
+            - generic [ref=e1103]:
+              - strong [ref=e1104]: "48"
+              - strong [ref=e1106]: Final
+              - strong [ref=e1107]: "61"
+            - link "(3) PUR Purdue" [ref=e1108] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/purdue-boilermakers
+              - generic [ref=e1110]:
+                - generic [ref=e1111]: (3)
+                - text: PUR
+              - img "Purdue" [ref=e1112]
+          - generic [ref=e1113]:
+            - paragraph [ref=e1114]: "-"
+            - paragraph [ref=e1115]:
+              - text: o/u Margin
+              - text: "Off"
+          - table [ref=e1117]:
+            - rowgroup [ref=e1118]:
+              - row "Team 1 2 Score" [ref=e1119]:
+                - columnheader "Team" [ref=e1120]:
+                  - generic [ref=e1121]: Team
+                - columnheader "1" [ref=e1122]
+                - columnheader "2" [ref=e1123]
+                - columnheader "Score" [ref=e1124]
+            - rowgroup [ref=e1125]:
+              - row "ODU 19 29 48" [ref=e1126]:
+                - rowheader "ODU" [ref=e1127]
+                - cell "19" [ref=e1128]
+                - cell "29" [ref=e1129]
+                - cell "48" [ref=e1130]
+              - row "PUR 32 29 61" [ref=e1131]:
+                - rowheader "PUR" [ref=e1132]
+                - cell "32" [ref=e1133]
+                - cell "29" [ref=e1134]
+                - cell "61" [ref=e1135]
+          - link "Boxscore" [ref=e1137] [cursor=pointer]:
+            - /url: /sport/basketball/ncaab/matchup/137782
+    - generic:
+      - heading "Latest headlines Checkout latest headlines Read more" [level=2] [ref=e1139]:
+        - text: Latest headlines
+        - link "Checkout latest headlines Read more" [ref=e1140] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1141]: Checkout latest headlines
+          - text: Read more
+      - generic [ref=e1142]:
+        - article [ref=e1143]:
+          - generic [ref=e1145]:
+            - generic [ref=e1146]:
+              - generic [ref=e1147]: NCAAB
+              - generic [ref=e1148]:
+                - generic [ref=e1149]: 04/09/2026
+                - generic [ref=e1151]: 07:40 ET
+            - paragraph [ref=e1152]:
+              - 'link "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1153] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/props
+            - paragraph [ref=e1154]:
+              - link "Best March Madness prop bets. Read more" [ref=e1155] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/props
+                - generic [ref=e1156]: Best March Madness prop bets.
+                - text: Read more
+        - article [ref=e1157]:
+          - generic [ref=e1159]:
+            - generic [ref=e1160]:
+              - generic [ref=e1161]: NCAAB
+              - generic [ref=e1162]:
+                - generic [ref=e1163]: 04/08/2026
+                - generic [ref=e1165]: 02:03 ET
+            - paragraph [ref=e1166]:
+              - 'link "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1167] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+            - paragraph [ref=e1168]:
+              - link "Huskies favored to reclaim title. Read more" [ref=e1169] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+                - generic [ref=e1170]: Huskies favored to reclaim title.
+                - text: Read more
+        - article [ref=e1171]:
+          - generic [ref=e1173]:
+            - generic [ref=e1174]:
+              - generic [ref=e1175]: NCAAB
+              - generic [ref=e1176]:
+                - generic [ref=e1177]: 04/08/2026
+                - generic [ref=e1179]: 01:55 ET
+            - paragraph [ref=e1180]:
+              - 'link "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1181] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+            - paragraph [ref=e1182]:
+              - link "How long before your bracket busts? Read more" [ref=e1183] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+                - generic [ref=e1184]: How long before your bracket busts?
+                - text: Read more
+        - article [ref=e1185]:
+          - generic [ref=e1187]:
+            - generic [ref=e1188]:
+              - generic [ref=e1189]: NCAAB
+              - generic [ref=e1190]:
+                - generic [ref=e1191]: 04/08/2026
+                - generic [ref=e1193]: 01:30 ET
+            - paragraph [ref=e1194]:
+              - 'link "March Madness Expert Picks: Daily Best Bets and Predictions" [ref=e1195] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+            - paragraph [ref=e1196]:
+              - link "Best bets and SGPs for the National Championship. Read more" [ref=e1197] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+                - generic [ref=e1198]: Best bets and SGPs for the National Championship.
+                - text: Read more
+    - generic:
+      - heading "Daily betting offers Checkout sportsbook promos Sportsbook promos" [level=2] [ref=e1200]:
+        - text: Daily betting offers
+        - link "Checkout sportsbook promos Sportsbook promos" [ref=e1201] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1202]: Checkout sportsbook promos
+          - text: Sportsbook promos
+      - generic:
+        - article [ref=e1203]:
+          - generic [ref=e1204]:
+            - link [ref=e1205] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1206]:
+              - generic [ref=e1207]:
+                - generic [ref=e1208]: PROMO
+                - generic [ref=e1209]:
+                  - generic [ref=e1210]: 04/21/2026
+                  - generic [ref=e1212]: 07:45 ET
+              - paragraph [ref=e1213]:
+                - 'link "Novig Promo Code COVERS100: Get 10% Off MLB, NBA, and NHL Prediction Markets on Tuesday" [ref=e1214] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1215]:
+                - link "Claim 10% off up to $100 using Novig promo code COVERS100. Read more" [ref=e1216] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e1217]: Claim 10% off up to $100 using Novig promo code COVERS100.
+                  - text: Read more
+        - article [ref=e1218]:
+          - generic [ref=e1219]:
+            - link [ref=e1220] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1221]:
+              - generic [ref=e1222]:
+                - generic [ref=e1223]: PROMO
+                - generic [ref=e1224]:
+                  - generic [ref=e1225]: 04/21/2026
+                  - generic [ref=e1227]: 07:40 ET
+              - paragraph [ref=e1228]:
+                - 'link "Polymarket Promo Code COVERS: Get $20 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e1229] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1230]:
+                - link "$20 deposit bonus with Polymarket promo code COVERS. Read more" [ref=e1231] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e1232]: $20 deposit bonus with Polymarket promo code COVERS.
+                  - text: Read more
+        - article [ref=e1233]:
+          - generic [ref=e1234]:
+            - link [ref=e1235] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1236]:
+              - generic [ref=e1237]:
+                - generic [ref=e1238]: PROMO
+                - generic [ref=e1239]:
+                  - generic [ref=e1240]: 04/21/2026
+                  - generic [ref=e1242]: 07:35 ET
+              - paragraph [ref=e1243]:
+                - 'link "Kalshi Promo Code COVERS: Get $10 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e1244] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1245]:
+                - link "$10 bonus with Kalshi Refferal Code COVERS Read more" [ref=e1246] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e1247]: $10 bonus with Kalshi Refferal Code COVERS
+                  - text: Read more
+        - article [ref=e1248]:
+          - generic [ref=e1249]:
+            - link [ref=e1250] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1251]:
+              - generic [ref=e1252]:
+                - generic [ref=e1253]: PROMO
+                - generic [ref=e1254]:
+                  - generic [ref=e1255]: 04/21/2026
+                  - generic [ref=e1257]: 07:30 ET
+              - paragraph [ref=e1258]:
+                - 'link "Betr Picks Promo COVERSBONUS: Claim $200 Bonus for MLB, NBA, NHL Playoffs" [ref=e1259] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1260]:
+                - link "Free Pick + $200 Bonus Cash Read more" [ref=e1261] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+                  - generic [ref=e1262]: Free Pick + $200 Bonus Cash
+                  - text: Read more
+    - article [ref=e1263]:
+      - heading "College Basketball Scores and Matchups" [level=2] [ref=e1265]:
+        - generic [ref=e1266]: College Basketball Scores and Matchups
+      - paragraph [ref=e1268]:
+        - generic [ref=e1269]: This page serves as the foundational platform for
+        - link "NCAAB" [ref=e1270] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1271]: NCAAB
+        - generic [ref=e1272]: bettors to initiate their handicapping process. It is where you delve into essential betting data that will shape your decision-making.
+      - paragraph [ref=e1274]:
+        - generic [ref=e1275]: Presented here are all forthcoming matchups, coupled with live scores and outcomes. Before the game, bettors can view odds for each matchup and upon the game's conclusion, we give you a glance over the scores, fractionated by quarter.
+      - heading "What are the main types of bets for college basketball matchups?" [level=3] [ref=e1277]:
+        - generic [ref=e1278]: What are the main types of bets for college basketball matchups?
+      - paragraph [ref=e1280]:
+        - generic [ref=e1281]:
+          - text: After deciding your bets, the next step
+          - generic [ref=e1282]:
+            - text: of the process involves scouring legal
+            - link "betting sites" [ref=e1283] [cursor=pointer]:
+              - /url: https://www.covers.com/betting
+            - text: for the most favorable lines via our
+        - link "college basketball odds" [ref=e1284] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+          - generic [ref=e1285]: college basketball odds
+        - generic [ref=e1286]: comparison tool. This platform reveals the odds for each game's point spread, moneyline, and total. Point
+        - generic [ref=e1287]: spread betting
+        - generic [ref=e1288]: is gambling on the predictive point gap between the two teams, while
+        - link "moneyline betting" [ref=e1289] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/how-to-bet-moneylines
+          - generic [ref=e1290]: moneyline betting
+        - generic [ref=e1291]: entails wagering on the team that is expected to triumph. Totals or
+        - link "Over/Under betting" [ref=e1292] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/over-under-totals-betting
+          - generic [ref=e1293]: Over/Under betting
+        - generic [ref=e1294]: involves staking Over or Under on the amalgamated point total estimated to be scored in a specific game.
+      - generic [ref=e1295]:
+        - paragraph [ref=e1296]:
+          - generic [ref=e1297]: Covers also have
+          - link "March Madness odds" [ref=e1298] [cursor=pointer]:
+            - /url: https://www.covers.com/ncaab/march-madness/odds
+            - generic [ref=e1299]: March Madness odds
+          - generic [ref=e1300]: from a full suite of the best
+          - link "March Madness betting sites" [ref=e1301] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+            - generic [ref=e1302]: March Madness betting sites
+          - generic [ref=e1303]: "!"
+        - heading "Why use Covers NCAAB Scoreboard" [level=3] [ref=e1304]:
+          - generic [ref=e1305]: Why use Covers NCAAB Scoreboard
+      - paragraph [ref=e1307]:
+        - generic [ref=e1308]: Covers’ NCAAB scoreboard is a great place for bettors to start researching their
+        - link "college basketball picks" [ref=e1309] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+          - generic [ref=e1310]: college basketball picks
+        - generic [ref=e1311]: .
+      - paragraph [ref=e1313]:
+        - generic [ref=e1314]: The live and up-to-date odds come from the absolute best
+        - link "basketball betting sites" [ref=e1315] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+          - generic [ref=e1316]: basketball betting sites
+        - generic [ref=e1317]: and the matchup pages are a gateway into a huge array of NCAAB stats. Whether you are betting on the tournament or looking for a good matchup to use a new
+        - link "March Madness betting promos" [ref=e1318] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+          - generic [ref=e1319]: March Madness betting promos
+        - generic [ref=e1320]: or
+        - link "sportsbook promo" [ref=e1321] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1322]: sportsbook promo
+        - generic [ref=e1323]: with, this page is where you need to start!
+      - heading "How frequently is the NCAAB scoreboard updated?" [level=3] [ref=e1326]:
+        - generic [ref=e1327]: How frequently is the NCAAB scoreboard updated?
+      - paragraph [ref=e1329]:
+        - generic [ref=e1330]: Our live scores update in real-time, and our pre-games odds are refreshed every five minutes, so you see the best odds for betting on upcoming NCAAB games.
+    - article [ref=e1331]:
+      - heading "FAQs" [level=2] [ref=e1332]
+      - button "How are college basketball matchups scheduled?" [ref=e1334] [cursor=pointer]:
+        - generic [ref=e1335]: How are college basketball matchups scheduled?
+      - button "How do injuries affect college basketball matchups and betting odds?" [ref=e1340] [cursor=pointer]:
+        - generic [ref=e1341]: How do injuries affect college basketball matchups and betting odds?
+      - button "What's the average score of the college basketball game?" [ref=e1346] [cursor=pointer]:
+        - generic [ref=e1347]: What's the average score of the college basketball game?
+    - article [ref=e1351]:
+      - heading "Pages related to this topic" [level=2] [ref=e1352]
+      - generic [ref=e1354]:
+        - link "Basketball Betting Sites" [ref=e1356] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+        - link "March Madness Betting Sites" [ref=e1358] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-sites
+        - link "March Madness Betting Promos" [ref=e1360] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+  - iframe [ref=e1361]:
+    
+  - generic [ref=e1363]:
+    - generic [ref=e1364]:
+      - generic [ref=e1366]:
+        - generic [ref=e1367]:
+          - link "About Us" [ref=e1369] [cursor=pointer]:
+            - /url: https://www.covers.com/about
+          - link "Contact Us" [ref=e1370] [cursor=pointer]:
+            - /url: https://www.covers.com/contact
+          - link "Careers" [ref=e1371] [cursor=pointer]:
+            - /url: https://www.covers.com/careers
+          - link "Our Team" [ref=e1372] [cursor=pointer]:
+            - /url: https://www.covers.com/writers
+          - link "Brand" [ref=e1373] [cursor=pointer]:
+            - /url: https://www.covers.com/brand
+          - link "Testimonials" [ref=e1374] [cursor=pointer]:
+            - /url: https://www.covers.com/testimonials
+        - generic [ref=e1375]:
+          - link "Betting Guides" [ref=e1377] [cursor=pointer]:
+            - /url: https://www.covers.com/guides
+          - link "Sportsbook Reviews" [ref=e1378] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/reviews
+          - link "Sports Betting News" [ref=e1379] [cursor=pointer]:
+            - /url: https://www.covers.com/betting-news
+          - link "Podcasts" [ref=e1380] [cursor=pointer]:
+            - /url: https://www.covers.com/podcasts
+          - link "Responsible Gaming" [ref=e1381] [cursor=pointer]:
+            - /url: https://www.covers.com/guides/help
+        - generic [ref=e1382]:
+          - link "Betting Sites" [ref=e1384] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "Canada Betting Sites" [ref=e1385] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/canada
+          - link "Canada Casinos" [ref=e1386] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada
+          - link "Best Betting Apps" [ref=e1387] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/best-betting-apps
+        - generic [ref=e1388]:
+          - link "Contests" [ref=e1390] [cursor=pointer]:
+            - /url: https://contests.covers.com
+          - link "Streak Survivor" [ref=e1391] [cursor=pointer]:
+            - /url: https://contests.covers.com/survivor
+          - link "King of Covers" [ref=e1392] [cursor=pointer]:
+            - /url: https://contests.covers.com/kingofcovers
+          - link "Office Pools" [ref=e1393] [cursor=pointer]:
+            - /url: https://contests.covers.com/officepools
+      - generic [ref=e1395]:
+        - generic [ref=e1396]: The Covers community has
+        - generic [ref=e1397]: 810,221
+        - generic [ref=e1398]: lifetime members worldwide
+        - link "Join our community today" [ref=e1400] [cursor=pointer]:
+          - /url: https://www.covers.com/forum
+    - generic [ref=e1404]:
+      - generic [ref=e1405]:
+        - img "Covers 30 Years Logo" [ref=e1406]
+        - generic [ref=e1407]:
+          - text: Established in 1995,
+          - text: Covers is the world
+          - text: leader in sports
+          - text: betting information.
+      - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e1409] [cursor=pointer]:
+        - /url: https://www.covers.com/guides/help
+        - generic [ref=e1410]:
+          - generic [ref=e1411]: 21+
+          - generic [ref=e1412]: Gambling problem? Call 1-800-GAMBLER
+    - generic [ref=e1416]:
+      - generic [ref=e1417]:
+        - link "Site Map" [ref=e1418] [cursor=pointer]:
+          - /url: https://www.covers.com/sitemap
+        - link "Help" [ref=e1419] [cursor=pointer]:
+          - /url: https://www.covers.com/help
+        - link "Privacy" [ref=e1420] [cursor=pointer]:
+          - /url: https://www.covers.com/privacy
+        - link "Terms of Service" [ref=e1421] [cursor=pointer]:
+          - /url: https://www.covers.com/terms
+      - generic [ref=e1422]:
+        - link "youtube logo" [ref=e1423] [cursor=pointer]:
+          - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+          - img "youtube logo" [ref=e1424]
+        - link "facebook logo" [ref=e1425] [cursor=pointer]:
+          - /url: https://www.facebook.com/CoversSports/
+          - img "facebook logo" [ref=e1426]
+        - link "twitter logo" [ref=e1427] [cursor=pointer]:
+          - /url: https://twitter.com/Covers
+          - img "twitter logo" [ref=e1428]
+        - link "instagram logo" [ref=e1429] [cursor=pointer]:
+          - /url: https://www.instagram.com/covers_sports/
+          - img "instagram logo" [ref=e1430]
+        - link "linkedin logo" [ref=e1431] [cursor=pointer]:
+          - /url: https://www.linkedin.com/company/2632327/
+          - img "linkedin logo" [ref=e1432]
+        - link "google news logo" [ref=e1433] [cursor=pointer]:
+          - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+          - img "google news logo" [ref=e1434]
+  - generic [ref=e1436]:
+    - generic [ref=e1441]:
+      - text: "Covers is verified safe by:"
+      - img "Evalon Logo" [ref=e1442]
+      - link "GPWA Logo" [ref=e1443] [cursor=pointer]:
+        - /url: https://certify.gpwa.org/verify/covers.com
+        - img "GPWA Logo" [ref=e1444]
+      - img "GDPR Logo" [ref=e1445]
+      - img "GeoTrust Logo" [ref=e1446]
+      - img "Evalon Logo" [ref=e1447]
+    - generic [ref=e1448]:
+      - img "Covers Logo" [ref=e1450]
+      - generic [ref=e1451]:
+        - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+        - paragraph [ref=e1452]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img

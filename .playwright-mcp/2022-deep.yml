@@ -1,0 +1,1361 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem:
+          - generic:
+            - generic:
+              - generic:
+                - generic
+                - generic
+              - generic:
+                - generic
+              - generic:
+                - generic
+  - navigation [ref=e31]:
+    - button "more arrow" [ref=e32] [cursor=pointer]:
+      - img "more arrow" [ref=e34]
+    - list [ref=e35]:
+      - listitem [ref=e36]:
+        - link "NCAAB" [ref=e37] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+      - listitem [ref=e38]:
+        - link "Scores & Matchups" [ref=e39] [cursor=pointer]:
+          - /url: https://www.covers.com/sports/ncaab/matchups
+      - listitem [ref=e40]:
+        - link "Free Picks" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e42]:
+        - link "Odds" [ref=e43] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+      - listitem [ref=e44]:
+        - link "Futures" [ref=e45] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds/futures
+      - listitem [ref=e46]:
+        - link "News & Analysis" [ref=e47] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/betting-news
+      - listitem [ref=e48]:
+        - link "NCAAB Contest" [ref=e49] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e50]:
+        - link "March Madness" [ref=e51] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab/march-madness
+      - listitem [ref=e52]:
+        - link "Injuries" [ref=e53] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/injuries
+      - listitem [ref=e54]:
+        - link "Teams" [ref=e55] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/teams
+      - listitem [ref=e56]:
+        - link "Players" [ref=e57] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/players
+  - main [ref=e58]:
+    - article [ref=e59]:
+      - generic [ref=e1402]:
+        - link "Kalshi Sports Logo" [ref=e1403] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner
+          - img "Kalshi Sports Logo" [ref=e1404]
+        - generic [ref=e1405]:
+          - generic [ref=e1406]:
+            - generic [ref=e1407]:
+              - text: $10 Trading Bonus
+              - img "tooltip icon" [ref=e1409] [cursor=pointer]
+            - generic [ref=e1410]: "CODE: COVERS"
+          - link "Claim $10" [ref=e1411] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner&location=flex
+    - generic [ref=e60]:
+      - heading "NCAAB Scores & Matchups" [level=1] [ref=e61]
+      - button "NCAAB" [ref=e63] [cursor=pointer]:
+        - img [ref=e64]
+        - generic [ref=e65]: NCAAB
+        - img [ref=e66]
+    - navigation [ref=e68]:
+      - generic [ref=e69]:
+        - link [ref=e70] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-16
+          - img [ref=e71]
+        - link "Tue Mar 15" [ref=e73] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-15
+          - text: Tue
+          - generic [ref=e74]: Mar 15
+        - link "Wed Mar 16" [ref=e75] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-16
+          - text: Wed
+          - generic [ref=e76]: Mar 16
+        - generic [ref=e77]:
+          - generic [ref=e78]: Thu
+          - generic [ref=e79]: Mar 17
+        - link "Fri Mar 18" [ref=e80] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-18
+          - text: Fri
+          - generic [ref=e81]: Mar 18
+        - link "Sat Mar 19" [ref=e82] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-19
+          - text: Sat
+          - generic [ref=e83]: Mar 19
+        - link [ref=e84] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups?selectedDate=2022-03-18
+          - img [ref=e85]
+      - button [ref=e88] [cursor=pointer]:
+        - img [ref=e89]
+        - img [ref=e91]
+      - button "Conferences Filter" [ref=e94] [cursor=pointer]:
+        - generic [ref=e95]: Conferences
+        - img [ref=e96]
+        - generic [ref=e98]: Filter
+        - img [ref=e99]
+      - generic [ref=e101]:
+        - textbox "Search" [ref=e102]
+        - button "clear search" [ref=e103] [cursor=pointer]:
+          - generic [ref=e104]: clear search
+    - generic [ref=e105]:
+      - article [ref=e106]:
+        - paragraph [ref=e107]:
+          - strong [ref=e108]: Michigan @ Colorado St.
+          - text: (N)
+          - generic [ref=e109]: March Madness
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - link "Michigan MICH (11)" [ref=e112] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+              - img "Michigan" [ref=e113]
+              - generic [ref=e115]:
+                - text: MICH
+                - generic [ref=e116]: (11)
+            - generic [ref=e118]:
+              - strong [ref=e119]: "75"
+              - strong [ref=e121]: Final
+              - strong [ref=e122]: "63"
+            - link "(6) CSU Colorado State" [ref=e123] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/colorado-state-rams
+              - generic [ref=e125]:
+                - generic [ref=e126]: (6)
+                - text: CSU
+              - img "Colorado State" [ref=e127]
+          - generic [ref=e128]:
+            - paragraph [ref=e129]:
+              - text: Cover By +10.5
+              - text: MICH -1.5
+            - paragraph [ref=e130]:
+              - text: o/u Margin
+              - text: o0.5
+          - generic [ref=e131]:
+            - table [ref=e132]:
+              - rowgroup [ref=e133]:
+                - row "Team 1 2 Score" [ref=e134]
+              - rowgroup [ref=e140]:
+                - row "MICH 29 46 75" [ref=e141]
+                - row "CSU 36 27 63" [ref=e146]
+            - paragraph [ref=e151]:
+              - text: Michigan covered the spread of
+              - strong [ref=e152]: "-1.5"
+              - text: . The total score of 138 was
+              - strong [ref=e153]: over 137.5
+              - text: .
+          - generic [ref=e154]:
+            - link "Boxscore" [ref=e155] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264719
+            - button "Bet graph" [ref=e157] [cursor=pointer]
+      - article [ref=e158]:
+        - paragraph [ref=e159]:
+          - strong [ref=e160]: SD State @ Providence
+          - text: (N)
+          - generic [ref=e161]: March Madness
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - link "South Dakota State SDST (13)" [ref=e164] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/south-dakota-state-jackrabbits
+              - img "South Dakota State" [ref=e165]
+              - generic [ref=e167]:
+                - text: SDST
+                - generic [ref=e168]: (13)
+            - generic [ref=e170]:
+              - strong [ref=e171]: "57"
+              - strong [ref=e173]: Final
+              - strong [ref=e174]: "66"
+            - link "(4) PROV Providence" [ref=e175] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/providence-friars
+              - generic [ref=e177]:
+                - generic [ref=e178]: (4)
+                - text: PROV
+              - img "Providence" [ref=e179]
+          - generic [ref=e180]:
+            - paragraph [ref=e181]:
+              - text: o/u Margin
+              - text: u25.5
+            - paragraph [ref=e182]:
+              - text: Cover By +6
+              - text: PROV -3
+          - generic [ref=e183]:
+            - table [ref=e184]:
+              - rowgroup [ref=e185]:
+                - row "Team 1 2 Score" [ref=e186]
+              - rowgroup [ref=e192]:
+                - row "SDST 23 34 57" [ref=e193]
+                - row "PROV 31 35 66" [ref=e198]
+            - paragraph [ref=e203]:
+              - text: Providence covered the spread of
+              - strong [ref=e204]: "-3"
+              - text: . The total score of 123 was
+              - strong [ref=e205]: under 148.5
+              - text: .
+          - generic [ref=e206]:
+            - link "Boxscore" [ref=e207] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264726
+            - button "Bet graph" [ref=e209] [cursor=pointer]
+      - article [ref=e210]:
+        - paragraph [ref=e211]:
+          - strong [ref=e212]: Memphis @ Boise St.
+          - text: (N)
+          - generic [ref=e213]: March Madness
+        - generic [ref=e214]:
+          - generic [ref=e215]:
+            - link "Memphis MEM (9)" [ref=e216] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/memphis-tigers
+              - img "Memphis" [ref=e217]
+              - generic [ref=e219]:
+                - text: MEM
+                - generic [ref=e220]: (9)
+            - generic [ref=e222]:
+              - strong [ref=e223]: "64"
+              - strong [ref=e225]: Final
+              - strong [ref=e226]: "53"
+            - link "(8) BSU Boise State" [ref=e227] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/boise-state-broncos
+              - generic [ref=e229]:
+                - generic [ref=e230]: (8)
+                - text: BSU
+              - img "Boise State" [ref=e231]
+          - generic [ref=e232]:
+            - paragraph [ref=e233]:
+              - text: Cover By +7.5
+              - text: MEM -3.5
+            - paragraph [ref=e234]:
+              - text: o/u Margin
+              - text: u16.5
+          - generic [ref=e235]:
+            - table [ref=e236]:
+              - rowgroup [ref=e237]:
+                - row "Team 1 2 Score" [ref=e238]
+              - rowgroup [ref=e244]:
+                - row "MEM 38 26 64" [ref=e245]
+                - row "BSU 19 34 53" [ref=e250]
+            - paragraph [ref=e255]:
+              - text: Memphis covered the spread of
+              - strong [ref=e256]: "-3.5"
+              - text: . The total score of 117 was
+              - strong [ref=e257]: under 133.5
+              - text: .
+          - generic [ref=e258]:
+            - link "Boxscore" [ref=e259] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264721
+            - button "Bet graph" [ref=e261] [cursor=pointer]
+      - article [ref=e262]:
+        - paragraph [ref=e263]:
+          - strong [ref=e264]: Norfolk State @ Baylor
+          - text: (N)
+          - generic [ref=e265]: March Madness
+        - generic [ref=e266]:
+          - generic [ref=e267]:
+            - link "Norfolk State NORF (16)" [ref=e268] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/norfolk-state-spartans
+              - img "Norfolk State" [ref=e269]
+              - generic [ref=e271]:
+                - text: NORF
+                - generic [ref=e272]: (16)
+            - generic [ref=e274]:
+              - strong [ref=e275]: "49"
+              - strong [ref=e277]: Final
+              - strong [ref=e278]: "85"
+            - link "(1) BAY Baylor" [ref=e279] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/baylor-bears
+              - generic [ref=e281]:
+                - generic [ref=e282]: (1)
+                - text: BAY
+              - img "Baylor" [ref=e283]
+          - generic [ref=e284]:
+            - paragraph [ref=e285]:
+              - text: o/u Margin
+              - text: u3.5
+            - paragraph [ref=e286]:
+              - text: Cover By +15.5
+              - text: BAY -20.5
+          - generic [ref=e287]:
+            - table [ref=e288]:
+              - rowgroup [ref=e289]:
+                - row "Team 1 2 Score" [ref=e290]
+              - rowgroup [ref=e296]:
+                - row "NORF 27 22 49" [ref=e297]
+                - row "BAY 43 42 85" [ref=e302]
+            - paragraph [ref=e307]:
+              - text: Baylor covered the spread of
+              - strong [ref=e308]: "-20.5"
+              - text: . The total score of 134 was
+              - strong [ref=e309]: under 137.5
+              - text: .
+          - generic [ref=e310]:
+            - link "Boxscore" [ref=e311] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264716
+            - button "Bet graph" [ref=e313] [cursor=pointer]
+      - article [ref=e314]:
+        - generic [ref=e315]:
+          - heading "Featured Apps" [level=2] [ref=e317]
+          - link "Best betting sites" [ref=e318] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+        - generic [ref=e321]:
+          - group "1 / 5" [ref=e322]:
+            - generic [ref=e323]:
+              - generic [ref=e324]:
+                - link "Kalshi Sports Logo" [ref=e325] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=covers_featured_partners
+                - generic [ref=e327]
+              - text: Sign up bonus
+              - generic [ref=e331]:
+                - text: $10 Trading Bonus
+                - img [ref=e333] [cursor=pointer]
+            - generic [ref=e334]:
+              - button "Click to copy promo code COVERS" [ref=e335]:
+                - generic [ref=e336]: Click to copy promo code
+                - generic [ref=e337]: COVERS
+              - link "Claim $10" [ref=e338] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "2 / 5" [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]:
+                - link "Polymarket Logo" [ref=e342] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=polymarket&sportsbookId=403&lang=en&vertical=dfs&location=covers_featured_partners
+                - generic [ref=e344]
+              - text: Sign up bonus
+              - generic [ref=e348]:
+                - text: Deposit $10, Get $20 Trading Bonus
+                - img [ref=e350] [cursor=pointer]
+            - generic [ref=e351]:
+              - button "Click to copy promo code COVERS" [ref=e352]:
+                - generic [ref=e353]: Click to copy promo code
+                - generic [ref=e354]: COVERS
+              - link "Claim $20" [ref=e355] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=polymarket&sportsbookId=403&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "3 / 5" [ref=e356]:
+            - generic [ref=e357]:
+              - generic [ref=e358]:
+                - link "Underdog Logo" [ref=e359] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=underdog&sportsbookId=313&lang=en&vertical=dfs&location=covers_featured_partners
+                - generic [ref=e361]
+              - text: Sign up bonus
+              - generic [ref=e365]:
+                - text: Play $5, Get $50 in Bonus Entries
+                - img [ref=e367] [cursor=pointer]
+            - generic [ref=e368]:
+              - button "Click to copy promo code COVERS" [ref=e369]:
+                - generic [ref=e370]: Click to copy promo code
+                - generic [ref=e371]: COVERS
+              - link "Claim $50" [ref=e372] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=underdog&sportsbookId=313&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "4 / 5" [ref=e373]:
+            - generic [ref=e374]:
+              - generic [ref=e375]:
+                - link "Novig Logo" [ref=e376] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=novig&sportsbookId=285&lang=en&vertical=dfs&location=covers_featured_partners
+                - generic [ref=e378]
+              - text: Sign up bonus
+              - generic [ref=e382]:
+                - text: Up to $100 Bonus
+                - img [ref=e384] [cursor=pointer]
+            - generic [ref=e385]:
+              - button "Click to copy promo code COVERS100" [ref=e386]:
+                - generic [ref=e387]: Click to copy promo code
+                - generic [ref=e388]: COVERS100
+              - link "Claim $100" [ref=e389] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=novig&sportsbookId=285&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+          - group "5 / 5" [ref=e390]:
+            - generic [ref=e391]:
+              - generic [ref=e392]:
+                - link "DraftKings Pick6 Logo" [ref=e393] [cursor=pointer]:
+                  - /url: https://www.covers.com/betting/sportsbookredirect?slug=draftkings-pick6&sportsbookId=318&lang=en&vertical=dfs&location=covers_featured_partners
+                - generic [ref=e395]
+              - text: Sign up bonus
+              - generic [ref=e399]:
+                - text: Play $5, Get $50 Instantly in Bonus Picks
+                - img [ref=e401] [cursor=pointer]
+            - generic [ref=e402]:
+              - button "No Code Needed" [disabled]:
+                - generic: No Code Needed
+              - link "Claim $50" [ref=e403] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?slug=draftkings-pick6&sportsbookId=318&lang=en&vertical=dfs&location=covers_featured_partners&location=widgets
+      - article [ref=e404]:
+        - paragraph [ref=e405]:
+          - strong [ref=e406]: Longwood @ Tennessee
+          - text: (N)
+          - generic [ref=e407]: March Madness
+        - generic [ref=e408]:
+          - generic [ref=e409]:
+            - link "Longwood LONG (14)" [ref=e410] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/longwood-lancers
+              - img "Longwood" [ref=e411]
+              - generic [ref=e413]:
+                - text: LONG
+                - generic [ref=e414]: (14)
+            - generic [ref=e416]:
+              - strong [ref=e417]: "56"
+              - strong [ref=e419]: Final
+              - strong [ref=e420]: "88"
+            - link "(3) TENN Tennessee" [ref=e421] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/tennessee-volunteers
+              - generic [ref=e423]:
+                - generic [ref=e424]: (3)
+                - text: TENN
+              - img "Tennessee" [ref=e425]
+          - generic [ref=e426]:
+            - paragraph [ref=e427]:
+              - text: o/u Margin
+              - text: o11
+            - paragraph [ref=e428]:
+              - text: Cover By +14
+              - text: TENN -18
+          - generic [ref=e429]:
+            - table [ref=e430]:
+              - rowgroup [ref=e431]:
+                - row "Team 1 2 Score" [ref=e432]
+              - rowgroup [ref=e438]:
+                - row "LONG 29 27 56" [ref=e439]
+                - row "TENN 54 34 88" [ref=e444]
+            - paragraph [ref=e449]:
+              - text: Tennessee covered the spread of
+              - strong [ref=e450]: "-18"
+              - text: . The total score of 144 was
+              - strong [ref=e451]: over 133
+              - text: .
+          - generic [ref=e452]:
+            - link "Boxscore" [ref=e453] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264720
+            - button "Bet graph" [ref=e455] [cursor=pointer]
+      - article [ref=e456]:
+        - paragraph [ref=e457]:
+          - strong [ref=e458]: Richmond @ Iowa
+          - text: (N)
+          - generic [ref=e459]: March Madness
+        - generic [ref=e460]:
+          - generic [ref=e461]:
+            - link "Richmond RICH (12)" [ref=e462] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/richmond-spiders
+              - img "Richmond" [ref=e463]
+              - generic [ref=e465]:
+                - text: RICH
+                - generic [ref=e466]: (12)
+            - generic [ref=e468]:
+              - strong [ref=e469]: "67"
+              - strong [ref=e471]: Final
+              - strong [ref=e472]: "63"
+            - link "(5) IOWA Iowa" [ref=e473] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/iowa-hawkeyes
+              - generic [ref=e475]:
+                - generic [ref=e476]: (5)
+                - text: IOWA
+              - img "Iowa" [ref=e477]
+          - generic [ref=e478]:
+            - paragraph [ref=e479]:
+              - text: Cover By +13.5
+              - text: RICH +9.5
+            - paragraph [ref=e480]:
+              - text: o/u Margin
+              - text: u21
+          - generic [ref=e481]:
+            - table [ref=e482]:
+              - rowgroup [ref=e483]:
+                - row "Team 1 2 Score" [ref=e484]
+              - rowgroup [ref=e490]:
+                - row "RICH 29 38 67" [ref=e491]
+                - row "IOWA 28 35 63" [ref=e496]
+            - paragraph [ref=e501]:
+              - text: Richmond covered the spread of
+              - strong [ref=e502]: "+9.5"
+              - text: . The total score of 130 was
+              - strong [ref=e503]: under 151
+              - text: .
+          - generic [ref=e504]:
+            - link "Boxscore" [ref=e505] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264727
+            - button "Bet graph" [ref=e507] [cursor=pointer]
+      - article [ref=e508]:
+        - paragraph [ref=e509]:
+          - strong [ref=e510]: Georgia St. @ Gonzaga
+          - text: (N)
+          - generic [ref=e511]: March Madness
+        - generic [ref=e512]:
+          - generic [ref=e513]:
+            - link "Georgia State GAST (16)" [ref=e514] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/georgia-state-panthers
+              - img "Georgia State" [ref=e515]
+              - generic [ref=e517]:
+                - text: GAST
+                - generic [ref=e518]: (16)
+            - generic [ref=e520]:
+              - strong [ref=e521]: "72"
+              - strong [ref=e523]: Final
+              - strong [ref=e524]: "93"
+            - link "(1) GONZ Gonzaga" [ref=e525] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/gonzaga-bulldogs
+              - generic [ref=e527]:
+                - generic [ref=e528]: (1)
+                - text: GONZ
+              - img "Gonzaga" [ref=e529]
+          - generic [ref=e530]:
+            - paragraph [ref=e531]:
+              - text: Cover By +1.5
+              - text: GAST +22.5
+            - paragraph [ref=e532]:
+              - text: o/u Margin
+              - text: o16.5
+          - generic [ref=e533]:
+            - table [ref=e534]:
+              - rowgroup [ref=e535]:
+                - row "Team 1 2 Score" [ref=e536]
+              - rowgroup [ref=e542]:
+                - row "GAST 33 39 72" [ref=e543]
+                - row "GONZ 35 58 93" [ref=e548]
+            - paragraph [ref=e553]:
+              - text: Georgia St. covered the spread of
+              - strong [ref=e554]: "+22.5"
+              - text: . The total score of 165 was
+              - strong [ref=e555]: over 148.5
+              - text: .
+          - generic [ref=e556]:
+            - link "Boxscore" [ref=e557] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264722
+            - button "Bet graph" [ref=e559] [cursor=pointer]
+      - article [ref=e560]:
+        - paragraph [ref=e561]:
+          - strong [ref=e562]: Marquette @ North Carolina
+          - text: (N)
+          - generic [ref=e563]: March Madness
+        - generic [ref=e564]:
+          - generic [ref=e565]:
+            - link "Marquette MARQ (9)" [ref=e566] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/marquette-golden-eagles
+              - img "Marquette" [ref=e567]
+              - generic [ref=e569]:
+                - text: MARQ
+                - generic [ref=e570]: (9)
+            - generic [ref=e572]:
+              - strong [ref=e573]: "63"
+              - strong [ref=e575]: Final
+              - strong [ref=e576]: "95"
+            - link "(8) UNC North Carolina" [ref=e577] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/north-carolina-tar-heels
+              - generic [ref=e579]:
+                - generic [ref=e580]: (8)
+                - text: UNC
+              - img "North Carolina" [ref=e581]
+          - generic [ref=e582]:
+            - paragraph [ref=e583]:
+              - text: o/u Margin
+              - text: o4.5
+            - paragraph [ref=e584]:
+              - text: Cover By +28
+              - text: UNC -4
+          - generic [ref=e585]:
+            - table [ref=e586]:
+              - rowgroup [ref=e587]:
+                - row "Team 1 2 Score" [ref=e588]
+              - rowgroup [ref=e594]:
+                - row "MARQ 25 38 63" [ref=e595]
+                - row "UNC 53 42 95" [ref=e600]
+            - paragraph [ref=e605]:
+              - text: North Carolina covered the spread of
+              - strong [ref=e606]: "-4"
+              - text: . The total score of 158 was
+              - strong [ref=e607]: over 153.5
+              - text: .
+          - generic [ref=e608]:
+            - link "Boxscore" [ref=e609] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264717
+            - button "Bet graph" [ref=e611] [cursor=pointer]
+      - article [ref=e612]:
+        - paragraph [ref=e613]:
+          - strong [ref=e614]: New Mexico St. @ Connecticut
+          - text: (N)
+          - generic [ref=e615]: March Madness
+        - generic [ref=e616]:
+          - generic [ref=e617]:
+            - link "New Mexico State NMSU (12)" [ref=e618] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/new-mexico-state-aggies
+              - img "New Mexico State" [ref=e619]
+              - generic [ref=e621]:
+                - text: NMSU
+                - generic [ref=e622]: (12)
+            - generic [ref=e624]:
+              - strong [ref=e625]: "70"
+              - strong [ref=e627]: Final
+              - strong [ref=e628]: "63"
+            - link "(5) CONN UConn" [ref=e629] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+              - generic [ref=e631]:
+                - generic [ref=e632]: (5)
+                - text: CONN
+              - img "UConn" [ref=e633]
+          - generic [ref=e634]:
+            - paragraph [ref=e635]:
+              - text: Cover By +13
+              - text: NMSU +6
+            - paragraph [ref=e636]:
+              - text: o/u Margin
+              - text: o1.5
+          - generic [ref=e637]:
+            - table [ref=e638]:
+              - rowgroup [ref=e639]:
+                - row "Team 1 2 Score" [ref=e640]
+              - rowgroup [ref=e646]:
+                - row "NMSU 32 38 70" [ref=e647]
+                - row "CONN 22 41 63" [ref=e652]
+            - paragraph [ref=e657]:
+              - text: New Mexico St. covered the spread of
+              - strong [ref=e658]: "+6"
+              - text: . The total score of 133 was
+              - strong [ref=e659]: over 131.5
+              - text: .
+          - generic [ref=e660]:
+            - link "Boxscore" [ref=e661] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264724
+            - button "Bet graph" [ref=e663] [cursor=pointer]
+      - article [ref=e664]:
+        - paragraph [ref=e665]:
+          - strong [ref=e666]: Saint Peter's @ Kentucky
+          - text: (N)
+          - generic [ref=e667]: March Madness
+        - generic [ref=e668]:
+          - generic [ref=e669]:
+            - link "Saint Peter's SPC (15)" [ref=e670] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/saint-peter-s-peacocks
+              - img "Saint Peter's" [ref=e671]
+              - generic [ref=e673]:
+                - text: SPC
+                - generic [ref=e674]: (15)
+            - generic [ref=e676]:
+              - strong [ref=e677]: "85"
+              - strong [ref=e679]: Final OT
+              - strong [ref=e680]: "79"
+            - link "(2) UK Kentucky" [ref=e681] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/kentucky-wildcats
+              - generic [ref=e683]:
+                - generic [ref=e684]: (2)
+                - text: UK
+              - img "Kentucky" [ref=e685]
+          - generic [ref=e686]:
+            - paragraph [ref=e687]:
+              - text: Cover By +24
+              - text: SPC +18
+            - paragraph [ref=e688]:
+              - text: o/u Margin
+              - text: o31.5
+          - generic [ref=e689]:
+            - table [ref=e690]:
+              - rowgroup [ref=e691]:
+                - row "Team 1 2 OT Score" [ref=e692]
+              - rowgroup [ref=e699]:
+                - row "SPC 37 34 14 85" [ref=e700]
+                - row "UK 37 34 8 79" [ref=e706]
+            - paragraph [ref=e712]:
+              - text: Saint Peter's covered the spread of
+              - strong [ref=e713]: "+18"
+              - text: . The total score of 164 was
+              - strong [ref=e714]: over 132.5
+              - text: .
+          - generic [ref=e715]:
+            - link "Boxscore" [ref=e716] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264725
+            - button "Bet graph" [ref=e718] [cursor=pointer]
+      - article [ref=e719]:
+        - paragraph [ref=e720]:
+          - strong [ref=e721]: Creighton @ San Diego St.
+          - text: (N)
+          - generic [ref=e722]: March Madness
+        - generic [ref=e723]:
+          - generic [ref=e724]:
+            - link "Creighton CREI (9)" [ref=e725] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/creighton-bluejays
+              - img "Creighton" [ref=e726]
+              - generic [ref=e728]:
+                - text: CREI
+                - generic [ref=e729]: (9)
+            - generic [ref=e731]:
+              - strong [ref=e732]: "72"
+              - strong [ref=e734]: Final OT
+              - strong [ref=e735]: "69"
+            - link "(8) SDSU San Diego State" [ref=e736] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/san-diego-state-aztecs
+              - generic [ref=e738]:
+                - generic [ref=e739]: (8)
+                - text: SDSU
+              - img "San Diego State" [ref=e740]
+          - generic [ref=e741]:
+            - paragraph [ref=e742]:
+              - text: Cover By +5.5
+              - text: CREI +2.5
+            - paragraph [ref=e743]:
+              - text: o/u Margin
+              - text: o20.5
+          - generic [ref=e744]:
+            - table [ref=e745]:
+              - rowgroup [ref=e746]:
+                - row "Team 1 2 OT Score" [ref=e747]
+              - rowgroup [ref=e754]:
+                - row "CREI 30 32 10 72" [ref=e755]
+                - row "SDSU 37 25 7 69" [ref=e761]
+            - paragraph [ref=e767]:
+              - text: Creighton covered the spread of
+              - strong [ref=e768]: "+2.5"
+              - text: . The total score of 141 was
+              - strong [ref=e769]: over 120.5
+              - text: .
+          - generic [ref=e770]:
+            - link "Boxscore" [ref=e771] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264730
+            - button "Bet graph" [ref=e773] [cursor=pointer]
+      - article [ref=e774]:
+        - paragraph [ref=e775]:
+          - strong [ref=e776]: Indiana @ Saint Mary's
+          - text: (N)
+          - generic [ref=e777]: March Madness
+        - generic [ref=e778]:
+          - generic [ref=e779]:
+            - link "Indiana IND (12)" [ref=e780] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/indiana-hoosiers
+              - img "Indiana" [ref=e781]
+              - generic [ref=e783]:
+                - text: IND
+                - generic [ref=e784]: (12)
+            - generic [ref=e786]:
+              - strong [ref=e787]: "53"
+              - strong [ref=e789]: Final
+              - strong [ref=e790]: "82"
+            - link "(5) SMC Saint Mary's" [ref=e791] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/saint-mary-s-gaels
+              - generic [ref=e793]:
+                - generic [ref=e794]: (5)
+                - text: SMC
+              - img "Saint Mary's" [ref=e795]
+          - generic [ref=e796]:
+            - paragraph [ref=e797]:
+              - text: o/u Margin
+              - text: o11
+            - paragraph [ref=e798]:
+              - text: Cover By +26.5
+              - text: SMC -2.5
+          - generic [ref=e799]:
+            - table [ref=e800]:
+              - rowgroup [ref=e801]:
+                - row "Team 1 2 Score" [ref=e802]
+              - rowgroup [ref=e808]:
+                - row "IND 28 25 53" [ref=e809]
+                - row "SMC 40 42 82" [ref=e814]
+            - paragraph [ref=e819]:
+              - text: Saint Mary's covered the spread of
+              - strong [ref=e820]: "-2.5"
+              - text: . The total score of 135 was
+              - strong [ref=e821]: over 124
+              - text: .
+          - generic [ref=e822]:
+            - link "Boxscore" [ref=e823] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264810
+            - button "Bet graph" [ref=e825] [cursor=pointer]
+      - article [ref=e826]:
+        - paragraph [ref=e827]:
+          - strong [ref=e828]: Vermont @ Arkansas
+          - text: (N)
+          - generic [ref=e829]: March Madness
+        - generic [ref=e830]:
+          - generic [ref=e831]:
+            - link "Vermont UVM (13)" [ref=e832] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/vermont-catamounts
+              - img "Vermont" [ref=e833]
+              - generic [ref=e835]:
+                - text: UVM
+                - generic [ref=e836]: (13)
+            - generic [ref=e838]:
+              - strong [ref=e839]: "71"
+              - strong [ref=e841]: Final
+              - strong [ref=e842]: "75"
+            - link "(4) ARK Arkansas" [ref=e843] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/arkansas-razorbacks
+              - generic [ref=e845]:
+                - generic [ref=e846]: (4)
+                - text: ARK
+              - img "Arkansas" [ref=e847]
+          - generic [ref=e848]:
+            - paragraph [ref=e849]:
+              - text: Cover By +0.5
+              - text: UVM +4.5
+            - paragraph [ref=e850]:
+              - text: o/u Margin
+              - text: o5
+          - generic [ref=e851]:
+            - table [ref=e852]:
+              - rowgroup [ref=e853]:
+                - row "Team 1 2 Score" [ref=e854]
+              - rowgroup [ref=e860]:
+                - row "UVM 27 44 71" [ref=e861]
+                - row "ARK 34 41 75" [ref=e866]
+            - paragraph [ref=e871]:
+              - text: Vermont covered the spread of
+              - strong [ref=e872]: "+4.5"
+              - text: . The total score of 146 was
+              - strong [ref=e873]: over 141
+              - text: .
+          - generic [ref=e874]:
+            - link "Boxscore" [ref=e875] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264723
+            - button "Bet graph" [ref=e877] [cursor=pointer]
+      - article [ref=e878]:
+        - paragraph [ref=e879]:
+          - strong [ref=e880]: Eastern WA @ Fresno St.
+          - generic [ref=e881]: Conf Tourn.
+        - generic [ref=e882]:
+          - generic [ref=e883]:
+            - link "Eastern Washington EWU" [ref=e884] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/eastern-washington-eagles
+              - img "Eastern Washington" [ref=e885]
+              - generic [ref=e887]: EWU
+            - generic [ref=e889]:
+              - strong [ref=e890]: "74"
+              - strong [ref=e892]: Final
+              - strong [ref=e893]: "83"
+            - link "FRES Fresno State" [ref=e894] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/fresno-state-bulldogs
+              - generic [ref=e896]: FRES
+              - img "Fresno State" [ref=e897]
+          - generic [ref=e898]:
+            - paragraph [ref=e899]:
+              - text: Cover By +3
+              - text: EWU +12
+            - paragraph [ref=e900]:
+              - text: o/u Margin
+              - text: o22
+          - generic [ref=e901]:
+            - table [ref=e902]:
+              - rowgroup [ref=e903]:
+                - row "Team 1 2 Score" [ref=e904]
+              - rowgroup [ref=e910]:
+                - row "EWU 33 41 74" [ref=e911]
+                - row "FRES 47 36 83" [ref=e916]
+            - paragraph [ref=e921]:
+              - text: Eastern WA covered the spread of
+              - strong [ref=e922]: "+12"
+              - text: . The total score of 157 was
+              - strong [ref=e923]: over 135
+              - text: .
+          - generic [ref=e924]:
+            - link "Boxscore" [ref=e925] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264808
+            - button "Bet graph" [ref=e927] [cursor=pointer]
+      - article [ref=e928]:
+        - paragraph [ref=e929]:
+          - strong [ref=e930]: Akron @ UCLA
+          - text: (N)
+          - generic [ref=e931]: March Madness
+        - generic [ref=e932]:
+          - generic [ref=e933]:
+            - link "Akron AKR (13)" [ref=e934] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/akron-zips
+              - img "Akron" [ref=e935]
+              - generic [ref=e937]:
+                - text: AKR
+                - generic [ref=e938]: (13)
+            - generic [ref=e940]:
+              - strong [ref=e941]: "53"
+              - strong [ref=e943]: Final
+              - strong [ref=e944]: "57"
+            - link "(4) UCLA UCLA" [ref=e945] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/ucla-bruins
+              - generic [ref=e947]:
+                - generic [ref=e948]: (4)
+                - text: UCLA
+              - img "UCLA" [ref=e949]
+          - generic [ref=e950]:
+            - paragraph [ref=e951]:
+              - text: Cover By +9.5
+              - text: AKR +13.5
+            - paragraph [ref=e952]:
+              - text: o/u Margin
+              - text: u17.5
+          - generic [ref=e953]:
+            - table [ref=e954]:
+              - rowgroup [ref=e955]:
+                - row "Team 1 2 Score" [ref=e956]
+              - rowgroup [ref=e962]:
+                - row "AKR 26 27 53" [ref=e963]
+                - row "UCLA 25 32 57" [ref=e968]
+            - paragraph [ref=e973]:
+              - text: Akron covered the spread of
+              - strong [ref=e974]: "+13.5"
+              - text: . The total score of 110 was
+              - strong [ref=e975]: under 127.5
+              - text: .
+          - generic [ref=e976]:
+            - link "Boxscore" [ref=e977] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264731
+            - button "Bet graph" [ref=e979] [cursor=pointer]
+      - article [ref=e980]:
+        - paragraph [ref=e981]:
+          - strong [ref=e982]: San Francisco @ Murray St.
+          - text: (N)
+          - generic [ref=e983]: March Madness
+        - generic [ref=e984]:
+          - generic [ref=e985]:
+            - link "San Francisco SF (10)" [ref=e986] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/san-francisco-dons
+              - img "San Francisco" [ref=e987]
+              - generic [ref=e989]:
+                - text: SF
+                - generic [ref=e990]: (10)
+            - generic [ref=e992]:
+              - strong [ref=e993]: "87"
+              - strong [ref=e995]: Final OT
+              - strong [ref=e996]: "92"
+            - link "(7) MURR Murray State" [ref=e997] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/murray-state-racers
+              - generic [ref=e999]:
+                - generic [ref=e1000]: (7)
+                - text: MURR
+              - img "Murray State" [ref=e1001]
+          - generic [ref=e1002]:
+            - paragraph [ref=e1003]:
+              - text: o/u Margin
+              - text: o41.5
+            - paragraph [ref=e1004]:
+              - text: Cover By +3.5
+              - text: MURR -1.5
+          - generic [ref=e1005]:
+            - table [ref=e1006]:
+              - rowgroup [ref=e1007]:
+                - row "Team 1 2 OT Score" [ref=e1008]
+              - rowgroup [ref=e1015]:
+                - row "SF 37 36 14 87" [ref=e1016]
+                - row "MURR 36 37 19 92" [ref=e1022]
+            - paragraph [ref=e1028]:
+              - text: Murray St. covered the spread of
+              - strong [ref=e1029]: "-1.5"
+              - text: . The total score of 179 was
+              - strong [ref=e1030]: over 137.5
+              - text: .
+          - generic [ref=e1031]:
+            - link "Boxscore" [ref=e1032] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264718
+            - button "Bet graph" [ref=e1034] [cursor=pointer]
+      - article [ref=e1035]:
+        - paragraph [ref=e1036]:
+          - strong [ref=e1037]: Texas Southern @ Kansas
+          - text: (N)
+          - generic [ref=e1038]: March Madness
+        - generic [ref=e1039]:
+          - generic [ref=e1040]:
+            - link "Texas Southern TXSO (16)" [ref=e1041] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/texas-southern-tigers
+              - img "Texas Southern" [ref=e1042]
+              - generic [ref=e1044]:
+                - text: TXSO
+                - generic [ref=e1045]: (16)
+            - generic [ref=e1047]:
+              - strong [ref=e1048]: "56"
+              - strong [ref=e1050]: Final
+              - strong [ref=e1051]: "83"
+            - link "(1) KU Kansas" [ref=e1052] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/kansas-jayhawks
+              - generic [ref=e1054]:
+                - generic [ref=e1055]: (1)
+                - text: KU
+              - img "Kansas" [ref=e1056]
+          - generic [ref=e1057]:
+            - paragraph [ref=e1058]:
+              - text: o/u Margin
+              - text: u6
+            - paragraph [ref=e1059]:
+              - text: Cover By +5.5
+              - text: KU -21.5
+          - generic [ref=e1060]:
+            - table [ref=e1061]:
+              - rowgroup [ref=e1062]:
+                - row "Team 1 2 Score" [ref=e1063]
+              - rowgroup [ref=e1069]:
+                - row "TXSO 19 37 56" [ref=e1070]
+                - row "KU 47 36 83" [ref=e1075]
+            - paragraph [ref=e1080]:
+              - text: Kansas covered the spread of
+              - strong [ref=e1081]: "-21.5"
+              - text: . The total score of 139 was
+              - strong [ref=e1082]: under 145
+              - text: .
+          - generic [ref=e1083]:
+            - link "Boxscore" [ref=e1084] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/matchup/264809
+            - button "Bet graph" [ref=e1086] [cursor=pointer]
+    - generic:
+      - heading "Latest headlines Checkout latest headlines Read more" [level=2] [ref=e1088]:
+        - text: Latest headlines
+        - link "Checkout latest headlines Read more" [ref=e1089] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1090]: Checkout latest headlines
+          - text: Read more
+      - generic [ref=e1091]:
+        - article [ref=e1092]:
+          - generic [ref=e1094]:
+            - generic [ref=e1095]:
+              - generic [ref=e1096]: NCAAB
+              - generic [ref=e1097]:
+                - generic [ref=e1098]: 04/09/2026
+                - generic [ref=e1100]: 07:40 ET
+            - paragraph [ref=e1101]:
+              - 'link "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1102] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/props
+            - paragraph [ref=e1103]:
+              - link "Best March Madness prop bets. Read more" [ref=e1104] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/props
+                - generic [ref=e1105]: Best March Madness prop bets.
+                - text: Read more
+        - article [ref=e1106]:
+          - generic [ref=e1108]:
+            - generic [ref=e1109]:
+              - generic [ref=e1110]: NCAAB
+              - generic [ref=e1111]:
+                - generic [ref=e1112]: 04/08/2026
+                - generic [ref=e1114]: 02:03 ET
+            - paragraph [ref=e1115]:
+              - 'link "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1116] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+            - paragraph [ref=e1117]:
+              - link "Huskies favored to reclaim title. Read more" [ref=e1118] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/womens-march-madness-odds
+                - generic [ref=e1119]: Huskies favored to reclaim title.
+                - text: Read more
+        - article [ref=e1120]:
+          - generic [ref=e1122]:
+            - generic [ref=e1123]:
+              - generic [ref=e1124]: NCAAB
+              - generic [ref=e1125]:
+                - generic [ref=e1126]: 04/08/2026
+                - generic [ref=e1128]: 01:55 ET
+            - paragraph [ref=e1129]:
+              - 'link "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1130] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+            - paragraph [ref=e1131]:
+              - link "How long before your bracket busts? Read more" [ref=e1132] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/bracket
+                - generic [ref=e1133]: How long before your bracket busts?
+                - text: Read more
+        - article [ref=e1134]:
+          - generic [ref=e1136]:
+            - generic [ref=e1137]:
+              - generic [ref=e1138]: NCAAB
+              - generic [ref=e1139]:
+                - generic [ref=e1140]: 04/08/2026
+                - generic [ref=e1142]: 01:30 ET
+            - paragraph [ref=e1143]:
+              - 'link "March Madness Expert Picks: Daily Best Bets and Predictions" [ref=e1144] [cursor=pointer]':
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+            - paragraph [ref=e1145]:
+              - link "Best bets and SGPs for the National Championship. Read more" [ref=e1146] [cursor=pointer]:
+                - /url: https://www.covers.com/ncaab/march-madness/expert-picks-for-todays-games
+                - generic [ref=e1147]: Best bets and SGPs for the National Championship.
+                - text: Read more
+    - generic:
+      - heading "Daily betting offers Checkout sportsbook promos Sportsbook promos" [level=2] [ref=e1149]:
+        - text: Daily betting offers
+        - link "Checkout sportsbook promos Sportsbook promos" [ref=e1150] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1151]: Checkout sportsbook promos
+          - text: Sportsbook promos
+      - generic:
+        - article [ref=e1152]:
+          - generic [ref=e1153]:
+            - link [ref=e1154] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1155]:
+              - generic [ref=e1156]:
+                - generic [ref=e1157]: PROMO
+                - generic [ref=e1158]
+              - paragraph [ref=e1162]:
+                - 'link "Novig Promo Code COVERS100: Get 10% Off MLB, NBA, and NHL Prediction Markets on Tuesday" [ref=e1163] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1164]:
+                - link "Claim 10% off up to $100 using Novig promo code COVERS100. Read more" [ref=e1165] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/novig-promo-code-nhl-nba-mlb-4-20-2026-8-am
+        - article [ref=e1167]:
+          - generic [ref=e1168]:
+            - link [ref=e1169] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1170]:
+              - generic [ref=e1171]:
+                - generic [ref=e1172]: PROMO
+                - generic [ref=e1173]
+              - paragraph [ref=e1177]:
+                - 'link "Polymarket Promo Code COVERS: Get $20 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e1178] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1179]:
+                - link "$20 deposit bonus with Polymarket promo code COVERS. Read more" [ref=e1180] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/polymarket-promo-code-nhl-nba-mlb-4-20-2026-8-am
+        - article [ref=e1182]:
+          - generic [ref=e1183]:
+            - link [ref=e1184] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1185]:
+              - generic [ref=e1186]:
+                - generic [ref=e1187]: PROMO
+                - generic [ref=e1188]
+              - paragraph [ref=e1192]:
+                - 'link "Kalshi Promo Code COVERS: Get $10 Sign-Up Bonus for MLB, NBA, NHL Prediction Markets Today" [ref=e1193] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1194]:
+                - link "$10 bonus with Kalshi Refferal Code COVERS Read more" [ref=e1195] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/kalshi-promo-code-nhl-nba-mlb-4-20-2026-8-am
+        - article [ref=e1197]:
+          - generic [ref=e1198]:
+            - link [ref=e1199] [cursor=pointer]:
+              - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+            - generic [ref=e1200]:
+              - generic [ref=e1201]:
+                - generic [ref=e1202]: PROMO
+                - generic [ref=e1203]
+              - paragraph [ref=e1207]:
+                - 'link "Betr Picks Promo COVERSBONUS: Claim $200 Bonus for MLB, NBA, NHL Playoffs" [ref=e1208] [cursor=pointer]':
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+              - paragraph [ref=e1209]:
+                - link "Free Pick + $200 Bonus Cash Read more" [ref=e1210] [cursor=pointer]:
+                  - /url: https://www.covers.com/daily-promos/betr-picks-promo-code-nhl-nba-mlb-4-20-2026-8-am
+    - article [ref=e1212]:
+      - heading "College Basketball Scores and Matchups" [level=2] [ref=e1214]:
+        - generic [ref=e1215]: College Basketball Scores and Matchups
+      - paragraph [ref=e1217]:
+        - generic [ref=e1218]: This page serves as the foundational platform for
+        - link "NCAAB" [ref=e1219] [cursor=pointer]:
+          - /url: https://www.covers.com/ncaab
+          - generic [ref=e1220]: NCAAB
+        - generic [ref=e1221]: bettors to initiate their handicapping process. It is where you delve into essential betting data that will shape your decision-making.
+      - paragraph [ref=e1223]:
+        - generic [ref=e1224]: Presented here are all forthcoming matchups, coupled with live scores and outcomes. Before the game, bettors can view odds for each matchup and upon the game's conclusion, we give you a glance over the scores, fractionated by quarter.
+      - heading "What are the main types of bets for college basketball matchups?" [level=3] [ref=e1226]:
+        - generic [ref=e1227]: What are the main types of bets for college basketball matchups?
+      - paragraph [ref=e1229]:
+        - generic [ref=e1230]:
+          - text: After deciding your bets, the next step
+          - generic [ref=e1231]:
+            - text: of the process involves scouring legal
+            - link "betting sites" [ref=e1232] [cursor=pointer]:
+              - /url: https://www.covers.com/betting
+            - text: for the most favorable lines via our
+        - link "college basketball odds" [ref=e1233] [cursor=pointer]:
+          - /url: https://www.covers.com/sport/basketball/ncaab/odds
+          - generic [ref=e1234]: college basketball odds
+        - generic [ref=e1235]: comparison tool. This platform reveals the odds for each game's point spread, moneyline, and total. Point
+        - generic [ref=e1236]: spread betting
+        - generic [ref=e1237]: is gambling on the predictive point gap between the two teams, while
+        - link "moneyline betting" [ref=e1238] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/how-to-bet-moneylines
+          - generic [ref=e1239]: moneyline betting
+        - generic [ref=e1240]: entails wagering on the team that is expected to triumph. Totals or
+        - link "Over/Under betting" [ref=e1241] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/over-under-totals-betting
+          - generic [ref=e1242]: Over/Under betting
+        - generic [ref=e1243]: involves staking Over or Under on the amalgamated point total estimated to be scored in a specific game.
+      - generic [ref=e1244]:
+        - paragraph [ref=e1245]:
+          - generic [ref=e1246]: Covers also have
+          - link "March Madness odds" [ref=e1247] [cursor=pointer]:
+            - /url: https://www.covers.com/ncaab/march-madness/odds
+            - generic [ref=e1248]: March Madness odds
+          - generic [ref=e1249]: from a full suite of the best
+          - link "March Madness betting sites" [ref=e1250] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+            - generic [ref=e1251]: March Madness betting sites
+          - generic [ref=e1252]: "!"
+        - heading "Why use Covers NCAAB Scoreboard" [level=3] [ref=e1253]:
+          - generic [ref=e1254]: Why use Covers NCAAB Scoreboard
+      - paragraph [ref=e1256]:
+        - generic [ref=e1257]: Covers’ NCAAB scoreboard is a great place for bettors to start researching their
+        - link "college basketball picks" [ref=e1258] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+          - generic [ref=e1259]: college basketball picks
+        - generic [ref=e1260]: .
+      - paragraph [ref=e1262]:
+        - generic [ref=e1263]: The live and up-to-date odds come from the absolute best
+        - link "basketball betting sites" [ref=e1264] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+          - generic [ref=e1265]: basketball betting sites
+        - generic [ref=e1266]: and the matchup pages are a gateway into a huge array of NCAAB stats. Whether you are betting on the tournament or looking for a good matchup to use a new
+        - link "March Madness betting promos" [ref=e1267] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+          - generic [ref=e1268]: March Madness betting promos
+        - generic [ref=e1269]: or
+        - link "sportsbook promo" [ref=e1270] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/bonuses
+          - generic [ref=e1271]: sportsbook promo
+        - generic [ref=e1272]: with, this page is where you need to start!
+      - heading "How frequently is the NCAAB scoreboard updated?" [level=3] [ref=e1275]:
+        - generic [ref=e1276]: How frequently is the NCAAB scoreboard updated?
+      - paragraph [ref=e1278]:
+        - generic [ref=e1279]: Our live scores update in real-time, and our pre-games odds are refreshed every five minutes, so you see the best odds for betting on upcoming NCAAB games.
+    - article [ref=e1280]:
+      - heading "FAQs" [level=2] [ref=e1281]
+      - button "How are college basketball matchups scheduled?" [ref=e1283] [cursor=pointer]:
+        - generic [ref=e1284]: How are college basketball matchups scheduled?
+      - button "How do injuries affect college basketball matchups and betting odds?" [ref=e1289] [cursor=pointer]:
+        - generic [ref=e1290]: How do injuries affect college basketball matchups and betting odds?
+      - button "What's the average score of the college basketball game?" [ref=e1295] [cursor=pointer]:
+        - generic [ref=e1296]: What's the average score of the college basketball game?
+    - article [ref=e1300]:
+      - heading "Pages related to this topic" [level=2] [ref=e1301]
+      - generic [ref=e1303]:
+        - link "Basketball Betting Sites" [ref=e1305] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/basketball-sites
+        - link "March Madness Betting Sites" [ref=e1307] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-sites
+        - link "March Madness Betting Promos" [ref=e1309] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/march-madness-promos
+  - generic [ref=e1311]:
+    - generic [ref=e1312]:
+      - generic [ref=e1314]:
+        - generic [ref=e1315]:
+          - link "About Us" [ref=e1317] [cursor=pointer]:
+            - /url: https://www.covers.com/about
+          - link "Contact Us" [ref=e1318] [cursor=pointer]:
+            - /url: https://www.covers.com/contact
+          - link "Careers" [ref=e1319] [cursor=pointer]:
+            - /url: https://www.covers.com/careers
+          - link "Our Team" [ref=e1320] [cursor=pointer]:
+            - /url: https://www.covers.com/writers
+          - link "Brand" [ref=e1321] [cursor=pointer]:
+            - /url: https://www.covers.com/brand
+          - link "Testimonials" [ref=e1322] [cursor=pointer]:
+            - /url: https://www.covers.com/testimonials
+        - generic [ref=e1323]:
+          - link "Betting Guides" [ref=e1325] [cursor=pointer]:
+            - /url: https://www.covers.com/guides
+          - link "Sportsbook Reviews" [ref=e1326] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/reviews
+          - link "Sports Betting News" [ref=e1327] [cursor=pointer]:
+            - /url: https://www.covers.com/betting-news
+          - link "Podcasts" [ref=e1328] [cursor=pointer]:
+            - /url: https://www.covers.com/podcasts
+          - link "Responsible Gaming" [ref=e1329] [cursor=pointer]:
+            - /url: https://www.covers.com/guides/help
+        - generic [ref=e1330]:
+          - link "Betting Sites" [ref=e1332] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "Canada Betting Sites" [ref=e1333] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/canada
+          - link "Canada Casinos" [ref=e1334] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada
+          - link "Best Betting Apps" [ref=e1335] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/best-betting-apps
+        - generic [ref=e1336]:
+          - link "Contests" [ref=e1338] [cursor=pointer]:
+            - /url: https://contests.covers.com
+          - link "Streak Survivor" [ref=e1339] [cursor=pointer]:
+            - /url: https://contests.covers.com/survivor
+          - link "King of Covers" [ref=e1340] [cursor=pointer]:
+            - /url: https://contests.covers.com/kingofcovers
+          - link "Office Pools" [ref=e1341] [cursor=pointer]:
+            - /url: https://contests.covers.com/officepools
+      - generic [ref=e1343]:
+        - generic [ref=e1344]: The Covers community has
+        - generic [ref=e1345]: 810,221
+        - generic [ref=e1346]: lifetime members worldwide
+        - link "Join our community today" [ref=e1348] [cursor=pointer]:
+          - /url: https://www.covers.com/forum
+    - generic [ref=e1352]:
+      - generic [ref=e1353]:
+        - img "Covers 30 Years Logo" [ref=e1354]
+        - generic [ref=e1355]:
+          - text: Established in 1995,
+          - text: Covers is the world
+          - text: leader in sports
+          - text: betting information.
+      - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e1357] [cursor=pointer]:
+        - /url: https://www.covers.com/guides/help
+        - generic [ref=e1358]:
+          - generic [ref=e1359]: 21+
+          - generic [ref=e1360]: Gambling problem? Call 1-800-GAMBLER
+    - generic [ref=e1364]:
+      - generic [ref=e1365]:
+        - link "Site Map" [ref=e1366] [cursor=pointer]:
+          - /url: https://www.covers.com/sitemap
+        - link "Help" [ref=e1367] [cursor=pointer]:
+          - /url: https://www.covers.com/help
+        - link "Privacy" [ref=e1368] [cursor=pointer]:
+          - /url: https://www.covers.com/privacy
+        - link "Terms of Service" [ref=e1369] [cursor=pointer]:
+          - /url: https://www.covers.com/terms
+      - generic [ref=e1370]:
+        - link "youtube logo" [ref=e1371] [cursor=pointer]:
+          - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+          - img "youtube logo" [ref=e1372]
+        - link "facebook logo" [ref=e1373] [cursor=pointer]:
+          - /url: https://www.facebook.com/CoversSports/
+          - img "facebook logo" [ref=e1374]
+        - link "twitter logo" [ref=e1375] [cursor=pointer]:
+          - /url: https://twitter.com/Covers
+          - img "twitter logo" [ref=e1376]
+        - link "instagram logo" [ref=e1377] [cursor=pointer]:
+          - /url: https://www.instagram.com/covers_sports/
+          - img "instagram logo" [ref=e1378]
+        - link "linkedin logo" [ref=e1379] [cursor=pointer]:
+          - /url: https://www.linkedin.com/company/2632327/
+          - img "linkedin logo" [ref=e1380]
+        - link "google news logo" [ref=e1381] [cursor=pointer]:
+          - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+          - img "google news logo" [ref=e1382]
+  - generic [ref=e1384]:
+    - generic [ref=e1389]:
+      - text: "Covers is verified safe by:"
+      - img "Evalon Logo" [ref=e1390]
+      - link "GPWA Logo" [ref=e1391] [cursor=pointer]:
+        - /url: https://certify.gpwa.org/verify/covers.com
+        - img "GPWA Logo" [ref=e1392]
+      - img "GDPR Logo" [ref=e1393]
+      - img "GeoTrust Logo" [ref=e1394]
+      - img "Evalon Logo" [ref=e1395]
+    - generic [ref=e1396]:
+      - img "Covers Logo" [ref=e1398]
+      - generic [ref=e1399]:
+        - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+        - paragraph [ref=e1400]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - iframe [ref=e1401]:
+    
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img
+  - img

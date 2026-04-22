@@ -1,0 +1,1932 @@
+{
+  "description": "Single bracket strategy comparison: 12 strategies \u00d7 15 years",
+  "timestamp": "2026-04-20T04:46:05Z",
+  "config": {
+    "years": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "gen_seed": 12345,
+    "decay": 0.85,
+    "scoring": "team_identity"
+  },
+  "per_year": {
+    "2011": {
+      "argmax": {
+        "actual_score": 530.0,
+        "expected_score": 868.701,
+        "leverage": 97.30099999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 530.0,
+        "expected_score": 868.701,
+        "leverage": 97.30099999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 530.0,
+        "expected_score": 868.701,
+        "leverage": 97.30099999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 530.0,
+        "expected_score": 868.701,
+        "leverage": 97.30099999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 480.0,
+        "expected_score": 798.913,
+        "leverage": 44.312999999999995,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 450.0,
+        "expected_score": 776.623,
+        "leverage": 84.823,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 380.0,
+        "expected_score": 687.569,
+        "leverage": 101.569,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 400.0,
+        "expected_score": 541.0389999999999,
+        "leverage": 46.039,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 530.0,
+        "expected_score": 844.6690000000001,
+        "leverage": 73.26899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 530.0,
+        "expected_score": 819.1650000000001,
+        "leverage": 47.76499999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 650.0,
+        "expected_score": 642.3050000000001,
+        "leverage": 89.705,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 530.0,
+        "expected_score": 868.701,
+        "leverage": 97.30099999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2012": {
+      "argmax": {
+        "actual_score": 1330.0,
+        "expected_score": 878.039,
+        "leverage": 164.23899999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 878.039,
+        "leverage": 164.23899999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 879.175,
+        "leverage": 151.77499999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 878.039,
+        "leverage": 164.23899999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1250.0,
+        "expected_score": 807.0809999999998,
+        "leverage": 70.28099999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 610.0,
+        "expected_score": 645.6950000000002,
+        "leverage": -27.505000000000006,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 620.0,
+        "expected_score": 589.2890000000001,
+        "leverage": -24.311,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 590.0,
+        "expected_score": 496.219,
+        "leverage": -7.380999999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1010.0,
+        "expected_score": 873.399,
+        "leverage": 181.999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 1170.0,
+        "expected_score": 817.383,
+        "leverage": 125.983,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 610.0,
+        "expected_score": 723.5749999999999,
+        "leverage": -3.825000000000001,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 1330.0,
+        "expected_score": 878.039,
+        "leverage": 164.23899999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2013": {
+      "argmax": {
+        "actual_score": 860.0,
+        "expected_score": 903.2899999999997,
+        "leverage": 155.29,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 860.0,
+        "expected_score": 903.2899999999997,
+        "leverage": 155.29,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 860.0,
+        "expected_score": 903.2899999999997,
+        "leverage": 155.29,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 860.0,
+        "expected_score": 903.2899999999997,
+        "leverage": 155.29,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1160.0,
+        "expected_score": 836.4140000000001,
+        "leverage": 137.614,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 590.0,
+        "expected_score": 728.6780000000001,
+        "leverage": 108.278,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 490.0,
+        "expected_score": 685.958,
+        "leverage": 145.358,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 470.0,
+        "expected_score": 610.57,
+        "leverage": 98.57,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 860.0,
+        "expected_score": 878.0739999999998,
+        "leverage": 184.474,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 1180.0,
+        "expected_score": 881.0499999999998,
+        "leverage": 133.04999999999998,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 740.0,
+        "expected_score": 696.7139999999997,
+        "leverage": 14.713999999999992,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 860.0,
+        "expected_score": 903.2899999999997,
+        "leverage": 155.29,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2014": {
+      "argmax": {
+        "actual_score": 650.0,
+        "expected_score": 840.6529999999999,
+        "leverage": 160.05299999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 650.0,
+        "expected_score": 840.6529999999999,
+        "leverage": 160.05299999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 650.0,
+        "expected_score": 840.6529999999999,
+        "leverage": 160.05299999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 650.0,
+        "expected_score": 840.6529999999999,
+        "leverage": 160.05299999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 720.0,
+        "expected_score": 718.7269999999999,
+        "leverage": 48.52699999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 750.0,
+        "expected_score": 685.3909999999998,
+        "leverage": 83.79099999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 880.0,
+        "expected_score": 583.0689999999998,
+        "leverage": 68.46899999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 880.0,
+        "expected_score": 576.7369999999997,
+        "leverage": 72.93699999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 650.0,
+        "expected_score": 815.3089999999999,
+        "leverage": 73.90899999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 650.0,
+        "expected_score": 806.5409999999999,
+        "leverage": 93.94099999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 530.0,
+        "expected_score": 688.9290000000001,
+        "leverage": 65.129,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 650.0,
+        "expected_score": 840.6529999999999,
+        "leverage": 160.05299999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2015": {
+      "argmax": {
+        "actual_score": 950.0,
+        "expected_score": 1015.234,
+        "leverage": 279.23400000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 950.0,
+        "expected_score": 1015.234,
+        "leverage": 279.23400000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 950.0,
+        "expected_score": 1015.234,
+        "leverage": 279.23400000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 950.0,
+        "expected_score": 1015.234,
+        "leverage": 279.23400000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1200.0,
+        "expected_score": 875.4460000000001,
+        "leverage": 146.64599999999996,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 850.0,
+        "expected_score": 761.3420000000001,
+        "leverage": 113.94200000000001,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 830.0,
+        "expected_score": 862.014,
+        "leverage": 207.214,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 550.0,
+        "expected_score": 791.4419999999999,
+        "leverage": 202.642,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1110.0,
+        "expected_score": 904.6740000000001,
+        "leverage": 168.67399999999995,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 950.0,
+        "expected_score": 935.586,
+        "leverage": 221.986,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 710.0,
+        "expected_score": 777.3620000000001,
+        "leverage": 96.56199999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 950.0,
+        "expected_score": 1015.234,
+        "leverage": 279.23400000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2016": {
+      "argmax": {
+        "actual_score": 800.0,
+        "expected_score": 786.111,
+        "leverage": 35.711,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 800.0,
+        "expected_score": 786.111,
+        "leverage": 35.711,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 720.0,
+        "expected_score": 786.0309999999998,
+        "leverage": 54.831,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 800.0,
+        "expected_score": 786.111,
+        "leverage": 35.711,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 520.0,
+        "expected_score": 656.6990000000001,
+        "leverage": -15.501000000000014,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 590.0,
+        "expected_score": 676.145,
+        "leverage": 1.5449999999999937,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 380.0,
+        "expected_score": 551.7249999999999,
+        "leverage": -20.875000000000007,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 340.0,
+        "expected_score": 458.509,
+        "leverage": -36.49100000000001,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1360.0,
+        "expected_score": 759.191,
+        "leverage": 65.59100000000001,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 800.0,
+        "expected_score": 771.999,
+        "leverage": 21.598999999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 1240.0,
+        "expected_score": 735.5910000000001,
+        "leverage": 86.791,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 800.0,
+        "expected_score": 786.111,
+        "leverage": 35.711,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2017": {
+      "argmax": {
+        "actual_score": 1100.0,
+        "expected_score": 817.0960000000001,
+        "leverage": 51.49599999999999,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 1100.0,
+        "expected_score": 817.0960000000001,
+        "leverage": 51.49599999999999,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 1100.0,
+        "expected_score": 818.8080000000001,
+        "leverage": 66.80799999999999,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 1100.0,
+        "expected_score": 817.0960000000001,
+        "leverage": 51.49599999999999,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1030.0,
+        "expected_score": 783.8420000000001,
+        "leverage": 45.841999999999985,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 730.0,
+        "expected_score": 654.05,
+        "leverage": -23.95,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 430.0,
+        "expected_score": 509.9020000000001,
+        "leverage": -7.2979999999999965,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 420.0,
+        "expected_score": 481.35800000000006,
+        "leverage": -4.8420000000000005,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1420.0,
+        "expected_score": 785.5120000000001,
+        "leverage": 19.911999999999992,
+        "f4_correct": 2,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 940.0,
+        "expected_score": 758.7760000000001,
+        "leverage": -6.824000000000004,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 580.0,
+        "expected_score": 684.836,
+        "leverage": 84.03599999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 1100.0,
+        "expected_score": 817.0960000000001,
+        "leverage": 51.49599999999999,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2018": {
+      "argmax": {
+        "actual_score": 790.0,
+        "expected_score": 881.4779999999998,
+        "leverage": 135.678,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 790.0,
+        "expected_score": 881.4779999999998,
+        "leverage": 135.678,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 790.0,
+        "expected_score": 881.4779999999998,
+        "leverage": 135.678,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 790.0,
+        "expected_score": 881.4779999999998,
+        "leverage": 135.678,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1070.0,
+        "expected_score": 826.1659999999999,
+        "leverage": 64.76599999999996,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 460.0,
+        "expected_score": 683.6619999999998,
+        "leverage": -15.13800000000002,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 440.0,
+        "expected_score": 677.662,
+        "leverage": 41.06199999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 410.0,
+        "expected_score": 587.868,
+        "leverage": 4.667999999999983,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1110.0,
+        "expected_score": 868.8699999999999,
+        "leverage": 123.07,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 630.0,
+        "expected_score": 831.7979999999999,
+        "leverage": 129.19799999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 630.0,
+        "expected_score": 750.2299999999999,
+        "leverage": 68.42999999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 790.0,
+        "expected_score": 881.4779999999998,
+        "leverage": 135.678,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2019": {
+      "argmax": {
+        "actual_score": 1330.0,
+        "expected_score": 941.0989999999999,
+        "leverage": 163.099,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 941.0989999999999,
+        "leverage": 163.099,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 941.0989999999999,
+        "leverage": 163.099,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 941.0989999999999,
+        "leverage": 163.099,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 1380.0,
+        "expected_score": 923.623,
+        "leverage": 152.623,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 760.0,
+        "expected_score": 724.3069999999998,
+        "leverage": 68.307,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 680.0,
+        "expected_score": 693.1809999999999,
+        "leverage": 65.981,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 630.0,
+        "expected_score": 540.853,
+        "leverage": 23.653000000000002,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1010.0,
+        "expected_score": 917.0669999999999,
+        "leverage": 139.06699999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 1010.0,
+        "expected_score": 903.771,
+        "leverage": 125.771,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 690.0,
+        "expected_score": 775.7950000000001,
+        "leverage": 116.195,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 1330.0,
+        "expected_score": 941.0989999999999,
+        "leverage": 163.099,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2021": {
+      "argmax": {
+        "actual_score": 1030.0,
+        "expected_score": 932.4709999999997,
+        "leverage": 197.47099999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 1030.0,
+        "expected_score": 932.4709999999997,
+        "leverage": 197.47099999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 1030.0,
+        "expected_score": 932.4709999999997,
+        "leverage": 197.47099999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 1030.0,
+        "expected_score": 932.4709999999997,
+        "leverage": 197.47099999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 780.0,
+        "expected_score": 810.4729999999998,
+        "leverage": 124.073,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 790.0,
+        "expected_score": 780.8589999999998,
+        "leverage": 135.259,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 750.0,
+        "expected_score": 754.697,
+        "leverage": 126.89699999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 730.0,
+        "expected_score": 724.243,
+        "leverage": 110.84299999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1030.0,
+        "expected_score": 868.2149999999997,
+        "leverage": 155.61499999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 1510.0,
+        "expected_score": 852.4709999999997,
+        "leverage": 96.67099999999999,
+        "f4_correct": 2,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 630.0,
+        "expected_score": 690.0549999999997,
+        "leverage": -17.745,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 1030.0,
+        "expected_score": 932.4709999999997,
+        "leverage": 197.47099999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2022": {
+      "argmax": {
+        "actual_score": 780.0,
+        "expected_score": 876.4279999999999,
+        "leverage": 109.02799999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_lock": {
+        "actual_score": 780.0,
+        "expected_score": 876.4279999999999,
+        "leverage": 109.02799999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_lock": {
+        "actual_score": 820.0,
+        "expected_score": 881.992,
+        "leverage": 156.59199999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "e8_lock": {
+        "actual_score": 780.0,
+        "expected_score": 876.4279999999999,
+        "leverage": 109.02799999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.5": {
+        "actual_score": 430.0,
+        "expected_score": 745.96,
+        "leverage": 69.96,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_0.8": {
+        "actual_score": 430.0,
+        "expected_score": 714.1320000000001,
+        "leverage": 32.732,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_1.5": {
+        "actual_score": 360.0,
+        "expected_score": 611.1440000000001,
+        "leverage": 41.74399999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "temp_2.0": {
+        "actual_score": 360.0,
+        "expected_score": 592.7860000000001,
+        "leverage": 45.586,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_2nd": {
+        "actual_score": 1100.0,
+        "expected_score": 826.092,
+        "leverage": 58.69199999999999,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "champ_3rd": {
+        "actual_score": 660.0,
+        "expected_score": 827.3039999999999,
+        "leverage": 164.30399999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "f4_2nd": {
+        "actual_score": 500.0,
+        "expected_score": 708.3679999999999,
+        "leverage": 60.96799999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      },
+      "top5_expmax": {
+        "actual_score": 780.0,
+        "expected_score": 876.4279999999999,
+        "leverage": 109.02799999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": null
+      }
+    },
+    "2023": {
+      "argmax": {
+        "actual_score": 710.0,
+        "expected_score": 825.4489999999998,
+        "leverage": 76.04899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "champ_lock": {
+        "actual_score": 710.0,
+        "expected_score": 825.4489999999998,
+        "leverage": 76.04899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "f4_lock": {
+        "actual_score": 710.0,
+        "expected_score": 825.693,
+        "leverage": 113.49299999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "e8_lock": {
+        "actual_score": 710.0,
+        "expected_score": 825.4489999999998,
+        "leverage": 76.04899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "temp_0.5": {
+        "actual_score": 620.0,
+        "expected_score": 726.239,
+        "leverage": 77.23899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "temp_0.8": {
+        "actual_score": 610.0,
+        "expected_score": 752.0029999999999,
+        "leverage": 82.20299999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "temp_1.5": {
+        "actual_score": 610.0,
+        "expected_score": 611.7909999999998,
+        "leverage": 25.990999999999993,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "temp_2.0": {
+        "actual_score": 560.0,
+        "expected_score": 517.0849999999998,
+        "leverage": 22.084999999999994,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "champ_2nd": {
+        "actual_score": 710.0,
+        "expected_score": 799.8489999999999,
+        "leverage": 50.44899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "champ_3rd": {
+        "actual_score": 710.0,
+        "expected_score": 770.5849999999999,
+        "leverage": 64.38499999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "f4_2nd": {
+        "actual_score": 710.0,
+        "expected_score": 688.401,
+        "leverage": -4.999000000000004,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      },
+      "top5_expmax": {
+        "actual_score": 710.0,
+        "expected_score": 825.4489999999998,
+        "leverage": 76.04899999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 720.0
+      }
+    },
+    "2024": {
+      "argmax": {
+        "actual_score": 1040.0,
+        "expected_score": 942.6460000000003,
+        "leverage": 175.64600000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "champ_lock": {
+        "actual_score": 1040.0,
+        "expected_score": 942.6460000000003,
+        "leverage": 175.64600000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "f4_lock": {
+        "actual_score": 1040.0,
+        "expected_score": 942.6460000000003,
+        "leverage": 175.64600000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "e8_lock": {
+        "actual_score": 1040.0,
+        "expected_score": 942.6460000000003,
+        "leverage": 175.64600000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "temp_0.5": {
+        "actual_score": 1400.0,
+        "expected_score": 840.856,
+        "leverage": 74.656,
+        "f4_correct": 2,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "temp_0.8": {
+        "actual_score": 720.0,
+        "expected_score": 728.288,
+        "leverage": 71.488,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "temp_1.5": {
+        "actual_score": 670.0,
+        "expected_score": 672.3279999999999,
+        "leverage": 42.32799999999999,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "temp_2.0": {
+        "actual_score": 380.0,
+        "expected_score": 517.2540000000001,
+        "leverage": 13.453999999999997,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "champ_2nd": {
+        "actual_score": 1360.0,
+        "expected_score": 902.1340000000002,
+        "leverage": 135.134,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "champ_3rd": {
+        "actual_score": 1200.0,
+        "expected_score": 878.3420000000003,
+        "leverage": 111.34199999999998,
+        "f4_correct": 2,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "f4_2nd": {
+        "actual_score": 720.0,
+        "expected_score": 729.1260000000003,
+        "leverage": 53.32599999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      },
+      "top5_expmax": {
+        "actual_score": 1040.0,
+        "expected_score": 942.6460000000003,
+        "leverage": 175.64600000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1540.0
+      }
+    },
+    "2025": {
+      "argmax": {
+        "actual_score": 1330.0,
+        "expected_score": 947.2989999999999,
+        "leverage": 173.899,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "champ_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 947.2989999999999,
+        "leverage": 173.899,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "f4_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 947.2989999999999,
+        "leverage": 173.899,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "e8_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 947.2989999999999,
+        "leverage": 173.899,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "temp_0.5": {
+        "actual_score": 1690.0,
+        "expected_score": 864.501,
+        "leverage": 109.901,
+        "f4_correct": 2,
+        "champ_correct": 1,
+        "beats_pool_winner": true,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "temp_0.8": {
+        "actual_score": 1030.0,
+        "expected_score": 816.1850000000001,
+        "leverage": 147.38500000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "temp_1.5": {
+        "actual_score": 1020.0,
+        "expected_score": 776.3570000000001,
+        "leverage": 146.95700000000002,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "temp_2.0": {
+        "actual_score": 730.0,
+        "expected_score": 585.251,
+        "leverage": 65.85100000000001,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "champ_2nd": {
+        "actual_score": 1170.0,
+        "expected_score": 934.6589999999999,
+        "leverage": 161.259,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "champ_3rd": {
+        "actual_score": 1330.0,
+        "expected_score": 929.6669999999998,
+        "leverage": 156.267,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "f4_2nd": {
+        "actual_score": 850.0,
+        "expected_score": 728.1469999999998,
+        "leverage": 89.14699999999999,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      },
+      "top5_expmax": {
+        "actual_score": 1330.0,
+        "expected_score": 947.2989999999999,
+        "leverage": 173.899,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1620.0
+      }
+    },
+    "2026": {
+      "argmax": {
+        "actual_score": 1330.0,
+        "expected_score": 943.4179999999999,
+        "leverage": 165.618,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "champ_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 943.4179999999999,
+        "leverage": 165.618,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "f4_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 943.4179999999999,
+        "leverage": 165.618,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "e8_lock": {
+        "actual_score": 1330.0,
+        "expected_score": 943.4179999999999,
+        "leverage": 165.618,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "temp_0.5": {
+        "actual_score": 830.0,
+        "expected_score": 891.2959999999999,
+        "leverage": 136.296,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "temp_0.8": {
+        "actual_score": 660.0,
+        "expected_score": 778.4499999999999,
+        "leverage": 122.65,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "temp_1.5": {
+        "actual_score": 1120.0,
+        "expected_score": 792.512,
+        "leverage": 137.712,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "temp_2.0": {
+        "actual_score": 590.0,
+        "expected_score": 578.9320000000001,
+        "leverage": 61.73200000000002,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "champ_2nd": {
+        "actual_score": 1010.0,
+        "expected_score": 933.3379999999999,
+        "leverage": 155.53799999999998,
+        "f4_correct": 1,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "champ_3rd": {
+        "actual_score": 850.0,
+        "expected_score": 921.4019999999998,
+        "leverage": 143.60199999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "f4_2nd": {
+        "actual_score": 770.0,
+        "expected_score": 786.4739999999999,
+        "leverage": 127.07399999999998,
+        "f4_correct": 0,
+        "champ_correct": 0,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      },
+      "top5_expmax": {
+        "actual_score": 1330.0,
+        "expected_score": 943.4179999999999,
+        "leverage": 165.618,
+        "f4_correct": 1,
+        "champ_correct": 1,
+        "beats_pool_winner": false,
+        "ties_pool_winner": false,
+        "pool_winner_score": 1350.0
+      }
+    }
+  },
+  "aggregate_ranking": [
+    {
+      "strategy": "champ_2nd",
+      "weighted_avg_score": 1071.6224079213866,
+      "pool_wins": 0,
+      "top3_years": 6
+    },
+    {
+      "strategy": "f4_lock",
+      "weighted_avg_score": 1054.3681935609486,
+      "pool_wins": 0,
+      "top3_years": 4
+    },
+    {
+      "strategy": "argmax",
+      "weighted_avg_score": 1053.482821418542,
+      "pool_wins": 0,
+      "top3_years": 13
+    },
+    {
+      "strategy": "champ_lock",
+      "weighted_avg_score": 1053.482821418542,
+      "pool_wins": 0,
+      "top3_years": 8
+    },
+    {
+      "strategy": "e8_lock",
+      "weighted_avg_score": 1053.482821418542,
+      "pool_wins": 0,
+      "top3_years": 0
+    },
+    {
+      "strategy": "top5_expmax",
+      "weighted_avg_score": 1053.482821418542,
+      "pool_wins": 0,
+      "top3_years": 0
+    },
+    {
+      "strategy": "temp_0.5",
+      "weighted_avg_score": 1021.3254018796373,
+      "pool_wins": 1,
+      "top3_years": 6
+    },
+    {
+      "strategy": "champ_3rd",
+      "weighted_avg_score": 988.7564754970961,
+      "pool_wins": 0,
+      "top3_years": 3
+    },
+    {
+      "strategy": "temp_1.5",
+      "weighted_avg_score": 741.8938774627959,
+      "pool_wins": 0,
+      "top3_years": 1
+    },
+    {
+      "strategy": "f4_2nd",
+      "weighted_avg_score": 718.5658906816628,
+      "pool_wins": 0,
+      "top3_years": 2
+    },
+    {
+      "strategy": "temp_0.8",
+      "weighted_avg_score": 704.422446299828,
+      "pool_wins": 0,
+      "top3_years": 1
+    },
+    {
+      "strategy": "temp_2.0",
+      "weighted_avg_score": 550.2279189586387,
+      "pool_wins": 0,
+      "top3_years": 1
+    }
+  ]
+}

@@ -1,0 +1,962 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - navigation [ref=e4]:
+        - generic [ref=e5]:
+          - link "Covers Logo" [ref=e6] [cursor=pointer]:
+            - /url: /
+            - img "Covers Logo" [ref=e8]
+          - list [ref=e10]:
+            - listitem [ref=e11]:
+              - generic [ref=e12] [cursor=pointer]: Sports
+            - listitem [ref=e13]:
+              - generic [ref=e14] [cursor=pointer]: Odds
+            - listitem [ref=e15]:
+              - generic [ref=e16] [cursor=pointer]: Picks
+            - listitem [ref=e17]:
+              - generic [ref=e18] [cursor=pointer]: Betting
+            - listitem [ref=e19]:
+              - generic [ref=e20] [cursor=pointer]: Promos
+            - listitem [ref=e21]:
+              - generic [ref=e22] [cursor=pointer]: Forum & Contests
+            - listitem [ref=e23]:
+              - generic [ref=e24] [cursor=pointer]: Casino
+            - listitem [ref=e25]:
+              - generic [ref=e26] [cursor=pointer]: Prediction Markets
+      - button "Toggle Account Menu" [ref=e29] [cursor=pointer]: Log in
+  - navigation [ref=e31]:
+    - list [ref=e33]:
+      - listitem [ref=e34]:
+        - link "Sports Odds History" [ref=e35] [cursor=pointer]:
+          - /url: /sportsoddshistory/
+          - generic [ref=e36]: Sports Odds History
+      - listitem [ref=e37]:
+        - link "NFL more arrow" [ref=e38] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/nfl-odds/
+          - text: NFL
+          - img "more arrow" [ref=e39]
+      - listitem [ref=e40]:
+        - link "NBA" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/nba-odds/
+      - listitem [ref=e42]:
+        - link "MLB" [ref=e43] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/mlb-odds/
+      - listitem [ref=e44]:
+        - link "NHL" [ref=e45] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/nhl-odds/
+      - listitem [ref=e46]:
+        - link "College Football" [ref=e47] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/college-football-odds/
+      - listitem [ref=e48]:
+        - link "College Basketball" [ref=e49] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/college-basketball-odds/
+      - listitem [ref=e50]:
+        - link "Golf" [ref=e51] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/golf-odds/
+      - listitem [ref=e52]:
+        - link "Tennis" [ref=e53] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/tennis-odds/
+      - listitem [ref=e54]:
+        - link "Soccer" [ref=e55] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/soccer-odds/
+      - listitem [ref=e56]:
+        - link "Other more arrow" [ref=e57] [cursor=pointer]:
+          - /url: https://www.covers.com/sportsoddshistory/other/
+          - text: Other
+          - img "more arrow" [ref=e58]
+  - main [ref=e62]:
+    - paragraph [ref=e63]:
+      - link "Sports Odds History" [ref=e64] [cursor=pointer]:
+        - /url: https://www.covers.com/sportsoddshistory/
+      - generic [ref=e65]: /
+      - text: Archived College Basketball Futures Odds
+    - heading "Archived College Basketball Futures Odds" [level=1] [ref=e66]
+    - paragraph [ref=e67]:
+      - link "Champions odds only" [ref=e68] [cursor=pointer]:
+        - /url: https://www.covers.com/sportsoddshistory/cbb-champs/
+      - link "Point spreads of National Semifinal & National Championship games" [ref=e69] [cursor=pointer]:
+        - /url: https://www.covers.com/sportsoddshistory/cbb-final-four/
+      - link "National Championship favorites entering the Tournament" [ref=e70] [cursor=pointer]:
+        - /url: https://www.covers.com/sportsoddshistory/college-basketball-national-championship-favorites-entering-the-tournament/
+      - link "National Championship favorites entering the Final Four" [ref=e71] [cursor=pointer]:
+        - /url: https://www.covers.com/sportsoddshistory/national-championship-favorites-entering-the-final-four/
+    - paragraph [ref=e72]: Please let others know about our site. If you use data from Covers’ Sports Odds History for an article, social media post or research for a podcast/broadcast, please reference and link to our site. Thanks!
+    - heading "Year-by-Year Results" [level=2] [ref=e73]
+    - table [ref=e75]:
+      - rowgroup [ref=e76]:
+        - row "Season National Champion Regular Season Conference Champion Conference Tournament Champion Tournament Regional Winners Season Win Totals John R. Wooden Award Tournament Most Outstanding Player" [ref=e77]:
+          - columnheader "Season" [ref=e78] [cursor=pointer]
+          - columnheader "National Champion" [ref=e79] [cursor=pointer]
+          - columnheader "Regular Season Conference Champion" [ref=e80] [cursor=pointer]:
+            - text: Regular Season
+            - text: Conference Champion
+          - columnheader "Conference Tournament Champion" [ref=e81] [cursor=pointer]:
+            - text: Conference Tournament
+            - text: Champion
+          - columnheader "Tournament Regional Winners" [ref=e82] [cursor=pointer]:
+            - text: Tournament
+            - text: Regional Winners
+          - columnheader "Season Win Totals" [ref=e83] [cursor=pointer]:
+            - text: Season
+            - text: Win Totals
+          - columnheader "John R. Wooden Award" [ref=e84] [cursor=pointer]:
+            - text: John R.
+            - text: Wooden Award
+          - columnheader "Tournament Most Outstanding Player" [ref=e85] [cursor=pointer]:
+            - text: Tournament
+            - text: Most Outstanding
+            - text: Player
+        - row "2026-2027 TBD" [ref=e86]:
+          - cell "2026-2027" [ref=e87]
+          - cell "TBD" [ref=e88]:
+            - link "TBD" [ref=e89] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2026-2027&sa=cbb&a=nc
+          - cell [ref=e90]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2026-2027&sa=cbb&a=reg
+          - cell [ref=e91]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2026-2027&sa=cbb&a=ct
+          - cell [ref=e92]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2026-2027&sa=cbb&a=tour
+          - cell [ref=e93]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2026-2027&sa=cbb&t=win
+          - cell [ref=e94]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2026-2027&sa=cbb&a=wooden
+          - cell [ref=e95]:
+            - link:
+              - /url: /sportsoddshistory/cbb-main/?y=2026-2027&sa=cbb&a=mop
+        - row "2025-2026 Michigan Regular Season Conf Tourney Regional Cameron Boozer Elliot Cadeau" [ref=e96]:
+          - cell "2025-2026" [ref=e97]
+          - cell "Michigan" [ref=e98]:
+            - link "Michigan" [ref=e99] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2025-2026&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e100]:
+            - link "Regular Season" [ref=e101] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2025-2026&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e102]:
+            - link "Conf Tourney" [ref=e103] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2025-2026&sa=cbb&a=ct
+          - cell "Regional" [ref=e104]:
+            - link "Regional" [ref=e105] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2025-2026&sa=cbb&a=tour
+          - cell [ref=e106]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2025-2026&sa=cbb&t=win
+          - cell "Cameron Boozer" [ref=e107]:
+            - link "Cameron Boozer" [ref=e108] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2025-2026&sa=cbb&a=wooden
+          - cell "Elliot Cadeau" [ref=e109]:
+            - link "Elliot Cadeau" [ref=e110] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2025-2026&sa=cbb&a=mop
+        - row "2024-2025 Florida Regular Season Conf Tourney Regional Cooper Flagg Walter Clayton Jr" [ref=e111]:
+          - cell "2024-2025" [ref=e112]
+          - cell "Florida" [ref=e113]:
+            - link "Florida" [ref=e114] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2024-2025&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e115]:
+            - link "Regular Season" [ref=e116] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2024-2025&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e117]:
+            - link "Conf Tourney" [ref=e118] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2024-2025&sa=cbb&a=ct
+          - cell "Regional" [ref=e119]:
+            - link "Regional" [ref=e120] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2024-2025&sa=cbb&a=tour
+          - cell [ref=e121]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2024-2025&sa=cbb&t=win
+          - cell "Cooper Flagg" [ref=e122]:
+            - link "Cooper Flagg" [ref=e123] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2024-2025&sa=cbb&a=wooden
+          - cell "Walter Clayton Jr" [ref=e124]:
+            - link "Walter Clayton Jr" [ref=e125] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2024-2025&sa=cbb&a=mop
+        - row "2023-2024 Connecticut Regular Season Conf Tourney Regional Zach Edey Tristen Newton" [ref=e126]:
+          - cell "2023-2024" [ref=e127]
+          - cell "Connecticut" [ref=e128]:
+            - link "Connecticut" [ref=e129] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2023-2024&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e130]:
+            - link "Regular Season" [ref=e131] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2023-2024&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e132]:
+            - link "Conf Tourney" [ref=e133] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2023-2024&sa=cbb&a=ct
+          - cell "Regional" [ref=e134]:
+            - link "Regional" [ref=e135] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2023-2024&sa=cbb&a=tour
+          - cell [ref=e136]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2023-2024&sa=cbb&t=win
+          - cell "Zach Edey" [ref=e137]:
+            - link "Zach Edey" [ref=e138] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2023-2024&sa=cbb&a=wooden
+          - cell "Tristen Newton" [ref=e139]:
+            - link "Tristen Newton" [ref=e140] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2023-2024&sa=cbb&a=mop
+        - row "2022-2023 Connecticut Regular Season Conf Tourney Regional Zach Edey Adama Sanogo" [ref=e141]:
+          - cell "2022-2023" [ref=e142]
+          - cell "Connecticut" [ref=e143]:
+            - link "Connecticut" [ref=e144] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2022-2023&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e145]:
+            - link "Regular Season" [ref=e146] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2022-2023&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e147]:
+            - link "Conf Tourney" [ref=e148] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2022-2023&sa=cbb&a=ct
+          - cell "Regional" [ref=e149]:
+            - link "Regional" [ref=e150] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2022-2023&sa=cbb&a=tour
+          - cell [ref=e151]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2022-2023&sa=cbb&t=win
+          - cell "Zach Edey" [ref=e152]:
+            - link "Zach Edey" [ref=e153] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2022-2023&sa=cbb&a=wooden
+          - cell "Adama Sanogo" [ref=e154]:
+            - link "Adama Sanogo" [ref=e155] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2022-2023&sa=cbb&a=mop
+        - row "2021-2022 Kansas Regular Season Conf Tourney Regional Oscar Tshiebwe Ochai Agbaji" [ref=e156]:
+          - cell "2021-2022" [ref=e157]
+          - cell "Kansas" [ref=e158]:
+            - link "Kansas" [ref=e159] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2021-2022&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e160]:
+            - link "Regular Season" [ref=e161] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2021-2022&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e162]:
+            - link "Conf Tourney" [ref=e163] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2021-2022&sa=cbb&a=ct
+          - cell "Regional" [ref=e164]:
+            - link "Regional" [ref=e165] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2021-2022&sa=cbb&a=tour
+          - cell [ref=e166]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2021-2022&sa=cbb&t=win
+          - cell "Oscar Tshiebwe" [ref=e167]:
+            - link "Oscar Tshiebwe" [ref=e168] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2021-2022&sa=cbb&a=wooden
+          - cell "Ochai Agbaji" [ref=e169]:
+            - link "Ochai Agbaji" [ref=e170] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2021-2022&sa=cbb&a=mop
+        - row "2020-2021 Baylor Regular Season Conf Tourney Regional Luka Garza Jared Butler" [ref=e171]:
+          - cell "2020-2021" [ref=e172]
+          - cell "Baylor" [ref=e173]:
+            - link "Baylor" [ref=e174] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2020-2021&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e175]:
+            - link "Regular Season" [ref=e176] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2020-2021&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e177]:
+            - link "Conf Tourney" [ref=e178] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2020-2021&sa=cbb&a=ct
+          - cell "Regional" [ref=e179]:
+            - link "Regional" [ref=e180] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2020-2021&sa=cbb&a=tour
+          - cell [ref=e181]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2020-2021&sa=cbb&t=win
+          - cell "Luka Garza" [ref=e182]:
+            - link "Luka Garza" [ref=e183] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2020-2021&sa=cbb&a=wooden
+          - cell "Jared Butler" [ref=e184]:
+            - link "Jared Butler" [ref=e185] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2020-2021&sa=cbb&a=mop
+        - row "2019-2020 Tournament Canceled Regular Season Wins Obi Toppin" [ref=e186]:
+          - cell "2019-2020" [ref=e187]
+          - cell "Tournament Canceled" [ref=e188]:
+            - link "Tournament Canceled" [ref=e189] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2019-2020&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e190]:
+            - link "Regular Season" [ref=e191] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2019-2020&sa=cbb&a=reg
+          - cell [ref=e192]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2019-2020&sa=cbb&a=ct
+          - cell [ref=e193]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2019-2020&sa=cbb&a=tour
+          - cell "Wins" [ref=e194]:
+            - link "Wins" [ref=e195] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-win/?y=2019-2020&sa=cbb&t=win
+          - cell "Obi Toppin" [ref=e196]:
+            - link "Obi Toppin" [ref=e197] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-awd/?y=2019-2020&sa=cbb&a=wooden
+          - cell [ref=e198]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2019-2020&sa=cbb&a=mopy
+        - row "2018-2019 Virginia Conf Tourney Regional Kyle Guy" [ref=e199]:
+          - cell "2018-2019" [ref=e200]
+          - cell "Virginia" [ref=e201]:
+            - link "Virginia" [ref=e202] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2018-2019&sa=cbb&a=nc
+          - cell [ref=e203]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2018-2019&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e204]:
+            - link "Conf Tourney" [ref=e205] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2018-2019&sa=cbb&a=ct
+          - cell "Regional" [ref=e206]:
+            - link "Regional" [ref=e207] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2018-2019&sa=cbb&a=tour
+          - cell [ref=e208]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2018-2019&sa=cbb&t=win
+          - cell [ref=e209]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2018-2019&sa=cbb&a=cbbpoy
+          - cell "Kyle Guy" [ref=e210]:
+            - link "Kyle Guy" [ref=e211] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2018-2019&sa=cbb&a=mop
+        - row "2017-2018 Villanova Conf Tourney Regional Donte DiVicenzo" [ref=e212]:
+          - cell "2017-2018" [ref=e213]
+          - cell "Villanova" [ref=e214]:
+            - link "Villanova" [ref=e215] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2017-2018&sa=cbb&a=nc
+          - cell [ref=e216]:
+            - link:
+              - /url: /sportsoddshistory/cbb-div/?y=2017-2018&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e217]:
+            - link "Conf Tourney" [ref=e218] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2017-2018&sa=cbb&a=ct
+          - cell "Regional" [ref=e219]:
+            - link "Regional" [ref=e220] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2017-2018&sa=cbb&a=tour
+          - cell [ref=e221]:
+            - link:
+              - /url: /sportsoddshistory/cbb-win/?y=2017-2018&sa=cbb&t=win
+          - cell [ref=e222]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2017-2018&sa=cbb&a=cbbpoy
+          - cell "Donte DiVicenzo" [ref=e223]:
+            - link "Donte DiVicenzo" [ref=e224] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2017-2018&sa=cbb&a=mop
+        - row "2016-2017 North Carolina Regular Season Conf Tourney Regional Wins" [ref=e225]:
+          - cell "2016-2017" [ref=e226]
+          - cell "North Carolina" [ref=e227]:
+            - link "North Carolina" [ref=e228] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2016-2017&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e229]:
+            - link "Regular Season" [ref=e230] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2016-2017&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e231]:
+            - link "Conf Tourney" [ref=e232] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2016-2017&sa=cbb&a=ct
+          - cell "Regional" [ref=e233]:
+            - link "Regional" [ref=e234] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2016-2017&sa=cbb&a=tour
+          - cell "Wins" [ref=e235]:
+            - link "Wins" [ref=e236] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-win/?y=2016-2017&sa=cbb&t=win
+          - cell [ref=e237]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2016-2017&sa=cbb&a=cbbpoy
+          - cell [ref=e238]
+        - row "2015-2016 Villanova Regular Season Conf Tourney Regional" [ref=e239]:
+          - cell "2015-2016" [ref=e240]
+          - cell "Villanova" [ref=e241]:
+            - link "Villanova" [ref=e242] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2015-2016&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e243]:
+            - link "Regular Season" [ref=e244] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2015-2016&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e245]:
+            - link "Conf Tourney" [ref=e246] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2015-2016&sa=cbb&a=ct
+          - cell "Regional" [ref=e247]:
+            - link "Regional" [ref=e248] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2015-2016&sa=cbb&a=tour
+          - cell [ref=e249]
+          - cell [ref=e250]:
+            - link:
+              - /url: /sportsoddshistory/cbb-awd/?y=2015-2016&sa=cbb&a=cbbpoy
+          - cell [ref=e251]
+        - row "2014-2015 Duke Regular Season Conf Tourney Regional" [ref=e252]:
+          - cell "2014-2015" [ref=e253]
+          - cell "Duke" [ref=e254]:
+            - link "Duke" [ref=e255] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2014-2015&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e256]:
+            - link "Regular Season" [ref=e257] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2014-2015&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e258]:
+            - link "Conf Tourney" [ref=e259] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2014-2015&sa=cbb&a=ct
+          - cell "Regional" [ref=e260]:
+            - link "Regional" [ref=e261] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2014-2015&sa=cbb&a=tour
+          - cell [ref=e262]
+          - cell [ref=e263]
+          - cell [ref=e264]
+        - row "2013-2014 Connecticut Regular Season Conf Tourney Regional" [ref=e265]:
+          - cell "2013-2014" [ref=e266]
+          - cell "Connecticut" [ref=e267]:
+            - link "Connecticut" [ref=e268] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2013-2014&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e269]:
+            - link "Regular Season" [ref=e270] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2013-2014&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e271]:
+            - link "Conf Tourney" [ref=e272] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2013-2014&sa=cbb&a=ct
+          - cell "Regional" [ref=e273]:
+            - link "Regional" [ref=e274] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2013-2014&sa=cbb&a=tour
+          - cell [ref=e275]
+          - cell [ref=e276]
+          - cell [ref=e277]
+        - row "2012-2013 Louisville Regular Season Conf Tourney Regional" [ref=e278]:
+          - cell "2012-2013" [ref=e279]
+          - cell "Louisville" [ref=e280]:
+            - link "Louisville" [ref=e281] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2012-2013&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e282]:
+            - link "Regular Season" [ref=e283] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2012-2013&sa=cbb&a=reg
+          - cell "Conf Tourney" [ref=e284]:
+            - link "Conf Tourney" [ref=e285] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2012-2013&sa=cbb&a=ct
+          - cell "Regional" [ref=e286]:
+            - link "Regional" [ref=e287] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2012-2013&sa=cbb&a=tour
+          - cell [ref=e288]
+          - cell [ref=e289]
+          - cell [ref=e290]
+        - row "2011-2012 Kentucky Regular Season Conf Tourney Regional" [ref=e291]:
+          - cell "2011-2012" [ref=e292]
+          - cell "Kentucky" [ref=e293]:
+            - link "Kentucky" [ref=e294] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2011-2012&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e295]:
+            - link "Regular Season" [ref=e296] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2011-2012&sa=cbb&a=reg&p=pre
+          - cell "Conf Tourney" [ref=e297]:
+            - link "Conf Tourney" [ref=e298] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2011-2012&sa=cbb&a=ct
+          - cell "Regional" [ref=e299]:
+            - link "Regional" [ref=e300] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2011-2012&sa=cbb&a=tour
+          - cell [ref=e301]
+          - cell [ref=e302]
+          - cell [ref=e303]
+        - row "2010-2011 Connecticut Regular Season Conf Tourney Regional" [ref=e304]:
+          - cell "2010-2011" [ref=e305]
+          - cell "Connecticut" [ref=e306]:
+            - link "Connecticut" [ref=e307] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2010-2011&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e308]:
+            - link "Regular Season" [ref=e309] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2010-2011&sa=cbb&a=reg&p=pre
+          - cell "Conf Tourney" [ref=e310]:
+            - link "Conf Tourney" [ref=e311] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2010-2011&sa=cbb&a=ct
+          - cell "Regional" [ref=e312]:
+            - link "Regional" [ref=e313] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2010-2011&sa=cbb&a=tour
+          - cell [ref=e314]
+          - cell [ref=e315]
+          - cell [ref=e316]
+        - row "2009-2010 Duke Regular Season Conf Tourney Regional" [ref=e317]:
+          - cell "2009-2010" [ref=e318]
+          - cell "Duke" [ref=e319]:
+            - link "Duke" [ref=e320] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2009-2010&sa=cbb&a=nc
+          - cell "Regular Season" [ref=e321]:
+            - link "Regular Season" [ref=e322] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2009-2010&sa=cbb&a=reg&p=pre
+          - cell "Conf Tourney" [ref=e323]:
+            - link "Conf Tourney" [ref=e324] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2009-2010&sa=cbb&a=ct
+          - cell "Regional" [ref=e325]:
+            - link "Regional" [ref=e326] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-div/?y=2009-2010&sa=cbb&a=tour
+          - cell [ref=e327]
+          - cell [ref=e328]
+          - cell [ref=e329]
+        - row "2008-2009 North Carolina" [ref=e330]:
+          - cell "2008-2009" [ref=e331]
+          - cell "North Carolina" [ref=e332]:
+            - link "North Carolina" [ref=e333] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2008-2009&sa=cbb&a=nc
+          - cell [ref=e334]
+          - cell [ref=e335]
+          - cell [ref=e336]
+          - cell [ref=e337]
+          - cell [ref=e338]
+          - cell [ref=e339]
+        - row "2007-2008 Kansas" [ref=e340]:
+          - cell "2007-2008" [ref=e341]
+          - cell "Kansas" [ref=e342]:
+            - link "Kansas" [ref=e343] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2007-2008&sa=cbb&a=nc
+          - cell [ref=e344]
+          - cell [ref=e345]
+          - cell [ref=e346]
+          - cell [ref=e347]
+          - cell [ref=e348]
+          - cell [ref=e349]
+        - row "2006-2007 Florida" [ref=e350]:
+          - cell "2006-2007" [ref=e351]
+          - cell "Florida" [ref=e352]:
+            - link "Florida" [ref=e353] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2006-2007&sa=cbb&a=nc
+          - cell [ref=e354]
+          - cell [ref=e355]
+          - cell [ref=e356]
+          - cell [ref=e357]
+          - cell [ref=e358]
+          - cell [ref=e359]
+        - row "2005-2006 Florida" [ref=e360]:
+          - cell "2005-2006" [ref=e361]
+          - cell "Florida" [ref=e362]:
+            - link "Florida" [ref=e363] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2005-2006&sa=cbb&a=nc
+          - cell [ref=e364]
+          - cell [ref=e365]
+          - cell [ref=e366]
+          - cell [ref=e367]
+          - cell [ref=e368]
+          - cell [ref=e369]
+        - row "2004-2005 North Carolina" [ref=e370]:
+          - cell "2004-2005" [ref=e371]
+          - cell "North Carolina" [ref=e372]:
+            - link "North Carolina" [ref=e373] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2004-2005&sa=cbb&a=nc
+          - cell [ref=e374]
+          - cell [ref=e375]
+          - cell [ref=e376]
+          - cell [ref=e377]
+          - cell [ref=e378]
+          - cell [ref=e379]
+        - row "2003-2004 Connecticut" [ref=e380]:
+          - cell "2003-2004" [ref=e381]
+          - cell "Connecticut" [ref=e382]:
+            - link "Connecticut" [ref=e383] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2003-2004&sa=cbb&a=nc
+          - cell [ref=e384]
+          - cell [ref=e385]
+          - cell [ref=e386]
+          - cell [ref=e387]
+          - cell [ref=e388]
+          - cell [ref=e389]
+        - row "2002-2003 Syracuse" [ref=e390]:
+          - cell "2002-2003" [ref=e391]
+          - cell "Syracuse" [ref=e392]:
+            - link "Syracuse" [ref=e393] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2002-2003&sa=cbb&a=nc
+          - cell [ref=e394]
+          - cell [ref=e395]
+          - cell [ref=e396]
+          - cell [ref=e397]
+          - cell [ref=e398]
+          - cell [ref=e399]
+        - row "2001-2002 Maryland" [ref=e400]:
+          - cell "2001-2002" [ref=e401]
+          - cell "Maryland" [ref=e402]:
+            - link "Maryland" [ref=e403] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2001-2002&sa=cbb&a=nc
+          - cell [ref=e404]
+          - cell [ref=e405]
+          - cell [ref=e406]
+          - cell [ref=e407]
+          - cell [ref=e408]
+          - cell [ref=e409]
+        - row "2000-2001 Duke" [ref=e410]:
+          - cell "2000-2001" [ref=e411]
+          - cell "Duke" [ref=e412]:
+            - link "Duke" [ref=e413] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=2000-2001&sa=cbb&a=nc
+          - cell [ref=e414]
+          - cell [ref=e415]
+          - cell [ref=e416]
+          - cell [ref=e417]
+          - cell [ref=e418]
+          - cell [ref=e419]
+        - row "1999-2000 Michigan State" [ref=e420]:
+          - cell "1999-2000" [ref=e421]
+          - cell "Michigan State" [ref=e422]:
+            - link "Michigan State" [ref=e423] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1999-2000&sa=cbb&a=nc
+          - cell [ref=e424]
+          - cell [ref=e425]
+          - cell [ref=e426]
+          - cell [ref=e427]
+          - cell [ref=e428]
+          - cell [ref=e429]
+        - row "1998-1999 Connecticut" [ref=e430]:
+          - cell "1998-1999" [ref=e431]
+          - cell "Connecticut" [ref=e432]:
+            - link "Connecticut" [ref=e433] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1998-1999&sa=cbb&a=nc
+          - cell [ref=e434]
+          - cell [ref=e435]
+          - cell [ref=e436]
+          - cell [ref=e437]
+          - cell [ref=e438]
+          - cell [ref=e439]
+        - row "1997-1998 Kentucky" [ref=e440]:
+          - cell "1997-1998" [ref=e441]
+          - cell "Kentucky" [ref=e442]:
+            - link "Kentucky" [ref=e443] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1997-1998&sa=cbb&a=nc
+          - cell [ref=e444]
+          - cell [ref=e445]
+          - cell [ref=e446]
+          - cell [ref=e447]
+          - cell [ref=e448]
+          - cell [ref=e449]
+        - row "1996-1997 Arizona" [ref=e450]:
+          - cell "1996-1997" [ref=e451]
+          - cell "Arizona" [ref=e452]:
+            - link "Arizona" [ref=e453] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1996-1997&sa=cbb&a=nc
+          - cell [ref=e454]
+          - cell [ref=e455]
+          - cell [ref=e456]
+          - cell [ref=e457]
+          - cell [ref=e458]
+          - cell [ref=e459]
+        - row "1995-1996 Kentucky" [ref=e460]:
+          - cell "1995-1996" [ref=e461]
+          - cell "Kentucky" [ref=e462]:
+            - link "Kentucky" [ref=e463] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1995-1996&sa=cbb&a=nc
+          - cell [ref=e464]
+          - cell [ref=e465]
+          - cell [ref=e466]
+          - cell [ref=e467]
+          - cell [ref=e468]
+          - cell [ref=e469]
+        - row "1994-1995 UCLA" [ref=e470]:
+          - cell "1994-1995" [ref=e471]
+          - cell "UCLA" [ref=e472]:
+            - link "UCLA" [ref=e473] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1994-1995&sa=cbb&a=nc
+          - cell [ref=e474]
+          - cell [ref=e475]
+          - cell [ref=e476]
+          - cell [ref=e477]
+          - cell [ref=e478]
+          - cell [ref=e479]
+        - row "1993-1994 Arkansas" [ref=e480]:
+          - cell "1993-1994" [ref=e481]
+          - cell "Arkansas" [ref=e482]:
+            - link "Arkansas" [ref=e483] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1993-1994&sa=cbb&a=nc
+          - cell [ref=e484]
+          - cell [ref=e485]
+          - cell [ref=e486]
+          - cell [ref=e487]
+          - cell [ref=e488]
+          - cell [ref=e489]
+        - row "1992-1993 North Carolina" [ref=e490]:
+          - cell "1992-1993" [ref=e491]
+          - cell "North Carolina" [ref=e492]:
+            - link "North Carolina" [ref=e493] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1992-1993&sa=cbb&a=nc
+          - cell [ref=e494]
+          - cell [ref=e495]
+          - cell [ref=e496]
+          - cell [ref=e497]
+          - cell [ref=e498]
+          - cell [ref=e499]
+        - row "1991-1992 Duke" [ref=e500]:
+          - cell "1991-1992" [ref=e501]
+          - cell "Duke" [ref=e502]:
+            - link "Duke" [ref=e503] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1991-1992&sa=cbb&a=nc
+          - cell [ref=e504]
+          - cell [ref=e505]
+          - cell [ref=e506]
+          - cell [ref=e507]
+          - cell [ref=e508]
+          - cell [ref=e509]
+        - row "1990-1991 Duke" [ref=e510]:
+          - cell "1990-1991" [ref=e511]
+          - cell "Duke" [ref=e512]:
+            - link "Duke" [ref=e513] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1990-1991&sa=cbb&a=nc
+          - cell [ref=e514]
+          - cell [ref=e515]
+          - cell [ref=e516]
+          - cell [ref=e517]
+          - cell [ref=e518]
+          - cell [ref=e519]
+        - row "1989-1990 UNLV" [ref=e520]:
+          - cell "1989-1990" [ref=e521]
+          - cell "UNLV" [ref=e522]:
+            - link "UNLV" [ref=e523] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1989-1990&sa=cbb&a=nc
+          - cell [ref=e524]
+          - cell [ref=e525]
+          - cell [ref=e526]
+          - cell [ref=e527]
+          - cell [ref=e528]
+          - cell [ref=e529]
+        - row "1988-1989 Michigan" [ref=e530]:
+          - cell "1988-1989" [ref=e531]
+          - cell "Michigan" [ref=e532]:
+            - link "Michigan" [ref=e533] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1988-1989&sa=cbb&a=nc
+          - cell [ref=e534]
+          - cell [ref=e535]
+          - cell [ref=e536]
+          - cell [ref=e537]
+          - cell [ref=e538]
+          - cell [ref=e539]
+        - row "1987-1988 Kansas" [ref=e540]:
+          - cell "1987-1988" [ref=e541]
+          - cell "Kansas" [ref=e542]:
+            - link "Kansas" [ref=e543] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1987-1988&sa=cbb&a=nc
+          - cell [ref=e544]
+          - cell [ref=e545]
+          - cell [ref=e546]
+          - cell [ref=e547]
+          - cell [ref=e548]
+          - cell [ref=e549]
+        - row "1986-1987 Indiana" [ref=e550]:
+          - cell "1986-1987" [ref=e551]
+          - cell "Indiana" [ref=e552]:
+            - link "Indiana" [ref=e553] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1986-1987&sa=cbb&a=nc
+          - cell [ref=e554]
+          - cell [ref=e555]
+          - cell [ref=e556]
+          - cell [ref=e557]
+          - cell [ref=e558]
+          - cell [ref=e559]
+        - row "1985-1986 Louisville" [ref=e560]:
+          - cell "1985-1986" [ref=e561]
+          - cell "Louisville" [ref=e562]:
+            - link "Louisville" [ref=e563] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1985-1986&sa=cbb&a=nc
+          - cell [ref=e564]
+          - cell [ref=e565]
+          - cell [ref=e566]
+          - cell [ref=e567]
+          - cell [ref=e568]
+          - cell [ref=e569]
+        - row "1984-1985 Villanova" [ref=e570]:
+          - cell "1984-1985" [ref=e571]
+          - cell "Villanova" [ref=e572]:
+            - link "Villanova" [ref=e573] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1984-1985&sa=cbb&a=nc
+          - cell [ref=e574]
+          - cell [ref=e575]
+          - cell [ref=e576]
+          - cell [ref=e577]
+          - cell [ref=e578]
+          - cell [ref=e579]
+        - row "1983-1984 Georgetown" [ref=e580]:
+          - cell "1983-1984" [ref=e581]
+          - cell "Georgetown" [ref=e582]:
+            - link "Georgetown" [ref=e583] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1983-1984&sa=cbb&a=nc
+          - cell [ref=e584]
+          - cell [ref=e585]
+          - cell [ref=e586]
+          - cell [ref=e587]
+          - cell [ref=e588]
+          - cell [ref=e589]
+        - row "1982-1983 NC State" [ref=e590]:
+          - cell "1982-1983" [ref=e591]
+          - cell "NC State" [ref=e592]:
+            - link "NC State" [ref=e593] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1982-1983&sa=cbb&a=nc
+          - cell [ref=e594]
+          - cell [ref=e595]
+          - cell [ref=e596]
+          - cell [ref=e597]
+          - cell [ref=e598]
+          - cell [ref=e599]
+        - row "1981-1982 North Carolina" [ref=e600]:
+          - cell "1981-1982" [ref=e601]
+          - cell "North Carolina" [ref=e602]:
+            - link "North Carolina" [ref=e603] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1981-1982&sa=cbb&a=nc
+          - cell [ref=e604]
+          - cell [ref=e605]
+          - cell [ref=e606]
+          - cell [ref=e607]
+          - cell [ref=e608]
+          - cell [ref=e609]
+        - row "1980-1981 Indiana" [ref=e610]:
+          - cell "1980-1981" [ref=e611]
+          - cell "Indiana" [ref=e612]:
+            - link "Indiana" [ref=e613] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1980-1981&sa=cbb&a=nc
+          - cell [ref=e614]
+          - cell [ref=e615]
+          - cell [ref=e616]
+          - cell [ref=e617]
+          - cell [ref=e618]
+          - cell [ref=e619]
+        - row "1979-1980 Louisville" [ref=e620]:
+          - cell "1979-1980" [ref=e621]
+          - cell "Louisville" [ref=e622]:
+            - link "Louisville" [ref=e623] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1979-1980&sa=cbb&a=nc
+          - cell [ref=e624]
+          - cell [ref=e625]
+          - cell [ref=e626]
+          - cell [ref=e627]
+          - cell [ref=e628]
+          - cell [ref=e629]
+        - row "1978-1979 Michigan State" [ref=e630]:
+          - cell "1978-1979" [ref=e631]
+          - cell "Michigan State" [ref=e632]:
+            - link "Michigan State" [ref=e633] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1978-1979&sa=cbb&a=nc
+          - cell [ref=e634]
+          - cell [ref=e635]
+          - cell [ref=e636]
+          - cell [ref=e637]
+          - cell [ref=e638]
+          - cell [ref=e639]
+        - row "1977-1978 Kentucky" [ref=e640]:
+          - cell "1977-1978" [ref=e641]
+          - cell "Kentucky" [ref=e642]:
+            - link "Kentucky" [ref=e643] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1977-1978&sa=cbb&a=nc
+          - cell [ref=e644]
+          - cell [ref=e645]
+          - cell [ref=e646]
+          - cell [ref=e647]
+          - cell [ref=e648]
+          - cell [ref=e649]
+        - row "1975-1976 Indiana" [ref=e650]:
+          - cell "1975-1976" [ref=e651]
+          - cell "Indiana" [ref=e652]:
+            - link "Indiana" [ref=e653] [cursor=pointer]:
+              - /url: /sportsoddshistory/cbb-main/?y=1975-1976&sa=cbb&a=nc
+          - cell [ref=e654]
+          - cell [ref=e655]
+          - cell [ref=e656]
+          - cell [ref=e657]
+          - cell [ref=e658]
+          - cell [ref=e659]
+  - generic [ref=e660]:
+    - generic [ref=e661]:
+      - generic [ref=e662]:
+        - generic [ref=e663]:
+          - link "About Us" [ref=e665] [cursor=pointer]:
+            - /url: https://www.covers.com/about
+          - link "Contact Us" [ref=e667] [cursor=pointer]:
+            - /url: https://www.covers.com/contact
+          - link "Careers" [ref=e669] [cursor=pointer]:
+            - /url: https://www.covers.com/careers
+          - link "Our Team" [ref=e671] [cursor=pointer]:
+            - /url: https://www.covers.com/writers
+          - link "Brand" [ref=e673] [cursor=pointer]:
+            - /url: https://www.covers.com/brand
+          - link "Testimonials" [ref=e675] [cursor=pointer]:
+            - /url: https://www.covers.com/testimonials
+        - generic [ref=e676]:
+          - link "Betting Guides" [ref=e678] [cursor=pointer]:
+            - /url: https://www.covers.com/guides
+          - link "Sportsbook Reviews" [ref=e680] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/reviews
+          - link "Betting News" [ref=e682] [cursor=pointer]:
+            - /url: /betting-news
+          - link "Podcasts" [ref=e684] [cursor=pointer]:
+            - /url: /podcasts
+          - link "Responsible Gambling" [ref=e686] [cursor=pointer]:
+            - /url: /guides/help
+        - generic [ref=e687]:
+          - link "Betting Sites" [ref=e689] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "US Betting Sites" [ref=e691] [cursor=pointer]:
+            - /url: https://www.covers.com/betting
+          - link "Canada Betting Sites" [ref=e693] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/canada
+          - link "Canada Casinos" [ref=e695] [cursor=pointer]:
+            - /url: /casino/canada
+          - link "Best Betting Apps" [ref=e697] [cursor=pointer]:
+            - /url: /betting/best-betting-apps
+        - generic [ref=e698]:
+          - link "Contests" [ref=e700] [cursor=pointer]:
+            - /url: https://contests.covers.com/
+          - link "Streak Survivor" [ref=e702] [cursor=pointer]:
+            - /url: https://contests.covers.com/survivor
+          - link "King of Covers" [ref=e704] [cursor=pointer]:
+            - /url: https://contests.covers.com/kingofcovers
+          - link "Ultimate Race" [ref=e706] [cursor=pointer]:
+            - /url: https://contests.covers.com/ultimaterace
+          - link "Office Pools" [ref=e708] [cursor=pointer]:
+            - /url: https://contests.covers.com/officepools
+        - generic [ref=e710]:
+          - generic [ref=e711]: The Covers community has
+          - generic [ref=e712]: 810,221
+          - generic [ref=e713]: lifetime members worldwide
+          - link "Join our community today" [ref=e715] [cursor=pointer]:
+            - /url: https://www.covers.com/forum
+      - generic [ref=e716]:
+        - generic [ref=e717]:
+          - img "Covers 30 Years Logo" [ref=e718]
+          - generic [ref=e719]:
+            - text: Established in 1995,
+            - text: Covers is the world
+            - text: leader in sports
+            - text: betting information.
+        - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e721] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/help
+          - generic [ref=e722]:
+            - generic [ref=e723]: 21+
+            - generic [ref=e724]: Gambling problem? Call 1-800-GAMBLER
+      - generic [ref=e726]:
+        - generic [ref=e727]:
+          - link "Help" [ref=e728] [cursor=pointer]:
+            - /url: https://www.covers.com/help
+          - link "Privacy" [ref=e729] [cursor=pointer]:
+            - /url: https://www.covers.com/privacy
+          - link "Terms of Service" [ref=e730] [cursor=pointer]:
+            - /url: https://www.covers.com/terms
+          - link "Cookies" [ref=e731] [cursor=pointer]:
+            - /url: https://www.covers.com/privacycookies
+          - link "Sitemap" [ref=e732] [cursor=pointer]:
+            - /url: https://www.covers.com/sitemap
+          - link "Forum" [ref=e733] [cursor=pointer]:
+            - /url: https://www.covers.com/forum
+        - generic [ref=e735]:
+          - link "YouTube logo" [ref=e737] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw/
+            - img "YouTube logo" [ref=e738]
+          - link "Facebook logo" [ref=e740] [cursor=pointer]:
+            - /url: https://www.facebook.com/Covers_Sports/
+            - img "Facebook logo" [ref=e741]
+          - link "Twitter logo" [ref=e743] [cursor=pointer]:
+            - /url: https://twitter.com/Covers/
+            - img "Twitter logo" [ref=e744]
+          - link "Instagram logo" [ref=e746] [cursor=pointer]:
+            - /url: https://www.instagram.com/coverssports/
+            - img "Instagram logo" [ref=e747]
+          - link "LinkedIn logo" [ref=e749] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/2632327/
+            - img "LinkedIn logo" [ref=e750]
+          - link "Google News logo" [ref=e752] [cursor=pointer]:
+            - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+            - img "Google News logo" [ref=e753]
+    - generic [ref=e756]:
+      - generic [ref=e758]:
+        - generic [ref=e759]: "Covers is verified safe by:"
+        - generic [ref=e760]:
+          - img "Evalon Logo Logo" [ref=e761]
+          - link "GPWA Logo" [ref=e762] [cursor=pointer]:
+            - /url: https://certify.gpwa.org/verify/covers.com
+            - img "GPWA Logo" [ref=e763]
+          - img "GDPR logo Logo" [ref=e764]
+          - img "GeoTrust logo Logo" [ref=e765]
+          - img "PCI DSS logo Logo" [ref=e766]
+      - generic [ref=e767]:
+        - img [ref=e768]
+        - generic [ref=e769]:
+          - generic [ref=e770]: Copyright © 1995 - 2026 CS Media Limited. All Rights Reserved.
+          - text: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - iframe [ref=e771]:
+    

@@ -1,0 +1,717 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e4]:
+    - link "Covers Logo" [ref=e5] [cursor=pointer]:
+      - /url: https://www.covers.com
+      - img "Covers Logo" [ref=e6]
+    - navigation [ref=e7]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "Sports" [ref=e10] [cursor=pointer]
+        - listitem [ref=e11]:
+          - button "Odds" [ref=e12] [cursor=pointer]
+        - listitem [ref=e13]:
+          - button "Picks" [ref=e14] [cursor=pointer]
+        - listitem [ref=e15]:
+          - button "Betting" [ref=e16] [cursor=pointer]
+        - listitem [ref=e17]:
+          - button "Promos" [ref=e18] [cursor=pointer]
+        - listitem [ref=e19]:
+          - button "Forum & Contests" [ref=e20] [cursor=pointer]
+        - listitem [ref=e21]:
+          - button "Casino" [ref=e22] [cursor=pointer]
+        - listitem [ref=e23]:
+          - button "Prediction Markets" [ref=e24] [cursor=pointer]
+    - generic [ref=e27]:
+      - button "Log in" [ref=e28] [cursor=pointer]
+      - list:
+        - listitem:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - text: LOG IN
+                  - img "Chevron"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph:
+                        - button "Continue with Google":
+                          - img
+                          - text: Continue with Google
+                  - generic:
+                    - textbox "Display Name Display Name":
+                      - /placeholder: Display Name
+                    - textbox "Password passwordCreate":
+                      - /placeholder: Password
+                    - checkbox "Stay Logged In"
+                    - text: Stay Logged In
+                    - button "SIGN IN"
+                    - generic:
+                      - text: Forgot your
+                      - link "display name":
+                        - /url: https://www.covers.com/account/forgotusername
+                      - text: or
+                      - link "password":
+                        - /url: https://www.covers.com/account/forgotpassword
+                      - text: "?"
+              - generic:
+                - generic:
+                  - generic:
+                    - mark: or
+              - generic:
+                - generic:
+                  - text: CREATE ACCOUNT
+                  - img "Chevron"
+  - navigation [ref=e31]:
+    - button "more arrow" [ref=e32] [cursor=pointer]:
+      - img "more arrow" [ref=e34]
+    - list [ref=e35]:
+      - listitem [ref=e36]:
+        - link "NCAAB" [ref=e37] [cursor=pointer]:
+          - /url: /ncaab
+      - listitem [ref=e38]:
+        - link "Scores & Matchups" [ref=e39] [cursor=pointer]:
+          - /url: /sports/ncaab/matchups
+      - listitem [ref=e40]:
+        - link "Free Picks" [ref=e41] [cursor=pointer]:
+          - /url: https://www.covers.com/picks/ncaab
+      - listitem [ref=e42]:
+        - link "Odds" [ref=e43] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/odds
+      - listitem [ref=e44]:
+        - link "Futures" [ref=e45] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/odds/futures
+      - listitem [ref=e46]:
+        - link "News & Analysis" [ref=e47] [cursor=pointer]:
+          - /url: /ncaab/betting-news
+      - listitem [ref=e48]:
+        - link "NCAAB Contest" [ref=e49] [cursor=pointer]:
+          - /url: https://contests.covers.com/kingofcovers/league/ncaab
+      - listitem [ref=e50]:
+        - link "March Madness" [ref=e51] [cursor=pointer]:
+          - /url: /ncaab/march-madness
+      - listitem [ref=e52]:
+        - link "Injuries" [ref=e53] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/injuries
+      - listitem [ref=e54]:
+        - link "Teams" [ref=e55] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/teams
+      - listitem [ref=e56]:
+        - link "Players" [ref=e57] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/players
+      - listitem [ref=e58]:
+        - link "Standings" [ref=e59] [cursor=pointer]:
+          - /url: /sport/basketball/ncaab/standings
+  - article [ref=e61]:
+    - generic [ref=e1182]:
+      - link "Kalshi Sports Logo" [ref=e1183] [cursor=pointer]:
+        - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner
+        - img "Kalshi Sports Logo" [ref=e1184]
+      - generic [ref=e1185]:
+        - generic [ref=e1186]:
+          - generic [ref=e1187]:
+            - text: $10 Trading Bonus
+            - img "tooltip icon" [ref=e1189] [cursor=pointer]
+          - generic [ref=e1190]: "CODE: COVERS"
+        - link "Claim $10" [ref=e1191] [cursor=pointer]:
+          - /url: https://www.covers.com/betting/sportsbookredirect?slug=kalshi-sports&sportsbookId=336&lang=en&vertical=dfs&location=sponsored-banner&location=flex
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - img "UConn Huskies logo" [ref=e69]
+          - generic [ref=e70]:
+            - link "UConn" [ref=e72] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/uconn-huskies
+            - generic [ref=e73]:
+              - text: 2nd Big East
+              - text: 34-6
+        - generic [ref=e75]:
+          - img "Michigan Wolverines logo" [ref=e76]
+          - generic [ref=e77]:
+            - link "Michigan" [ref=e79] [cursor=pointer]:
+              - /url: /sport/basketball/ncaab/teams/main/michigan-wolverines
+            - generic [ref=e80]:
+              - text: 1st Big Ten
+              - text: 37-3
+        - time [ref=e83]:
+          - generic [ref=e84]: 63 FINAL 69
+          - generic [ref=e85]: Apr 06, 2026
+      - tablist [ref=e87]:
+        - tab "Stats" [ref=e88] [cursor=pointer]
+        - tab "Picks" [ref=e89] [cursor=pointer]
+        - tab "Odds" [ref=e90] [cursor=pointer]
+      - heading "UConn vs Michigan Odds" [level=1] [ref=e1692]:
+        - text: UConn vs Michigan
+        - text: Odds
+      - generic [ref=e1694]:
+        - list [ref=e1696]:
+          - listitem [ref=e1697]:
+            - button "All" [ref=e1698] [cursor=pointer]
+          - listitem [ref=e1699]:
+            - button "Game Odds" [ref=e1700] [cursor=pointer]
+          - listitem [ref=e1701]:
+            - button "Points" [ref=e1702] [cursor=pointer]
+          - listitem [ref=e1703]:
+            - button "Rebounds" [ref=e1704] [cursor=pointer]
+          - listitem [ref=e1705]:
+            - button "Assists" [ref=e1706] [cursor=pointer]
+          - listitem [ref=e1707]:
+            - button "More Props" [ref=e1708] [cursor=pointer]:
+              - generic [ref=e1709]: More Props
+              - img [ref=e1710]
+        - generic [ref=e1712]:
+          - article [ref=e1713]:
+            - generic [ref=e1714]:
+              - heading "Game Odds" [level=2] [ref=e1715]
+              - button [ref=e1716] [cursor=pointer]:
+                - img [ref=e1717]
+            - table "Game Odds UConn Huskies vs. Michigan Wolverines" [ref=e1720]:
+              - rowgroup [ref=e1721]:
+                - row "Spread Total Moneyline" [ref=e1722]:
+                  - columnheader [ref=e1723]
+                  - columnheader "Spread" [ref=e1724]
+                  - columnheader "Total" [ref=e1725]
+                  - columnheader "Moneyline" [ref=e1726]
+              - rowgroup [ref=e1727]:
+                - row "UConn Huskies logo Connecticut +7.0 -118 Thrillzz logo o144.0 -122 Thrillzz logo +270 Novig logo" [ref=e1728]:
+                  - rowheader "UConn Huskies logo Connecticut" [ref=e1729]:
+                    - link "UConn Huskies logo Connecticut" [ref=e1730] [cursor=pointer]:
+                      - /url: https://www.covers.com/sport/basketball/ncaab/teams/main/uconn-huskies
+                      - img "UConn Huskies logo" [ref=e1731]
+                      - generic [ref=e1732]: Connecticut
+                  - cell "+7.0 -118 Thrillzz logo" [ref=e1733]:
+                    - generic [ref=e1734]:
+                      - link "+7.0 -118" [ref=e1735] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                        - generic [ref=e1736]: "+7.0"
+                        - generic [ref=e1737]: "-118"
+                      - img "Thrillzz logo" [ref=e1738]
+                  - cell "o144.0 -122 Thrillzz logo" [ref=e1739]:
+                    - generic [ref=e1740]:
+                      - link "o144.0 -122" [ref=e1741] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                        - generic [ref=e1742]: o144.0
+                        - generic [ref=e1743]: "-122"
+                      - img "Thrillzz logo" [ref=e1744]
+                  - cell "+270 Novig logo" [ref=e1745]:
+                    - generic [ref=e1746]:
+                      - link "+270" [ref=e1747] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=novig&vertical=DFS
+                        - generic [ref=e1748]: "+270"
+                      - img "Novig logo" [ref=e1749]
+                - row "Michigan Wolverines logo Michigan -7.0 -122 Thrillzz logo u147.5 -116 Kalshi Sports logo -273 Novig logo" [ref=e1750]:
+                  - rowheader "Michigan Wolverines logo Michigan" [ref=e1751]:
+                    - link "Michigan Wolverines logo Michigan" [ref=e1752] [cursor=pointer]:
+                      - /url: https://www.covers.com/sport/basketball/ncaab/teams/main/michigan-wolverines
+                      - img "Michigan Wolverines logo" [ref=e1753]
+                      - generic [ref=e1754]: Michigan
+                  - cell "-7.0 -122 Thrillzz logo" [ref=e1755]:
+                    - generic [ref=e1756]:
+                      - link "-7.0 -122" [ref=e1757] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                        - generic [ref=e1758]: "-7.0"
+                        - generic [ref=e1759]: "-122"
+                      - img "Thrillzz logo" [ref=e1760]
+                  - cell "u147.5 -116 Kalshi Sports logo" [ref=e1761]:
+                    - generic [ref=e1762]:
+                      - link "u147.5 -116" [ref=e1763] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=kalshi-sports&vertical=DFS
+                        - generic [ref=e1764]: u147.5
+                        - generic [ref=e1765]: "-116"
+                      - img "Kalshi Sports logo" [ref=e1766]
+                  - cell "-273 Novig logo" [ref=e1767]:
+                    - generic [ref=e1768]:
+                      - link "-273" [ref=e1769] [cursor=pointer]:
+                        - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=novig&vertical=DFS
+                        - generic [ref=e1770]: "-273"
+                      - img "Novig logo" [ref=e1771]
+          - article [ref=e1772]:
+            - generic [ref=e1773]:
+              - heading "Spread" [level=2] [ref=e1774]
+              - button [ref=e1775] [cursor=pointer]:
+                - img [ref=e1776]
+            - generic [ref=e1778]:
+              - table "Game Odds UConn Huskies vs. Michigan Wolverines" [ref=e1779]:
+                - rowgroup [ref=e1780]:
+                  - row "CONN MICH" [ref=e1781]:
+                    - columnheader [ref=e1782]
+                    - columnheader "CONN" [ref=e1783]
+                    - columnheader "MICH" [ref=e1784]
+                - rowgroup [ref=e1785]:
+                  - row "+7.0 -118 Thrillzz logo -7.0 -122 Thrillzz logo" [ref=e1786]:
+                    - cell [ref=e1787]
+                    - cell "+7.0 -118 Thrillzz logo" [ref=e1788]:
+                      - generic [ref=e1789]:
+                        - link "+7.0 -118" [ref=e1790] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                          - generic [ref=e1791]: "+7.0"
+                          - generic [ref=e1792]: "-118"
+                        - img "Thrillzz logo" [ref=e1793]
+                    - cell "-7.0 -122 Thrillzz logo" [ref=e1794]:
+                      - generic [ref=e1795]:
+                        - link "-7.0 -122" [ref=e1796] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                          - generic [ref=e1797]: "-7.0"
+                          - generic [ref=e1798]: "-122"
+                        - img "Thrillzz logo" [ref=e1799]
+              - button "COMPARE ODDS" [ref=e1800] [cursor=pointer]:
+                - generic [ref=e1801]: COMPARE ODDS
+                - img [ref=e1802]
+          - article [ref=e1804]:
+            - generic [ref=e1805]:
+              - heading "Total" [level=2] [ref=e1806]
+              - button [ref=e1807] [cursor=pointer]:
+                - img [ref=e1808]
+            - generic [ref=e1810]:
+              - table "Game Odds vs." [ref=e1811]:
+                - rowgroup [ref=e1812]:
+                  - row "OVER UNDER" [ref=e1813]:
+                    - columnheader [ref=e1814]
+                    - columnheader "OVER" [ref=e1815]
+                    - columnheader "UNDER" [ref=e1816]
+                - rowgroup [ref=e1817]:
+                  - row "o144.0 -122 Thrillzz logo u147.5 -116 Kalshi Sports logo" [ref=e1818]:
+                    - cell [ref=e1819]
+                    - cell "o144.0 -122 Thrillzz logo" [ref=e1820]:
+                      - generic [ref=e1821]:
+                        - link "o144.0 -122" [ref=e1822] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=thrillzz&vertical=DFS
+                          - generic [ref=e1823]: o144.0
+                          - generic [ref=e1824]: "-122"
+                        - img "Thrillzz logo" [ref=e1825]
+                    - cell "u147.5 -116 Kalshi Sports logo" [ref=e1826]:
+                      - generic [ref=e1827]:
+                        - link "u147.5 -116" [ref=e1828] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=kalshi-sports&vertical=DFS
+                          - generic [ref=e1829]: u147.5
+                          - generic [ref=e1830]: "-116"
+                        - img "Kalshi Sports logo" [ref=e1831]
+              - button "COMPARE ODDS" [ref=e1832] [cursor=pointer]:
+                - generic [ref=e1833]: COMPARE ODDS
+                - img [ref=e1834]
+          - article [ref=e1836]:
+            - generic [ref=e1837]:
+              - heading "Moneyline" [level=2] [ref=e1838]
+              - button [ref=e1839] [cursor=pointer]:
+                - img [ref=e1840]
+            - generic [ref=e1842]:
+              - table "Game Odds UConn Huskies vs. Michigan Wolverines" [ref=e1843]:
+                - rowgroup [ref=e1844]:
+                  - row "CONN MICH" [ref=e1845]:
+                    - columnheader [ref=e1846]
+                    - columnheader "CONN" [ref=e1847]
+                    - columnheader "MICH" [ref=e1848]
+                - rowgroup [ref=e1849]:
+                  - row "+270 Novig logo -273 Novig logo" [ref=e1850]:
+                    - cell [ref=e1851]
+                    - cell "+270 Novig logo" [ref=e1852]:
+                      - generic [ref=e1853]:
+                        - link "+270" [ref=e1854] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=novig&vertical=DFS
+                          - generic [ref=e1855]: "+270"
+                        - img "Novig logo" [ref=e1856]
+                    - cell "-273 Novig logo" [ref=e1857]:
+                      - generic [ref=e1858]:
+                        - link "-273" [ref=e1859] [cursor=pointer]:
+                          - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=novig&vertical=DFS
+                          - generic [ref=e1860]: "-273"
+                        - img "Novig logo" [ref=e1861]
+              - button "COMPARE ODDS" [ref=e1862] [cursor=pointer]:
+                - generic [ref=e1863]: COMPARE ODDS
+                - img [ref=e1864]
+          - article [ref=e1866]:
+            - generic [ref=e1867]:
+              - heading "Points" [level=2] [ref=e1868]
+              - button [ref=e1869] [cursor=pointer]:
+                - img [ref=e1870]
+            - generic [ref=e1872]:
+              - generic [ref=e1873]:
+                - link "Nimari Burnett logo Michigan logo Nimari Burnett" [ref=e1874] [cursor=pointer]:
+                  - /url: https://www.covers.com/sport/basketball/ncaab/players/222841/nimari-burnett
+                  - generic [ref=e1875]:
+                    - generic [ref=e1876]:
+                      - img "Nimari Burnett logo" [ref=e1877]
+                      - img "Michigan logo" [ref=e1879]
+                    - generic [ref=e1881]: Nimari Burnett
+                - table "Game Odds vs." [ref=e1882]:
+                  - rowgroup [ref=e1883]:
+                    - row "OVER UNDER" [ref=e1884]:
+                      - columnheader "OVER" [ref=e1885]
+                      - columnheader "UNDER" [ref=e1886]
+                  - rowgroup [ref=e1887]:
+                    - row "o6.5 -131 ProphetX logo u6.5 -119 ProphetX logo" [ref=e1888]:
+                      - cell "o6.5 -131 ProphetX logo" [ref=e1889]:
+                        - generic [ref=e1890]:
+                          - link "o6.5 -131" [ref=e1891] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1892]: o6.5
+                            - generic [ref=e1893]: "-131"
+                          - img "ProphetX logo" [ref=e1894]
+                      - cell "u6.5 -119 ProphetX logo" [ref=e1895]:
+                        - generic [ref=e1896]:
+                          - link "u6.5 -119" [ref=e1897] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1898]: u6.5
+                            - generic [ref=e1899]: "-119"
+                          - img "ProphetX logo" [ref=e1900]
+                - button "COMPARE ODDS" [ref=e1901] [cursor=pointer]:
+                  - generic [ref=e1902]: COMPARE ODDS
+                  - img [ref=e1903]
+              - generic [ref=e1906]:
+                - link "Alex Karaban logo Connecticut logo Alex Karaban" [ref=e1907] [cursor=pointer]:
+                  - /url: https://www.covers.com/sport/basketball/ncaab/players/257485/alex-karaban
+                  - generic [ref=e1908]:
+                    - generic [ref=e1909]:
+                      - img "Alex Karaban logo" [ref=e1910]
+                      - img "Connecticut logo" [ref=e1912]
+                    - generic [ref=e1914]: Alex Karaban
+                - table "Game Odds vs." [ref=e1915]:
+                  - rowgroup [ref=e1916]:
+                    - row "OVER UNDER" [ref=e1917]:
+                      - columnheader "OVER" [ref=e1918]
+                      - columnheader "UNDER" [ref=e1919]
+                  - rowgroup [ref=e1920]:
+                    - row "o12.5 -126 ProphetX logo u12.5 -103 ProphetX logo" [ref=e1921]:
+                      - cell "o12.5 -126 ProphetX logo" [ref=e1922]:
+                        - generic [ref=e1923]:
+                          - link "o12.5 -126" [ref=e1924] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1925]: o12.5
+                            - generic [ref=e1926]: "-126"
+                          - img "ProphetX logo" [ref=e1927]
+                      - cell "u12.5 -103 ProphetX logo" [ref=e1928]:
+                        - generic [ref=e1929]:
+                          - link "u12.5 -103" [ref=e1930] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1931]: u12.5
+                            - generic [ref=e1932]: "-103"
+                          - img "ProphetX logo" [ref=e1933]
+                - button "COMPARE ODDS" [ref=e1934] [cursor=pointer]:
+                  - generic [ref=e1935]: COMPARE ODDS
+                  - img [ref=e1936]
+            - button "More Players" [ref=e1938] [cursor=pointer]:
+              - text: More Players
+              - img [ref=e1939]
+          - article [ref=e1941]:
+            - generic [ref=e1942]:
+              - heading "Rebounds" [level=2] [ref=e1943]
+              - button [ref=e1944] [cursor=pointer]:
+                - img [ref=e1945]
+            - generic [ref=e1947]:
+              - generic [ref=e1948]:
+                - link "Nimari Burnett logo Michigan logo Nimari Burnett" [ref=e1949] [cursor=pointer]:
+                  - /url: https://www.covers.com/sport/basketball/ncaab/players/222841/nimari-burnett
+                  - generic [ref=e1950]:
+                    - generic [ref=e1951]:
+                      - img "Nimari Burnett logo" [ref=e1952]
+                      - img "Michigan logo" [ref=e1954]
+                    - generic [ref=e1956]: Nimari Burnett
+                - table "Game Odds vs." [ref=e1957]:
+                  - rowgroup [ref=e1958]:
+                    - row "OVER UNDER" [ref=e1959]:
+                      - columnheader "OVER" [ref=e1960]
+                      - columnheader "UNDER" [ref=e1961]
+                  - rowgroup [ref=e1962]:
+                    - row "o3.5 +149 ProphetX logo u3.5 -147 ProphetX logo" [ref=e1963]:
+                      - cell "o3.5 +149 ProphetX logo" [ref=e1964]:
+                        - generic [ref=e1965]:
+                          - link "o3.5 +149" [ref=e1966] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1967]: o3.5
+                            - generic [ref=e1968]: "+149"
+                          - img "ProphetX logo" [ref=e1969]
+                      - cell "u3.5 -147 ProphetX logo" [ref=e1970]:
+                        - generic [ref=e1971]:
+                          - link "u3.5 -147" [ref=e1972] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e1973]: u3.5
+                            - generic [ref=e1974]: "-147"
+                          - img "ProphetX logo" [ref=e1975]
+                - button "COMPARE ODDS" [ref=e1976] [cursor=pointer]:
+                  - generic [ref=e1977]: COMPARE ODDS
+                  - img [ref=e1978]
+              - generic [ref=e1981]:
+                - link "Malachi Smith logo Connecticut logo Malachi Smith" [ref=e1982] [cursor=pointer]:
+                  - /url: https://www.covers.com/sport/basketball/ncaab/players/238504/malachi-smith
+                  - generic [ref=e1983]:
+                    - generic [ref=e1984]:
+                      - img "Malachi Smith logo" [ref=e1985]
+                      - img "Connecticut logo" [ref=e1987]
+                    - generic [ref=e1989]: Malachi Smith
+                - table "Game Odds vs." [ref=e1990]:
+                  - rowgroup [ref=e1991]:
+                    - row "OVER UNDER" [ref=e1992]:
+                      - columnheader "OVER" [ref=e1993]
+                      - columnheader "UNDER" [ref=e1994]
+                  - rowgroup [ref=e1995]:
+                    - row "o1.5 +216 ProphetX logo u1.5 -20000 ProphetX logo" [ref=e1996]:
+                      - cell "o1.5 +216 ProphetX logo" [ref=e1997]:
+                        - generic [ref=e1998]:
+                          - link "o1.5 +216" [ref=e1999] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e2000]: o1.5
+                            - generic [ref=e2001]: "+216"
+                          - img "ProphetX logo" [ref=e2002]
+                      - cell "u1.5 -20000 ProphetX logo" [ref=e2003]:
+                        - generic [ref=e2004]:
+                          - link "u1.5 -20000" [ref=e2005] [cursor=pointer]:
+                            - /url: https://www.covers.com/betting/sportsbookredirect?location=covers_prop_odds&slug=prophetx&vertical=DFS
+                            - generic [ref=e2006]: u1.5
+                            - generic [ref=e2007]: "-20000"
+                          - img "ProphetX logo" [ref=e2008]
+                - button "COMPARE ODDS" [ref=e2009] [cursor=pointer]:
+                  - generic [ref=e2010]: COMPARE ODDS
+                  - img [ref=e2011]
+            - button "More Players" [ref=e2013] [cursor=pointer]:
+              - text: More Players
+              - img [ref=e2014]
+          - article [ref=e2016]:
+            - generic [ref=e2017]:
+              - heading "Assists" [level=2] [ref=e2018]
+              - button [ref=e2019] [cursor=pointer]:
+                - img [ref=e2020]
+          - article [ref=e2023]:
+            - generic [ref=e2024]:
+              - heading "Made 3 Point Shots" [level=2] [ref=e2025]
+              - button [ref=e2026] [cursor=pointer]:
+                - img [ref=e2027]
+          - article [ref=e2030]:
+            - generic [ref=e2031]:
+              - heading "Blocks" [level=2] [ref=e2032]
+              - button [ref=e2033] [cursor=pointer]:
+                - img [ref=e2034]
+          - article [ref=e2037]:
+            - generic [ref=e2038]:
+              - heading "Steals" [level=2] [ref=e2039]
+              - button [ref=e2040] [cursor=pointer]:
+                - img [ref=e2041]
+          - article [ref=e2044]:
+            - generic [ref=e2045]:
+              - heading "Turnovers" [level=2] [ref=e2046]
+              - button [ref=e2047] [cursor=pointer]:
+                - img [ref=e2048]
+          - article [ref=e2051]:
+            - generic [ref=e2052]:
+              - heading "Points and Rebounds" [level=2] [ref=e2053]
+              - button [ref=e2054] [cursor=pointer]:
+                - img [ref=e2055]
+          - article [ref=e2058]:
+            - generic [ref=e2059]:
+              - heading "Points and Assists" [level=2] [ref=e2060]
+              - button [ref=e2061] [cursor=pointer]:
+                - img [ref=e2062]
+          - article [ref=e2065]:
+            - generic [ref=e2066]:
+              - heading "Rebounds and Assists" [level=2] [ref=e2067]
+              - button [ref=e2068] [cursor=pointer]:
+                - img [ref=e2069]
+          - article [ref=e2072]:
+            - generic [ref=e2073]:
+              - heading "Steals and Blocks" [level=2] [ref=e2074]
+              - button [ref=e2075] [cursor=pointer]:
+                - img [ref=e2076]
+      - generic [ref=e1046]:
+        - heading "Pages Related to This Topic" [level=2] [ref=e1047]
+        - generic [ref=e1049]:
+          - link "Michigan Sports Betting" [ref=e1051] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/usa/michigan
+          - link "Basketball Betting Sites" [ref=e1053] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/basketball-sites
+          - link "March Madness Betting Sites" [ref=e1055] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-sites
+          - link "Best Michigan Sportsbook Promotions" [ref=e1057] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/bonuses/michigan-best-bonuses-promo-codes
+          - link "Online Casinos" [ref=e1059] [cursor=pointer]:
+            - /url: https://www.covers.com/casino
+          - link "Online Slots Canada" [ref=e1061] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada/slots
+          - link "Fastest Payout Online Casinos in the US" [ref=e1063] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/payment/fast-payout
+          - link "Fastest Payout Online Casinos in Canada" [ref=e1065] [cursor=pointer]:
+            - /url: https://www.covers.com/casino/canada/payment/fast-payout
+          - link "March Madness Betting Promos" [ref=e1067] [cursor=pointer]:
+            - /url: https://www.covers.com/betting/march-madness-promos
+    - complementary [ref=e1068]:
+      - generic [ref=e1069]:
+        - generic [ref=e1070]:
+          - heading "Know Who'll Cover Between:" [level=2] [ref=e1072]
+          - paragraph [ref=e1073]: Connecticut -vs- Michigan?
+          - generic [ref=e1644]:
+            - generic [ref=e1645]:
+              - link "Kalshi Sports" [ref=e1646] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?sportsbookId=336&slug=kalshi-sports&location=widgets
+                - img "Kalshi Sports" [ref=e1647]
+              - generic [ref=e1649]:
+                - text: $10 Trading Bonus
+                - img [ref=e1651] [cursor=pointer]
+              - link "Review" [ref=e1653] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/reviews/kalshi-sports
+            - generic [ref=e1654]:
+              - link "Polymarket" [ref=e1655] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?sportsbookId=403&slug=polymarket&location=widgets
+                - img "Polymarket" [ref=e1656]
+              - generic [ref=e1658]:
+                - text: Deposit $10, Get $20 Trading Bonus
+                - img [ref=e1660] [cursor=pointer]
+              - link "Review" [ref=e1662] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/reviews/polymarket
+            - generic [ref=e1663]:
+              - link "Underdog" [ref=e1664] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?sportsbookId=313&slug=underdog&location=widgets
+                - img "Underdog" [ref=e1665]
+              - generic [ref=e1667]:
+                - text: Play $5, Get $50 in Bonus Entries
+                - img [ref=e1669] [cursor=pointer]
+              - link "Review" [ref=e1671] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/reviews/underdog
+            - generic [ref=e1672]:
+              - link "Novig" [ref=e1673] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?sportsbookId=285&slug=novig&location=widgets
+                - img "Novig" [ref=e1674]
+              - generic [ref=e1676]:
+                - text: Up to $100 Bonus
+                - img [ref=e1678] [cursor=pointer]
+              - link "Review" [ref=e1680] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/reviews/novig
+            - generic [ref=e1681]:
+              - link "DraftKings Pick6" [ref=e1682] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/sportsbookredirect?sportsbookId=318&slug=draftkings-pick6&location=widgets
+                - img "DraftKings Pick6" [ref=e1683]
+              - generic [ref=e1685]:
+                - text: Play $5, Get $50 Instantly in Bonus Picks
+                - img [ref=e1687] [cursor=pointer]
+              - link "Review" [ref=e1689] [cursor=pointer]:
+                - /url: https://www.covers.com/betting/reviews/draftkings-pick6
+            - link "See More" [ref=e1691] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/reviews
+        - generic [ref=e1074]:
+          - generic [ref=e1075]:
+            - heading "News & Analysis" [level=2] [ref=e1076]
+            - link "More News" [ref=e1077] [cursor=pointer]:
+              - /url: https://www.covers.com/ncaab
+          - generic [ref=e1079]:
+            - generic [ref=e1080]:
+              - 'img "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1081]'
+              - 'link "March Madness Player Props: Picks, Odds & Betting Strategy" [ref=e1082] [cursor=pointer]':
+                - /url: /ncaab/march-madness/props
+            - generic [ref=e1083]:
+              - 'img "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1084]'
+              - 'link "Women’s College Basketball Odds 2027: UConn Leads Early Championship Market" [ref=e1085] [cursor=pointer]':
+                - /url: /ncaab/womens-march-madness-odds
+            - generic [ref=e1086]:
+              - 'img "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1087]'
+              - 'link "March Madness Bracket: NCAA Tournament Bracket, Schedule & Daily Updates" [ref=e1088] [cursor=pointer]':
+                - /url: /ncaab/march-madness/bracket
+  - contentinfo [ref=e1089]:
+    - generic [ref=e1091]:
+      - generic [ref=e1092]:
+        - generic [ref=e1094]:
+          - generic [ref=e1095]:
+            - link "About Us" [ref=e1097] [cursor=pointer]:
+              - /url: https://www.covers.com/about
+            - link "Contact Us" [ref=e1098] [cursor=pointer]:
+              - /url: https://www.covers.com/contact
+            - link "Careers" [ref=e1099] [cursor=pointer]:
+              - /url: https://www.covers.com/careers
+            - link "Our Team" [ref=e1100] [cursor=pointer]:
+              - /url: https://www.covers.com/writers
+            - link "Brand" [ref=e1101] [cursor=pointer]:
+              - /url: https://www.covers.com/brand
+            - link "Testimonials" [ref=e1102] [cursor=pointer]:
+              - /url: https://www.covers.com/testimonials
+          - generic [ref=e1103]:
+            - link "Betting Guides" [ref=e1105] [cursor=pointer]:
+              - /url: https://www.covers.com/guides
+            - link "Sportsbook Reviews" [ref=e1106] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/reviews
+            - link "Sports Betting News" [ref=e1107] [cursor=pointer]:
+              - /url: https://www.covers.com/betting-news
+            - link "Podcasts" [ref=e1108] [cursor=pointer]:
+              - /url: https://www.covers.com/podcasts
+            - link "Responsible Gaming" [ref=e1109] [cursor=pointer]:
+              - /url: https://www.covers.com/guides/help
+          - generic [ref=e1110]:
+            - link "Betting Sites" [ref=e1112] [cursor=pointer]:
+              - /url: https://www.covers.com/betting
+            - link "Canada Betting Sites" [ref=e1113] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/canada
+            - link "Canada Casinos" [ref=e1114] [cursor=pointer]:
+              - /url: https://www.covers.com/casino/canada
+            - link "Best Betting Apps" [ref=e1115] [cursor=pointer]:
+              - /url: https://www.covers.com/betting/best-betting-apps
+          - generic [ref=e1116]:
+            - link "Contests" [ref=e1118] [cursor=pointer]:
+              - /url: https://contests.covers.com
+            - link "Streak Survivor" [ref=e1119] [cursor=pointer]:
+              - /url: https://contests.covers.com/survivor
+            - link "King of Covers" [ref=e1120] [cursor=pointer]:
+              - /url: https://contests.covers.com/kingofcovers
+            - link "Office Pools" [ref=e1121] [cursor=pointer]:
+              - /url: https://contests.covers.com/officepools
+        - generic [ref=e1123]:
+          - generic [ref=e1124]: The Covers community has
+          - generic [ref=e1125]: 810,221
+          - generic [ref=e1126]: lifetime members worldwide
+          - link "Join our community today" [ref=e1128] [cursor=pointer]:
+            - /url: https://www.covers.com/forum
+      - generic [ref=e1132]:
+        - generic [ref=e1133]:
+          - img "Covers 30 Years Logo" [ref=e1134]
+          - generic [ref=e1135]:
+            - text: Established in 1995,
+            - text: Covers is the world
+            - text: leader in sports
+            - text: betting information.
+        - link "21+ Gambling problem? Call 1-800-GAMBLER" [ref=e1137] [cursor=pointer]:
+          - /url: https://www.covers.com/guides/help
+          - generic [ref=e1138]:
+            - generic [ref=e1139]: 21+
+            - generic [ref=e1140]: Gambling problem? Call 1-800-GAMBLER
+      - generic [ref=e1144]:
+        - generic [ref=e1145]:
+          - link "Site Map" [ref=e1146] [cursor=pointer]:
+            - /url: https://www.covers.com/sitemap
+          - link "Help" [ref=e1147] [cursor=pointer]:
+            - /url: https://www.covers.com/help
+          - link "Privacy" [ref=e1148] [cursor=pointer]:
+            - /url: https://www.covers.com/privacy
+          - link "Terms of Service" [ref=e1149] [cursor=pointer]:
+            - /url: https://www.covers.com/terms
+        - generic [ref=e1150]:
+          - link "youtube logo" [ref=e1151] [cursor=pointer]:
+            - /url: https://www.youtube.com/channel/UCwy_kTt8FLKUDyCKIyoqHnw
+            - img "youtube logo" [ref=e1152]
+          - link "facebook logo" [ref=e1153] [cursor=pointer]:
+            - /url: https://www.facebook.com/CoversSports/
+            - img "facebook logo" [ref=e1154]
+          - link "twitter logo" [ref=e1155] [cursor=pointer]:
+            - /url: https://twitter.com/Covers
+            - img "twitter logo" [ref=e1156]
+          - link "instagram logo" [ref=e1157] [cursor=pointer]:
+            - /url: https://www.instagram.com/covers_sports/
+            - img "instagram logo" [ref=e1158]
+          - link "linkedin logo" [ref=e1159] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/2632327/
+            - img "linkedin logo" [ref=e1160]
+          - link "google news logo" [ref=e1161] [cursor=pointer]:
+            - /url: https://news.google.com/publications/CAAqBwgKMMLXlwsw9ICvAw?hl=en-US&gl=US&ceid=US%3Aen
+            - img "google news logo" [ref=e1162]
+    - generic [ref=e1164]:
+      - generic [ref=e1169]:
+        - text: "Covers is verified safe by:"
+        - img "Evalon Logo" [ref=e1170]
+        - link "GPWA Logo" [ref=e1171] [cursor=pointer]:
+          - /url: https://certify.gpwa.org/verify/covers.com
+          - img "GPWA Logo" [ref=e1172]
+        - img "GDPR Logo" [ref=e1173]
+        - img "GeoTrust Logo" [ref=e1174]
+        - img "Evalon Logo" [ref=e1175]
+      - generic [ref=e1176]:
+        - img "Covers Logo" [ref=e1178]
+        - generic [ref=e1179]:
+          - text: Copyright © 1995 - 2026 CS Media Limited All Rights Reserved.
+          - paragraph [ref=e1180]: If you choose to make use of any information on this website including online sports betting services from any websites that may be featured on this website, we strongly recommend that you carefully check your local laws before doing so.It is your sole responsibility to understand your local laws and observe them strictly.Covers does not provide any advice or guidance as to the legality of online sports betting or other online gambling activities within your jurisdiction and you are responsible for complying with laws that are applicable to you in your relevant locality.Covers disclaims all liability associated with your use of this website and use of any information contained on it.As a condition of using this website, you agree to hold the owner of this website harmless from any claims arising from your use of any services on any third party website that may be featured by Covers.
+  - iframe [ref=e1181]:
+    
+  - img

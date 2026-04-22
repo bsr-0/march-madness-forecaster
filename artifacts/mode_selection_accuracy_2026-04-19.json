@@ -1,0 +1,703 @@
+{
+  "description": "Mode \u00d7 selection criterion end-to-end accuracy",
+  "timestamp": "2026-04-20T04:18:41Z",
+  "config": {
+    "n_brackets": 50,
+    "n_tournaments": 20000,
+    "n_opponents": 200,
+    "decay": 0.85,
+    "scoring": "team_identity"
+  },
+  "per_year": {
+    "2011": {
+      "torvik": {
+        "best_of_50": 660.0,
+        "random_avg": 464.2,
+        "median_pick_idx": 42,
+        "median_pick_score": 530.0,
+        "median_pick_within": 10,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 530.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 530.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 660.0,
+        "random_avg": 466.2,
+        "median_pick_idx": 15,
+        "median_pick_score": 470.0,
+        "median_pick_within": 21,
+        "mean_pick_idx": 15,
+        "mean_pick_score": 470.0,
+        "p90_pick_idx": 36,
+        "p90_pick_score": 390.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 710.0,
+        "random_avg": 466.4,
+        "median_pick_idx": 11,
+        "median_pick_score": 470.0,
+        "median_pick_within": 18,
+        "mean_pick_idx": 11,
+        "mean_pick_score": 470.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 470.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 680.0,
+        "random_avg": 484.2,
+        "median_pick_idx": 7,
+        "median_pick_score": 520.0,
+        "median_pick_within": 14,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 520.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 520.0
+      }
+    },
+    "2012": {
+      "torvik": {
+        "best_of_50": 1550.0,
+        "random_avg": 927.4,
+        "median_pick_idx": 42,
+        "median_pick_score": 1300.0,
+        "median_pick_within": 9,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1300.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 1300.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1410.0,
+        "random_avg": 865.2,
+        "median_pick_idx": 45,
+        "median_pick_score": 830.0,
+        "median_pick_within": 26,
+        "mean_pick_idx": 45,
+        "mean_pick_score": 830.0,
+        "p90_pick_idx": 45,
+        "p90_pick_score": 830.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1440.0,
+        "random_avg": 853.8,
+        "median_pick_idx": 25,
+        "median_pick_score": 620.0,
+        "median_pick_within": 39,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 620.0,
+        "p90_pick_idx": 25,
+        "p90_pick_score": 620.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1310.0,
+        "random_avg": 821.2,
+        "median_pick_idx": 42,
+        "median_pick_score": 1120.0,
+        "median_pick_within": 9,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1120.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 1120.0
+      }
+    },
+    "2013": {
+      "torvik": {
+        "best_of_50": 1270.0,
+        "random_avg": 672.2,
+        "median_pick_idx": 49,
+        "median_pick_score": 630.0,
+        "median_pick_within": 22,
+        "mean_pick_idx": 49,
+        "mean_pick_score": 630.0,
+        "p90_pick_idx": 49,
+        "p90_pick_score": 630.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1440.0,
+        "random_avg": 730.0,
+        "median_pick_idx": 13,
+        "median_pick_score": 820.0,
+        "median_pick_within": 13,
+        "mean_pick_idx": 43,
+        "mean_pick_score": 590.0,
+        "p90_pick_idx": 17,
+        "p90_pick_score": 1240.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1520.0,
+        "random_avg": 749.6,
+        "median_pick_idx": 25,
+        "median_pick_score": 1100.0,
+        "median_pick_within": 6,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 1100.0,
+        "p90_pick_idx": 25,
+        "p90_pick_score": 1100.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1180.0,
+        "random_avg": 669.0,
+        "median_pick_idx": 26,
+        "median_pick_score": 560.0,
+        "median_pick_within": 26,
+        "mean_pick_idx": 26,
+        "mean_pick_score": 560.0,
+        "p90_pick_idx": 26,
+        "p90_pick_score": 560.0
+      }
+    },
+    "2014": {
+      "torvik": {
+        "best_of_50": 750.0,
+        "random_avg": 541.8,
+        "median_pick_idx": 42,
+        "median_pick_score": 660.0,
+        "median_pick_within": 9,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 660.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 660.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 770.0,
+        "random_avg": 542.4,
+        "median_pick_idx": 7,
+        "median_pick_score": 450.0,
+        "median_pick_within": 43,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 450.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 450.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 780.0,
+        "random_avg": 527.0,
+        "median_pick_idx": 12,
+        "median_pick_score": 630.0,
+        "median_pick_within": 8,
+        "mean_pick_idx": 12,
+        "mean_pick_score": 630.0,
+        "p90_pick_idx": 12,
+        "p90_pick_score": 630.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 820.0,
+        "random_avg": 557.6,
+        "median_pick_idx": 13,
+        "median_pick_score": 660.0,
+        "median_pick_within": 5,
+        "mean_pick_idx": 13,
+        "mean_pick_score": 660.0,
+        "p90_pick_idx": 3,
+        "p90_pick_score": 750.0
+      }
+    },
+    "2015": {
+      "torvik": {
+        "best_of_50": 1420.0,
+        "random_avg": 818.2,
+        "median_pick_idx": 16,
+        "median_pick_score": 1310.0,
+        "median_pick_within": 3,
+        "mean_pick_idx": 23,
+        "mean_pick_score": 1420.0,
+        "p90_pick_idx": 16,
+        "p90_pick_score": 1310.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1570.0,
+        "random_avg": 859.8,
+        "median_pick_idx": 25,
+        "median_pick_score": 1020.0,
+        "median_pick_within": 10,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 1020.0,
+        "p90_pick_idx": 0,
+        "p90_pick_score": 1040.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1390.0,
+        "random_avg": 826.2,
+        "median_pick_idx": 11,
+        "median_pick_score": 910.0,
+        "median_pick_within": 16,
+        "mean_pick_idx": 11,
+        "mean_pick_score": 910.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 910.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1490.0,
+        "random_avg": 842.0,
+        "median_pick_idx": 7,
+        "median_pick_score": 1490.0,
+        "median_pick_within": 1,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 1490.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 1490.0
+      }
+    },
+    "2016": {
+      "torvik": {
+        "best_of_50": 1430.0,
+        "random_avg": 708.8,
+        "median_pick_idx": 13,
+        "median_pick_score": 770.0,
+        "median_pick_within": 15,
+        "mean_pick_idx": 13,
+        "mean_pick_score": 770.0,
+        "p90_pick_idx": 13,
+        "p90_pick_score": 770.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1420.0,
+        "random_avg": 688.4,
+        "median_pick_idx": 39,
+        "median_pick_score": 600.0,
+        "median_pick_within": 26,
+        "mean_pick_idx": 39,
+        "mean_pick_score": 600.0,
+        "p90_pick_idx": 5,
+        "p90_pick_score": 630.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1310.0,
+        "random_avg": 715.2,
+        "median_pick_idx": 11,
+        "median_pick_score": 790.0,
+        "median_pick_within": 17,
+        "mean_pick_idx": 11,
+        "mean_pick_score": 790.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 790.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1520.0,
+        "random_avg": 685.6,
+        "median_pick_idx": 6,
+        "median_pick_score": 720.0,
+        "median_pick_within": 15,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 700.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 700.0
+      }
+    },
+    "2017": {
+      "torvik": {
+        "best_of_50": 1370.0,
+        "random_avg": 798.2,
+        "median_pick_idx": 42,
+        "median_pick_score": 1130.0,
+        "median_pick_within": 6,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1130.0,
+        "p90_pick_idx": 4,
+        "p90_pick_score": 610.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1460.0,
+        "random_avg": 710.6,
+        "median_pick_idx": 36,
+        "median_pick_score": 1460.0,
+        "median_pick_within": 1,
+        "mean_pick_idx": 36,
+        "mean_pick_score": 1460.0,
+        "p90_pick_idx": 36,
+        "p90_pick_score": 1460.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1290.0,
+        "random_avg": 782.8,
+        "median_pick_idx": 11,
+        "median_pick_score": 1250.0,
+        "median_pick_within": 3,
+        "mean_pick_idx": 11,
+        "mean_pick_score": 1250.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 1250.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1300.0,
+        "random_avg": 797.0,
+        "median_pick_idx": 7,
+        "median_pick_score": 1220.0,
+        "median_pick_within": 5,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 1220.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 1220.0
+      }
+    },
+    "2018": {
+      "torvik": {
+        "best_of_50": 1130.0,
+        "random_avg": 623.2,
+        "median_pick_idx": 42,
+        "median_pick_score": 1120.0,
+        "median_pick_within": 2,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1120.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 1120.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1110.0,
+        "random_avg": 645.4,
+        "median_pick_idx": 8,
+        "median_pick_score": 640.0,
+        "median_pick_within": 26,
+        "mean_pick_idx": 8,
+        "mean_pick_score": 640.0,
+        "p90_pick_idx": 8,
+        "p90_pick_score": 640.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1220.0,
+        "random_avg": 683.4,
+        "median_pick_idx": 25,
+        "median_pick_score": 1220.0,
+        "median_pick_within": 1,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 1220.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 600.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1250.0,
+        "random_avg": 643.0,
+        "median_pick_idx": 5,
+        "median_pick_score": 1250.0,
+        "median_pick_within": 1,
+        "mean_pick_idx": 5,
+        "mean_pick_score": 1250.0,
+        "p90_pick_idx": 5,
+        "p90_pick_score": 1250.0
+      }
+    },
+    "2019": {
+      "torvik": {
+        "best_of_50": 1670.0,
+        "random_avg": 882.0,
+        "median_pick_idx": 42,
+        "median_pick_score": 1220.0,
+        "median_pick_within": 10,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1220.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 1220.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1360.0,
+        "random_avg": 831.0,
+        "median_pick_idx": 13,
+        "median_pick_score": 960.0,
+        "median_pick_within": 10,
+        "mean_pick_idx": 27,
+        "mean_pick_score": 820.0,
+        "p90_pick_idx": 27,
+        "p90_pick_score": 820.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1370.0,
+        "random_avg": 887.8,
+        "median_pick_idx": 1,
+        "median_pick_score": 1110.0,
+        "median_pick_within": 15,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 780.0,
+        "p90_pick_idx": 1,
+        "p90_pick_score": 1110.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1460.0,
+        "random_avg": 912.4,
+        "median_pick_idx": 5,
+        "median_pick_score": 1260.0,
+        "median_pick_within": 8,
+        "mean_pick_idx": 13,
+        "mean_pick_score": 1290.0,
+        "p90_pick_idx": 5,
+        "p90_pick_score": 1260.0
+      }
+    },
+    "2021": {
+      "torvik": {
+        "best_of_50": 1420.0,
+        "random_avg": 816.4,
+        "median_pick_idx": 42,
+        "median_pick_score": 1070.0,
+        "median_pick_within": 5,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 1070.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 1070.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1310.0,
+        "random_avg": 847.6,
+        "median_pick_idx": 26,
+        "median_pick_score": 920.0,
+        "median_pick_within": 21,
+        "mean_pick_idx": 26,
+        "mean_pick_score": 920.0,
+        "p90_pick_idx": 8,
+        "p90_pick_score": 840.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1230.0,
+        "random_avg": 822.4,
+        "median_pick_idx": 25,
+        "median_pick_score": 830.0,
+        "median_pick_within": 24,
+        "mean_pick_idx": 25,
+        "mean_pick_score": 830.0,
+        "p90_pick_idx": 25,
+        "p90_pick_score": 830.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1420.0,
+        "random_avg": 818.0,
+        "median_pick_idx": 7,
+        "median_pick_score": 1000.0,
+        "median_pick_within": 12,
+        "mean_pick_idx": 7,
+        "mean_pick_score": 1000.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 1000.0
+      }
+    },
+    "2022": {
+      "torvik": {
+        "best_of_50": 1070.0,
+        "random_avg": 589.0,
+        "median_pick_idx": 42,
+        "median_pick_score": 760.0,
+        "median_pick_within": 6,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 760.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 760.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1300.0,
+        "random_avg": 646.2,
+        "median_pick_idx": 8,
+        "median_pick_score": 550.0,
+        "median_pick_within": 31,
+        "mean_pick_idx": 8,
+        "mean_pick_score": 550.0,
+        "p90_pick_idx": 8,
+        "p90_pick_score": 550.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1310.0,
+        "random_avg": 627.0,
+        "median_pick_idx": 22,
+        "median_pick_score": 630.0,
+        "median_pick_within": 17,
+        "mean_pick_idx": 22,
+        "mean_pick_score": 630.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 600.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1230.0,
+        "random_avg": 634.4,
+        "median_pick_idx": 5,
+        "median_pick_score": 1060.0,
+        "median_pick_within": 4,
+        "mean_pick_idx": 5,
+        "mean_pick_score": 1060.0,
+        "p90_pick_idx": 5,
+        "p90_pick_score": 1060.0
+      }
+    },
+    "2023": {
+      "torvik": {
+        "best_of_50": 1130.0,
+        "random_avg": 567.4,
+        "median_pick_idx": 42,
+        "median_pick_score": 650.0,
+        "median_pick_within": 8,
+        "mean_pick_idx": 42,
+        "mean_pick_score": 650.0,
+        "p90_pick_idx": 42,
+        "p90_pick_score": 650.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1180.0,
+        "random_avg": 636.8,
+        "median_pick_idx": 8,
+        "median_pick_score": 650.0,
+        "median_pick_within": 17,
+        "mean_pick_idx": 49,
+        "mean_pick_score": 520.0,
+        "p90_pick_idx": 49,
+        "p90_pick_score": 520.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1230.0,
+        "random_avg": 601.4,
+        "median_pick_idx": 14,
+        "median_pick_score": 640.0,
+        "median_pick_within": 17,
+        "mean_pick_idx": 14,
+        "mean_pick_score": 640.0,
+        "p90_pick_idx": 14,
+        "p90_pick_score": 640.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1280.0,
+        "random_avg": 554.2,
+        "median_pick_idx": 0,
+        "median_pick_score": 590.0,
+        "median_pick_within": 14,
+        "mean_pick_idx": 0,
+        "mean_pick_score": 590.0,
+        "p90_pick_idx": 0,
+        "p90_pick_score": 590.0
+      }
+    },
+    "2024": {
+      "torvik": {
+        "best_of_50": 1400.0,
+        "random_avg": 821.4,
+        "median_pick_idx": 17,
+        "median_pick_score": 1360.0,
+        "median_pick_within": 3,
+        "mean_pick_idx": 17,
+        "mean_pick_score": 1360.0,
+        "p90_pick_idx": 9,
+        "p90_pick_score": 680.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1370.0,
+        "random_avg": 806.0,
+        "median_pick_idx": 8,
+        "median_pick_score": 710.0,
+        "median_pick_within": 28,
+        "mean_pick_idx": 8,
+        "mean_pick_score": 710.0,
+        "p90_pick_idx": 8,
+        "p90_pick_score": 710.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1510.0,
+        "random_avg": 895.4,
+        "median_pick_idx": 14,
+        "median_pick_score": 970.0,
+        "median_pick_within": 17,
+        "mean_pick_idx": 14,
+        "mean_pick_score": 970.0,
+        "p90_pick_idx": 14,
+        "p90_pick_score": 970.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1500.0,
+        "random_avg": 774.6,
+        "median_pick_idx": 5,
+        "median_pick_score": 1500.0,
+        "median_pick_within": 1,
+        "mean_pick_idx": 5,
+        "mean_pick_score": 1500.0,
+        "p90_pick_idx": 5,
+        "p90_pick_score": 1500.0
+      }
+    },
+    "2025": {
+      "torvik": {
+        "best_of_50": 1460.0,
+        "random_avg": 972.2,
+        "median_pick_idx": 9,
+        "median_pick_score": 1160.0,
+        "median_pick_within": 9,
+        "mean_pick_idx": 9,
+        "mean_pick_score": 1160.0,
+        "p90_pick_idx": 9,
+        "p90_pick_score": 1160.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1530.0,
+        "random_avg": 978.8,
+        "median_pick_idx": 8,
+        "median_pick_score": 1140.0,
+        "median_pick_within": 11,
+        "mean_pick_idx": 8,
+        "mean_pick_score": 1140.0,
+        "p90_pick_idx": 8,
+        "p90_pick_score": 1140.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1540.0,
+        "random_avg": 1036.4,
+        "median_pick_idx": 27,
+        "median_pick_score": 1400.0,
+        "median_pick_within": 4,
+        "mean_pick_idx": 30,
+        "mean_pick_score": 1170.0,
+        "p90_pick_idx": 30,
+        "p90_pick_score": 1170.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1760.0,
+        "random_avg": 950.4,
+        "median_pick_idx": 5,
+        "median_pick_score": 1680.0,
+        "median_pick_within": 2,
+        "mean_pick_idx": 19,
+        "mean_pick_score": 1280.0,
+        "p90_pick_idx": 7,
+        "p90_pick_score": 1260.0
+      }
+    },
+    "2026": {
+      "torvik": {
+        "best_of_50": 1490.0,
+        "random_avg": 961.2,
+        "median_pick_idx": 13,
+        "median_pick_score": 900.0,
+        "median_pick_within": 25,
+        "mean_pick_idx": 13,
+        "mean_pick_score": 900.0,
+        "p90_pick_idx": 13,
+        "p90_pick_score": 900.0
+      },
+      "champ_first_tv": {
+        "best_of_50": 1380.0,
+        "random_avg": 859.8,
+        "median_pick_idx": 48,
+        "median_pick_score": 760.0,
+        "median_pick_within": 32,
+        "mean_pick_idx": 48,
+        "mean_pick_score": 760.0,
+        "p90_pick_idx": 48,
+        "p90_pick_score": 760.0
+      },
+      "f4_first_tv": {
+        "best_of_50": 1390.0,
+        "random_avg": 906.2,
+        "median_pick_idx": 11,
+        "median_pick_score": 1020.0,
+        "median_pick_within": 16,
+        "mean_pick_idx": 11,
+        "mean_pick_score": 1020.0,
+        "p90_pick_idx": 11,
+        "p90_pick_score": 1020.0
+      },
+      "e8_first_tv": {
+        "best_of_50": 1590.0,
+        "random_avg": 896.0,
+        "median_pick_idx": 5,
+        "median_pick_score": 770.0,
+        "median_pick_within": 28,
+        "mean_pick_idx": 31,
+        "mean_pick_score": 1290.0,
+        "p90_pick_idx": 31,
+        "p90_pick_score": 1290.0
+      }
+    }
+  }
+}

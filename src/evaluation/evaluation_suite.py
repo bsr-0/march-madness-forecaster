@@ -376,7 +376,7 @@ def simulate_bracket_ev(
     model_brackets: List[Dict[str, Any]],
     pick_distribution: Optional[Dict[str, Dict[str, float]]] = None,
     pool_size: int = 100,
-    n_tournaments: int = 5000,  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
+    n_tournaments: int = 20000,  # rank-stable across seeds at 20K; see rank_stability_check
     n_opponents: int = 200,
     noise_std: float = 0.16,
     scoring_system: Optional[Dict[str, int]] = None,

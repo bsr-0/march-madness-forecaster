@@ -39,7 +39,7 @@ The MC ranker's #1 pick beats the pool winner in only 1 of 12 mode×year combina
 
 ## Blind Spots from Peer Review
 
-- **The opponent field is observable (flagged by 3/3 reviewers).** In a ~30-person ESPN pool, competitors' brackets are visible via the ESPN group page before lock. None of the 5 advisors mentioned using actual opponent bracket data to compute true differential EV. This is the highest-leverage signal available and is practically achievable. The system already has pool_hist_results.json with 4 years of actual opponent brackets and a Tavily MCP server registered for opponent-intelligence workflows.
+- **~~The opponent field is observable (flagged by 3/3 reviewers).~~** **CORRECTED 2026-04-19: ESPN Tournament Challenge pools do NOT show opponent brackets before lock.** Picks are private until the tournament starts. All 3 reviewers and 5 advisors were wrong on this factual claim. The observed-opponent ranking mode built in response is valuable for retroactive validation (post-tournament) and for diagnosing that opponent-sampling variance is the dominant instability source, but it cannot be used for pre-submission selection. Production must use synthetic opponents (ESPN national 60/30/10).
 - **The distribution of losses is informative (flagged by 1/3 reviewers).** Did losing brackets lose by being too chalky or by picking the wrong upset? That distinction drives the fix but no advisor examined it.
 
 ## Load-Bearing Assumptions

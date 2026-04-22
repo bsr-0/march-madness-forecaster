@@ -461,7 +461,7 @@ def _rerank_brackets_by_p1st(
     opponent_picks,
     pool_size,
     rng_seed=2027,
-    n_tournaments=5000,
+    n_tournaments=20000,
 ):
     """Populate ``win_probability`` on each bracket and sort by P(1st) desc.
 
@@ -592,7 +592,7 @@ def _run_det_construction(
             pick_distribution=opponent_picks,
             seeds=seeds,
             n_opponents=pool_size - 1,
-            n_tournaments=5000,
+            n_tournaments=20000,
             rng=rng,
         )
 
@@ -751,7 +751,7 @@ def _run_auto_mode(
             pick_distribution=opponent_picks,
             seeds=seeds,
             n_opponents=pool_size - 1,
-            n_tournaments=5000,
+            n_tournaments=20000,
             rng=rng,
         )
 
