@@ -1549,6 +1549,11 @@ class HoldoutEvaluator:
                         _v[52] = _mf["market_implied_prob"]
                         _v[53] = _mf["market_spread"]
 
+                # Feature-group ablation for A/B testing.
+                from ...data.features.ablation import apply_ablation
+                apply_ablation(v1, config)
+                apply_ablation(v2, config)
+
                 vec = IncrementalMetricsEngine.build_matchup_vector(
                     v1,
                     v2,
@@ -1740,6 +1745,11 @@ class HoldoutEvaluator:
                     _mf = _ctmf(_tid, tournament_cutoff, _ho_odds_by_team.get(_tid, []))
                     _v[52] = _mf["market_implied_prob"]
                     _v[53] = _mf["market_spread"]
+
+            # Feature-group ablation for A/B testing.
+            from ...data.features.ablation import apply_ablation
+            apply_ablation(v1, config)
+            apply_ablation(v2, config)
 
             vec = IncrementalMetricsEngine.build_matchup_vector(
                 v1,

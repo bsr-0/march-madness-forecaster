@@ -872,6 +872,14 @@ class SOTAPipelineConfig:
     vegas_anchor_sigma: float = 13.5  # Spread-to-probability sigma for Vegas lines
     use_market_features: bool = False  # Add market-implied features to training vectors (for A/B testing)
 
+    # Feature-group ablation flags (for LOYO A/B testing).
+    # Set True to zero out the feature group. Default False = features active.
+    ablate_elo: bool = False              # index 29 (elo_rating)
+    ablate_massey: bool = False           # Massey composite + multi-system features
+    ablate_conf_tourney: bool = False     # indices 46-48
+    ablate_late_season: bool = False      # indices 49-51
+    ablate_market: bool = False           # indices 52-53 (also requires use_market_features=True to populate)
+
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0
     enable_budget_degradation: bool = True

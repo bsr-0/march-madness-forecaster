@@ -494,6 +494,11 @@ def _load_year_samples_incremental_core(
             _mc1 = _mc2 = _ms1 = _ms2 = float("nan")
             _mm1 = _mm2 = None
 
+        # Massey ablation: zero out before vector construction.
+        if getattr(config, "ablate_massey", False):
+            _mc1 = _mc2 = _ms1 = _ms2 = float("nan")
+            _mm1 = _mm2 = None
+
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
             m1,
             seed=seed1,
@@ -522,6 +527,11 @@ def _load_year_samples_incremental_core(
                 _mf = compute_team_market_features(_tid, g.game_date, unified_odds_by_team.get(_tid, []))
                 _v[52] = _mf["market_implied_prob"]
                 _v[53] = _mf["market_spread"]
+
+        # Feature-group ablation for A/B testing.
+        from ...data.features.ablation import apply_ablation
+        apply_ablation(v1, config)
+        apply_ablation(v2, config)
 
         matchup = IncrementalMetricsEngine.build_matchup_vector(
             v1,
