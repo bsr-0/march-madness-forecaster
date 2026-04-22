@@ -10,7 +10,7 @@ def _default_year() -> int:
     return datetime.date.today().year
 
 from ..pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
-from ..governance.production_validator import ProductionValidationError
+from ..governance import ProductionValidationError
 
 
 def _resolve_multi_year_dir(raw_value):
