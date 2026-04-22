@@ -101,28 +101,127 @@ class InjuryReportScraper:
 
         if isinstance(teams_data, dict):
             for team_id, team_block in teams_data.items():
-                team_report = self._parse_team_block(
-                    team_id, team_block, source, report_date
-                )
+                team_report = self._parse_team_block(team_id, team_block, source, report_date)
                 reports[team_id] = team_report
         elif isinstance(teams_data, list):
             for team_block in teams_data:
                 team_id = team_block.get("team_id", "")
                 if not team_id:
                     continue
-                team_report = self._parse_team_block(
-                    team_id, team_block, source, report_date
-                )
+                team_report = self._parse_team_block(team_id, team_block, source, report_date)
                 reports[team_id] = team_report
 
         # Validate through pydantic schemas
         try:
             from .schemas import validate_injury_reports
+
             validate_injury_reports(reports)
         except Exception as e:
             logger.warning("Injury report schema validation failed: %s", e)
 
         return reports
+
+    def fetch_from_espn(self) -> Dict[str, "TeamInjuryReport"]:
+        """
+        Fetch current injury reports from ESPN's public college basketball API.
+
+        Returns a dict of normalized_team_id -> TeamInjuryReport for every team
+        that has at least one reported injury.  ESPN only exposes *current*
+        injury data; this method always returns an empty dict for historical
+        seasons — callers must handle that case gracefully.
+
+        Results are written to ``{cache_dir}/espn_injuries_latest.json`` when
+        a cache directory is configured.
+        """
+        import requests as _requests
+
+        url = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/injuries"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        try:
+            resp = _requests.get(url, headers=headers, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:
+            logger.warning("ESPN injury API fetch failed: %s", exc)
+            return {}
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        reports: Dict[str, TeamInjuryReport] = {}
+
+        # ESPN wraps injuries inside sports → leagues → teams
+        for sport in data.get("sports", []):
+            for league in sport.get("leagues", []):
+                for team_entry in league.get("teams", []):
+                    team_info = team_entry.get("team", {})
+                    team_name = str(team_info.get("displayName") or team_info.get("name") or "").strip()
+                    if not team_name:
+                        continue
+
+                    from ..normalize import normalize_team_id as _normalize
+
+                    norm_id = _normalize(team_name)
+
+                    team_report = TeamInjuryReport(team_id=norm_id, reports=[], report_date=timestamp)
+                    for item in team_entry.get("injuries", []):
+                        if not isinstance(item, dict):
+                            continue
+                        athlete = item.get("athlete", {})
+                        player_name = str(athlete.get("displayName") or athlete.get("fullName") or "").strip()
+                        raw_status = str(item.get("status", "healthy")).strip().lower()
+                        injury_type = str((item.get("type") or {}).get("description", "")).strip().lower()
+                        expected_return = str((item.get("details") or {}).get("returnDate", "")).strip().lower()
+
+                        team_report.reports.append(
+                            InjuryReport(
+                                player_name=player_name,
+                                team_id=norm_id,
+                                status=self._normalize_status(raw_status),
+                                injury_type=injury_type,
+                                expected_return=expected_return,
+                                report_date=timestamp,
+                                source="espn",
+                            )
+                        )
+                    reports[norm_id] = team_report
+
+        if self.cache_dir and reports:
+            self._cache_espn_response(reports, timestamp)
+
+        return reports
+
+    def _cache_espn_response(self, reports: Dict[str, "TeamInjuryReport"], timestamp: str) -> None:
+        """Write ESPN injury fetch results to cache."""
+        cache_path = self.cache_dir / "espn_injuries_latest.json"
+        try:
+            payload = {
+                "timestamp": timestamp,
+                "source": "espn",
+                "teams": {
+                    tid: {
+                        "players": [
+                            {
+                                "name": r.player_name,
+                                "status": r.status.value,
+                                "injury_type": r.injury_type,
+                                "expected_return": r.expected_return,
+                            }
+                            for r in report.reports
+                        ]
+                    }
+                    for tid, report in reports.items()
+                },
+            }
+            with open(cache_path, "w") as f:
+                json.dump(payload, f, indent=2)
+            logger.info("Cached ESPN injury data: %d teams → %s", len(reports), cache_path)
+        except Exception as exc:
+            logger.warning("Failed to cache ESPN injury data: %s", exc)
 
     def _parse_team_block(
         self,
@@ -266,16 +365,12 @@ class InjurySeverityEstimator:
             return (0.0, 0.05)
 
         # Get injury type prior
-        injury_prior = INJURY_SEVERITY_PRIORS.get(
-            report.injury_type, (0.60, 0.20)
-        )
+        injury_prior = INJURY_SEVERITY_PRIORS.get(report.injury_type, (0.60, 0.20))
         base_mean, base_std = injury_prior
 
         # Adjust for return timeline
         if report.expected_return:
-            timeline_factor = RETURN_TIMELINE_FACTORS.get(
-                report.expected_return, 0.60
-            )
+            timeline_factor = RETURN_TIMELINE_FACTORS.get(report.expected_return, 0.60)
             # Blend injury type prior with timeline
             base_mean = 0.6 * base_mean + 0.4 * timeline_factor
 
@@ -316,7 +411,6 @@ class InjurySeverityEstimator:
 
         samples = self.rng.normal(mean, std, size=n_samples)
         return np.clip(samples, 0.0, 1.0)
-
 
 
 InjurySeverityModel = InjurySeverityEstimator  # backward compat alias
@@ -368,9 +462,7 @@ class PositionalDepthChart:
         results = {}
 
         for group_name, positions in POSITION_GROUPS.items():
-            group_players = [
-                p for p in roster.players if p.position in positions
-            ]
+            group_players = [p for p in roster.players if p.position in positions]
 
             # Sort by contribution
             group_players.sort(key=lambda p: p.contribution_score, reverse=True)
@@ -379,18 +471,12 @@ class PositionalDepthChart:
             backups = group_players[2:4]  # Next 2
 
             total = sum(p.contribution_score for p in group_players)
-            healthy = sum(
-                p.contribution_score * p.availability_factor for p in group_players
-            )
+            healthy = sum(p.contribution_score * p.availability_factor for p in group_players)
 
             # Depth score: ratio of backup quality to starter quality
             starter_quality = sum(p.contribution_score for p in starters)
             backup_quality = sum(p.contribution_score for p in backups)
-            depth_score = (
-                backup_quality / max(starter_quality, 0.01)
-                if starter_quality > 0
-                else 0.0
-            )
+            depth_score = backup_quality / max(starter_quality, 0.01) if starter_quality > 0 else 0.0
 
             results[group_name] = PositionGroupDepth(
                 group_name=group_name,
