@@ -74,6 +74,53 @@ Specialized agents live in `.claude/agents/<name>/`. Each is a self-contained wo
 
 The first four tools read pre-computed artifacts and work immediately. `run_pool_optimization` needs `pip install -r requirements.txt` first.
 
+## 2027 Pre-Season: Evaluate New Feature Groups
+
+**CRITICAL — Do this before the 2027 tournament (by February 2027).**
+
+Eight new features were added in April 2026 but have NOT been evaluated via LOYO yet. Run ablation experiments to determine which groups improve Brier score and pool EV before locking the 2027 production model.
+
+### Feature Groups to Evaluate
+
+| Feature Group | Indices | Config Flag | Data Source |
+|---------------|---------|-------------|-------------|
+| Conference tournament | 46-48 | `ablate_conf_tourney` | Game records (auto-computed) |
+| Late-season recency | 49-51 | `ablate_late_season` | Game records (auto-computed) |
+| Market-implied (Vegas) | 52-53 | `ablate_market` + `use_market_features=True` | `data/processed/betting_odds/unified_odds_{year}.json` |
+| Injury risk | 54 | `ablate_injury` | `data/raw/injury_reports/injuries_{year}.json` |
+
+### How to Evaluate
+
+1. **Rebuild odds data** (if not cached):
+   ```bash
+   python scripts/ingest_sbro_odds.py --all         # SBRO Excel → JSON (2008-2022)
+   python scripts/scrape_covers_odds.py --all --full-season  # Covers (2023-2027)
+   python scripts/build_unified_odds.py              # merge → unified JSON
+   ```
+
+2. **Scrape injuries** (run in mid-March before tournament):
+   ```bash
+   python scripts/scrape_injuries.py --season 2027
+   ```
+
+3. **Run LOYO with each feature group enabled/ablated**:
+   - Baseline: all new features OFF (current production behavior)
+   - Treatment A: `use_market_features=True` (adds Vegas signal)
+   - Treatment B: conf tourney + late-season ON (already on by default)
+   - Treatment C: all ON
+   - Then ablate each group individually to measure marginal impact
+
+4. **Decision gate**: Only ship feature groups that improve BSS by ≥ 0.002 in LOYO. Zero-cost features (conf tourney, late-season) can ship even with neutral BSS if they don't hurt.
+
+### Data Coverage
+
+| Source | Years | Rebuild Command |
+|--------|-------|-----------------|
+| SBRO (Excel archives) | 2008-2022 | `python scripts/ingest_sbro_odds.py --all` |
+| Covers.com (Playwright) | 2023-2027 | `python scripts/scrape_covers_odds.py --all --full-season` |
+| SBR (sbrscrape) | 2025-2027 | `python scripts/ingest_sbr_odds.py --season 2027` |
+| ESPN injuries | Current season only | `python scripts/scrape_injuries.py --season 2027` |
+
 ## Git Workflow: Rebase-Only
 
 This repo keeps a **linear history**. Every auto-merge workflow in

@@ -36,13 +36,17 @@ Step 1.1: Multi-Source Ingestion
 ├── cbbpy / sportsipy ───────▶ Game box scores + rosters
 ├── ESPN scraper ────────────▶ Public pick percentages
 ├── Kaggle CSVs ─────────────▶ Massey Ordinals, seeds, results
-└── Sports Reference ────────▶ Historical tournament outcomes
+├── Sports Reference ────────▶ Historical tournament outcomes
+├── SBRO Excel archives ─────▶ Spreads, moneylines, totals (2008-2022)
+├── Covers.com (Playwright) ─▶ Spreads, totals (2023+)
+└── ESPN injury API ─────────▶ Player injury status (current season)
 
 Step 1.2: Historical Backfill
 ├── Scrape 2008–2025 regular season games (~2,200/yr)
 ├── Scrape tournament results (63 games/yr)
 ├── Exclude 2020 (COVID, rule changes)
-└── Output: data/raw/ + data/historical/
+├── Build unified odds: scripts/build_unified_odds.py (87K+ games, 19 seasons)
+└── Output: data/raw/ + data/historical/ + data/processed/betting_odds/
 
 Step 1.3: Point-in-Time (PIT) Integrity
 ├── Tier 1 (Static):      Seed, conference — no restriction
@@ -64,22 +68,25 @@ Step 1.4: Data Contracts
 **Goal:** Domain-knowledge features, not kitchen-sink ML features.
 
 ```
-Step 2.1: Team Feature Vectors (86 dimensions)
+Step 2.1: Team Feature Vectors (55 dimensions)
 ├── Efficiency:     adj_off_eff, adj_def_eff, adj_tempo (Torvik)
-├── Four Factors:   eFG%, TO%, ORB%, FT rate (box scores)
-├── Elo:            MOV-adjusted, K=20, 0.75 season carryover
+├── Four Factors:   eFG%, TO%, ORB%, FT rate (Torvik FF overlay)
+├── Elo:            MOV-adjusted, K=38, 0.75 season carryover
 ├── Player:         RAPM, WARP, top-5 player quality (rosters)
 ├── Schedule:       SOS AdjEM, opponent quality
 ├── Momentum:       Last-10-game AdjEM trajectory
 ├── Experience:     Avg experience, roster continuity %
 ├── Volatility:     3PT variance, scoring consistency
-└── Preseason:      AP rank, preseason expectations
+├── Conf tourney:   champion flag, games played, avg margin (12-day window)
+├── Late-season:    all games in pre-tournament window (games, margin, win%)
+├── Market:         avg implied probability + avg spread from Vegas odds
+└── Injury:         injury_risk (RAPM-weighted injured player impact)
 
 Step 2.2: Matchup Construction
 ├── Diff features:   team_A - team_B for each metric
 ├── Absolute levels:  avg(team_A, team_B) for context features
 ├── Interactions:     7 cross-term features
-└── Output: 98-dim matchup vector
+└── Output: 67-dim matchup vector (55 diff + 5 absolute + 7 interactions)
 
 Step 2.3: Redundancy Audit
 ├── Remove algebraic duplicates (adj_efficiency_margin = adj_off - adj_def)
@@ -288,6 +295,41 @@ Total: 6 focused weeks, no detours into GNN/transformers/ensembles
 ```
 
 ---
+
+## Pending: Feature Group Evaluation (Pre-2027)
+
+**Status: BUILT but NOT EVALUATED.**
+
+Eight new features (indices 46-54) were added in April 2026 across four groups. They are wired into the training pipeline and LOYO evaluator but have not yet been tested for Brier score impact. This must happen before locking the 2027 production model.
+
+```
+Feature Group Ablation Testing
+┌──────────────────────────────────────────────────────────────┐
+│  Run LOYO with each group ON/OFF, compare Brier scores:     │
+│                                                               │
+│  Group              Indices   Data Source      Coverage       │
+│  ─────              ───────   ───────────      ────────       │
+│  Conf tournament    46-48     Game records     2008-2026 ✓   │
+│  Late-season        49-51     Game records     2008-2026 ✓   │
+│  Market (Vegas)     52-53     Unified odds     2008-2026 ✓   │
+│  Injury risk        54        ESPN scraper     Current yr    │
+│                                                               │
+│  Config flags: ablate_conf_tourney, ablate_late_season,      │
+│                ablate_market, ablate_injury                   │
+│                use_market_features=True (to populate Vegas)   │
+│                                                               │
+│  Decision gate: ship if BSS improves ≥ 0.002                │
+│  Timeline: evaluate by February 2027                         │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Data rebuild commands (if odds cache is missing):
+```bash
+python scripts/ingest_sbro_odds.py --all              # SBRO Excel → JSON
+python scripts/scrape_covers_odds.py --all --full-season  # Covers → JSON
+python scripts/build_unified_odds.py                   # merge all sources
+python scripts/scrape_injuries.py --season 2027        # ESPN injuries (March)
+```
 
 ## Key Insight
 
