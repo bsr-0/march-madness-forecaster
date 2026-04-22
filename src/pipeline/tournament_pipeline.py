@@ -55,17 +55,24 @@ from ..data.scrapers.injury_report import InjurySeverityEstimator, PositionalDep
 from ..data.scrapers.bracket_ingestion import BracketIngestionPipeline
 from ..data.normalize import normalize_team_id as _shared_normalize_team_id
 from ..data.team_name_resolver import TeamNameResolver
-from ..ml.evaluation.experiment_registry import ExperimentRegistry
-from ..monitoring.phase_timer import PhaseTimer
+try:
+    from ..ml.evaluation.experiment_registry import ExperimentRegistry
+except ImportError:
+    ExperimentRegistry = None
+try:
+    from ..monitoring.phase_timer import PhaseTimer
+except ImportError:
+    PhaseTimer = None
 from ..data.features.proprietary_metrics import ProprietaryMetricsEngine
 from ..optimization.pool_optimizer import (
     PoolEnvironment,
     PoolOptimizer,
 )
-from ..forecasting.engine import (
-    ForecastEngine,
-    ForecastEngineConfig,
-)
+try:
+    from ..forecasting.engine import ForecastEngine, ForecastEngineConfig
+except ImportError:
+    ForecastEngine = None
+    ForecastEngineConfig = None
 
 from ._optional_imports import (  # noqa: F401 — re-exported for backward compat
     torch,

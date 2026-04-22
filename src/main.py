@@ -14,8 +14,6 @@ from .cli import (
     scrape_cmds,
     eval_cmds,
     export_cmds,
-    ops_cmds,
-    live_protocol_cmds,
     pool_cmds,
 )
 
@@ -41,8 +39,6 @@ _COMMAND_MODULES = [
     scrape_cmds,
     eval_cmds,
     export_cmds,
-    ops_cmds,
-    live_protocol_cmds,
     pool_cmds,
 ]
 
