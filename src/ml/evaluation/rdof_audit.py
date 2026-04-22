@@ -1358,6 +1358,18 @@ class HoldoutEvaluator:
             )
             _cross_year_elo = inc_engine.get_end_of_season_elo()
 
+            # Market odds overlay for this training year.
+            _odds_by_team = {}
+            if getattr(config, "use_market_features", False):
+                try:
+                    from ...data.scrapers.unified_odds import load_unified_odds_by_team as _load_uobt
+                    for _odir in [str(self.historical_dir / ".." / "betting_odds"), "data/processed/betting_odds"]:
+                        _odds_by_team = _load_uobt(train_year, data_dir=_odir)
+                        if _odds_by_team:
+                            break
+                except Exception:
+                    pass
+
             # Torvik FF overlay for this training year
             _ff_lookup = TorVikFFLookup(train_year)
             if not _ff_lookup.has_snapshots:
@@ -1405,6 +1417,18 @@ class HoldoutEvaluator:
                 s1, s2 = 0, 0
                 v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
                 v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+
+                if _odds_by_team:
+                    from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf
+                    for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
+                        _mf = _ctmf(_tid, g.game_date, _odds_by_team.get(_tid, []))
+                        _v[52] = _mf["market_implied_prob"]
+                        _v[53] = _mf["market_spread"]
+
+                from ...data.features.ablation import apply_ablation
+                apply_ablation(v1, config)
+                apply_ablation(v2, config)
+
                 vec = IncrementalMetricsEngine.build_matchup_vector(
                     v1,
                     v2,
@@ -1531,6 +1555,18 @@ class HoldoutEvaluator:
             prior_elo=_cross_year_elo,
         )
 
+        # Market odds for holdout year.
+        _ho_odds_by_team = {}
+        if getattr(config, "use_market_features", False):
+            try:
+                from ...data.scrapers.unified_odds import load_unified_odds_by_team as _load_uobt
+                for _odir in [str(self.historical_dir / ".." / "betting_odds"), "data/processed/betting_odds"]:
+                    _ho_odds_by_team = _load_uobt(holdout_year, data_dir=_odir)
+                    if _ho_odds_by_team:
+                        break
+            except Exception:
+                pass
+
         # Compute end-of-regular-season metrics for tournament predictions.
         tournament_cutoff = _TOURNEY_DATES.get(holdout_year, _dtdate(holdout_year, 3, 14)).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
@@ -1573,6 +1609,18 @@ class HoldoutEvaluator:
             s2 = ho_seeds.get(t2, 0)
             v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
             v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+
+            if _ho_odds_by_team:
+                from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf
+                for _v, _tid in ((v1, t1), (v2, t2)):
+                    _mf = _ctmf(_tid, tournament_cutoff, _ho_odds_by_team.get(_tid, []))
+                    _v[52] = _mf["market_implied_prob"]
+                    _v[53] = _mf["market_spread"]
+
+            from ...data.features.ablation import apply_ablation
+            apply_ablation(v1, config)
+            apply_ablation(v2, config)
+
             vec = IncrementalMetricsEngine.build_matchup_vector(
                 v1,
                 v2,
