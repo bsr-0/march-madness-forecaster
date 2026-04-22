@@ -74,15 +74,33 @@ Specialized agents live in `.claude/agents/<name>/`. Each is a self-contained wo
 
 The first four tools read pre-computed artifacts and work immediately. `run_pool_optimization` needs `pip install -r requirements.txt` first.
 
-## Git Workflow: Rebase-Only
+## Git Workflow: Rebase-Only (Linear History)
 
-This repo keeps a **linear history**. Every auto-merge workflow in
-`.github/workflows/` (`auto-merge-claude`, `auto-fix-failed-checks`,
-`outcome-logging`, `data-ingestion`, `espn-picks-ingestion`, `repair-dates`,
-`rescrape-torvik`) uses `gh pr merge --rebase`. No merge commits are
-created on `main`.
+This repo keeps a **linear history**. No merge commits are ever created on
+`main` — all integration is via rebase + fast-forward.
 
-When integrating work locally:
+**Two acceptable integration paths:**
+
+1. **Direct-to-main push** (Claude Code sessions, trusted authors):
+   ```bash
+   git fetch origin
+   git rebase origin/main                        # on the feature branch
+   git checkout main && git pull --rebase
+   git merge --ff-only <feature-branch>
+   git push origin main
+   ```
+   The PreToolUse block on `git push ... main` was removed 2026-04-22 per
+   explicit policy change. Direct pushes to main bypass the required CI
+   status check — commits must be self-verified (`pytest`, `ruff check src/`)
+   before pushing.
+
+2. **PR-based auto-merge** (external contributors, CI-gated work):
+   Every auto-merge workflow in `.github/workflows/` (`auto-merge-claude`,
+   `auto-fix-failed-checks`, `outcome-logging`, `data-ingestion`,
+   `espn-picks-ingestion`, `repair-dates`, `rescrape-torvik`) uses
+   `gh pr merge --rebase`. Use this path when you want CI to gate the merge.
+
+**Either path — same rules:**
 - **Pull with rebase, never merge:** `git pull --rebase origin <branch>`
 - **Integrate long-running branches by rebasing onto main**, not by merging
   main into them.
@@ -91,9 +109,8 @@ When integrating work locally:
   remote (`git reset --hard origin/<branch>` after verifying no local
   work is lost) — do not accept the default `git pull` that creates a
   merge commit.
-- **PRs land via rebase, not squash.** Individual commits are preserved on
-  main; commit messages should therefore each stand alone as a logical
-  unit.
+- **Commits land via rebase, not squash.** Individual commits are preserved
+  on main; each commit message must stand alone as a logical unit.
 
 One-time local setup to match the repo convention:
 ```bash
