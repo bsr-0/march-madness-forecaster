@@ -2533,6 +2533,32 @@ features:
     revision_behavior: latest_forbidden
     late_arrival_policy: exclude_if_available_after_prediction_time
 
+  - feature_name: injury_risk
+    owner: data-platform
+    source:
+      system: injury_report
+      dataset: espn_injuries
+      field: injury_risk
+    event_timestamp_field: report_timestamp
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/scrapers/injury_report.py::InjuryReportScraper.scrape_espn"
+    transformation_logic_ref: "src/pipeline/stages/materialization.py::materialize_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-014"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
   - feature_name: massey_rank_std
     deprecated: true
     owner: data-platform

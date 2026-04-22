@@ -1329,9 +1329,17 @@ def apply_injury_reports(
     }
     positional_impacts: Dict[str, Dict[str, float]] = {}
 
-    if config.injury_report_json:
+    # Auto-discover injury JSON if not explicitly set.
+    injury_json = config.injury_report_json
+    if not injury_json:
+        auto_path = os.path.join("data", "raw", "injury_reports", f"injuries_{config.year}.json")
+        if os.path.isfile(auto_path):
+            injury_json = auto_path
+            logger.info("Auto-discovered injury report: %s", auto_path)
+
+    if injury_json:
         scraper = InjuryReportScraper(cache_dir=config.data_cache_dir)
-        team_reports = scraper.load_from_json(config.injury_report_json)
+        team_reports = scraper.load_from_json(injury_json)
 
         total_updated = 0
         teams_injured = 0

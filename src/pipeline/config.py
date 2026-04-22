@@ -879,6 +879,7 @@ class SOTAPipelineConfig:
     ablate_conf_tourney: bool = False     # indices 46-48
     ablate_late_season: bool = False      # indices 49-51
     ablate_market: bool = False           # indices 52-53 (also requires use_market_features=True to populate)
+    ablate_injury: bool = False           # index 54 (injury_risk)
 
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0

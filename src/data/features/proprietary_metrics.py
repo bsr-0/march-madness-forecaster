@@ -2956,6 +2956,8 @@ class IncrementalMetricsEngine:
         # Market features (overlaid later from unified odds data).
         v[52] = 0.0
         v[53] = 0.0
+        # Injury risk (overlaid later when injury data available).
+        v[54] = 0.0
 
         # NaN/inf guard — convert inf→NaN but preserve NaN for tree models
         inf_mask = np.isinf(v)

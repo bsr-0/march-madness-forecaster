@@ -164,6 +164,156 @@ class InjuryReportScraper:
             report_date=report_date,
         )
 
+    def scrape_espn(self, season: int, team_filter: Optional[List[str]] = None) -> Dict[str, TeamInjuryReport]:
+        """Scrape injury reports from ESPN's roster API for all D1 teams.
+
+        Hits ``/teams/{id}/roster`` for each team and extracts the
+        ``injuries`` array and ``status`` field per athlete.
+
+        Args:
+            season: Tournament year (e.g., 2026).
+            team_filter: Optional list of normalized team IDs to restrict to.
+                         If None, scrapes all ~362 D1 teams.
+
+        Returns:
+            Dict mapping normalized team_id → TeamInjuryReport.
+        """
+        import time
+        import requests
+        from ..normalize import normalize_team_id
+
+        base = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball"
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        # Get all ESPN team IDs.
+        try:
+            resp = requests.get(f"{base}/teams?limit=400", timeout=15)
+            resp.raise_for_status()
+            raw_teams = resp.json().get("sports", [{}])[0].get("leagues", [{}])[0].get("teams", [])
+        except Exception as e:
+            logger.error("Failed to fetch ESPN team list: %s", e)
+            return {}
+
+        reports: Dict[str, TeamInjuryReport] = {}
+        scraped = 0
+        injured_teams = 0
+
+        for entry in raw_teams:
+            team_info = entry.get("team", {})
+            espn_id = team_info.get("id")
+            display_name = team_info.get("displayName", "")
+            team_id = normalize_team_id(display_name)
+
+            if team_filter and team_id not in team_filter:
+                continue
+
+            time.sleep(0.5)  # rate limit
+
+            try:
+                r = requests.get(f"{base}/teams/{espn_id}/roster", timeout=10)
+                if r.status_code != 200:
+                    continue
+                roster_data = r.json()
+            except Exception:
+                continue
+
+            scraped += 1
+            injuries: List[InjuryReport] = []
+
+            for athlete in roster_data.get("athletes", []):
+                player_name = athlete.get("displayName", "")
+                athlete_injuries = athlete.get("injuries", [])
+                athlete_status = athlete.get("status", {})
+
+                # Check status field first (covers most cases).
+                status_type = athlete_status.get("type", "active").lower()
+                if status_type == "active" and not athlete_injuries:
+                    continue
+
+                # Parse injury details if present.
+                if athlete_injuries:
+                    for inj in athlete_injuries:
+                        inj_status = inj.get("status", status_type)
+                        inj_type = inj.get("type", {}).get("description", "") if isinstance(inj.get("type"), dict) else str(inj.get("type", ""))
+                        details = inj.get("details", {})
+                        return_date = details.get("returnDate", "") if isinstance(details, dict) else ""
+
+                        injuries.append(InjuryReport(
+                            player_name=player_name,
+                            team_id=team_id,
+                            status=self._normalize_status(inj_status),
+                            injury_type=inj_type.lower(),
+                            expected_return=return_date,
+                            report_date=timestamp,
+                            source="espn",
+                        ))
+                elif status_type != "active":
+                    injuries.append(InjuryReport(
+                        player_name=player_name,
+                        team_id=team_id,
+                        status=self._normalize_status(status_type),
+                        injury_type="",
+                        expected_return="",
+                        report_date=timestamp,
+                        source="espn",
+                    ))
+
+            if injuries:
+                injured_teams += 1
+
+            reports[team_id] = TeamInjuryReport(
+                team_id=team_id,
+                reports=injuries,
+                report_date=timestamp,
+            )
+
+        logger.info(
+            "ESPN injuries: scraped %d teams, %d with injuries",
+            scraped, injured_teams,
+        )
+        return reports
+
+    def scrape_and_save(
+        self,
+        output_path: str,
+        season: int,
+        team_filter: Optional[List[str]] = None,
+    ) -> Dict[str, TeamInjuryReport]:
+        """Scrape ESPN injuries and save to JSON."""
+        reports = self.scrape_espn(season, team_filter)
+
+        # Convert to the expected JSON format.
+        teams_dict = {}
+        for team_id, team_report in reports.items():
+            if not team_report.reports:
+                continue
+            teams_dict[team_id] = {
+                "players": [
+                    {
+                        "name": r.player_name,
+                        "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+                        "injury_type": r.injury_type,
+                        "expected_return": r.expected_return,
+                    }
+                    for r in team_report.reports
+                ]
+            }
+
+        output = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "source": "espn",
+            "season": season,
+            "n_teams_with_injuries": len(teams_dict),
+            "teams": teams_dict,
+        }
+
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        with open(output_path, "w") as f:
+            json.dump(output, f, indent=2)
+
+        logger.info("Saved injury reports to %s (%d teams)", output_path, len(teams_dict))
+        return reports
+
     @staticmethod
     def _normalize_status(raw: str) -> InjuryStatus:
         """Normalize various status strings to InjuryStatus enum."""

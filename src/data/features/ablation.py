@@ -16,6 +16,7 @@ ABLATION_GROUPS = {
     "ablate_conf_tourney": [46, 47, 48],   # conf_tourney_champion, games, margin
     "ablate_late_season": [49, 50, 51],    # late_season_games, margin, win_pct
     "ablate_market": [52, 53],             # market_implied_prob, market_spread
+    "ablate_injury": [54],                 # injury_risk
 }
 
 # Massey features are passed via external_rating_composite/spread and massey_features
