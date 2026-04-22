@@ -1,6 +1,6 @@
 """Sample loading for historical LOYO training.
 
-Extracts ``_load_year_samples_incremental`` from ``SOTAPipeline`` as a
+Extracts ``_load_year_samples_incremental`` from ``TournamentPipeline`` as a
 module-level function with explicit ``config`` parameter.
 
 Implements Agent Directive V7 S2 Phase 1 (sample loading decomposition).
@@ -26,7 +26,7 @@ from ...exceptions import LeakageError
 from .data_loader import load_roster_overlay
 from ..config import (
     MIN_SEASON_FEATURE_COMPLETENESS,
-    SOTAPipelineConfig,
+    ForecastConfig,
     TOURNAMENT_START_DATES,
     _infer_tournament_round_weight,
 )
@@ -55,7 +55,7 @@ def load_year_samples(
 
 
 def load_year_samples_incremental(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     games_path: str,
     metrics_path: str,
     feature_dim: int,
@@ -96,7 +96,7 @@ def load_year_samples_incremental(
 
 
 def load_year_tournament_samples_incremental(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     games_path: str,
     metrics_path: str,
     feature_dim: int,
@@ -136,7 +136,7 @@ def load_year_tournament_samples_incremental(
 
 
 def _load_year_samples_incremental_core(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     games_path: str,
     metrics_path: str,
     feature_dim: int,

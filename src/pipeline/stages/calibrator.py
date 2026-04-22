@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class CalibrationStage:
     """Fit calibration pipeline and Massey predictor.
 
-    Delegates to the SOTAPipeline's calibration methods while providing
+    Delegates to the TournamentPipeline's calibration methods while providing
     typed :class:`CalibratedPipeline` output contract.
     """
 
@@ -36,7 +36,7 @@ class CalibrationStage:
 
         Args:
             ctx: Shared pipeline context.
-            pipeline: The SOTAPipeline instance (for method delegation).
+            pipeline: The TournamentPipeline instance (for method delegation).
             models: Trained models from the model-training stage.
 
         Returns:

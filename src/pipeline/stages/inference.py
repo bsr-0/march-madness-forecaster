@@ -1,4 +1,4 @@
-"""Inference-stage utilities extracted from SOTAPipeline.
+"""Inference-stage utilities extracted from TournamentPipeline.
 
 Contains pure functions for embedding-based probability computation
 and other prediction helpers that don't require access to the full

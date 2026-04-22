@@ -1,6 +1,6 @@
 """Pipeline orchestration helpers.
 
-Extracted from SOTAPipeline._run_shared_pipeline() to reduce the monolith.
+Extracted from TournamentPipeline._run_shared_pipeline() to reduce the monolith.
 Contains pre-run checks, post-pipeline integrations, mode-gated sections,
 and report assembly logic.
 """
@@ -19,7 +19,7 @@ import numpy as np
 
 from ..config import (
     DataRequirementError,
-    SOTAPipelineConfig,
+    ForecastConfig,
 )
 from ...exceptions import LeakageError
 from ...governance.artifact_provenance import build_artifact_provenance

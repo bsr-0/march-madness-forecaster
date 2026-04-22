@@ -2,7 +2,7 @@
 
 Wires existing components (KaggleBacktester, EvaluationReport, RiskReport,
 bootstrap metrics) into a single orchestrator that:
-1. Runs SOTAPipeline per held-out year
+1. Runs TournamentPipeline per held-out year
 2. Produces EvaluationReport per year + AggregateEvaluationReport
 3. Compares against a stored baseline via a regression gate
 4. Saves a reusable JSON artifact for future comparisons
@@ -164,7 +164,7 @@ class BacktestHarness:
         )
         from ..ml.evaluation.kaggle_backtest import KaggleBacktester
         from ..ml.evaluation.risk_report import RiskReport
-        from ..pipeline.sota import SOTAPipeline, SOTAPipelineConfig, DataRequirementError
+        from ..pipeline.tournament_pipeline import TournamentPipeline, ForecastConfig, DataRequirementError
 
         t0 = time.monotonic()
         results_dir = str(self.historical_dir)
@@ -205,7 +205,7 @@ class BacktestHarness:
 
             predictions, actual_games = self._run_year(
                 held_out_year, results_dir, get_tournament_games_for_eval,
-                SOTAPipeline, SOTAPipelineConfig, DataRequirementError,
+                TournamentPipeline, ForecastConfig, DataRequirementError,
             )
 
             if not actual_games:

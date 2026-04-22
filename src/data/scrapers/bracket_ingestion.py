@@ -88,7 +88,7 @@ class TournamentBracketData:
         return matchups
 
     def to_pipeline_json(self) -> Dict:
-        """Convert to the JSON format expected by SOTAPipeline."""
+        """Convert to the JSON format expected by TournamentPipeline."""
         return {
             "season": self.season,
             "source": self.source,

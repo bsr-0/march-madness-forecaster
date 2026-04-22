@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class SimulationStage:
     """Run Monte Carlo bracket simulation.
 
-    Delegates to the SOTAPipeline's simulation methods while providing
+    Delegates to the TournamentPipeline's simulation methods while providing
     typed :class:`SimulationResults` output contract.
     """
 
@@ -36,7 +36,7 @@ class SimulationStage:
 
         Args:
             ctx: Shared pipeline context.
-            pipeline: The SOTAPipeline instance.
+            pipeline: The TournamentPipeline instance.
             calibration: Calibrated pipeline from previous stage.
 
         Returns:

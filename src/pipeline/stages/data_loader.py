@@ -1,8 +1,8 @@
 """Data loading pipeline stage — real implementations.
 
-Extracts data-loading logic from ``SOTAPipeline`` as module-level functions
+Extracts data-loading logic from ``TournamentPipeline`` as module-level functions
 with explicit parameters.  Each function returns its outputs explicitly;
-``SOTAPipeline`` delegates call these and unpacks the results.
+``TournamentPipeline`` delegates call these and unpacks the results.
 
 Implements Agent Directive V7 S2 Phase 1 (data loading decomposition).
 """
@@ -41,7 +41,7 @@ from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
 from ...models.team import Team
-from ..config import DataRequirementError, SOTAPipelineConfig, TOURNAMENT_START_DATES
+from ..config import DataRequirementError, ForecastConfig, TOURNAMENT_START_DATES
 from . import LoadedData, PipelineStage
 from .context import PipelineContext
 from .game_utils import (
@@ -431,7 +431,7 @@ def assess_roster_rapm_quality(
 
 
 def validate_feed_freshness(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     source_name: str,
     payload: Dict,
 ) -> None:
@@ -501,12 +501,12 @@ def bracket_data_to_teams(bracket: Any) -> List[Team]:
 
 
 # ---------------------------------------------------------------------------
-# Data loading functions (previously SOTAPipeline methods)
+# Data loading functions (previously TournamentPipeline methods)
 # ---------------------------------------------------------------------------
 
 
 def load_teams(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     bracket_pipeline: Any,
 ) -> List[Team]:
     """Load tournament teams from configured data source.
@@ -540,7 +540,7 @@ def load_teams(
     )
 
 
-def compute_prior_year_elo(config: SOTAPipelineConfig) -> Optional[Dict[str, float]]:
+def compute_prior_year_elo(config: ForecastConfig) -> Optional[Dict[str, float]]:
     """Compute end-of-season Elo for year before ``config.year``.
 
     Returns ``None`` if prior-year data is unavailable — the pipeline
@@ -598,7 +598,7 @@ def compute_prior_year_elo(config: SOTAPipelineConfig) -> Optional[Dict[str, flo
 
 
 def enrich_tournament_context(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     torvik_map: Dict[str, Dict],
     proprietary_map: Dict[str, Dict],
     teams: List[Team],
@@ -744,7 +744,7 @@ def enrich_tournament_context(
 
 
 def load_team_stat_sources(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     teams: List[Team],
     proprietary_engine: ProprietaryMetricsEngine,
 ) -> StatSourcesResult:
@@ -1310,7 +1310,7 @@ def load_team_stat_sources(
 
 
 def apply_injury_reports(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     rosters: Dict[str, Roster],
     positional_depth_chart: Any,
     injury_severity_model: Any,
@@ -1373,7 +1373,7 @@ def apply_injury_reports(
 
 
 def build_rosters(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     teams: List[Team],
 ) -> RosterResult:
     """Load rosters from JSON and enrich with RAPM.
@@ -1485,7 +1485,7 @@ def infer_game_year(game: Dict, default_year: int) -> int:
 
 
 def build_or_load_game_flows(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     teams: List[Team],
     resolve_to_canonical: Optional[Callable] = None,
     mascot_cache: Optional[Dict[str, str]] = None,
@@ -1565,7 +1565,7 @@ def build_or_load_game_flows(
 
 
 def load_massey_multi_system(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
 ) -> Dict:
     """Load Massey Ordinals multi-system features for all teams.
 
@@ -1601,7 +1601,7 @@ def load_massey_multi_system(
 
 
 def load_external_ratings(
-    config: SOTAPipelineConfig,
+    config: ForecastConfig,
     teams: List[Team],
 ) -> Dict:
     """Load external rating composites (Massey Ordinals, etc.).

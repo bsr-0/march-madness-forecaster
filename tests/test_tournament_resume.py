@@ -357,19 +357,19 @@ class TestFixedFeatureSetIntegration:
 
     def test_diff_tournament_resume_in_fixed_set(self):
         """diff_tournament_resume should be in FIXED_FEATURE_SET."""
-        from src.pipeline.sota import FIXED_FEATURE_SET
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET
 
         assert "diff_tournament_resume" in FIXED_FEATURE_SET
 
     def test_diff_home_court_dependence_removed_from_fixed_set(self):
         """diff_home_court_dependence was pruned from FIXED_FEATURE_SET."""
-        from src.pipeline.sota import FIXED_FEATURE_SET
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET
 
         assert "diff_home_court_dependence" not in FIXED_FEATURE_SET
 
     def test_fixed_feature_set_not_too_large(self):
         """FIXED_FEATURE_SET should not exceed 30 features (overfitting guard)."""
-        from src.pipeline.sota import FIXED_FEATURE_SET
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET
 
         assert len(FIXED_FEATURE_SET) <= 35, (
             f"FIXED_FEATURE_SET has {len(FIXED_FEATURE_SET)} features — risk of overfitting on ~600 tournament samples"
@@ -377,7 +377,7 @@ class TestFixedFeatureSetIntegration:
 
     def test_all_fixed_features_exist_in_matchup_names(self):
         """Every feature in FIXED_FEATURE_SET should be resolvable."""
-        from src.pipeline.sota import FIXED_FEATURE_SET, ABSOLUTE_LEVEL_FEATURE_NAMES
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET, ABSOLUTE_LEVEL_FEATURE_NAMES
 
         base_names = TeamFeatures.get_feature_names()
         diff_names = [f"diff_{n}" for n in base_names]
@@ -527,7 +527,7 @@ class TestOverfittingSafeguards:
 
     def test_single_composite_vs_four_features(self):
         """Verify we use 1 composite feature, not 4 separate features."""
-        from src.pipeline.sota import FIXED_FEATURE_SET
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET
 
         opponent_quality_features = [
             f
@@ -551,7 +551,7 @@ class TestOverfittingSafeguards:
 
     def test_feature_count_within_budget(self):
         """Total features should stay within sample-size budget."""
-        from src.pipeline.sota import FIXED_FEATURE_SET
+        from src.pipeline.tournament_pipeline import FIXED_FEATURE_SET
 
         # Rule of thumb: N/10 features for logistic, N/20 for LightGBM
         # With ~600 samples, max ~30 features

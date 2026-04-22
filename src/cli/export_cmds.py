@@ -19,7 +19,7 @@ def run_kaggle_export(args):
     from ..pipeline.womens import WomensPipeline, WomensPipelineConfig
     from ..exports.kaggle import load_kaggle_womens_teams, is_womens_team, build_team_id_map, generate_predictions, load_kaggle_teams
     from ..ml.evaluation.kaggle_backtest import validate_submission
-    from ..pipeline.sota import SOTAPipeline, DataRequirementError
+    from ..pipeline.tournament_pipeline import TournamentPipeline, DataRequirementError
     from ..data.team_name_resolver import TeamNameResolver
     from ._helpers import _load_manifest, _resolve_manifest_paths, _build_pipeline_config, _guard_production_2026
 
@@ -33,7 +33,7 @@ def run_kaggle_export(args):
     _guard_production_2026(config)
 
     # --- Men's pipeline ---
-    pipeline = SOTAPipeline(config)
+    pipeline = TournamentPipeline(config)
     try:
         pipeline.run()
     except DataRequirementError as exc:

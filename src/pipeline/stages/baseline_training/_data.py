@@ -13,7 +13,7 @@ from ...config import (
     DATA_QUALITY_ERA_WEIGHTS,
     FIXED_FEATURE_SET,
     SIMPLE_FEATURE_SET,
-    SOTAPipelineConfig,
+    ForecastConfig,
     TOURNAMENT_START_DATES,
     compute_year_data_quality,
 )

@@ -11,7 +11,7 @@ def audit_rdof(args):
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     from ._helpers import _parse_year_list
-    from ..pipeline.sota import SOTAPipelineConfig
+    from ..pipeline.tournament_pipeline import ForecastConfig
     from ..ml.evaluation.rdof_audit import run_rdof_audit
 
     holdout_years = _parse_year_list(args.holdout_years)
@@ -24,7 +24,7 @@ def audit_rdof(args):
         config_kwargs["holdout_years"] = holdout_years
     if calibration_years is not None:
         config_kwargs["calibration_years"] = calibration_years
-    config = SOTAPipelineConfig(**config_kwargs)
+    config = ForecastConfig(**config_kwargs)
 
     run_rdof_audit(
         historical_dir=args.historical_dir,
@@ -48,7 +48,7 @@ def run_loyo_validate(args):
         get_available_years,
         get_tournament_games_for_eval,
     )
-    from ..pipeline.sota import SOTAPipeline, SOTAPipelineConfig, DataRequirementError
+    from ..pipeline.tournament_pipeline import TournamentPipeline, ForecastConfig, DataRequirementError
 
     years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
     hist_dir = Path(args.historical_dir)
@@ -86,14 +86,14 @@ def run_loyo_validate(args):
         print(f"{'=' * 60}")
 
         try:
-            config = SOTAPipelineConfig(
+            config = ForecastConfig(
                 year=held_out_year,
                 multi_year_games_dir=str(hist_dir),
                 enable_multi_year_training=True,
                 mode="calibration",
                 kaggle_dir=getattr(args, "kaggle_dir", None),
             )
-            pipeline = SOTAPipeline(config)
+            pipeline = TournamentPipeline(config)
             report = pipeline.run()
 
             predictions = {}
@@ -292,7 +292,7 @@ def run_backtest_kaggle(args):
 def run_backtest_unified(args):
     """Run unified backtest (Kaggle calibration + ESPN bracket pool)."""
     from ..ml.evaluation.loyo_protocol import LOYO_YEARS
-    from ..pipeline.sota import SOTAPipeline, SOTAPipelineConfig
+    from ..pipeline.tournament_pipeline import TournamentPipeline, ForecastConfig
 
     years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
     modes = [m.strip() for m in args.modes.split(",")]
@@ -372,7 +372,7 @@ def run_backtest_unified(args):
             eval_teams_json = _resolve_teams_json(eval_year)
             eval_torvik_json = _resolve_torvik_json(eval_year)
             eval_games_json = _resolve_historical_games_json(eval_year)
-            cfg = SOTAPipelineConfig(
+            cfg = ForecastConfig(
                 year=eval_year,
                 mode="calibration",
                 probability_profile="experimental",
@@ -395,7 +395,7 @@ def run_backtest_unified(args):
                 bracket_json=bracket_json,
                 bracket_source=bracket_source,
             )
-            pipeline = SOTAPipeline(cfg)
+            pipeline = TournamentPipeline(cfg)
             pipeline.train_for_predictions()
             return pipeline.predict_probability
 
@@ -534,10 +534,10 @@ def prospective_eval(args):
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    from ..pipeline.sota import SOTAPipelineConfig
+    from ..pipeline.tournament_pipeline import ForecastConfig
     from ..ml.evaluation.rdof_audit import run_prospective_evaluation
 
-    config = SOTAPipelineConfig()
+    config = ForecastConfig()
     try:
         result = run_prospective_evaluation(
             freeze_path=args.freeze_file,

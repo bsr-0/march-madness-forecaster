@@ -32,7 +32,7 @@ class PipelineConstant:
     name: str
     tier: int  # 1=external, 2=structurally constrained, 3=freely tuned
     current_value: Any
-    config_path: str  # e.g. "SOTAPipelineConfig.tournament_shrinkage"
+    config_path: str  # e.g. "ForecastConfig.tournament_shrinkage"
     valid_range: Tuple[float, float]  # search bounds for sensitivity
     derivation: str  # brief provenance note
     notes: str = ""
@@ -56,7 +56,7 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "ProprietaryMetrics._four_factors", (0.0, 1.0),
         "Oliver 2004, Kubatko 2007 — published D1 regression coefficients"),
     PipelineConstant("vif_threshold", 1, 10.0,
-        "SOTAPipelineConfig.vif_threshold", (5.0, 20.0),
+        "ForecastConfig.vif_threshold", (5.0, 20.0),
         "Belsley 1980 — standard multicollinearity cutoff"),
     PipelineConstant("hca_points", 1, 3.75,
         "ProprietaryMetrics.HCA_POINTS", (2.5, 5.0),
@@ -65,27 +65,27 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "ProprietaryMetrics (derived: HCA_POINTS * 13.3)", (10.0, 16.0),
         "FiveThirtyEight Elo methodology — published conversion factor"),
     PipelineConstant("seed_prior_slope", 1, 0.175,
-        "SOTAPipelineConfig.seed_prior_slope", (0.10, 0.25),
+        "ForecastConfig.seed_prior_slope", (0.10, 0.25),
         "Logistic fit on 40 years of public tournament data (1985-2024, N>2500)"),
     PipelineConstant("pre_calibration_clips", 1, [0.03, 0.97],
-        "SOTAPipelineConfig.pre_calibration_clip_lo/hi", (0.01, 0.10),
+        "ForecastConfig.pre_calibration_clip_lo/hi", (0.01, 0.10),
         "Historical 1-vs-16 upset rate ~1.5%; 3% provides safety margin"),
 
     # ── Tier 2: Structurally Constrained ────────────────────────────
     PipelineConstant("training_year_decay", 2, 0.85,
-        "SOTAPipelineConfig.training_year_decay", (0.70, 0.95),
+        "ForecastConfig.training_year_decay", (0.70, 0.95),
         "Bounded (0,1), monotonically decreasing importance of older data"),
     PipelineConstant("training_year_min_weight", 2, 0.15,
-        "SOTAPipelineConfig.training_year_min_weight", (0.05, 0.30),
+        "ForecastConfig.training_year_min_weight", (0.05, 0.30),
         "Floor > 0 prevents discarding old data entirely"),
     PipelineConstant("recency_half_life", 2, 0.3,
-        "SOTAPipelineConfig.recency_half_life", (0.1, 0.8),
+        "ForecastConfig.recency_half_life", (0.1, 0.8),
         "Within-season temporal weighting; bounded, monotone effect"),
     PipelineConstant("recency_decay_floor", 2, 0.3,
-        "SOTAPipelineConfig.recency_decay_floor", (0.1, 0.6),
+        "ForecastConfig.recency_decay_floor", (0.1, 0.6),
         "Floor prevents discarding early-season games"),
     PipelineConstant("late_season_cutoff_days", 2, 45,
-        "SOTAPipelineConfig.late_season_training_cutoff_days", (20, 90),
+        "ForecastConfig.late_season_training_cutoff_days", (20, 90),
         "Bounded, monotone effect on sample size vs feature quality"),
     PipelineConstant("round_correlation_decay", 3, [1.0, 0.6, 0.3, 0.15, 0.0, 0.0],
         "monte_carlo._run_batch (hardcoded)", (0.0, 1.0),
@@ -116,24 +116,24 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "LOYO-derived at training time; bounds from PRODUCTION_BASELINE.weight_bounds. "
         "Fallback prior is 0.15. Coupled with lgb weight"),
     PipelineConstant("tournament_shrinkage", 3, 0.0,
-        "SOTAPipelineConfig.tournament_shrinkage", (0.0, 0.25),
+        "ForecastConfig.tournament_shrinkage", (0.0, 0.25),
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("seed_prior_weight", 3, 0.0,
-        "SOTAPipelineConfig.seed_prior_weight", (0.0, 0.15),
+        "ForecastConfig.seed_prior_weight", (0.0, 0.15),
         "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_bonus_max", 3, 0.0,
-        "SOTAPipelineConfig.consistency_bonus_max", (0.0, 0.06),
+        "ForecastConfig.consistency_bonus_max", (0.0, 0.06),
         "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_normalizer", 3, 15.0,
-        "SOTAPipelineConfig.consistency_normalizer", (5.0, 30.0),
+        "ForecastConfig.consistency_normalizer", (5.0, 30.0),
         "Experimental-only; paired with consistency_bonus_max"),
     PipelineConstant("mc_noise_std", 3, 0.16,
         "SimulationConfig.noise_std", (0.02, 0.25),
         "Changed 0.04→0.035→0.02→0.12→0.16; Lopez & Matthews (2015) ≈ 0.16-0.18"),
     PipelineConstant("mc_regional_correlation", 3, 0.0,
-        "SOTAPipelineConfig.mc_regional_correlation", (0.0, 0.30),
+        "ForecastConfig.mc_regional_correlation", (0.0, 0.30),
         "Reduced from 0.25 during OOS fix round"),
 
     # ── Additional Tier 1: Published/External ─────────────────────────
@@ -150,7 +150,7 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
 
     # ── Additional Tier 2: Structurally Constrained ───────────────────
     PipelineConstant("elo_season_regression", 2, 0.25,
-        "ProprietaryMetrics._compute_elo_ratings + sota._load_year_samples",
+        "ProprietaryMetrics._compute_elo_ratings + pipeline._load_year_samples",
         (0.10, 0.50),
         "D2 fix: 25% regression toward mean (1500) at each season boundary. "
         "Matches FiveThirtyEight NFL Elo methodology (Silver, 2014). "
@@ -159,7 +159,7 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "ProprietaryMetrics._compute_elo K_BASE", (20.0, 60.0),
         "MOV-adjusted Elo K-factor; bounded, monotone effect on update magnitude"),
     PipelineConstant("wab_k", 2, 11.5,
-        "sota.py _load_year_samples _WAB_K", (5.0, 20.0),
+        "pipeline _load_year_samples _WAB_K", (5.0, 20.0),
         "log5 scaling denominator for WAB; bounded, controls sensitivity to AdjEM gap"),
     PipelineConstant("bubble_em_prior", 2, 5.0,
         "ProprietaryMetrics.BUBBLE_EM_PRIOR", (2.0, 10.0),
@@ -177,19 +177,19 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "ProprietaryMetrics (hardcoded 0.345)", (0.330, 0.360),
         "D1 average 3PT%; slowly drifts year-to-year but structurally bounded"),
     PipelineConstant("pit_noise_base", 2, 0.05,
-        "sota.py _train_baseline_model base_noise", (0.02, 0.10),
+        "pipeline _train_baseline_model base_noise", (0.02, 0.10),
         "PIT residual noise scale; bounded, proportional to season_remaining"),
     PipelineConstant("pit_stability_scaling", 2, 0.7,
-        "sota.py (feature_noise_weight = 1.0 - stability * 0.7)", (0.4, 0.9),
+        "pipeline (feature_noise_weight = 1.0 - stability * 0.7)", (0.4, 0.9),
         "How much feature stability reduces PIT noise; bounded [0,1]"),
     PipelineConstant("pit_feature_noise_reduction", 2, 0.3,
-        "sota.py (feature_noise_weight *= 0.3 for PIT features)", (0.1, 0.6),
+        "pipeline (feature_noise_weight *= 0.3 for PIT features)", (0.1, 0.6),
         "Noise reduction multiplier for PIT-adjusted features; bounded (0,1)"),
     PipelineConstant("mean_regression_shrinkage", 2, 0.10,
-        "sota.py (shrinkage = 0.10 toward league mean)", (0.0, 0.25),
+        "pipeline (shrinkage = 0.10 toward league mean)", (0.0, 0.25),
         "Regression toward league mean; bounded, monotone effect"),
     PipelineConstant("pit_weight_cap", 2, 0.9,
-        "sota.py (min(0.9, 0.9 * season_remaining))", (0.5, 1.0),
+        "pipeline (min(0.9, 0.9 * season_remaining))", (0.5, 1.0),
         "Maximum PIT blend weight; bounded, caps PIT override of end-of-season"),
 
     # ── Additional Tier 3: MC Simulation Constants ────────────────────
@@ -261,16 +261,16 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)", (0.95, 0.999),
         "Post-noise probability ceiling in MC simulation; structural bound"),
     PipelineConstant("seed_interaction_scale", 2, 128.0,
-        "sota.py seed_interaction = (seed1*seed2)/128 - 1", (64.0, 256.0),
+        "pipeline seed_interaction = (seed1*seed2)/128 - 1", (64.0, 256.0),
         "Normalization denominator for seed interaction feature; structural"),
     PipelineConstant("gnn_target_scale", 2, 30.0,
-        "sota.py adj_em / 30.0 for GNN targets", (15.0, 50.0),
+        "pipeline adj_em / 30.0 for GNN targets", (15.0, 50.0),
         "AdjEM normalization for GNN training targets; scale parameter"),
     PipelineConstant("early_stopping_rounds", 2, 30,
-        "sota.py LGB/XGB early stopping patience", (10, 50),
+        "pipeline LGB/XGB early stopping patience", (10, 50),
         "Early stopping rounds; structural regularization, bounded"),
     PipelineConstant("optuna_n_trials", 2, 15,
-        "SOTAPipelineConfig.optuna_n_trials", (5, 50),
+        "ForecastConfig.optuna_n_trials", (5, 50),
         "Max Optuna tuning trials; bounded, more trials = more selection bias"),
 ]
 # fmt: on
@@ -312,7 +312,7 @@ def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
 def _feature_set_hash() -> Optional[str]:
     """Hash of the fixed feature set used by the pipeline."""
     try:
-        from ...pipeline.sota import FIXED_FEATURE_SET
+        from ...pipeline.tournament_pipeline import FIXED_FEATURE_SET
     except Exception:
         return None
     canonical = json.dumps(list(FIXED_FEATURE_SET), sort_keys=False)
@@ -705,7 +705,7 @@ def estimate_model_complexity(
     by regularization strength.
 
     Args:
-        config: SOTAPipelineConfig (for hyperparameters). If None, uses defaults.
+        config: ForecastConfig (for hyperparameters). If None, uses defaults.
         n_training_samples: Number of training samples (game-pairs).
         n_features: Number of features after selection.
         gnn_embedding_dim: GNN output dimension.
@@ -2331,7 +2331,7 @@ def run_rdof_audit(
         run_sensitivity: Whether to run sensitivity analysis
         sensitivity_grid: Grid points per constant for sensitivity
         output_path: Path to write JSON report (auto-generated if None)
-        config: Pipeline config (default: SOTAPipelineConfig())
+        config: Pipeline config (default: ForecastConfig())
         include_mc: Include Monte Carlo constants in sensitivity analysis
         mc_trials: Noise trials per game for MC sensitivity (default: 200)
 
@@ -2339,9 +2339,9 @@ def run_rdof_audit(
         Audit report dict
     """
     if config is None:
-        from ...pipeline.sota import SOTAPipelineConfig
+        from ...pipeline.tournament_pipeline import ForecastConfig
 
-        config = SOTAPipelineConfig()
+        config = ForecastConfig()
     if holdout_years is None and getattr(config, "holdout_years", None):
         holdout_years = list(config.holdout_years)
     if holdout_years is None:
@@ -2457,9 +2457,9 @@ def run_prospective_evaluation(
         ValueError: If config doesn't match freeze or data is missing.
     """
     if config is None:
-        from ...pipeline.sota import SOTAPipelineConfig
+        from ...pipeline.tournament_pipeline import ForecastConfig
 
-        config = SOTAPipelineConfig()
+        config = ForecastConfig()
 
     # Step 1: Verify freeze
     verification = verify_freeze(config, freeze_path)
