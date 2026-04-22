@@ -2,10 +2,10 @@
   "torvik_trank": {
     "name": "torvik_trank",
     "state": "closed",
-    "failure_count": 1,
-    "last_failure_time": 1775526846.866158,
+    "failure_count": 2,
+    "last_failure_time": 1776826911.1896625,
     "last_success_time": 1775447041.743453,
-    "total_failures": 1,
+    "total_failures": 2,
     "total_successes": 14,
     "half_open_calls": 0,
     "last_transition_time": 0.0,
