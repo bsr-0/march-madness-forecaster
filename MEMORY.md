@@ -150,6 +150,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_hedge_results
 - Council lessons + open questions: `COUNCIL_LESSONS.md` (consolidated 2026-04-13; raw transcripts deleted). New sessions append to §3.
 - Audits: `AUDIT_DATA_LEAKAGE.md`, `AUDIT_DATA_SCRAPERS.md`, `FEATURE_ENGINEERING_AUDIT.md` (Phase-1 ML workflow audit archived 2026-04-13: explicitly marked HISTORICAL post-pivot; `num_simulations=50000` rationale now lives in freeze + this file only)
 - Status: `PROJECT_STATUS.md`, `WORKFLOW.md`
+- Data sources (ingested, stubs, gaps vs. successful bracket models): `WORKFLOW.md` Appendix A. Consult before proposing a new data source — EvanMiya / Haslametrics / ESPN BPI / Hoop-Math / returning-production / KenPom-direct / ShotQuality / tournament-futures already scoped there.
 - Strategy: `POOL_STRATEGY_RECOMMENDATION.md`
 - Freeze: `pipeline_freeze.json`
 - Backtest artifacts: `mc_pool_backtest_*.txt`, `pool_report*.json`
