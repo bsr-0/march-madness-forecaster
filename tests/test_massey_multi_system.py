@@ -221,7 +221,7 @@ class TestTeamFeaturesDimension:
     def test_dimension_matches_pruned_vector(self):
         """TEAM_FEATURE_DIM should match the post-pruning vector width."""
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM
-        assert TEAM_FEATURE_DIM == 55
+        assert TEAM_FEATURE_DIM == 56
 
     def test_feature_names_exclude_massey(self):
         """Massey feature names were pruned from the model-facing vector."""
