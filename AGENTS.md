@@ -39,7 +39,7 @@ This file provides role-specific guidance for Claude subagents working on this c
 | Team name aliases | `configs/team_aliases.json` |
 
 **Important constants:**
-- `TEAM_FEATURE_DIM = 86` — full feature vector size (only 7 used in production via `SIMPLE_FEATURE_SET`)
+- `TEAM_FEATURE_DIM = 56` — full feature vector size (only 7 used in production via `SIMPLE_FEATURE_SET`)
 - `TOURNAMENT_START_DATES` — per-year dates for PIT enforcement
 - `SELECTION_SUNDAY_DATES` — per-year Selection Sunday dates
 - `KAGGLE_ROUND_WEIGHTS` — round-wise scoring weights

@@ -37,11 +37,11 @@ The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for dev run
 | `stages/inference.py` | ~3k | Model inference wrapper |
 | `stages/context.py` | ~2k | Pipeline context object (shared state between stages) |
 
-### `src/data/features/` — Feature Engineering (86 dimensions, 7 used in production)
+### `src/data/features/` — Feature Engineering (56 dimensions, 7 used in production)
 
 | File | Purpose |
 |------|---------|
-| `feature_engineering.py` | Core 86-dim team feature vector builder |
+| `feature_engineering.py` | Core 56-dim team feature vector builder |
 | `proprietary_metrics.py` | `IncrementalMetricsEngine` — temporal-safe metric computation with mandatory `cutoff_date` |
 | `feature_selection.py` | Learned feature importance pruning with train/eval drift checks |
 | `materialization.py` | Feature table materialization (game-pair → feature matrix) |

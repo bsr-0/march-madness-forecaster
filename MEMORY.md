@@ -41,8 +41,8 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 ### Pool strategy
 | Decision | Value | Source |
 |---|---|---|
-| Recommended mode | `champ_first_tv` | `POOL_STRATEGY_RECOMMENDATION.md:7-9` |
-| Aggressive alt | `e8_first_tv` (10× seed P(1st)) | `POOL_STRATEGY_RECOMMENDATION.md:18-29` |
+| Recommended mode | `f4_first_tv` (supersedes `champ_first_tv` per O26/O27 team-identity scoring) | `COUNCIL_LESSONS.md §1 Pool strategy`; `artifacts/backtest_runs/mc_pool_backtest_20260418_225840.txt` |
+| Aggressive alt | `e8_first_tv` (highest P(1st) at 0.29% under team-identity) | `COUNCIL_LESSONS.md §1 Pool strategy` |
 | Opponent pool size | N=31 | `mc_pool_backtest_n31_results.txt` |
 | Opponent model weights (2026) | 60% ESPN picks / 30% Massey / 10% seed fallback | `POOL_STRATEGY_RECOMMENDATION.md`; `COUNCIL_LESSONS.md` §3 row 25 (2026-04-12c) |
 | Pool-MC `n_tournaments` | `5000` (rank-stable at fixed seed; closes §2 O5) | `src/simulation/pool_competition.py:93`; `tests/test_pool_competition.py::TestRankStability`; `COUNCIL_LESSONS.md` §2 O5 |
@@ -113,19 +113,22 @@ Current numbers. If you're about to claim an improvement, it has to clear these.
 | LogLoss gate | < 0.56 | Training objective | `pipeline_freeze.json:121` |
 | Brier gate | 0.19 | Admission threshold | `pipeline_freeze.json:14` |
 
-### Pool backtest (13 yrs 2011–2025 ex. 2012, N=31, 50 stochastic brackets × 50 opponent repeats)
+### Pool backtest — team-identity scoring (14 yrs 2011–2026 ex. 2012/2020, N=1000, 50 brackets × 50 repeats)
+
 | Mode | BestRank ↓ | MeanRank ↓ | P(1st) ↑ | P(top 5%) ↑ |
 |---|---|---|---|---|
-| **champ_first_tv** *(recommended)* | **21.1** | 515.6 | 0.06% | 4.96% |
-| e8_first_tv *(aggressive)* | 23.2 | 550.1 | **0.20%** | 3.95% |
-| f4_first_tv | 26.1 | 518.7 | 0.16% | 4.35% |
-| torvik *(prior rec)* | 31.5 | 546.0 | 0.02% | 5.05% |
-| seed *(baseline)* | 38.1 | 527.4 | 0.02% | 4.89% |
+| **torvik** | **27.1** | 583.5 | 0.07% | **7.35%** |
+| **f4_first_tv** *(recommended)* | 33.8 | **573.6** | 0.16% | 6.60% |
+| e8_first_tv *(aggressive)* | 35.5 | 601.9 | **0.29%** | 4.85% |
+| champ_first_tv *(prior rec)* | 36.5 | 583.7 | 0.20% | 5.39% |
+| seed *(baseline)* | 47.3 | 605.1 | 0.21% | 3.89% |
 
-Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_hedge_results.txt`.
-**Statistical power:** N=14 yrs, ~9–16% power. 12–17-position BestRank effects are meaningful but not conclusive.
+Source: `artifacts/backtest_runs/mc_pool_backtest_20260418_225840.txt` (O27 closure, 2026-04-18). Team-identity scoring per O26.
+**Statistical power:** N=14 yrs, ~9–16% power. No stochastic mode reaches Bonferroni-significance vs seed on BestRank; direction is consistent.
 
-**Team-identity caveat (2026-04-17, per `COUNCIL_LESSONS.md §2 O26-G3-narrow` → `artifacts/o26_g3_n31_team_identity_2026-04-17.json`):** the numbers above are shape-encoded (`score_brackets_against_outcome`). A narrow-scope N=31 rerun under real ESPN team-identity scoring (9 of 11 modes; noseed+blend deferred) shows **BestRank top-5 ordering rearranges** — shape's f4/e8/champ_first/seed/torvik (BestRanks 1.50/1.50/1.60/1.60/2.00) becomes team-identity's **torvik/e8/f4/seed/champ_first (1.42/1.87/2.06/2.30/2.67)**. Production-recommended `champ_first_tv` BestRank moves from ~tied-for-top to worst of the 5 headline modes at N=31. **P(1st) argmax is PRESERVED** — torvik wins both encodings (0.0445 shape, 0.0417 team-identity), so the WTA mode recommendation is not invalidated. N=1000 team-identity rerun tracked as `COUNCIL_LESSONS.md §2 O27`. Until O27 closes: do not cite the BestRank ordering in the table above as authoritative for new mode recommendations; the P(1st) column and `champ_first_tv` recommendation remain locked pending N=1000 confirmation.
+**Why f4_first_tv over torvik:** torvik has best BestRank but f4_first_tv has best MeanRank, highest P(top25%) (21.4%), and highest MeanScr (737). Retroactive actual-pool analysis across 2023-2026 (§3 row 65) independently confirms: f4_first_tv wins all 4 actual pool years when selecting from the ranker's top-3. Three independent lines of evidence converge on f4_first_tv: (1) retroactive pool scoring, (2) within-portfolio ranker correlation, (3) N=1000 team-identity backtest.
+
+**Superseded shape-encoded table:** Prior numbers (champ_first_tv BestRank 21.1, e8 23.2, f4 26.1) were scored under shape encoding which diverges from real ESPN scoring. See `ANALYSIS_O4_OPPONENT_CORRELATION.md` and O26 for the encoding gap. Shape-encoded numbers preserved in `POOL_STRATEGY_RECOMMENDATION.md` for historical reference.
 
 ### 2026 tournament result
 - System produced a winning-quality bracket (1440 pts, 4/4 Final Four) but **ranked it #11** in its own portfolio.
@@ -141,7 +144,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_hedge_results
 | Coverage threshold | 20% | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
 
 ### Known open diagnostic (for context — not a TODO)
-- Independence assumption in opponent model has been empirically tested (2026-04-13, 4 years × 93 brackets). **Independence holds** — pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals. The council's "validity threat" framing was misdiagnosed: error is in the opponent-model marginals (using ESPN-national instead of pool-specific; 5pp mean absolute divergence, up to 18pp on individual teams), not in correlation. Next binding step is `COUNCIL_LESSONS.md §2 O21` (rebuild opponent model with pool-history marginals). Sources: `ANALYSIS_O4_OPPONENT_CORRELATION.md`, `COUNCIL_LESSONS.md §2 O4 [closed] / O21 [open]`.
+- Independence assumption in opponent model has been empirically tested (2026-04-13, 4 years × 93 brackets). **Independence holds** — pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals. The council's "validity threat" framing was misdiagnosed: error is in the opponent-model marginals (using ESPN-national instead of pool-specific; 5pp mean absolute divergence, up to 18pp on individual teams), not in correlation. **Pool-history marginal blending tested and rejected** — O21 (2026-04-13) found blending pool-specific marginals into the opponent model does NOT change bracket rankings (Spearman ρ invariant across blend weights 0–1.0 on n=2 usable years; Δρ=0 for 2024, Δρ=−0.07 for 2025). O26-G2a (2026-04-17) retested under team-identity scoring and found modest signal (argmax-best weight=0.25, Δρ=+0.058 vs ESPN-only) but insufficient to justify a production change on n=3 years. Keep locked weights at 60/30/10 ESPN/Massey/seed. Sources: `ANALYSIS_O4_OPPONENT_CORRELATION.md`, `ANALYSIS_O21_MARGINAL_BLEND.md`, `COUNCIL_LESSONS.md §2 O4 [closed] / O21 [closed — negative verdict]`.
 
 ---
 

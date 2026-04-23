@@ -88,12 +88,13 @@ The first four tools read pre-computed artifacts and work immediately. `run_pool
 Each bracket has: rank, points, percentile, and all 63 picks (R64 through champion). Scraped 2026-04-12.
 
 **This data is critical for:**
-- Empirical opponent correlation modeling (council O4, O10)
+- Empirical opponent correlation modeling (council O4 — closed, independence confirmed)
 - Validating the opponent bracket simulator against real field behavior
-- Measuring whether predicted P(1st) correlates with actual pool placement (O3, O6)
-- Building a team-identity scoring model from real opponent picks
+- Measuring whether predicted P(1st) correlates with actual pool placement (O3, O6 — closed)
+- Pool-specific pick distribution analysis (O21 — closed, null result: marginal blend doesn't change bracket rankings)
+- Team-identity scoring validation (O26 — closed)
 
-**Council items closed by this data:** O1 (collect 31 brackets — done, 30 collected for 2026). O4 and O10 are now unblocked.
+**Council items closed by this data:** O1 (data collection), O4 (independence holds, z=-4.15), O10 (copula not needed → D14), O21 (pool marginal blend — null result). Module: `src/simulation/pool_history_opponent_model.py`.
 
 ## Git Workflow: Rebase-Only (Linear History)
 

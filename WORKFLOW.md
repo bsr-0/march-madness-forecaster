@@ -13,7 +13,7 @@ DATA             FEATURES           MODEL              CALIBRATION        SIMULA
 FOUNDATION       ENGINEERING        SELECTION           & VALIDATION       ENGINE             & EXPORT
                                                                           
 ┌──────────┐    ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Ingest    │───▶│ Build 86-dim │──▶│ Prove simple │──▶│ Temperature  │──▶│ Monte Carlo  │──▶│ Contrarian   │
+│ Ingest    │───▶│ Build 56-dim │──▶│ Prove simple │──▶│ Temperature  │──▶│ Monte Carlo  │──▶│ Contrarian   │
 │ Multi-src │    │ team vectors │   │ LR = ceiling │   │ scaling on   │   │ 10k bracket  │   │ bracket      │
 │ + PIT     │    │ + matchup    │   │ via LOYO     │   │ tourney-only │   │ simulations  │   │ portfolio    │
 │ guardrails│    │ diffs        │   │ backtest     │   │ data         │   │              │   │ vs public    │
@@ -64,7 +64,7 @@ Step 1.4: Data Contracts
 **Goal:** Domain-knowledge features, not kitchen-sink ML features.
 
 ```
-Step 2.1: Team Feature Vectors (86 dimensions)
+Step 2.1: Team Feature Vectors (56 dimensions)
 ├── Efficiency:     adj_off_eff, adj_def_eff, adj_tempo (Torvik)
 ├── Four Factors:   eFG%, TO%, ORB%, FT rate (box scores)
 ├── Elo:            MOV-adjusted, K=20, 0.75 season carryover
@@ -277,7 +277,7 @@ Step 7.3: Production Run
 
 ```
 Week 1:  Ingest + PIT framework + data contracts
-Week 2:  Feature engineering (86-dim) + redundancy audit
+Week 2:  Feature engineering (56-dim) + redundancy audit
 Week 3:  LOYO backtest → prove LR = ceiling → lock 7 features
 Week 4:  Temperature calibration on tournament data + validation gates
 Week 5:  Monte Carlo sims + contrarian optimizer + Kaggle export
