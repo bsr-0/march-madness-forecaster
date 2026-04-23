@@ -284,7 +284,7 @@ class TestTeamFeaturesIntegration:
 
     def test_team_feature_dim_includes_resume(self):
         """TEAM_FEATURE_DIM should reflect the pruned production vector width."""
-        assert TEAM_FEATURE_DIM == 55
+        assert TEAM_FEATURE_DIM == 56
 
     def test_to_vector_length_matches_dim(self):
         """to_vector() output length should equal TEAM_FEATURE_DIM."""

@@ -69,7 +69,7 @@ REMOVED_REDUNDANCIES = [
 # Canonical team feature dimension after observation-rate pruning.
 # Any feature below the 80% real-observation threshold across 2012-2026
 # tournament-team vectors was removed from the model-facing vector.
-TEAM_FEATURE_DIM = 55
+TEAM_FEATURE_DIM = 56
 
 # Normalization constants for interaction features in create_matchup_features()
 TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
@@ -576,6 +576,7 @@ class TeamFeatures:
             self.market_implied_prob,
             self.market_spread,
             self.injury_risk,
+            float(np.log1p(self.coach_tournament_appearances)),
         ]
 
         result = np.array(features, dtype=np.float64)
@@ -657,6 +658,7 @@ class TeamFeatures:
             'late_season_games', 'late_season_margin', 'late_season_win_pct',
             'market_implied_prob', 'market_spread',
             'injury_risk',
+            'coach_tournament_exp',
         ]
 
         # FIX #10: Static assertion at call time

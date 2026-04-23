@@ -14,6 +14,7 @@ ABLATION_GROUPS = {
     "ablate_late_season": [49, 50, 51],
     "ablate_market": [52, 53],
     "ablate_injury": [54],
+    "ablate_coach_exp": [55],
 }
 
 

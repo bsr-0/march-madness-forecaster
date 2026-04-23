@@ -879,6 +879,7 @@ class ForecastConfig:
     ablate_late_season: bool = False
     ablate_market: bool = False
     ablate_injury: bool = False
+    ablate_coach_exp: bool = False
 
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0

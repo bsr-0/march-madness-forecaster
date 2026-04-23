@@ -197,12 +197,12 @@ class TestFeatureVectorDimensions:
     """Verify the 6 new features are wired into the vectors."""
 
     def test_team_feature_dim_is_52(self):
-        assert TEAM_FEATURE_DIM == 55
+        assert TEAM_FEATURE_DIM == 56
 
     def test_to_vector_length(self):
         tf = TeamFeatures(team_id="duke", team_name="Duke", seed=1, region="East")
         v = tf.to_vector()
-        assert len(v) == 55
+        assert len(v) == 56
 
     def test_conf_tourney_indices(self):
         tf = TeamFeatures(
@@ -224,7 +224,7 @@ class TestFeatureVectorDimensions:
 
     def test_get_feature_names_length(self):
         names = TeamFeatures.get_feature_names()
-        assert len(names) == 55
+        assert len(names) == 56
         assert names[46] == 'conf_tourney_champion'
         assert names[47] == 'conf_tourney_games'
         assert names[48] == 'conf_tourney_margin'
@@ -248,4 +248,4 @@ class TestFeatureVectorDimensions:
         assert v[49] == 6.0
         assert v[50] == pytest.approx(8.3)
         assert v[51] == pytest.approx(0.833)
-        assert len(v) == 55
+        assert len(v) == 56

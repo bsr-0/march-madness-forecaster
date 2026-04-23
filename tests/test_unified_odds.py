@@ -137,11 +137,11 @@ class TestComputeTeamMarketFeatures:
 
 class TestFeatureVectorDim:
     def test_dim_is_54(self):
-        assert TEAM_FEATURE_DIM == 55
+        assert TEAM_FEATURE_DIM == 56
 
     def test_feature_names_include_market(self):
         names = TeamFeatures.get_feature_names()
-        assert len(names) == 55
+        assert len(names) == 56
         assert "market_implied_prob" in names
         assert "market_spread" in names
         assert names[52] == "market_implied_prob"

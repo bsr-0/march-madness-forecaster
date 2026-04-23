@@ -1871,6 +1871,7 @@ class IncrementalMetricsEngine:
         v[52] = 0.0
         v[53] = 0.0
         v[54] = 0.0
+        v[55] = float(np.log1p(m.coach_tournament_appearances))
 
         inf_mask = np.isinf(v)
         if inf_mask.any():
