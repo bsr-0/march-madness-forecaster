@@ -74,6 +74,27 @@ Specialized agents live in `.claude/agents/<name>/`. Each is a self-contained wo
 
 The first four tools read pre-computed artifacts and work immediately. `run_pool_optimization` needs `pip install -r requirements.txt` first.
 
+## Pool History Data (Opponent Brackets)
+
+**`data/pool_history/pool_hist_results.json`** contains complete bracket data from the actual pool:
+
+| Year | Brackets | Picks per bracket |
+|------|----------|-------------------|
+| 2023 | 18 | 63 |
+| 2024 | 25 | 63 |
+| 2025 | 32 | 63 |
+| 2026 | 30 | 63 |
+
+Each bracket has: rank, points, percentile, and all 63 picks (R64 through champion). Scraped 2026-04-12.
+
+**This data is critical for:**
+- Empirical opponent correlation modeling (council O4, O10)
+- Validating the opponent bracket simulator against real field behavior
+- Measuring whether predicted P(1st) correlates with actual pool placement (O3, O6)
+- Building a team-identity scoring model from real opponent picks
+
+**Council items closed by this data:** O1 (collect 31 brackets — done, 30 collected for 2026). O4 and O10 are now unblocked.
+
 ## Git Workflow: Rebase-Only (Linear History)
 
 This repo keeps a **linear history**. No merge commits are ever created on
