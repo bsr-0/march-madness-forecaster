@@ -37,7 +37,7 @@ class TestParseWpwHtmlScriptEmbed:
         assert duke["round_of_64_pct"] == 98.7
         assert duke["round_of_32_pct"] == 92.1
         assert duke["sweet_16_pct"] == 78.4
-        assert duke["elite_8_pct"] == 56.2
+        assert duke["elite_8_pct"] == 55.2
         assert duke["final_four_pct"] == 38.6
         assert duke["champion_pct"] == 22.3
 

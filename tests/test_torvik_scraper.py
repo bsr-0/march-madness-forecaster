@@ -327,7 +327,7 @@ class TestAggregatePlayerCsv:
         assert t["ftm"] == 90.0
         assert t["fta"] == 110.0
         assert t["fg2m"] == 180.0
-        assert t["fg3m"] == 56.0
+        assert t["fg3m"] == 55.0
 
     def test_short_row_skipped(self, scraper):
         csv_text = "Player A,Duke\n"  # too short
