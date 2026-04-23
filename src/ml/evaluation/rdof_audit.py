@@ -1113,6 +1113,115 @@ class HoldoutEvaluator:
 
         return games_payload, metrics_payload
 
+    def _load_conference_map(self, year: int) -> Optional[Dict[str, str]]:
+        """Load team→conference mapping, preferring torvik data."""
+        conf_map: Optional[Dict[str, str]] = None
+
+        # Primary: torvik_{year}.json has reliable conference field.
+        torvik_path = self.historical_dir / f"torvik_{year}.json"
+        if torvik_path.exists():
+            try:
+                with open(torvik_path, "r") as f:
+                    tp = json.load(f)
+                teams_list = tp.get("teams", tp) if isinstance(tp, dict) else tp
+                if isinstance(teams_list, list):
+                    for tm in teams_list:
+                        conf = tm.get("conference")
+                        tid = str(tm.get("team_id", "")).lower().strip()
+                        tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
+                        if tid and conf:
+                            if conf_map is None:
+                                conf_map = {}
+                            conf_map[tid] = conf
+            except Exception:
+                pass
+
+        if conf_map:
+            return conf_map
+
+        # Fallback: team_metrics_{year}.json (rarely has conference).
+        metrics_path = self.historical_dir / f"team_metrics_{year}.json"
+        if metrics_path.exists():
+            try:
+                with open(metrics_path, "r") as f:
+                    mp = json.load(f)
+                if isinstance(mp, dict):
+                    teams_list = mp.get("teams", [])
+                    if isinstance(teams_list, list):
+                        for tm in teams_list:
+                            conf = tm.get("conference")
+                            tid = str(tm.get("team_id", "")).lower().strip()
+                            tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
+                            if tid and conf:
+                                if conf_map is None:
+                                    conf_map = {}
+                                conf_map[tid] = conf
+            except Exception:
+                pass
+
+        return conf_map
+
+    def _load_coach_experience(self, year: int) -> Dict[str, int]:
+        """Load team→coach_tournament_appearances for a given year.
+
+        Uses Kaggle MTeamCoaches.csv for team→coach mapping and
+        coach_tournament_2026.json for career stats. Coach stats are
+        career totals as of 2026 — for historical years this introduces
+        mild look-ahead on career *length* but not on tournament outcomes
+        (appearances are a slow-moving career attribute).
+        """
+        coach_apps: Dict[str, int] = {}
+
+        # 1. Load coach career stats
+        coach_json = Path("data/raw/coach_tournament_2026.json")
+        if not coach_json.exists():
+            return coach_apps
+        try:
+            with open(coach_json, "r") as f:
+                raw = json.load(f)
+            coaches_dict = raw.get("coaches", raw) if isinstance(raw, dict) else {}
+        except Exception:
+            return coach_apps
+
+        # 2. Load team→coach mapping from Kaggle
+        kaggle_coaches = Path("data/kaggle/MTeamCoaches.csv")
+        kaggle_teams = Path("data/kaggle/MTeams.csv")
+        if not kaggle_coaches.exists() or not kaggle_teams.exists():
+            return coach_apps
+
+        try:
+            import csv
+
+            # Build TeamID → team_name slug
+            tid_to_name: Dict[int, str] = {}
+            with open(kaggle_teams, "r") as f:
+                for row in csv.DictReader(f):
+                    team_id = int(row.get("TeamID", 0))
+                    name = row.get("TeamName", "")
+                    slug = name.lower().replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                    if team_id and slug:
+                        tid_to_name[team_id] = slug
+
+            # Build team_slug → coach_name for this year
+            team_to_coach: Dict[str, str] = {}
+            with open(kaggle_coaches, "r") as f:
+                for row in csv.DictReader(f):
+                    if int(row.get("Season", 0)) == year:
+                        team_id = int(row.get("TeamID", 0))
+                        coach_name = row.get("CoachName", "")
+                        slug = tid_to_name.get(team_id, "")
+                        if slug and coach_name:
+                            team_to_coach[slug] = coach_name
+
+            # 3. Match coaches to career stats
+            for team_slug, coach_name in team_to_coach.items():
+                if coach_name in coaches_dict:
+                    coach_apps[team_slug] = coaches_dict[coach_name].get("appearances", 0)
+        except Exception:
+            pass
+
+        return coach_apps
+
     def _build_team_metrics(self, metrics_payload: dict) -> Dict[str, Dict[str, float]]:
         """Parse team metrics from payload."""
         team_metrics: Dict[str, Dict[str, float]] = {}
@@ -1323,26 +1432,11 @@ class HoldoutEvaluator:
                 logger.warning("Year %d: only %d GameRecords, skipping", train_year, len(game_records))
                 continue
 
-            # Conference map from metrics file.
-            conference_map = None
-            metrics_path = self.historical_dir / f"team_metrics_{train_year}.json"
-            if metrics_path.exists():
-                try:
-                    with open(metrics_path, "r") as f:
-                        mp = json.load(f)
-                    if isinstance(mp, dict):
-                        teams_list = mp.get("teams", [])
-                        if isinstance(teams_list, list):
-                            for tm in teams_list:
-                                conf = tm.get("conference")
-                                tid = str(tm.get("team_id", "")).lower().strip()
-                                tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
-                                if tid and conf:
-                                    if conference_map is None:
-                                        conference_map = {}
-                                    conference_map[tid] = conf
-                except Exception:
-                    pass
+            # Conference map (prefer torvik, fall back to team_metrics).
+            conference_map = self._load_conference_map(train_year)
+
+            # Coach tournament experience for this training year.
+            _coach_apps = self._load_coach_experience(train_year)
 
             # Tournament seeds are NOT loaded for training games.
             # All training samples in this loop are regular-season games
@@ -1417,6 +1511,14 @@ class HoldoutEvaluator:
                 s1, s2 = 0, 0
                 v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
                 v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+
+                # Coach tournament experience overlay.
+                if _coach_apps:
+                    import numpy as _np
+                    for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
+                        _apps = _coach_apps.get(_tid, 0)
+                        if _apps > 0:
+                            _v[55] = float(_np.log1p(_apps))
 
                 if _odds_by_team:
                     from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf
@@ -1512,26 +1614,11 @@ class HoldoutEvaluator:
         if len(ho_game_records) < 100:
             raise ValueError(f"Insufficient game records for holdout year {holdout_year}")
 
-        # Conference map for holdout year.
-        ho_conf_map = None
-        ho_metrics_path = self.historical_dir / f"team_metrics_{holdout_year}.json"
-        if ho_metrics_path.exists():
-            try:
-                with open(ho_metrics_path, "r") as f:
-                    ho_mp = json.load(f)
-                if isinstance(ho_mp, dict):
-                    teams_list = ho_mp.get("teams", [])
-                    if isinstance(teams_list, list):
-                        for tm in teams_list:
-                            conf = tm.get("conference")
-                            tid = str(tm.get("team_id", "")).lower().strip()
-                            tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
-                            if tid and conf:
-                                if ho_conf_map is None:
-                                    ho_conf_map = {}
-                                ho_conf_map[tid] = conf
-            except Exception:
-                pass
+        # Conference map for holdout year (prefer torvik, fall back to metrics).
+        ho_conf_map = self._load_conference_map(holdout_year)
+
+        # Coach tournament experience for holdout year.
+        _ho_coach_apps = self._load_coach_experience(holdout_year)
 
         # Seeds for holdout year.
         ho_seeds: Dict[str, int] = {}
@@ -1609,6 +1696,13 @@ class HoldoutEvaluator:
             s2 = ho_seeds.get(t2, 0)
             v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
             v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+
+            # Coach tournament experience overlay.
+            if _ho_coach_apps:
+                for _v, _tid in ((v1, t1), (v2, t2)):
+                    _apps = _ho_coach_apps.get(_tid, 0)
+                    if _apps > 0:
+                        _v[55] = float(np.log1p(_apps))
 
             if _ho_odds_by_team:
                 from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf

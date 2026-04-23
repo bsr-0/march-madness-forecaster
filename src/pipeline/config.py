@@ -870,7 +870,7 @@ class ForecastConfig:
     enable_vegas_calibration_anchor: bool = False  # Use Vegas closing spreads as calibration anchor
     vegas_spreads_json: Optional[str] = None  # Path to per-game Vegas spreads JSON (auto-resolved if None)
     vegas_anchor_sigma: float = 13.5  # Spread-to-probability sigma for Vegas lines
-    use_market_features: bool = False  # Add market-implied features to training vectors (for A/B testing)
+    use_market_features: bool = True  # Add market-implied features to training vectors
 
     # Feature-group ablation flags (for LOYO A/B testing)
     ablate_elo: bool = False
