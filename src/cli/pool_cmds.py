@@ -31,6 +31,7 @@ combination. The opt_* and hedge_tv modes were deprecated 2026-04-12
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -101,6 +102,11 @@ def run_optimize_pool(args):
     walk_forward = not getattr(args, "no_walk_forward", False)
 
     pool_history_path = getattr(args, "pool_history", None)
+    if pool_history_path is None:
+        _auto_path = "data/pool_history/pool_hist_results.json"
+        if os.path.isfile(_auto_path):
+            pool_history_path = _auto_path
+            print(f"  Auto-discovered pool history: {_auto_path}")
     pool_history_weight = float(getattr(args, "pool_history_weight", 1.0))
 
     if mode == "auto":
