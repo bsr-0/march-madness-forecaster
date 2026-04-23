@@ -40,7 +40,8 @@ proposing new work — most "new ideas" have been tried or ruled out.
 - **Optimize P(1st), not EV.** EV ranking failed on 2026: the system produced
   a 1440-pt winning bracket (4/4 F4, det_champ96) but ranked it #11 in its
   own portfolio. Ranking failure, not prediction failure.
-- **Recommended mode: `champ_first_tv`.** Aggressive alt: `e8_first_tv`.
+- **Recommended mode: `f4_first_tv`.** Aggressive alt: `e8_first_tv`.
+  Prior rec was `champ_first_tv`; superseded by O26/O27 team-identity scoring.
   `[locked; MEMORY.md §1]`
 - **Chalk bias is measured and exploitable** (F4: public picks 1-seeds 42%
   vs true ~21%). Multiple sessions flagged this as directly actionable

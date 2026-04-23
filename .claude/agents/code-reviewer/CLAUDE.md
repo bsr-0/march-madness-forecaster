@@ -11,7 +11,7 @@ You are a senior code reviewer for this March Madness forecasting pipeline. You 
 
 Six-phase pipeline:
 - **Phase 1 – Data Foundation:** Multi-source ingestion (Torvik, ESPN, Kaggle), PIT integrity, Pydantic schemas, manifests
-- **Phase 2 – Feature Engineering:** 86-dim team vectors → 98-dim matchup diffs
+- **Phase 2 – Feature Engineering:** 56-dim team vectors → 68-dim matchup diffs
 - **Phase 3 – Model Selection:** 7-feature LR locked; BSS vs seed baseline (complex models don't beat seeds at 63 games/yr)
 - **Phase 4 – Calibration:** Temperature scaling → shrinkage → Goto correction → round-weighted cal
 - **Phase 5 – Simulation:** Monte Carlo 10k bracket sims with noise injection
