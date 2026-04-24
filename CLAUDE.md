@@ -1,5 +1,18 @@
 # Project Instructions
 
+## North Star Metric: P(1st)
+
+**READ BEFORE ANY OPTIMIZATION WORK.** Full details in `memory/project_north_star_metric.md`.
+
+- **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
+- **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
+- **Current baseline:** 4.27% P(1st) per bracket (vs 3.23% random). Oracle best-of-50: ~9%.
+- **Three levers (priority order):** (1) Opponent model calibration, (2) Bracket selection/ranking, (3) Generation mode tuning.
+- **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring). Run `scripts/mc_pool_backtest.py --team-identity --n-opponents 30`.
+- **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
+- **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
+- **Before proposing any new strategy:** Read `memory/project_strategies_tested.md` for what's been tried and killed.
+
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").
 
