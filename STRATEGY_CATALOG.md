@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 1,470 strategies — 6 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 1,960 strategies — 7 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -125,27 +125,30 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/elo_probabilities.py`; lock test: `tests/test_elo_source.py`
 
 #### A5: `massey_avg`
-- **Status:** NEW
-- **Data:** `data/kaggle/MMasseyOrdinals.csv` — 36+ ranking systems, daily updates
+- **Status:** IMPLEMENTED (2026-04-24) — uses the pre-aggregated Massey composite file rather than per-system top-10 averaging (same signal, cleaner source; see "Deviations" below).
+- **Data:** `data/raw/external_massey_composite_{year}.json` (list of `{team_id, rating, ranking, normalized}` per team). Available 2008-2025; 2026 not yet scraped — loader returns None for that year and the backtest skips this source for 2026.
 - **Algorithm:**
-  1. Load ordinal ranks for all systems on the last pre-tournament day
-  2. For each tournament team, compute average rank across top-10 most stable systems (POM, SAG, MOR, DOL, COL, WOL, RTH, DUN, MAS, SEL — selected by historical availability)
-  3. Convert rank to barthag: `barthag = 1.0 - (avg_rank / 360)` (360 ≈ D-I teams)
-  4. Clip to [0.10, 0.99]
-- **Fallback:** Teams not in Massey → seed-based estimate
-- **Years:** 2003-2026
-- **File:** `src/prediction/massey_probabilities.py` (NEW)
+  1. Load composite JSON (already ensembled across ~150 ranking systems).
+  2. For each canonical tournament team, bridge the Massey team_id via exact-match-then-alias (6 explicit edge cases for heavily abbreviated Massey names: `american_univ → american`, `mt_st_mary_s → mount_st__mary_s`, `ne_omaha → omaha`, `st_francis_pa → saint_francis`, `st_mary_s_ca → saint_mary_s__ca`, `siue → siu_edwardsville`).
+  3. Use the composite's `normalized` field (already ∈ (0, 1); top teams ~0.99, bottom ~0.01) directly as barthag.
+  4. Clip to [0.10, 0.99] per catalog.
+- **Fallback:** Teams not in Massey → seed-based estimate `max(0.10, 1 − 0.04 × seed)` (same pattern as Elo/torvik fallbacks).
+- **Deviations from original catalog spec:**
+  - Uses pre-aggregated `data/raw/external_massey_composite_*.json` instead of `data/kaggle/MMasseyOrdinals.csv` (the latter doesn't exist in this repo; the former is the already-ensembled equivalent).
+  - No per-system top-10 averaging — the composite is already the ensemble.
+- **Years:** 2008-2025 (2026 pending composite scrape).
+- **Coverage:** 68/68 tournament teams bridged for 2025 (exact-match 62 + 6 aliases).
+- **File:** `src/prediction/massey_probabilities.py`; lock test: `tests/test_massey_source.py`.
 
 #### A6: `massey_best`
-- **Status:** NEW
-- **Data:** Same as A5
-- **Algorithm:**
-  1. Walk-forward: for each test year, evaluate each Massey system's historical tournament prediction accuracy (Brier score on prior years)
-  2. Select the single best system
-  3. Use that system's ranks → barthag conversion
-  - Prevents cherry-picking: system selection uses only data from years < test_year
-- **Years:** 2008-2026 (needs 5+ prior years for system selection)
-- **File:** `src/prediction/massey_probabilities.py` (NEW, same file as A5)
+- **Status:** DEFERRED (2026-04-24) — needs a per-system Brier-selection harness.
+- **Data:** 150+ per-system files at `data/raw/external_{SYSTEM}_{year}.json` (POM, SAG, MOR, DOL, COL, WOL, RTH, DUN, MAS, SEL, etc.) are available for historical years.
+- **Why deferred:** The walk-forward Brier-selection algorithm requires:
+  (i) per-system tournament pairwise-win-rate predictions for every game in every historical tournament,
+  (ii) a Brier harness that scores each system vs actual outcomes across years < test_year,
+  (iii) a selection step that picks the best cumulative-Brier system per test year.
+  This is its own phase of work (~4-5 files, separate Brier-accumulator module, additional per-system data-validation). Scoped separately rather than squeezed into 1d.
+- **Next phase:** 1d-2. Once shipped, composes with every adjustment + construction in the catalog (~420 new `massey_best_*` permutations).
 
 #### A7: `spread_power`
 - **Status:** IMPLEMENTED (data quality issues — Covers implied_prob is inverted for some games; data quality guard added)
@@ -429,7 +432,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
-| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo (6) | massey_avg, massey_best, ap_strength (3) |
+| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
 | **Adjustments** | contrarian, upset_tuned, volatile (3) | coach_adj, roster_adj, momentum (3) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
@@ -615,7 +618,8 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b6 | Chaos Index (pre-tournament regime prediction from Torvik top-of-field) | **DONE** | `--chaos-index` — `mean_top8_barthag` r=−0.668 p=0.006; walk-forward MAE 0.89 beats 1.13 baseline; informational only (no strategy gating yet) |
 | 1b7 | cbbpy team-ID bridge (unblocks A4 Elo, C2 roster_adj, D1 volatile) | **DONE** | `bridge_cbbpy_id()` in `src/data/normalize.py` — longest-prefix match + 12 explicit edge-case aliases; coverage 17/68 → 68/68 on 2026 tournament field (2026-04-24) |
 | 1c | Elo base (A4) | **DONE** | Self-contained K=38 Elo from historical_games via cbbpy bridge; 68/68 coverage; +420 `elo_*` permutations (2026-04-24) |
-| 1d | Massey bases (A5, A6) | TODO | massey_avg, massey_best, blends |
+| 1d | Massey bases (A5, A6) | **PARTIAL** | A5 massey_avg DONE 2026-04-24 (uses pre-aggregated composite + 6-alias ID bridge; 68/68 2025 coverage). A6 massey_best deferred to phase 1d-2 — needs per-system Brier-selection harness. |
+| 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
