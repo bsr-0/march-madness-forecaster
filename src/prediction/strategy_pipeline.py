@@ -58,7 +58,7 @@ CONSTRUCTIONS = (
 
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom"}
-IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned"}
+IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile"}
 IMPLEMENTED_CONSTRUCTIONS = {
     "forward",
     "champ_first",
@@ -222,6 +222,7 @@ def resolve_pipeline_round_probs(
     *,
     seeds: Optional[Dict[str, int]] = None,
     historical_seed_reach_rates: Optional[Dict[int, Dict[str, float]]] = None,
+    team_volatility: Optional[Dict[str, float]] = None,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Resolve a pipeline specification into round_probs.
 
@@ -231,6 +232,9 @@ def resolve_pipeline_round_probs(
         base_round_probs: Pre-computed round_probs for each source
         pick_dist: Public pick distribution (for contrarian adjustment)
         seeds: Per-team seed map (required for upset_tuned adjustment)
+        team_volatility: Per-team [0,1]-normalized volatility
+            (required for volatile adjustment; produced by
+            ``src.prediction.volatile_probabilities.load_team_volatility``)
         historical_seed_reach_rates: Walk-forward seed-by-round empirical
             rates (required for upset_tuned; produced by
             ``src.prediction.upset_tuned_probabilities.load_upset_tuned_context``)
@@ -275,6 +279,12 @@ def resolve_pipeline_round_probs(
             from src.prediction.upset_tuned_probabilities import build_upset_tuned_round_probs
 
             result = build_upset_tuned_round_probs(result, seeds, historical_seed_reach_rates)
+        elif adj == "volatile":
+            if team_volatility is None:
+                return None  # Required context not supplied
+            from src.prediction.volatile_probabilities import build_volatile_round_probs
+
+            result = build_volatile_round_probs(result, team_volatility)
         # Future adjustments:
         # elif adj == "coach_adj":
         #     result = apply_coach_adjustment(result, ...)
