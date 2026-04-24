@@ -19,6 +19,7 @@ from __future__ import annotations
 import html as _html
 import json
 import logging
+from typing import Iterable
 import re
 import unicodedata
 from pathlib import Path
@@ -245,8 +246,9 @@ def _load_aliases() -> dict[str, str]:
             data = json.load(f)
         aliases = data.get("aliases", {})
         if aliases:
-            _logger.debug("Loaded %d team aliases from %s (version %s)",
-                          len(aliases), config_path, data.get("version", "?"))
+            _logger.debug(
+                "Loaded %d team aliases from %s (version %s)", len(aliases), config_path, data.get("version", "?")
+            )
             return aliases
     except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
         _logger.debug("Could not load team aliases config (%s), using inline fallback", exc)
@@ -351,3 +353,70 @@ def strip_ncaa_suffix_name(name: str) -> str:
     if name and re.search(r"NCAA$", name):
         return re.sub(r"NCAA$", "", name).rstrip()
     return name
+
+
+# cbbpy (scraped game results) uses mascot-suffixed team IDs that the rest of the
+# repo doesn't. The bridge below maps `illinois_fighting_illini` → `illinois` and
+# the ~12 edge cases where cbbpy uses an abbreviation or disambiguator that
+# diverges from Torvik's canonical form (UConn, BYU, SMU, VCU, the two Miamis, etc.).
+#
+# 82% of the 2026 tournament field (56/68) bridges via simple longest-prefix
+# match against known canonical IDs. The remaining 12 need explicit aliases,
+# measured against `data/raw/historical/historical_games_{year}.json`.
+_CBBPY_EDGE_CASES: dict[str, str] = {
+    # cbbpy_id → canonical Torvik/seeds ID
+    "byu_cougars": "brigham_young",
+    "uconn_huskies": "connecticut",
+    "hawai_i_rainbow_warriors": "hawaii",
+    "umbc_retrievers": "maryland_baltimore_county",
+    "mcneese_cowboys": "mcneese_state",
+    "miami_hurricanes": "miami__fl",
+    "miami_oh_redhawks": "miami__oh",
+    "queens_university_royals": "queens__nc",
+    "saint_mary_s_gaels": "saint_mary_s__ca",
+    "smu_mustangs": "southern_methodist",
+    "st_john_s_red_storm": "st__john_s__ny",
+    "vcu_rams": "virginia_commonwealth",
+}
+
+
+def bridge_cbbpy_id(cbbpy_id: str, canonical_ids: Iterable[str]) -> str | None:
+    """Map a cbbpy-style mascot-suffixed team ID to a canonical ID.
+
+    Tries three strategies, in order:
+      1. **Exact match** — the cbbpy ID is already canonical (happens for teams
+         whose names Torvik spells the same way, e.g. ``duke`` and ``duke``).
+      2. **Edge-case alias** — explicit mapping in ``_CBBPY_EDGE_CASES`` for
+         the 12 teams where cbbpy diverges materially (UConn/BYU/SMU/...).
+      3. **Longest-prefix match** — find the longest element of
+         ``canonical_ids`` that is a prefix of ``cbbpy_id`` followed by ``_``.
+         This catches the bulk of cases: ``illinois_fighting_illini`` →
+         ``illinois``; ``james_madison_dukes`` → ``james_madison``.
+
+    Longest-prefix ordering matters: ``north_carolina`` is a prefix of
+    ``north_carolina_state``, so without length-sorting a North Carolina State
+    cbbpy ID could be misrouted to North Carolina.
+
+    Args:
+        cbbpy_id: Snake-cased team ID from ``historical_games_*.json``
+            (already lowercase, alphanumeric + underscore).
+        canonical_ids: Iterable of canonical IDs to match against — typically
+            the tournament seeds set or the Torvik ``team_id`` column.
+
+    Returns:
+        The canonical ID if a match was found, else ``None``.
+    """
+    if not cbbpy_id:
+        return None
+    canonical_set = frozenset(canonical_ids)
+    if cbbpy_id in canonical_set:
+        return cbbpy_id
+    edge = _CBBPY_EDGE_CASES.get(cbbpy_id)
+    if edge is not None and edge in canonical_set:
+        return edge
+    # Longest-prefix fallback: sort candidates by length descending so the
+    # most specific prefix wins (north_carolina_state before north_carolina).
+    for canonical in sorted(canonical_set, key=len, reverse=True):
+        if cbbpy_id.startswith(canonical + "_"):
+            return canonical
+    return None
