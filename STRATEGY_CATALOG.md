@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 600 strategies — 5 sources × (1 + 2 adj + pair chain) × 10 constructions × blends)
+# Auto-generate all permutations (currently 1,050 strategies — 5 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -289,17 +289,20 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 ### Category D: Upset-Aware Ratings
 
 #### D1: `volatile`
-- **Status:** NEW
-- **Data:** `data/raw/historical/historical_games_{year}.json`
+- **Status:** IMPLEMENTED (2026-04-24) — shipped as an ADJUSTMENT rather than a base, composable with every source and construction. Uses the cbbpy team-ID bridge (phase 1b7) to map historical game records to tournament team IDs.
+- **Data:** `data/raw/historical/historical_games_{year}.json` (bridged via `src.data.normalize.bridge_cbbpy_id`), cut off at Torvik's `tournament_start` date for walk-forward safety.
 - **Algorithm:**
-  1. Start with torvik barthag
-  2. For each team, compute season game-by-game win probability variance
-  3. Instead of using barthag directly in Log5, use `barthag ± noise` where noise ~ N(0, team_volatility)
-  4. In the MC simulation, each game samples from this distribution, so volatile teams sometimes look much stronger and sometimes much weaker
-  - Effect: high-variance teams get more upset wins AND more upset losses, matching real tournament behavior
-  - Low-variance teams (consistent) maintain their expected advancement rates
-- **Years:** 2008-2026
-- **File:** `src/prediction/upset_probabilities.py` (NEW)
+  1. For each tournament team, collect point margins across every pre-tournament regular-season game.
+  2. Volatility = standard deviation of those margins (proxy for game-to-game inconsistency).
+  3. Normalize per year: `v ∈ [0, 1]` where 1.0 = noisiest team in the field, 0.0 = most consistent.
+  4. For each team `t` and round `r`: blend the base round_prob toward the per-round uniform rate (`teams_per_round[r] / 64`):
+     `adjusted[t][r] = (1 - v * strength) * base[t][r] + v * strength * uniform[r]` (default `strength=0.5`)
+  5. Re-normalize per round to the bracket's team-count targets.
+  - **Effect matches catalog intent:** strong volatile teams lose mass (more upset losses toward round mean); weak volatile teams gain mass (more upset wins). Low-vol teams keep their baseline.
+  - **Deliberate deviation from catalog spec:** spec called for pairwise Log5 noise at MC sampling time; we apply at the round-probs level for composability (same signal, every source × construction gets a `_+volatile_` variant).
+  - Teams with fewer than 5 games get the neutral `v=0.5` fallback — no bias either way.
+- **Years:** 2011-2026 (whenever `historical_games_{year}.json` + Torvik cutoff are both ingested)
+- **File:** `src/prediction/volatile_probabilities.py`; lock test: `tests/test_volatile_adjustment.py`
 
 #### D2: `upset_tuned`
 - **Status:** IMPLEMENTED (2026-04-24) — shipped as an ADJUSTMENT rather than a base. Composable with every source / construction; tuples produce e.g. `torvik+upset_tuned_confidence`, `odds+contrarian+upset_tuned_f4_first`.
@@ -424,7 +427,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
-| **Adjustments** | contrarian, upset_tuned (2) | coach_adj, roster_adj, momentum, volatile (4) |
+| **Adjustments** | contrarian, upset_tuned, volatile (3) | coach_adj, roster_adj, momentum (3) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
@@ -613,7 +616,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
-| 1h | Upset bases (D1 volatile, D2 upset_tuned) | **PARTIAL** | D2 upset_tuned DONE 2026-04-24 (as adjustment) — walk-forward seed-by-round calibration; D1 volatile still TODO |
+| 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
 | 2c | Anchor-restricted F4 modes (M3a f4_chalk, M3b f4_diverse) | **DONE** | Post-Phase-3 expansion — tests whether `seed_f4_first`'s edge comes from chalk anchors (M3a) or survives diverse anchors (M3b) (2026-04-24) |

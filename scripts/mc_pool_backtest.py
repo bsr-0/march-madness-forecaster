@@ -1888,6 +1888,14 @@ def run_backtest(
 
         upset_tuned_ctx = load_upset_tuned_context(year)
 
+        # Volatile context: per-team [0,1]-normalized game-margin volatility
+        # from pre-tournament regular-season games. Consumed by the volatile
+        # adjustment. Walk-forward-safe: only uses games strictly before the
+        # Torvik tournament_start cutoff.
+        from src.prediction.volatile_probabilities import load_team_volatility
+
+        team_volatility = load_team_volatility(year, seeds.keys(), Path("data"))
+
         # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
         def _make_sampler(mode_name):
             """Return a sampler function for the given construction mode."""
@@ -2033,6 +2041,7 @@ def run_backtest(
                     pick_dist,
                     seeds=seeds,
                     historical_seed_reach_rates=upset_tuned_ctx,
+                    team_volatility=team_volatility,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)
