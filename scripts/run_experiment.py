@@ -539,49 +539,43 @@ def _run_sweep(bases, modes, n_repeats, n_model, n_opponents, label="sweep"):
 
 
 def _print_summary(results, strategies, label):
-    """Print ranked summary table sorted by P(1st)."""
-    print(f"\n{'=' * 80}")
+    """Print ranked summary table sorted by P(1st).
+
+    Columns reflect the catalog's Metrics Reported contract — primary
+    metrics (P(1st) ± CI95, BestScore, MeanScore) on the left; secondary
+    placement diagnostics (p_top5%, p_top25%, MeanRank) on the right.
+    """
+    # Delegate aggregation to the Testing Budget helper so the primary,
+    # secondary, and CI95 fields stay in lockstep with the artifact writer.
+    seed_key = "seed_forward" if "seed_forward" in {r["mode"] for r in results} else "seed"
+    strategy_stats = aggregate_strategy_stats(results, seed_key)
+
+    # Restrict to the strategies the caller asked to display.
+    visible = {s: strategy_stats[s] for s in strategies if s in strategy_stats}
+
+    print(f"\n{'=' * 100}")
     print(f"RESULTS RANKED BY P(1st) — {label}")
-    print(f"{'=' * 80}")
-    print(
-        f"  {'Rank':>4} {'Strategy':<30} {'P(1st)':>8} {'MeanRnk':>8} {'BestRnk':>8} {'MeanScr':>8} {'Years':>5} {'Win8+':>5}"
+    print(f"{'=' * 100}")
+    header = (
+        f"  {'Rank':>4} {'Strategy':<30} "
+        f"{'P(1st)':>8} {'±CI95':>7} "
+        f"{'BestScr':>8} {'MeanScr':>8} "
+        f"{'pTop5':>6} {'pTop25':>7} "
+        f"{'MeanRnk':>8} {'Yrs':>4} {'Win8+':>5}"
     )
-    print(f"  {'-' * 85}")
+    print(header)
+    print(f"  {'-' * (len(header) - 2)}")
 
-    # Aggregate per strategy
-    strategy_stats = {}
-    for s in strategies:
-        s_results = [r for r in results if r["mode"] == s]
-        if not s_results:
-            continue
-        p1 = np.mean([r["p_first"] for r in s_results])
-        mean_rank = np.mean([r["mean_rank"] for r in s_results])
-        best_rank = np.mean([r["best_rank"] for r in s_results])
-        mean_score = np.mean([r["mean_score"] for r in s_results])
-        n_years = len(s_results)
-
-        # Count years where this strategy beats seed_forward
-        seed_key = "seed_forward" if "seed_forward" in {r["mode"] for r in results} else "seed"
-        seed_by_year = {r["year"]: r["p_first"] for r in results if r["mode"] == seed_key}
-        wins_vs_seed = sum(1 for r in s_results if r["year"] in seed_by_year and r["p_first"] > seed_by_year[r["year"]])
-
-        strategy_stats[s] = {
-            "p_first": p1,
-            "mean_rank": mean_rank,
-            "best_rank": best_rank,
-            "mean_score": mean_score,
-            "n_years": n_years,
-            "wins_vs_seed": wins_vs_seed,
-        }
-
-    # Sort by P(1st) descending
-    ranked = sorted(strategy_stats.items(), key=lambda x: -x[1]["p_first"])
+    ranked = sorted(visible.items(), key=lambda kv: -kv[1]["mean_p_first"])
     for rank, (s, st) in enumerate(ranked, 1):
-        marker = " ***" if st["wins_vs_seed"] >= 8 else ""
+        marker = " ***" if st["wins_vs_baseline"] >= 8 else ""
         print(
-            f"  {rank:>4} {s:<30} {st['p_first']:>8.4f} {st['mean_rank']:>8.1f} "
-            f"{st['best_rank']:>8.1f} {st['mean_score']:>8.0f} {st['n_years']:>5} "
-            f"{st['wins_vs_seed']:>5}{marker}"
+            f"  {rank:>4} {s:<30} "
+            f"{st['mean_p_first']:>8.4f} {st['ci95_p_first']:>7.4f} "
+            f"{st['mean_best_score']:>8.0f} {st['mean_mean_score']:>8.0f} "
+            f"{st['mean_p_top5']:>6.3f} {st['mean_p_top25']:>7.3f} "
+            f"{st['mean_mean_rank']:>8.1f} {st['n_years']:>4} "
+            f"{st['wins_vs_baseline']:>5}{marker}"
         )
 
 
