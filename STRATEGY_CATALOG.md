@@ -65,6 +65,7 @@ Keeping this file honest is a project-level invariant. When a PR changes any of 
 | Testing Budget parameters changed (`TIER_CONFIGS`) | `## Testing Budget` table + `tests/test_experiment_budget.py::test_tier_configs_match_catalog_contract` |
 | Build Order phase completed | Flip `TODO` → `**DONE**` in `## Build Order` |
 | Tier kill rules changed | `## Testing Budget` per-tier table, lock test, `run_budget()` cut-losses threshold |
+| New tournament completed | `memory/tournament_oracle.md` (new ledger row + regime label), run `--oracle <year>` and paste the ranker-gap row |
 
 The `test_tier_configs_match_catalog_contract` test is the drift guard — if the budget parameters in code diverge from the catalog's table, it fails CI.
 
@@ -392,8 +393,9 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | **Constructions** | forward, champ_first, f4_first, e8_first (4) | backward, confidence (2) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
+| **Tournament Oracle** | `--oracle <year>` reports F4/finals/champ hits + ranker_gap_espn_pts; ledger in `memory/tournament_oracle.md` | Auto-run inside `run_budget()` after T3 (currently a separate CLI call) |
 
-_Last verified: 2026-04-24 — see § Catalog maintenance. Metrics promoted to three-primary (P(1st), BestScore, MeanScore) 2026-04-24._
+_Last verified: 2026-04-24 — see § Catalog maintenance. Three-primary metrics + oracle ledger added 2026-04-24._
 
 ---
 
@@ -500,7 +502,7 @@ Strategies that can't cover ≥12 years are excluded from significance testing.
 
 **Secondary — diagnostic:**
 - MeanRank, BestRank — placement diagnostics; don't pay out but surface portfolio consistency.
-- F4 correctness, Champion correctness — optional per-year oracle checks (see § Tournament Oracle Ledger below once implemented).
+- **Tournament oracle** — `python -m scripts.run_experiment --oracle <year>` scores the saved portfolio against actual tournament outcomes (F4 hits / finals hits / champion / ranker gap in ESPN points). Per-year ledger with regime labels in `memory/tournament_oracle.md`. The `ranker_gap_espn_pts` field — points left on the table because the ranker didn't promote the best bracket — is the direct KPI for the selection/ranking problem (North Star lever #2).
 
 All three primaries go in `_print_summary` and `_save_budget_summary` outputs; ESPN scoring is the team-identity score under `--team-identity` (locked per MEMORY.md §1 O26/O27).
 
@@ -567,6 +569,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b2 | Contrarian adjustment (B6) + pool_wisdom (B7) | **DONE** | contrarian chains, pool_wisdom, blends |
 | 1b3 | Experiment loop + permutation generator | **DONE** | 120 auto-generated strategies testable |
 | 1b4 | Testing Budget (tier configs, kill rules, cut-losses gate) | **DONE** | `--tier budget` runs T1→T2→T3 with automatic pruning |
+| 1b5 | Tournament Oracle Ledger (per-year F4/finals/champ + ranker gap KPI) | **DONE** | `--oracle <year>` + `memory/tournament_oracle.md` — 2023/2026 chaos gap +820/+830, 2024/2025 chalk gap +0/+280 |
 | 1c | Elo base (A4) | TODO | elo, elo+contrarian, blends |
 | 1d | Massey bases (A5, A6) | TODO | massey_avg, massey_best, blends |
 | 1e | AP base (A8) | TODO | ap_strength |
