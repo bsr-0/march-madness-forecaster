@@ -57,7 +57,7 @@ CONSTRUCTIONS = (
 )
 
 # Which sources and adjustments are actually implemented and available
-IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom"}
+IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom", "elo"}
 IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile"}
 IMPLEMENTED_CONSTRUCTIONS = {
     "forward",
