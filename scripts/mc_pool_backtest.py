@@ -97,23 +97,24 @@ REGION_ORDER = ["East", "West", "South", "Midwest"]
 # See STRATEGY_CATALOG.md for the full 58-strategy design.
 
 PROBABILITY_BASES: Tuple[str, ...] = (
-    "seed",          # A1: historical seed win rates
-    "noseed",        # B1: 12-feature LR+GBM ensemble
-    "blend",         # B2: alpha*seed + (1-alpha)*noseed
-    "torvik",        # A2: Bart Torvik barthag
-    "odds",          # A3: Bradley-Terry on market implied probs
+    "seed",  # A1: historical seed win rates
+    "noseed",  # B1: 12-feature LR+GBM ensemble
+    "blend",  # B2: alpha*seed + (1-alpha)*noseed
+    "torvik",  # A2: Bart Torvik barthag
+    "odds",  # A3: Bradley-Terry on market implied probs
     "spread_power",  # A7: average closing spread → logistic
-    "contrarian",    # B6: torvik adjusted by ownership gap vs public picks
-    "pool_wisdom",   # B7: actual pool picks (or extrapolated) as round probs
+    "contrarian",  # B6: torvik adjusted by ownership gap vs public picks
+    "pool_wisdom",  # B7: actual pool picks (or extrapolated) as round probs
     # New bases added here as implemented (A4-A6, A8, B3-B5, C1-C3, D1-D2)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
-    "forward",      # M1: sample each game independently from round_probs
+    "forward",  # M1: sample each game independently from round_probs
     "champ_first",  # M2: lock champion, fill rest stochastically
-    "f4_first",     # M3: lock 4 F4 teams, fill rest
-    "e8_first",     # M4: lock 8 E8 teams, fill rest
-    # New modes added here as implemented (M5 backward, M6 confidence)
+    "f4_first",  # M3: lock 4 F4 teams, fill rest
+    "e8_first",  # M4: lock 8 E8 teams, fill rest
+    "confidence",  # M6: route per-game by pairwise confidence (lock chalk / sample / boost upsets)
+    # New modes added here as implemented (M5 backward)
 )
 
 # Legacy mode names mapped to (base, mode) pairs for backward compatibility.
@@ -166,6 +167,7 @@ def build_strategy_name(base: str, mode: str) -> str:
 def expand_strategies(bases: Sequence[str], modes: Sequence[str]) -> list:
     """Expand base × mode cross-product into strategy names."""
     return [build_strategy_name(b, m) for b in bases for m in modes]
+
 
 # ---------------------------------------------------------------------------
 # Walk-forward pool hyperparameters
@@ -926,6 +928,95 @@ def sample_e8_first_brackets(
     )
 
 
+def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rng):
+    """Sample N brackets via confidence-routed per-game sampling (M6).
+
+    Per STRATEGY_CATALOG.md § M6 confidence: every game is routed by the
+    model's pairwise confidence into one of three regimes. High confidence
+    games (P(fav) > 0.85) are locked chalk — no bracket diversity is spent
+    on 1v16s everyone agrees on. Medium confidence games sample from the
+    model's calibrated probability. Low confidence games get a
+    1.5× upset-probability boost — the MC variance is concentrated on the
+    games that actually differentiate brackets in the pool (5v12, 6v11,
+    7v10).
+
+    Contrast with ``sample_model_brackets`` (M1 forward): forward samples
+    every game at its raw model probability. Confidence is strictly a
+    variance-allocation change — calibrated on average, more diversity on
+    swing games, less on blowouts.
+
+    Path consistency is enforced the same way as the other samplers — a
+    team only appears in round R+1 if it won its round-R game in this
+    bracket.
+
+    Returns:
+        Boolean array of shape (n_brackets, 63).
+    """
+    # Thresholds and upset boost per catalog spec. Kept as module-scope
+    # literals only if/when tunable; current values come straight from M6.
+    high_conf_threshold = 0.85
+    low_conf_threshold = 0.60
+    low_conf_upset_boost = 1.5
+
+    all_brackets = np.zeros((n_brackets, 63), dtype=bool)
+
+    for b in range(n_brackets):
+        current_teams = list(first_round_matchups)
+        game_idx = 0
+
+        for round_idx in range(6):
+            round_name = ROUND_NAMES[round_idx]
+            next_round = []
+
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round.append(current_teams[g])
+                    continue
+
+                t1, t2 = current_teams[g], current_teams[g + 1]
+                p1 = round_probs.get(t1, {}).get(round_name, 0.0)
+                p2 = round_probs.get(t2, {}).get(round_name, 0.0)
+
+                if p1 + p2 > 1e-8:
+                    p_t1 = p1 / (p1 + p2)
+                else:
+                    p_t1 = 0.5
+
+                # Route by confidence on the favorite.
+                fav_prob = max(p_t1, 1.0 - p_t1)
+
+                if fav_prob >= high_conf_threshold:
+                    # High-confidence: lock chalk (pick the favorite). No
+                    # randomness spent — every bracket in the portfolio agrees
+                    # here, which matches the real pool's behavior on 1v16s.
+                    effective_p_t1 = 1.0 if p_t1 >= 0.5 else 0.0
+                elif fav_prob <= low_conf_threshold:
+                    # Low-confidence: boost the upset side by 1.5× and
+                    # re-normalize. This concentrates bracket differentiation
+                    # on the swing games (5v12, 6v11, 7v10).
+                    p_upset = 1.0 - fav_prob
+                    boosted_upset = min(p_upset * low_conf_upset_boost, 0.99)
+                    boosted_fav = 1.0 - boosted_upset
+                    effective_p_t1 = boosted_fav if p_t1 >= 0.5 else boosted_upset
+                else:
+                    # Medium: sample at the model's raw probability.
+                    effective_p_t1 = p_t1
+
+                if rng.random() < effective_p_t1:
+                    winner = t1
+                    all_brackets[b, game_idx] = True
+                else:
+                    winner = t2
+                    all_brackets[b, game_idx] = False
+
+                next_round.append(winner)
+                game_idx += 1
+
+            current_teams = next_round
+
+    return all_brackets
+
+
 def build_actual_outcome(first_round_matchups, games):
     """Convert actual tournament results into a (63,) boolean vector.
 
@@ -1523,6 +1614,7 @@ def run_backtest(
             load_market_ratings,
             load_spread_power_ratings,
         )
+
         market_barthag = load_market_ratings(year, seeds)
         if market_barthag is not None:
             odds_rp = build_torvik_round_probabilities(seeds, regions, market_barthag)
@@ -1553,6 +1645,7 @@ def run_backtest(
             build_contrarian_round_probs,
             load_pool_wisdom_ratings,
         )
+
         # Contrarian: adjust torvik by ownership gap against public picks
         contrarian_rp = build_contrarian_round_probs(torvik_rp, pick_dist)
         base_round_probs["contrarian"] = contrarian_rp
@@ -1573,11 +1666,11 @@ def run_backtest(
                 return lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions)
             elif mode_name == "e8_first":
                 return lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "confidence":
+                return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r)
             # New construction modes register here:
             # elif mode_name == "backward":
             #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
-            # elif mode_name == "confidence":
-            #     return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r, seeds, regions)
             else:
                 raise ValueError(f"Unknown construction mode: {mode_name}")
 
@@ -1593,39 +1686,67 @@ def run_backtest(
             "blend": ("blend", blend_rp, sample_model_brackets),
             "torvik": ("torvik", torvik_rp, sample_model_brackets),
             "champ_first_tv": (
-                "champ_first_tv", torvik_rp,
+                "champ_first_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
             ),
             "champ_first_chalkfade_tv": (
-                "champ_first_chalkfade_tv", torvik_rp,
+                "champ_first_chalkfade_tv",
+                torvik_rp,
                 lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
                     fr, rp, n, r, seeds, _cbt
                 ),
             ),
             "f4_first_tv": (
-                "f4_first_tv", torvik_rp,
+                "f4_first_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
             ),
             "e8_first_tv": (
-                "e8_first_tv", torvik_rp,
+                "e8_first_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
             ),
             "det_champ_tv": (
-                "det_champ_tv", torvik_rp,
+                "det_champ_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr, rp, n, r, seeds, regions, pick_dist, "det_champ_tv",
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_champ_tv",
                 ),
             ),
             "det_f4_tv": (
-                "det_f4_tv", torvik_rp,
+                "det_f4_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr, rp, n, r, seeds, regions, pick_dist, "det_f4_tv",
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_f4_tv",
                 ),
             ),
             "det_e8_tv": (
-                "det_e8_tv", torvik_rp,
+                "det_e8_tv",
+                torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr, rp, n, r, seeds, regions, pick_dist, "det_e8_tv",
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_e8_tv",
                 ),
             ),
         }
@@ -1647,7 +1768,7 @@ def run_backtest(
                 for i in range(len(mode_name)):
                     if mode_name[i] == "_":
                         candidate_base = mode_name[:i]
-                        candidate_mode = mode_name[i+1:]
+                        candidate_mode = mode_name[i + 1 :]
                         if candidate_base in base_round_probs and candidate_mode in CONSTRUCTION_MODES:
                             rp = base_round_probs[candidate_base]
                             sampler = _make_sampler(candidate_mode)
@@ -1663,7 +1784,10 @@ def run_backtest(
             try:
                 sources, adjustments, construction = parse_pipeline(mode_name)
                 pipeline_rp = resolve_pipeline_round_probs(
-                    sources, adjustments, base_round_probs, pick_dist,
+                    sources,
+                    adjustments,
+                    base_round_probs,
+                    pick_dist,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)
@@ -1683,7 +1807,10 @@ def run_backtest(
             # BestScr / MeanScr and for --save-brackets).
             if team_identity:
                 model_scores_actual = score_brackets_team_identity(
-                    model_brackets, winners_by_rnd, first_round, ESPN_SCORING,
+                    model_brackets,
+                    winners_by_rnd,
+                    first_round,
+                    ESPN_SCORING,
                 )
             else:
                 model_scores_actual = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
@@ -1717,15 +1844,18 @@ def run_backtest(
                         noise_std=0.16,
                         rng=rng,
                     )
-                    sim_winners = {
-                        rnd: set(sim_by_round[0][ri])
-                        for ri, rnd in enumerate(ROUND_NAMES)
-                    }
+                    sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
                     model_scores_sim = score_brackets_team_identity(
-                        model_brackets, sim_winners, first_round, ESPN_SCORING,
+                        model_brackets,
+                        sim_winners,
+                        first_round,
+                        ESPN_SCORING,
                     )
                     opp_scores = score_brackets_team_identity(
-                        opp, sim_winners, first_round, ESPN_SCORING,
+                        opp,
+                        sim_winners,
+                        first_round,
+                        ESPN_SCORING,
                     )
                 else:
                     model_scores_sim = model_scores_actual
@@ -1778,27 +1908,34 @@ def run_backtest(
             if save_brackets:
                 winners_by_rnd = actual_winners_by_round(games)
                 ti_scores = score_brackets_team_identity(
-                    model_brackets, winners_by_rnd, first_round, ESPN_SCORING,
+                    model_brackets,
+                    winners_by_rnd,
+                    first_round,
+                    ESPN_SCORING,
                 )
                 mode_bracket_records = []
                 for m in range(n_model):
                     picks = picks_by_round(model_brackets[m], first_round)
                     champion = list(picks["CHAMP"])[0] if picks["CHAMP"] else None
                     final_four = sorted(picks["F4"]) if picks["F4"] else []
-                    mode_bracket_records.append({
-                        "bracket_idx": m,
-                        "score_team_identity": float(ti_scores[m]),
-                        "score_shape": float(model_scores_actual[m]),
-                        "mean_rank": float(bracket_mean_ranks[m]),
-                        "champion": champion,
-                        "final_four": final_four,
-                        "picks": {rnd: sorted(teams) for rnd, teams in picks.items()},
-                    })
+                    mode_bracket_records.append(
+                        {
+                            "bracket_idx": m,
+                            "score_team_identity": float(ti_scores[m]),
+                            "score_shape": float(model_scores_actual[m]),
+                            "mean_rank": float(bracket_mean_ranks[m]),
+                            "champion": champion,
+                            "final_four": final_four,
+                            "picks": {rnd: sorted(teams) for rnd, teams in picks.items()},
+                        }
+                    )
                 mode_bracket_records.sort(key=lambda x: -x["score_team_identity"])
-                saved_brackets.setdefault(year, []).append({
-                    "mode": mode_name,
-                    "brackets": mode_bracket_records,
-                })
+                saved_brackets.setdefault(year, []).append(
+                    {
+                        "mode": mode_name,
+                        "brackets": mode_bracket_records,
+                    }
+                )
 
         # opt_seed, opt_blend, opt_torvik, hedge_tv: DEPRECATED 2026-04-12.
         # See MEMORY.md §2 D6 and COUNCIL_LESSONS.md §3 rows 23-25 for evidence.
@@ -2007,14 +2144,22 @@ def main():
     # Legacy interface: --modes (or --small-pool) → old hardcoded list
     if args.bases or args.construction_modes:
         # New base×mode cross-product interface
-        bases = list(PROBABILITY_BASES) if (args.bases and "all" in args.bases) else (args.bases or list(PROBABILITY_BASES))
-        cmodes = list(CONSTRUCTION_MODES) if (args.construction_modes and "all" in args.construction_modes) else (args.construction_modes or list(CONSTRUCTION_MODES))
+        bases = (
+            list(PROBABILITY_BASES) if (args.bases and "all" in args.bases) else (args.bases or list(PROBABILITY_BASES))
+        )
+        cmodes = (
+            list(CONSTRUCTION_MODES)
+            if (args.construction_modes and "all" in args.construction_modes)
+            else (args.construction_modes or list(CONSTRUCTION_MODES))
+        )
         invalid_bases = set(bases) - set(PROBABILITY_BASES)
         invalid_cmodes = set(cmodes) - set(CONSTRUCTION_MODES)
         if invalid_bases:
             parser.error(f"Unknown base(s): {', '.join(sorted(invalid_bases))}. Valid: {', '.join(PROBABILITY_BASES)}")
         if invalid_cmodes:
-            parser.error(f"Unknown construction mode(s): {', '.join(sorted(invalid_cmodes))}. Valid: {', '.join(CONSTRUCTION_MODES)}")
+            parser.error(
+                f"Unknown construction mode(s): {', '.join(sorted(invalid_cmodes))}. Valid: {', '.join(CONSTRUCTION_MODES)}"
+            )
         strategy_names = expand_strategies(bases, cmodes)
         mode_override = tuple(strategy_names)
         print(f"[strategy registry] {len(bases)} bases × {len(cmodes)} modes = {len(strategy_names)} strategies")

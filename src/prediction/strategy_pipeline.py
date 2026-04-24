@@ -24,29 +24,29 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 # Registry categories
 SOURCES = (
-    "seed",          # A1
-    "torvik",        # A2
-    "odds",          # A3
-    "elo",           # A4 (not yet implemented)
-    "massey_avg",    # A5 (not yet implemented)
+    "seed",  # A1
+    "torvik",  # A2
+    "odds",  # A3
+    "elo",  # A4 (not yet implemented)
+    "massey_avg",  # A5 (not yet implemented)
     "spread_power",  # A7
-    "pool_wisdom",   # B7
+    "pool_wisdom",  # B7
 )
 
 ADJUSTMENTS = (
-    "contrarian",    # B6: ownership-gap adjustment
-    "coach_adj",     # C1 (not yet implemented)
-    "roster_adj",    # C2 (not yet implemented)
-    "momentum",      # C3 (not yet implemented)
-    "volatile",      # D1 (not yet implemented)
-    "upset_tuned",   # D2 (not yet implemented)
+    "contrarian",  # B6: ownership-gap adjustment
+    "coach_adj",  # C1 (not yet implemented)
+    "roster_adj",  # C2 (not yet implemented)
+    "momentum",  # C3 (not yet implemented)
+    "volatile",  # D1 (not yet implemented)
+    "upset_tuned",  # D2 (not yet implemented)
 )
 
 CONSTRUCTIONS = (
-    "forward",       # M1
-    "champ_first",   # M2
-    "f4_first",      # M3
-    "e8_first",      # M4
+    "forward",  # M1
+    "champ_first",  # M2
+    "f4_first",  # M3
+    "e8_first",  # M4
     # "backward",    # M5 (not yet implemented)
     # "confidence",  # M6 (not yet implemented)
 )
@@ -54,7 +54,7 @@ CONSTRUCTIONS = (
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom"}
 IMPLEMENTED_ADJUSTMENTS = {"contrarian"}
-IMPLEMENTED_CONSTRUCTIONS = {"forward", "champ_first", "f4_first", "e8_first"}
+IMPLEMENTED_CONSTRUCTIONS = {"forward", "champ_first", "f4_first", "e8_first", "confidence"}
 
 
 def parse_pipeline(spec: str) -> Tuple[List[Tuple[float, str]], List[str], str]:
@@ -79,7 +79,7 @@ def parse_pipeline(spec: str) -> Tuple[List[Tuple[float, str]], List[str], str]:
         suffix = f"_{cmode}"
         if spec.endswith(suffix):
             construction = cmode
-            spec = spec[:-len(suffix)]
+            spec = spec[: -len(suffix)]
             break
 
     # Split remaining by + into components
@@ -94,7 +94,7 @@ def parse_pipeline(spec: str) -> Tuple[List[Tuple[float, str]], List[str], str]:
             continue
 
         # Check if it's a weighted source: "0.7*torvik"
-        weight_match = re.match(r'^(\d+\.?\d*)\*(.+)$', comp)
+        weight_match = re.match(r"^(\d+\.?\d*)\*(.+)$", comp)
         if weight_match:
             weight = float(weight_match.group(1))
             name = weight_match.group(2)
@@ -238,10 +238,7 @@ def resolve_pipeline_round_probs(
         for tid in available_sources[0][1]:
             result[tid] = {}
             for rnd in ("R64", "R32", "S16", "E8", "F4", "CHAMP"):
-                blended = sum(
-                    (w / total_w) * rp.get(tid, {}).get(rnd, 0.001)
-                    for w, rp in available_sources
-                )
+                blended = sum((w / total_w) * rp.get(tid, {}).get(rnd, 0.001) for w, rp in available_sources)
                 result[tid][rnd] = blended
 
     # Step 2: Apply adjustments in order
