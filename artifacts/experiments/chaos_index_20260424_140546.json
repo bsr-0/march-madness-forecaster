@@ -1,0 +1,223 @@
+{
+  "years": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "rows": [
+    {
+      "year": 2011,
+      "features": {
+        "year": 2011,
+        "mean_1seed_barthag": 0.963086963353005,
+        "weakest_1seed_barthag": 0.94768713783935,
+        "mean_top8_barthag": 0.9538069392191275,
+        "elite_count_gt_095": 4,
+        "top4_minus_top30_barthag": 0.04821680862255451
+      },
+      "actual_mean_f4_seed": 6.5,
+      "predicted_mean_f4_seed": 3.6444492535311355
+    },
+    {
+      "year": 2012,
+      "features": {
+        "year": 2012,
+        "mean_1seed_barthag": 0.9546077104127175,
+        "weakest_1seed_barthag": 0.94487565033565,
+        "mean_top8_barthag": 0.9532665381708912,
+        "elite_count_gt_095": 5,
+        "top4_minus_top30_barthag": 0.05027856153559185
+      },
+      "actual_mean_f4_seed": 2.25,
+      "predicted_mean_f4_seed": 4.062348395240747
+    },
+    {
+      "year": 2013,
+      "features": {
+        "year": 2013,
+        "mean_1seed_barthag": 0.9644209281816075,
+        "weakest_1seed_barthag": 0.95540375490234,
+        "mean_top8_barthag": 0.9576179509035613,
+        "elite_count_gt_095": 6,
+        "top4_minus_top30_barthag": 0.05186248391927184
+      },
+      "actual_mean_f4_seed": 4.5,
+      "predicted_mean_f4_seed": 3.260027973238522
+    },
+    {
+      "year": 2014,
+      "features": {
+        "year": 2014,
+        "mean_1seed_barthag": 0.945512027740945,
+        "weakest_1seed_barthag": 0.91887966732693,
+        "mean_top8_barthag": 0.9481442940227488,
+        "elite_count_gt_095": 3,
+        "top4_minus_top30_barthag": 0.04379909110152447
+      },
+      "actual_mean_f4_seed": 4.5,
+      "predicted_mean_f4_seed": 4.620968890958665
+    },
+    {
+      "year": 2015,
+      "features": {
+        "year": 2015,
+        "mean_1seed_barthag": 0.9712112635535974,
+        "weakest_1seed_barthag": 0.96083667685262,
+        "mean_top8_barthag": 0.9656152860443037,
+        "elite_count_gt_095": 8,
+        "top4_minus_top30_barthag": 0.053183477318645034
+      },
+      "actual_mean_f4_seed": 2.5,
+      "predicted_mean_f4_seed": 2.236974713887122
+    },
+    {
+      "year": 2016,
+      "features": {
+        "year": 2016,
+        "mean_1seed_barthag": 0.939927897143895,
+        "weakest_1seed_barthag": 0.90382094995034,
+        "mean_top8_barthag": 0.9482043204851875,
+        "elite_count_gt_095": 3,
+        "top4_minus_top30_barthag": 0.03746729726948361
+      },
+      "actual_mean_f4_seed": 3.75,
+      "predicted_mean_f4_seed": 4.740198324298007
+    },
+    {
+      "year": 2017,
+      "features": {
+        "year": 2017,
+        "mean_1seed_barthag": 0.9574784333397525,
+        "weakest_1seed_barthag": 0.94251595226514,
+        "mean_top8_barthag": 0.9568375806049237,
+        "elite_count_gt_095": 8,
+        "top4_minus_top30_barthag": 0.0329149672343787
+      },
+      "actual_mean_f4_seed": 3,
+      "predicted_mean_f4_seed": 3.483367146235082
+    },
+    {
+      "year": 2018,
+      "features": {
+        "year": 2018,
+        "mean_1seed_barthag": 0.951114537750855,
+        "weakest_1seed_barthag": 0.92692302826563,
+        "mean_top8_barthag": 0.9513257393531338,
+        "elite_count_gt_095": 4,
+        "top4_minus_top30_barthag": 0.05139711660026447
+      },
+      "actual_mean_f4_seed": 4,
+      "predicted_mean_f4_seed": 4.200417759748419
+    },
+    {
+      "year": 2019,
+      "features": {
+        "year": 2019,
+        "mean_1seed_barthag": 0.968015391119755,
+        "weakest_1seed_barthag": 0.95593823513112,
+        "mean_top8_barthag": 0.9620127328966888,
+        "elite_count_gt_095": 8,
+        "top4_minus_top30_barthag": 0.05214071101828943
+      },
+      "actual_mean_f4_seed": 2.75,
+      "predicted_mean_f4_seed": 2.7664960815325657
+    },
+    {
+      "year": 2021,
+      "features": {
+        "year": 2021,
+        "mean_1seed_barthag": 0.96035257172116,
+        "weakest_1seed_barthag": 0.95042810397209,
+        "mean_top8_barthag": 0.9520535813632337,
+        "elite_count_gt_095": 5,
+        "top4_minus_top30_barthag": 0.04496228697000215
+      },
+      "actual_mean_f4_seed": 3.75,
+      "predicted_mean_f4_seed": 4.116734502191406
+    },
+    {
+      "year": 2022,
+      "features": {
+        "year": 2022,
+        "mean_1seed_barthag": 0.9547399947696324,
+        "weakest_1seed_barthag": 0.94330604394845,
+        "mean_top8_barthag": 0.9504501640752362,
+        "elite_count_gt_095": 4,
+        "top4_minus_top30_barthag": 0.04905959816083738
+      },
+      "actual_mean_f4_seed": 3.25,
+      "predicted_mean_f4_seed": 4.422872401956226
+    },
+    {
+      "year": 2023,
+      "features": {
+        "year": 2023,
+        "mean_1seed_barthag": 0.9456783306907974,
+        "weakest_1seed_barthag": 0.91841889507729,
+        "mean_top8_barthag": 0.946692293444275,
+        "elite_count_gt_095": 3,
+        "top4_minus_top30_barthag": 0.04726290761913332
+      },
+      "actual_mean_f4_seed": 5.75,
+      "predicted_mean_f4_seed": 4.585167326696364
+    },
+    {
+      "year": 2024,
+      "features": {
+        "year": 2024,
+        "mean_1seed_barthag": 0.9621774874786675,
+        "weakest_1seed_barthag": 0.93642207036039,
+        "mean_top8_barthag": 0.956237077554575,
+        "elite_count_gt_095": 6,
+        "top4_minus_top30_barthag": 0.050478463384632244
+      },
+      "actual_mean_f4_seed": 4.25,
+      "predicted_mean_f4_seed": 3.4787660304119186
+    },
+    {
+      "year": 2025,
+      "features": {
+        "year": 2025,
+        "mean_1seed_barthag": 0.9769214373634475,
+        "weakest_1seed_barthag": 0.96831038176654,
+        "mean_top8_barthag": 0.9657950029076875,
+        "elite_count_gt_095": 7,
+        "top4_minus_top30_barthag": 0.04141805127448683
+      },
+      "actual_mean_f4_seed": 1,
+      "predicted_mean_f4_seed": 2.568968855305286
+    },
+    {
+      "year": 2026,
+      "features": {
+        "year": 2026,
+        "mean_1seed_barthag": 0.97661121801278,
+        "weakest_1seed_barthag": 0.97098145654807,
+        "mean_top8_barthag": 0.97137710868356,
+        "elite_count_gt_095": 9,
+        "top4_minus_top30_barthag": 0.038531984183294954
+      },
+      "actual_mean_f4_seed": 1.75,
+      "predicted_mean_f4_seed": 1.3830984216436377
+    }
+  ],
+  "pearson_r_per_feature": {
+    "mean_1seed_barthag": -0.5255942050697178,
+    "weakest_1seed_barthag": -0.5510927559362729,
+    "mean_top8_barthag": -0.6681294802603098,
+    "elite_count_gt_095": -0.6598111337215848,
+    "top4_minus_top30_barthag": 0.23675674855259785
+  }
+}

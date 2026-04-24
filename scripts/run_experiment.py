@@ -66,6 +66,10 @@ from src.evaluation.tournament_oracle import (
     report_to_dict,
     score_portfolio,
 )
+from src.evaluation.chaos_index import (
+    BACKTEST_YEARS as CHAOS_YEARS,
+    regime_report,
+)
 
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "experiments"
 BRACKET_ARTIFACT_DIR = PROJECT_ROOT / "artifacts" / "backtest_brackets"
@@ -145,6 +149,67 @@ def run_oracle_report(year: int) -> dict:
         },
         "per_mode": per_mode,
     }
+
+
+def run_chaos_index_report() -> dict:
+    """Pre-tournament chaos-regime diagnostic over all backtest years.
+
+    Computes Torvik-derived chaos features per year, measures correlation
+    with actual mean F4 seed, and runs LOO walk-forward predictions. If
+    ``mean_top8_barthag`` keeps correlating negatively with chaos, it
+    becomes a live input for strategy selection (chalk modes in
+    strong-top years, upset-tolerant modes in thin-top years).
+
+    Measurement does not gate any strategy choice — this is a reporting
+    artifact. Saved to ``artifacts/experiments/chaos_index_<ts>.json``.
+    """
+    report = regime_report(CHAOS_YEARS, DATA_ROOT)
+
+    print(f"\n{'=' * 80}")
+    print(f"CHAOS INDEX — {len(report['rows'])} years (2011-2026 excl 2020)")
+    print(f"{'=' * 80}")
+    print(f"  {'Year':<5} {'top8_bth':>9} {'weak_1s':>8} {'elite#':>6} {'actual_F4s':>10} {'pred_F4s':>9} {'|err|':>6}")
+    print(f"  {'-' * 62}")
+    for r in report["rows"]:
+        pred = r["predicted_mean_f4_seed"]
+        err = abs(r["actual_mean_f4_seed"] - pred) if pred is not None else None
+        print(
+            f"  {r['year']:<5} "
+            f"{r['features']['mean_top8_barthag']:>9.4f} "
+            f"{r['features']['weakest_1seed_barthag']:>8.4f} "
+            f"{r['features']['elite_count_gt_095']:>6} "
+            f"{r['actual_mean_f4_seed']:>10.2f} "
+            f"{('---' if pred is None else f'{pred:.2f}'):>9} "
+            f"{('---' if err is None else f'{err:.2f}'):>6}"
+        )
+
+    print(f"\n  Pearson r vs actual mean-F4-seed (whole window):")
+    for name, r in report["pearson_r_per_feature"].items():
+        flag = " **" if abs(r) > 0.5 else ""
+        print(f"    {name:<28} r = {r:+.3f}{flag}")
+    print("    (negative r = stronger-field signal predicts chalkier tournament)")
+
+    # Walk-forward MAE
+    preds = [
+        (r["actual_mean_f4_seed"], r["predicted_mean_f4_seed"])
+        for r in report["rows"]
+        if r["predicted_mean_f4_seed"] is not None
+    ]
+    if preds:
+        mae = sum(abs(a - p) for a, p in preds) / len(preds)
+        actuals = [a for a, _ in preds]
+        baseline = sum(actuals) / len(actuals)
+        mae_baseline = sum(abs(a - baseline) for a in actuals) / len(actuals)
+        print(f"\n  Walk-forward MAE (univariate, mean_top8_barthag): {mae:.2f} seeds")
+        print(f"  Mean-of-actuals baseline MAE:                     {mae_baseline:.2f} seeds")
+        print(f"  {'IMPROVES ON BASELINE' if mae < mae_baseline else 'NO IMPROVEMENT'} (Δ = {mae_baseline - mae:+.2f})")
+
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = ARTIFACTS_DIR / f"chaos_index_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    with open(out_path, "w") as f:
+        json.dump(report, f, indent=2)
+    print(f"\n  Chaos index report saved to {out_path}")
+    return report
 
 
 def run_budget(
@@ -647,10 +712,20 @@ def main():
         "outcomes (F4 / finalists / champion / ranker gap). Reads "
         "artifacts/backtest_brackets/backtest_brackets_{YEAR}.json.",
     )
+    parser.add_argument(
+        "--chaos-index",
+        action="store_true",
+        help="Run the pre-tournament chaos-regime diagnostic across all backtest "
+        "years: Torvik top-of-field features, walk-forward predicted mean-F4-seed, "
+        "per-feature correlation with actual chaos. Output saved to artifacts/experiments/.",
+    )
     args = parser.parse_args()
 
     if args.oracle is not None:
         run_oracle_report(args.oracle)
+        return
+    if args.chaos_index:
+        run_chaos_index_report()
         return
 
     if args.tier == "budget":
