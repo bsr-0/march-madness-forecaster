@@ -50,13 +50,27 @@ CONSTRUCTIONS = (
     "confidence",  # M6
     "f4_chalk",  # M3a: f4_first restricted to seeds 1-3 anchors
     "f4_diverse",  # M3b: f4_first excluding 1-seeds from anchor pool
+    "f4_top4",  # M3c: f4_first restricted to seeds 1-4 anchors
+    "e8_chalk",  # M4a: e8_first restricted to top seeds (1-6) per quadrant
+    "e8_diverse",  # M4b: e8_first excluding 1-seeds from S16 anchor pool
     # "backward",    # M5 (not yet implemented)
 )
 
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom"}
 IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned"}
-IMPLEMENTED_CONSTRUCTIONS = {"forward", "champ_first", "f4_first", "e8_first", "confidence", "f4_chalk", "f4_diverse"}
+IMPLEMENTED_CONSTRUCTIONS = {
+    "forward",
+    "champ_first",
+    "f4_first",
+    "e8_first",
+    "confidence",
+    "f4_chalk",
+    "f4_diverse",
+    "f4_top4",
+    "e8_chalk",
+    "e8_diverse",
+}
 
 
 def parse_pipeline(spec: str) -> Tuple[List[Tuple[float, str]], List[str], str]:
