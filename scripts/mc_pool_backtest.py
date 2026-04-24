@@ -2164,6 +2164,9 @@ def run_backtest(
             p_first = (all_ranks == 1.0).mean()
             p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
             p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
+            # Count of binary win/lose trials behind p_first — needed by the
+            # downstream Wilson-CI computation (phase-2 metrics rollout).
+            n_trials = int(all_ranks.size)
 
             best_score = float(model_scores_actual[best_bracket_idx])
             mean_score = float(model_scores_actual.mean())
@@ -2185,6 +2188,7 @@ def run_backtest(
                     "p_first": p_first,
                     "p_top5": p_top5,
                     "p_top25": p_top25,
+                    "n_trials": n_trials,
                 }
             )
 

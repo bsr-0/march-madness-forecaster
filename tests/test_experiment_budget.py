@@ -17,6 +17,7 @@ from src.evaluation.testing_budget import (
     promote_top_n,
     select_tier_years,
     stats_for_artifact,
+    wilson_ci95,
 )
 
 
@@ -35,6 +36,7 @@ def _mk(mode, year, p_first, **overrides):
         "best_score": 0.0,
         "p_top5": 0.0,
         "p_top25": 0.0,
+        "n_trials": 2500,  # typical n_model × n_repeats at T3
     }
     row.update(overrides)
     return row
@@ -93,6 +95,67 @@ def test_aggregate_strategy_stats_tracks_primary_metric_triple():
     # (but we have 2 years here so non-zero).
     assert stats["A"]["ci95_p_first"] > 0
     assert stats["A"]["ci95_best_score"] > 0
+
+
+def test_wilson_ci95_center_matches_observed_proportion_for_midrange_p():
+    """At p=0.5 and moderate n, Wilson center is essentially p. Sanity check
+    that the closed-form implementation matches the well-known midrange behavior.
+    """
+    center, half = wilson_ci95(0.5, 1000)
+    # Exact Wilson center at p=0.5: (0.5 + 1.92/2000) / (1 + 1.92/1000) ≈ 0.5.
+    assert center == pytest.approx(0.5, abs=1e-6)
+    # Exact half-width at p=0.5, n=1000: ~0.031.
+    assert 0.029 < half < 0.033
+
+
+def test_wilson_ci95_returns_zero_halfwidth_for_no_trials():
+    """n=0 → no data → half-width 0. Defensive path for legacy rows without n_trials."""
+    center, half = wilson_ci95(0.07, 0)
+    assert half == 0.0
+    assert center == pytest.approx(0.07)
+
+
+def test_wilson_ci95_shrinks_as_n_grows():
+    """Binomial CI half-width ∝ 1/√n — doubling n shrinks the CI by √2."""
+    _, half_100 = wilson_ci95(0.1, 100)
+    _, half_1000 = wilson_ci95(0.1, 1000)
+    assert half_100 > half_1000 > 0
+    # With n×10, half-width should drop by roughly √10 ≈ 3.16 — allow wide slack.
+    ratio = half_100 / half_1000
+    assert 2.5 < ratio < 3.8
+
+
+def test_wilson_ci95_extreme_p_handled_without_crash():
+    """p=0 and p=1 are defensible edge cases — no division-by-zero, returns sane CI."""
+    for p in (0.0, 1.0):
+        center, half = wilson_ci95(p, 100)
+        assert 0.0 <= center <= 1.0
+        assert half >= 0.0
+
+
+def test_aggregate_strategy_stats_attaches_per_year_wilson_ci():
+    """Each result row's n_trials flows into a per-year Wilson CI in the stats dict."""
+    results = [
+        _mk("A", 2025, 0.10, n_trials=1000),
+        _mk("A", 2026, 0.05, n_trials=1000),
+    ]
+    stats = aggregate_strategy_stats(results, "A")
+    ci_by_year = stats["A"]["p1_wilson_ci_by_year"]
+    assert set(ci_by_year.keys()) == {2025, 2026}
+    for year, (center, half) in ci_by_year.items():
+        assert 0.0 < center < 1.0
+        assert half > 0
+
+
+def test_aggregate_strategy_stats_wilson_ci_handles_missing_n_trials():
+    """Legacy rows lacking n_trials must not crash; the per-year CI degrades to (p, 0)."""
+    legacy = [
+        {"mode": "legacy", "year": 2023, "p_first": 0.08, "mean_rank": 0, "best_rank": 0, "mean_score": 0},
+    ]
+    stats = aggregate_strategy_stats(legacy, "legacy")
+    center, half = stats["legacy"]["p1_wilson_ci_by_year"][2023]
+    assert center == pytest.approx(0.08)
+    assert half == 0.0
 
 
 def test_ci95_halfwidth_is_zero_for_single_year_series():

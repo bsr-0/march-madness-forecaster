@@ -559,13 +559,23 @@ All metrics go in `_print_summary` (human-readable ranked table) and `stats_for_
 
 ### Significance Gate
 ```
-Test:   Paired permutation test (10,000 draws) on P(1st) per year
-H0:     P(1st)_new = P(1st)_seed_forward
-H1:     P(1st)_new > P(1st)_seed_forward
-Gate:   p < 0.10 (one-tailed)
-Also:   P(1st)_new > P(1st)_seed_forward in ≥ 8/14 years
+Canonical gate (P(1st) — the payout metric):
+  Test:   Paired permutation test (10,000 draws) on P(1st) per year
+  H0:     P(1st)_new = P(1st)_seed_forward
+  H1:     P(1st)_new > P(1st)_seed_forward
+  Gate:   p < 0.10 (one-tailed)
+  Also:   P(1st)_new > P(1st)_seed_forward in ≥ 8/14 years
+
+Companion diagnostic blocks (phase-2 metrics rollout, 2026-04-24):
+  Same paired-permutation harness run on BestScore and MeanScore
+  with Bonferroni α = 0.10/N_tests per block. Informational — surfaces
+  strategies that win on ESPN points without winning on P(1st) (usually
+  opponent-model mis-specification, not scoring shape).
 ```
-P(1st) is the gate because it's the only metric that converts to money. BestScore is a companion diagnostic — a strategy that improves BestScore but not P(1st) is producing high-ceiling brackets that lose to the field anyway (usually because of opponent-model mis-specification, not scoring shape).
+
+**Per-year binomial CI on P(1st)** — phase-2 metrics rollout also added Wilson 95% score intervals per year: `ci = wilson_ci95(p_first, n_trials)` where `n_trials = n_model × n_repeats`. Stored in `stats["strategy"]["p1_wilson_ci_by_year"]` as `{year: (center, halfwidth)}`. Distinct from the cross-year CI from phase-1 — answers "given this year's N_trials, how tight is the P(1st) estimate for this single year?" Small N_trials (e.g., T1's 25 repeats × 50 brackets = 1250) produces noticeable per-year CI; T3's 5000 trials/year narrows it substantially.
+
+P(1st) remains the canonical gate because it's the only metric that converts to money. BestScore and MeanScore blocks catch money-framing sanity checks — a strategy that improves BestScore but not P(1st) is producing high-ceiling brackets that lose to the field anyway.
 
 ### Dead-End Criteria
 A strategy is killed if:
@@ -624,6 +634,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b6 | Chaos Index (pre-tournament regime prediction from Torvik top-of-field) | **DONE** | `--chaos-index` — `mean_top8_barthag` r=−0.668 p=0.006; walk-forward MAE 0.89 beats 1.13 baseline; informational only (no strategy gating yet) |
 | 1b7 | cbbpy team-ID bridge (unblocks A4 Elo, C2 roster_adj, D1 volatile) | **DONE** | `bridge_cbbpy_id()` in `src/data/normalize.py` — longest-prefix match + 12 explicit edge-case aliases; coverage 17/68 → 68/68 on 2026 tournament field (2026-04-24) |
 | 1b8 | Metrics rollout — phase 1 (surface dropped metrics + cross-year CI95) | **DONE** | `aggregate_strategy_stats` now tracks primary triple (P(1st), BestScore, MeanScore) + secondaries (p_top5, p_top25) with 95% CI half-widths; `_print_summary` + `stats_for_artifact` surface them; +16 pass locks the contract (2026-04-24) |
+| 1b9 | Metrics rollout — phase 2 (Wilson CI per year + multi-metric significance) | **DONE** | `wilson_ci95()` attaches per-year binomial CI to `stats.p1_wilson_ci_by_year`; `_run_significance_tests` now runs paired permutation on P(1st), BestScore, MeanScore (3 blocks) each with its own Bonferroni α; `run_backtest` emits `n_trials` per result row (2026-04-24) |
 | 1c | Elo base (A4) | **DONE** | Self-contained K=38 Elo from historical_games via cbbpy bridge; 68/68 coverage; +420 `elo_*` permutations (2026-04-24) |
 | 1d | Massey bases (A5, A6) | **PARTIAL** | A5 massey_avg DONE 2026-04-24 (uses pre-aggregated composite + 6-alias ID bridge; 68/68 2025 coverage). A6 massey_best deferred to phase 1d-2 — needs per-system Brier-selection harness. |
 | 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
