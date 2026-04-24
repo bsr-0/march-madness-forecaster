@@ -697,6 +697,56 @@ Every sophisticated candidate failed to survive:
 
 ---
 
+## Outstanding Work
+
+Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed with what blocks it, why it's worth doing, and a rough scope. Adding a new strategy or construction below does **not** authorize a `--tier budget` run — see § Running experiments and `memory/run_policy.md`.
+
+### Sources still to ship
+
+| ID | Phase | Blocker / Prereq | Why it's worth it | Scope |
+|----|-------|------------------|-------------------|-------|
+| A6 `massey_best` | 1d-2 | Per-system Brier-selection harness (none today) | All 150+ Massey systems are already on disk (`data/raw/external_{SYSTEM}_{year}.json`); we currently only consume the pre-aggregated composite (`A5 massey_avg`). `massey_best` walks each tournament and *picks the system with best cumulative Brier on years < test_year*. Different signal from A5 — selects the single best ranker rather than ensembling them. | ~4-5 files: per-system loader, Brier accumulator module, walk-forward selection harness, source wrapper, lock test. |
+| A8 `ap_strength` | 1e | Verify `data/kaggle/ap_poll_data.json` ingestion is current | Captures *public-perception* signal that's distinct from efficiency metrics — useful for opponent modeling (the field anchors on rankings, not barthag). Adds another orthogonal source for B4 `consensus`. | 1 file (`src/prediction/ap_probabilities.py`) + lock test. Algorithm is straightforward (rank → barthag table). |
+| B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
+| C1 `coach_adj` | 1g | Needs `data/kaggle/MTeamCoaches.csv` | Tournament-experience adjustment. Captures the "veteran coach effect" that team-level efficiency misses. Composes with every source. | 1 file + lock test; data is small. |
+| C2 `roster_adj` | 1g | UNBLOCKED by cbbpy bridge (1b7) | Top-5 player WARP adjustment. Captures star-player effect missed by team metrics. Roster files (`cbbpy_rosters_{year}.json`) are already on disk and now bridge cleanly to canonical IDs. | 1 file + lock test. |
+| C3 `momentum` | 1g | Needs Torvik four-factor monthly snapshots ingested for 2008-2026 | January→March efficiency-trend adjustment. Composable with every source/construction. | 1 file + ingestion verification + lock test. |
+
+### Construction modes still to ship
+
+| ID | Phase | What | Why it's worth it | Scope |
+|----|-------|------|-------------------|-------|
+| M5 `backward` | 2a | Champion → F4 → E8 → … → R64, every earlier-round pick conditioned on the downstream picks already drawn | **The only consistency-by-construction mode in a sea of forward-fill modes.** All existing modes (`forward`, `champ_first`, `f4_first`, `e8_first`, anchor variants, `confidence`) sample earlier rounds *independently of* the anchors already locked, which can produce internally-inconsistent brackets (champion losing in R32). `backward` eliminates that whole class of pathology by conditioning every pick on downstream survivors. | Largest open phase. Requires computing joint probabilities `P(team T survives round R | downstream survivors)` — the existing `round_probs` table doesn't carry that conditional structure. Real engineering lift before the mode is even runnable. |
+
+### Validation & guardrails
+
+| Item | Phase | Why | Scope |
+|------|-------|-----|-------|
+| Drift-guard test for Oracle output | 1b10 follow-up | `oracle_sweep_t3_years()` ships its data into `summary["tiers"]["T3"]["oracle"]` but nothing currently fails CI if `ranker_gap_espn_pts` regresses. A drift-guard would lock the *expected* gap ranges per regime (chaos vs chalk, per `memory/tournament_oracle.md`). | 1 test file; reads the most-recent T3 artifact and asserts gaps stay within the historical envelope. |
+| Phase 5 parameter sweeps on `seed_f4_first` | 5 | The Phase 3 winner is the bare seed table × F4-first. Open question: does anchor threshold (top-3 vs top-4 vs top-6 vs unrestricted) or seed-table sharpness lift ΔP(1st) above the +0.0053 baseline without breaking Bonferroni? | Sweep config + T3-rigor run on ~10-15 variants. **Requires explicit run authorization** per `memory/run_policy.md`. |
+| Submission-ranker test for `seed_f4_first` | 5 | MEMORY.md §3 flags the ranker as the binding constraint (North Star lever #2). Phase 3 measured P(1st) over the *portfolio*; the actual submitted bracket is the one the ranker picks. Open question: does `seed_f4_first` keep its edge once filtered through the ranker, or does the ranker's `min mean_rank` rule drop the high-P(1st) brackets? | Re-run Phase 3 winner with `--team-identity --rank-mode mean_rank` and compare `BestScore` (oracle's best) vs the ranker's submitted bracket score. |
+| `seed_f4_first` vs locked `f4_first_tv` (`torvik_f4_first`) | 5 | MEMORY.md §1 currently locks `f4_first_tv` as the production pool strategy. If `seed_f4_first` consistently beats it in a fresh paired run, that's a candidate pool-strategy update. Don't swap silently — needs a side-by-side Bonferroni-clearing comparison. | Paired permutation harness on the two strategies, full 14-year window, T3 rigor. **Run-gated.** |
+
+### Run authorization queue
+
+| What | Status |
+|------|--------|
+| Next `--tier budget` run on the now-1,960-strategy catalog (Phase 3 ran on 301; +1,659 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
+| Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
+
+### Why these matter (orthogonality, not just count)
+
+The catalog is at ~1,960 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+
+- **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
+- **`backward` (M5)** is the only construction mode that enforces internal bracket consistency. Every other mode samples earlier rounds independently of the anchors already locked.
+- **`massey_best` (A6)** is the only source that *selects* a single best ranker per year via Brier; everything else either uses one fixed model or ensembles them statically.
+- **C1/C2/C3 enriched bases** introduce roster-, coach-, and trajectory-level signal that no efficiency metric on its own captures.
+
+Each of these closes a *kind of strategy the current catalog literally cannot express* — that's the orthogonality argument for prioritizing them over yet another permutation of the existing surface.
+
+---
+
 ## Deprecated Strategies (removed, do not re-implement)
 
 | Strategy | Why Removed | Closure |
