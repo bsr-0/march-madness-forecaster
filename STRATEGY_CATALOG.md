@@ -37,7 +37,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 120 strategies)
+# Auto-generate all permutations (currently 150 strategies — 5 sources × (1+1 adj) × 5 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -359,7 +359,7 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `scripts/mc_pool_backtest.py:sample_backward_brackets()` (NEW)
 
 ### M6: `confidence`
-- **Status:** NEW
+- **Status:** IMPLEMENTED (2026-04-24)
 - **Algorithm:** Per-game decision based on prediction confidence:
   1. For each game, compute `confidence = |P(fav) - 0.5|`
   2. **High confidence** (P > 0.85): always pick favorite (lock chalk). Wastes no randomness on 1v16 games.
@@ -367,7 +367,7 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
   4. **Low confidence** (P < 0.60): sample with BOOSTED variance — inflate upset probability by 1.5× to explore differentiation opportunities
   - Effect: concentrates bracket diversity on the games that actually matter for pool differentiation (5v12, 6v11, 7v10) while locking in the games everyone agrees on
   - No anchoring — works game-by-game, not by locking teams through paths
-- **File:** `scripts/mc_pool_backtest.py:sample_confidence_brackets()` (NEW)
+- **File:** `scripts/mc_pool_backtest.py:sample_confidence_brackets()`; lock test: `tests/test_confidence_construction.py`
 
 ---
 
@@ -390,7 +390,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
 | **Adjustments** | contrarian (1) | coach_adj, roster_adj, momentum, volatile, upset_tuned (5) |
-| **Constructions** | forward, champ_first, f4_first, e8_first (4) | backward, confidence (2) |
+| **Constructions** | forward, champ_first, f4_first, e8_first, confidence (5) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
 | **Tournament Oracle** | `--oracle <year>` reports F4/finals/champ hits + ranker_gap_espn_pts; ledger in `memory/tournament_oracle.md` | Auto-run inside `run_budget()` after T3 (currently a separate CLI call) |
@@ -579,7 +579,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | TODO | upset-aware MC simulation |
 | 2a | Backward construction (M5) | TODO | *_backward |
-| 2b | Confidence construction (M6) | TODO | *_confidence |
+| 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
 | 3 | Full permutation evaluation | TODO | Run per §Testing Budget — T1 screen (≤1hr) → T2 rank (≤3hr) |
 | 4 | Significance testing + dead-end pruning | TODO | T3 validate — Gate: p<0.10, ≥8/14 years; cut losses if <0.3 pp over seed_forward |
 | 5 | Parameter sweeps on top strategies | TODO | T3b — Training window, blend weights, only for T3 survivors |
