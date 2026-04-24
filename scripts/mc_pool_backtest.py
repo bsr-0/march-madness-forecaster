@@ -1655,6 +1655,13 @@ def run_backtest(
         if pool_rp is not None:
             base_round_probs["pool_wisdom"] = pool_rp
 
+        # Upset-tuned context: walk-forward seed-by-round historical reach rates.
+        # Computed once per test year; consumed by the upset_tuned adjustment
+        # inside resolve_pipeline_round_probs. Uses only tournaments < year.
+        from src.prediction.upset_tuned_probabilities import load_upset_tuned_context
+
+        upset_tuned_ctx = load_upset_tuned_context(year)
+
         # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
         def _make_sampler(mode_name):
             """Return a sampler function for the given construction mode."""
@@ -1788,6 +1795,8 @@ def run_backtest(
                     adjustments,
                     base_round_probs,
                     pick_dist,
+                    seeds=seeds,
+                    historical_seed_reach_rates=upset_tuned_ctx,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)

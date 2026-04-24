@@ -37,7 +37,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 150 strategies — 5 sources × (1+1 adj) × 5 constructions × blends)
+# Auto-generate all permutations (currently 300 strategies — 5 sources × (1 + 2 adj + pair chain) × 5 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -297,17 +297,17 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/upset_probabilities.py` (NEW)
 
 #### D2: `upset_tuned`
-- **Status:** NEW
-- **Data:** Historical tournament game results + `data/kaggle/upset_seed_info.json`
+- **Status:** IMPLEMENTED (2026-04-24) — shipped as an ADJUSTMENT rather than a base. Composable with every source / construction; tuples produce e.g. `torvik+upset_tuned_confidence`, `odds+contrarian+upset_tuned_f4_first`.
+- **Data:** `data/raw/historical/tournament_results_{year}.json` (2005-2026; already team-ID-normalized to the Torvik / seeds ID scheme — sidesteps the cbbpy ID-mismatch blocker)
 - **Algorithm:**
-  1. Compute actual upset rates by seed matchup from all historical data (1985-present)
-  2. Compare to Log5-predicted upset rates using torvik barthag
-  3. Apply per-matchup calibration: if Log5 says 1v16 upset is 1% but history says 1.5%, scale pairwise probability by 1.5
-  4. This calibration is applied INSIDE the MC simulation at the pairwise level
-  - Walk-forward: only use upset data from years < test_year
-  - Addresses known Log5 bias: tends to underestimate extreme upsets and overestimate mild ones
-- **Years:** 2008-2026
-- **File:** `src/prediction/upset_probabilities.py` (NEW)
+  1. Walk-forward: compute empirical seed-by-round reach rates from all tournaments in `[2005, test_year)`
+  2. For each team t with seed s(t) in the test year, compute model's mean round-r probability across all s(t)-seeds
+  3. Calibration factor = `historical_reach_rate[s(t)][r] / model_mean_rate_for_seed_s(t)[r]`, clipped to [0.5, 2.0]
+  4. Adjusted round_prob = `model_rp[t][r] * factor`, then re-normalized per round to {64, 32, 16, 8, 4, 2} teams
+  - **Deliberate deviation from the original catalog spec:** the spec called for pairwise calibration inside the MC simulation; this implementation operates on round_probs before sampling so it remains composable with every source and construction. Captures the same signal (historical over/under-performance by seed) at the seed-aggregate level.
+  - **Addresses known Log5 bias:** underestimates upset seeds that historically over-perform (11, 12, 15) and over-estimates chalk seeds that have quietly drifted.
+- **Years:** 2011-2026 (needs ≥3 prior tournaments; 2008-2010 also workable but backtest window starts at 2011)
+- **File:** `src/prediction/upset_tuned_probabilities.py`; lock test: `tests/test_upset_tuned_adjustment.py`
 
 ---
 
@@ -389,7 +389,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
-| **Adjustments** | contrarian (1) | coach_adj, roster_adj, momentum, volatile, upset_tuned (5) |
+| **Adjustments** | contrarian, upset_tuned (2) | coach_adj, roster_adj, momentum, volatile (4) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence (5) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
@@ -577,7 +577,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
-| 1h | Upset bases (D1 volatile, D2 upset_tuned) | TODO | upset-aware MC simulation |
+| 1h | Upset bases (D1 volatile, D2 upset_tuned) | **PARTIAL** | D2 upset_tuned DONE 2026-04-24 (as adjustment) — walk-forward seed-by-round calibration; D1 volatile still TODO |
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
 | 3 | Full permutation evaluation | TODO | Run per §Testing Budget — T1 screen (≤1hr) → T2 rank (≤3hr) |
