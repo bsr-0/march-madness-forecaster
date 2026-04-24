@@ -487,6 +487,42 @@ A strategy is killed if:
 
 ---
 
+## Testing Budget: Comprehensive but Time-Bounded
+
+The tier structure above scales rigor with signal strength. Full-rigor backtests (N=100 repeats × 14 years × ~120 strategies) take days — most of it wasted on strategies that were dead on arrival. Rule: **spend cheap compute to prune, expensive compute only on survivors.** The goal is two overnight runs end-to-end, not a week of babysitting.
+
+### Per-tier budget
+| Tier | Strategies | Repeats | Years | Wall-time target | Kill threshold |
+|------|-----------:|--------:|-------|------------------|----------------|
+| T1 screen   | all (~120)     |  25 | recent 8 (excl 2020)  | ≤1 hr   | P(1st) < `seed_forward` in ≥6/8 years **or** P(1st)=0 in any year |
+| T2 rank     | top 10 from T1 |  50 | full 14 (2011-2026 excl 2020) | ≤3 hr   | P(1st) < `seed_forward` in ≥10/14 years |
+| T3 validate | top 5 from T2  | 100 | full 14               | ≤6 hr   | significance gate (p<0.10, ≥8/14 years) |
+| T3b sweep   | top 3 ± params | 100 | full 14               | overnight | same as T3 |
+
+T1+T2 fit one overnight. T3+T3b fit the next. Everything else is optional.
+
+### Cost-reduction levers (priority order)
+1. **Cache `round_probs` per (source, year).** Every strategy sharing a base hits the same probability grid — compute once, reuse across modes and adjustments. This alone cuts the pipeline cross-product cost by ~4-6×.
+2. **Early-stop within a strategy.** If after 3 years P(1st) ≤ 1% (below the 3.23% random baseline), abort the remaining years for that strategy.
+3. **Parallelize across strategies, not years.** Strategies are embarrassingly parallel; years share no state. Use `multiprocessing.Pool(n_cores)` over the strategy list. Avoid nesting parallelism — it thrashes.
+4. **Convergence monitoring, not fixed repeats.** Track running P(1st) CI width; stop when 95% CI < 0.5 pp. Losers stabilize fast (n≈20); survivors need the full 100.
+5. **Subsample years in T1 only.** T1 ranks; it does not certify. 8 recent years is enough to separate signal from noise for screening — never cite T1 numbers as the final result.
+
+### Anti-patterns (burn time, yield mediocre results)
+- Running T3 params (N=100, 14 years) on every strategy "just to have the data". Don't. Use T1 first.
+- Adding a strategy mid-run. Batch it into the next tier run; never lengthen an in-flight job.
+- Re-running identical configs hoping the average smooths out. If results look off, fix the **input** — more repeats do not buy you significance the design can't deliver.
+- Tuning a losing base. If the base failed T1, no parameter sweep saves it. Move on.
+- Re-simulating opponents when only the user bracket changed. Lock the opponent field at a fixed RNG seed across a tier so variance between strategies is purely user-side.
+
+### When to cut losses
+If after T2 the best non-baseline strategy improves P(1st) by <0.3 pp over `seed_forward`, stop. The effect size will not clear the significance gate even with more compute — redirect effort to a new source/adjustment, not more repeats. This is the single most time-saving rule in the catalog.
+
+### What "comprehensive" means here
+Comprehensive ≠ every permutation at full rigor. It means: **every source/adjustment/mode gets a fair shot at T1 with identical conditions**, and **every survivor gets validated at full rigor**. Strategies killed at T1 are documented in `memory/project_strategies_tested.md` with their T1 numbers — that's the audit trail, not a re-run.
+
+---
+
 ## Build Order
 
 | Phase | What | Status | Strategies Enabled |
@@ -503,9 +539,9 @@ A strategy is killed if:
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | TODO | upset-aware MC simulation |
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | TODO | *_confidence |
-| 3 | Full permutation evaluation | TODO | All implemented × all implemented |
-| 4 | Significance testing + dead-end pruning | TODO | Gate: p<0.10, ≥8/14 years |
-| 5 | Parameter sweeps on top strategies | TODO | Training window, blend weights |
+| 3 | Full permutation evaluation | TODO | Run per §Testing Budget — T1 screen (≤1hr) → T2 rank (≤3hr) |
+| 4 | Significance testing + dead-end pruning | TODO | T3 validate — Gate: p<0.10, ≥8/14 years; cut losses if <0.3 pp over seed_forward |
+| 5 | Parameter sweeps on top strategies | TODO | T3b — Training window, blend weights, only for T3 survivors |
 
 ---
 
