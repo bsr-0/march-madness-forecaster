@@ -105,7 +105,8 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "spread_power",  # A7: average closing spread → logistic
     "contrarian",  # B6: torvik adjusted by ownership gap vs public picks
     "pool_wisdom",  # B7: actual pool picks (or extrapolated) as round probs
-    # New bases added here as implemented (A4-A6, A8, B3-B5, C1-C3, D1-D2)
+    "elo",  # A4: K=38 Elo from historical_games, bridged via cbbpy normalizer
+    # New bases added here as implemented (A5-A6, A8, B3-B5, C1-C3)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -1853,6 +1854,18 @@ def run_backtest(
         else:
             spread_rp = None
 
+        # --- Elo base (A4) ---
+        # Self-contained K=38 Elo from historical_games, bridged via the
+        # cbbpy ID normalizer to canonical tournament IDs, then MC-sim'd
+        # to round_probs via the same torvik machinery.
+        from src.prediction.elo_probabilities import load_elo_barthag
+
+        elo_barthag = load_elo_barthag(year, seeds, Path("data"))
+        if elo_barthag is not None:
+            elo_rp = build_torvik_round_probabilities(seeds, regions, elo_barthag)
+        else:
+            elo_rp = None
+
         # Probability base registry: base_name → round_probs
         base_round_probs = {
             "seed": seed_rp,
@@ -1860,9 +1873,11 @@ def run_backtest(
             "blend": blend_rp,
             "torvik": torvik_rp,
         }
-        # Only register market bases if data is available for this year
+        # Only register market + elo bases if data is available for this year
         if odds_rp is not None:
             base_round_probs["odds"] = odds_rp
+        if elo_rp is not None:
+            base_round_probs["elo"] = elo_rp
         if spread_rp is not None:
             base_round_probs["spread_power"] = spread_rp
 
