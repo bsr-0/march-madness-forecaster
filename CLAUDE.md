@@ -12,6 +12,7 @@
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
 - **Before proposing any new strategy:** Read `memory/project_strategies_tested.md` for what's been tried and killed.
+- **Before running `--tier budget` or any backtest pipeline:** Read `memory/run_policy.md`. Strategy-addition phases are **no-run by default** — `python -m scripts.run_experiment --tier budget` (and any `--tier 1|2|3|all` variant) requires **explicit human approval**. Adding new strategies, adjustments, or construction modes does NOT authorize a run. If the operator's signal is ambiguous, ask.
 
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").
