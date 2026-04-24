@@ -27,9 +27,14 @@ Everything is cross-producted with construction modes: `..._f4_first`
 | `0.5*pool_wisdom+0.5*torvik+contrarian_e8_first` | Pool+torvik blend, contrarian, E8-first |
 
 ### Running experiments
+
+> **⚠️ NO-RUN POLICY — Read `memory/run_policy.md` before invoking any command in this block.**
+> Strategy-addition phases are no-run by default. A `--tier budget` invocation requires **explicit human approval** (phrases like "run the budget", "kick off the run", "run tier 1"). Adding new strategies, adjustments, or construction modes does **not** authorize a run. If in doubt, ask.
+
 ```bash
 # Budgeted pipeline (recommended): T1 screen → kill → T2 rank → kill → T3 validate
 # Uses the tier parameters + kill rules from § Testing Budget automatically.
+# GATED: requires explicit human approval per memory/run_policy.md.
 python -m scripts.run_experiment --tier budget
 
 # Individual tiers (advanced — usually you want --tier budget instead)
