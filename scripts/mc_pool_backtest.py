@@ -89,6 +89,51 @@ N_MODEL_BRACKETS = 50  # Stochastic brackets per mode per repeat
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 REGION_ORDER = ["East", "West", "South", "Midwest"]
 
+# ---------------------------------------------------------------------------
+# Strategy registry: probability bases × construction modes
+# ---------------------------------------------------------------------------
+# A strategy = base × mode. Bases produce team ratings (barthag-equivalent).
+# Modes build brackets from round advancement probabilities.
+# See STRATEGY_CATALOG.md for the full 58-strategy design.
+
+PROBABILITY_BASES: Tuple[str, ...] = (
+    "seed",          # A1: historical seed win rates
+    "noseed",        # B1: 12-feature LR+GBM ensemble
+    "blend",         # B2: alpha*seed + (1-alpha)*noseed
+    "torvik",        # A2: Bart Torvik barthag
+    "odds",          # A3: Bradley-Terry on market implied probs
+    "spread_power",  # A7: average closing spread → logistic
+    "contrarian",    # B6: torvik adjusted by ownership gap vs public picks
+    "pool_wisdom",   # B7: actual pool picks (or extrapolated) as round probs
+    # New bases added here as implemented (A4-A6, A8, B3-B5, C1-C3, D1-D2)
+)
+
+CONSTRUCTION_MODES: Tuple[str, ...] = (
+    "forward",      # M1: sample each game independently from round_probs
+    "champ_first",  # M2: lock champion, fill rest stochastically
+    "f4_first",     # M3: lock 4 F4 teams, fill rest
+    "e8_first",     # M4: lock 8 E8 teams, fill rest
+    # New modes added here as implemented (M5 backward, M6 confidence)
+)
+
+# Legacy mode names mapped to (base, mode) pairs for backward compatibility.
+# The old system conflated base and mode into a single name.
+LEGACY_MODE_MAP = {
+    "seed": ("seed", "forward"),
+    "noseed": ("noseed", "forward"),
+    "blend": ("blend", "forward"),
+    "torvik": ("torvik", "forward"),
+    "champ_first_tv": ("torvik", "champ_first"),
+    "champ_first_chalkfade_tv": ("torvik", "champ_first"),  # chalkfade is a variant
+    "f4_first_tv": ("torvik", "f4_first"),
+    "e8_first_tv": ("torvik", "e8_first"),
+    "det_champ_tv": ("torvik", "champ_first"),  # deterministic variant
+    "det_f4_tv": ("torvik", "f4_first"),
+    "det_e8_tv": ("torvik", "e8_first"),
+}
+
+# ALL_MODES kept for backward compatibility with existing CLI invocations,
+# PoolHyperparameters.enabled_modes, and walk-forward fitter interface.
 ALL_MODES: Tuple[str, ...] = (
     "seed",
     "noseed",
@@ -111,6 +156,16 @@ ALL_MODES: Tuple[str, ...] = (
 # Small-pool preset is now identical to ALL_MODES since opt_* and hedge_tv
 # were deprecated. Kept as an alias for backward-compatible CLI invocations.
 SMALL_POOL_MODES: Tuple[str, ...] = ALL_MODES
+
+
+def build_strategy_name(base: str, mode: str) -> str:
+    """Construct a strategy name from base × mode."""
+    return f"{base}_{mode}"
+
+
+def expand_strategies(bases: Sequence[str], modes: Sequence[str]) -> list:
+    """Expand base × mode cross-product into strategy names."""
+    return [build_strategy_name(b, m) for b in bases for m in modes]
 
 # ---------------------------------------------------------------------------
 # Walk-forward pool hyperparameters
@@ -1456,89 +1511,167 @@ def run_backtest(
 
         chalk_bias_table = load_chalk_bias_table()
 
-        # Each entry is (mode_name, round_probs, sampler_fn). The sampler_fn
-        # takes (first_round, round_probs, n_samples, rng) and returns an
-        # (n_samples, 63) bool array. The 4 baseline modes all use
-        # sample_model_brackets (independent-draw sampling from round_probs,
-        # which is structurally equivalent to forward_greedy construction at
-        # the per-game level). The 3 construction-mode variants all use the
-        # torvik probabilities as their base (since torvik is the backtest-
-        # recommended probability mode) but apply different anchor-and-lock
-        # logic to produce brackets with mode-specific structure. The
-        # round_probs is passed to the sampler so it can compute per-team
-        # anchor weights (e.g., CHAMP probability for champ_first).
-        mode_sampler_specs = [
-            ("seed", seed_rp, sample_model_brackets),
-            ("noseed", noseed_rp, sample_model_brackets),
-            ("blend", blend_rp, sample_model_brackets),
-            ("torvik", torvik_rp, sample_model_brackets),
-            (
-                "champ_first_tv",
-                torvik_rp,
+        # -------------------------------------------------------------------
+        # Strategy registry: base × mode cross-product
+        # -------------------------------------------------------------------
+        # Each base produces round_probs (Dict[team_id, Dict[round, float]]).
+        # Each mode produces brackets from round_probs via a sampler function.
+        # New bases/modes register here; the cross-product is automatic.
+
+        # --- Market-implied probability bases (A3, A7) ---
+        from src.prediction.market_probabilities import (
+            load_market_ratings,
+            load_spread_power_ratings,
+        )
+        market_barthag = load_market_ratings(year, seeds)
+        if market_barthag is not None:
+            odds_rp = build_torvik_round_probabilities(seeds, regions, market_barthag)
+        else:
+            odds_rp = None
+
+        spread_barthag = load_spread_power_ratings(year, seeds)
+        if spread_barthag is not None:
+            spread_rp = build_torvik_round_probabilities(seeds, regions, spread_barthag)
+        else:
+            spread_rp = None
+
+        # Probability base registry: base_name → round_probs
+        base_round_probs = {
+            "seed": seed_rp,
+            "noseed": noseed_rp,
+            "blend": blend_rp,
+            "torvik": torvik_rp,
+        }
+        # Only register market bases if data is available for this year
+        if odds_rp is not None:
+            base_round_probs["odds"] = odds_rp
+        if spread_rp is not None:
+            base_round_probs["spread_power"] = spread_rp
+
+        # --- Contrarian and pool-wisdom bases (B6, B7) ---
+        from src.prediction.contrarian_probabilities import (
+            build_contrarian_round_probs,
+            load_pool_wisdom_ratings,
+        )
+        # Contrarian: adjust torvik by ownership gap against public picks
+        contrarian_rp = build_contrarian_round_probs(torvik_rp, pick_dist)
+        base_round_probs["contrarian"] = contrarian_rp
+
+        # Pool wisdom: actual pool picks or extrapolated from bias signature
+        pool_rp = load_pool_wisdom_ratings(year, seeds)
+        if pool_rp is not None:
+            base_round_probs["pool_wisdom"] = pool_rp
+
+        # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
+        def _make_sampler(mode_name):
+            """Return a sampler function for the given construction mode."""
+            if mode_name == "forward":
+                return sample_model_brackets
+            elif mode_name == "champ_first":
+                return lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r)
+            elif mode_name == "f4_first":
+                return lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "e8_first":
+                return lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions)
+            # New construction modes register here:
+            # elif mode_name == "backward":
+            #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
+            # elif mode_name == "confidence":
+            #     return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r, seeds, regions)
+            else:
+                raise ValueError(f"Unknown construction mode: {mode_name}")
+
+        # Build mode_sampler_specs from the strategy registry.
+        # Supports both legacy mode names (e.g. "f4_first_tv") and new
+        # base×mode names (e.g. "torvik_f4_first").
+        mode_sampler_specs = []
+
+        # Legacy modes: hardcoded specs for backward compatibility
+        legacy_specs = {
+            "seed": ("seed", seed_rp, sample_model_brackets),
+            "noseed": ("noseed", noseed_rp, sample_model_brackets),
+            "blend": ("blend", blend_rp, sample_model_brackets),
+            "torvik": ("torvik", torvik_rp, sample_model_brackets),
+            "champ_first_tv": (
+                "champ_first_tv", torvik_rp,
                 lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
             ),
-            (
-                "champ_first_chalkfade_tv",
-                torvik_rp,
+            "champ_first_chalkfade_tv": (
+                "champ_first_chalkfade_tv", torvik_rp,
                 lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
                     fr, rp, n, r, seeds, _cbt
                 ),
             ),
-            (
-                "f4_first_tv",
-                torvik_rp,
+            "f4_first_tv": (
+                "f4_first_tv", torvik_rp,
                 lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
             ),
-            (
-                "e8_first_tv",
-                torvik_rp,
+            "e8_first_tv": (
+                "e8_first_tv", torvik_rp,
                 lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
             ),
-            (
-                "det_champ_tv",
-                torvik_rp,
+            "det_champ_tv": (
+                "det_champ_tv", torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_champ_tv",
+                    fr, rp, n, r, seeds, regions, pick_dist, "det_champ_tv",
                 ),
             ),
-            (
-                "det_f4_tv",
-                torvik_rp,
+            "det_f4_tv": (
+                "det_f4_tv", torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_f4_tv",
+                    fr, rp, n, r, seeds, regions, pick_dist, "det_f4_tv",
                 ),
             ),
-            (
-                "det_e8_tv",
-                torvik_rp,
+            "det_e8_tv": (
+                "det_e8_tv", torvik_rp,
                 lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_e8_tv",
+                    fr, rp, n, r, seeds, regions, pick_dist, "det_e8_tv",
                 ),
             ),
-        ]
-        # Filter to the modes the walked-forward fitter asked for.
-        mode_sampler_specs = [m for m in mode_sampler_specs if m[0] in hparams.enabled_modes]
+        }
+
+        from src.prediction.strategy_pipeline import (
+            parse_pipeline,
+            resolve_pipeline_round_probs,
+        )
+
+        for mode_name in hparams.enabled_modes:
+            # Try legacy name first
+            if mode_name in legacy_specs:
+                mode_sampler_specs.append(legacy_specs[mode_name])
+                continue
+
+            # Try simple base×mode cross-product (e.g. "torvik_f4_first")
+            resolved_simple = False
+            if "_" in mode_name:
+                for i in range(len(mode_name)):
+                    if mode_name[i] == "_":
+                        candidate_base = mode_name[:i]
+                        candidate_mode = mode_name[i+1:]
+                        if candidate_base in base_round_probs and candidate_mode in CONSTRUCTION_MODES:
+                            rp = base_round_probs[candidate_base]
+                            sampler = _make_sampler(candidate_mode)
+                            mode_sampler_specs.append((mode_name, rp, sampler))
+                            resolved_simple = True
+                            break
+
+            if resolved_simple:
+                continue
+
+            # Try pipeline resolution (e.g. "odds+contrarian_f4_first",
+            # "0.7*torvik+0.3*odds+contrarian_e8_first")
+            try:
+                sources, adjustments, construction = parse_pipeline(mode_name)
+                pipeline_rp = resolve_pipeline_round_probs(
+                    sources, adjustments, base_round_probs, pick_dist,
+                )
+                if pipeline_rp is not None:
+                    sampler = _make_sampler(construction)
+                    mode_sampler_specs.append((mode_name, pipeline_rp, sampler))
+                else:
+                    print(f"  WARNING: pipeline '{mode_name}' sources not available for year {year}, skipping")
+            except (ValueError, KeyError) as exc:
+                print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
 
         rng = np.random.default_rng(42 + year)
 
@@ -1672,7 +1805,7 @@ def run_backtest(
 
     if not results:
         print("\nNo results.")
-        return 1
+        return []
 
     # --- Write saved brackets ---
     if save_brackets and saved_brackets:
@@ -1693,7 +1826,8 @@ def run_backtest(
     )
     print(f"  {'-' * 65}")
 
-    for mode in list(ALL_MODES):
+    unique_modes = list(dict.fromkeys(r["mode"] for r in results))
+    for mode in unique_modes:
         mode_results = [r for r in results if r["mode"] == mode]
         if not mode_results:
             continue
@@ -1710,30 +1844,35 @@ def run_backtest(
     # --- Statistical tests (on mean_rank for fair comparison) ---
     print(f"\n  Statistical Tests — Mean Rank (paired across years):")
 
-    # Collect per-year ranks by mode
-    all_modes = list(ALL_MODES)
-    mode_ranks = {m: {} for m in all_modes}
-    mode_best = {m: {} for m in all_modes}
+    # Collect per-year ranks by mode (handles both legacy and new strategy names)
+    mode_ranks = {}
+    mode_best = {}
     for r in results:
-        if r["mode"] in mode_ranks:
-            mode_ranks[r["mode"]][r["year"]] = r["mean_rank"]
-            mode_best[r["mode"]][r["year"]] = r["best_rank"]
+        m = r["mode"]
+        if m not in mode_ranks:
+            mode_ranks[m] = {}
+            mode_best[m] = {}
+        mode_ranks[m][r["year"]] = r["mean_rank"]
+        mode_best[m][r["year"]] = r["best_rank"]
 
-    # Find years where all baseline modes exist
-    baseline_years = sorted(set(mode_ranks["seed"]) & set(mode_ranks["noseed"]) & set(mode_ranks["blend"]))
+    # Determine baseline: prefer "seed_forward" (new), fall back to "seed" (legacy)
+    baseline_key = "seed_forward" if "seed_forward" in mode_ranks else ("seed" if "seed" in mode_ranks else None)
+    if baseline_key is None:
+        print("    No seed baseline found, skipping statistical tests.")
+        return results
 
     # For each non-baseline mode, run paired tests vs seed
-    comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in all_modes if m != "seed" and m in mode_ranks]
+    comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in mode_ranks if m != baseline_key]
 
     n_comparisons = len(comparison_modes)
     bonferroni_alpha = 0.05 / n_comparisons
     print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
 
     for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-        shared_years = sorted(set(mode_ranks["seed"].keys()) & set(cmp_ranks.keys()))
+        shared_years = sorted(set(mode_ranks[baseline_key].keys()) & set(cmp_ranks.keys()))
         if len(shared_years) < 5:
             continue
-        seed_arr = np.array([mode_ranks["seed"][y] for y in shared_years])
+        seed_arr = np.array([mode_ranks[baseline_key][y] for y in shared_years])
         cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
         t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
         p_adj = min(p * n_comparisons, 1.0)
@@ -1741,7 +1880,7 @@ def run_backtest(
         improvement = np.mean(seed_arr - cmp_arr)
         wins = np.sum(cmp_arr < seed_arr)
         print(
-            f"    MeanRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"    MeanRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
             f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
         )
 
@@ -1750,10 +1889,10 @@ def run_backtest(
     print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
 
     for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-        shared_years = sorted(set(mode_best["seed"].keys()) & set(cmp_best.keys()))
+        shared_years = sorted(set(mode_best[baseline_key].keys()) & set(cmp_best.keys()))
         if len(shared_years) < 5:
             continue
-        sb = np.array([mode_best["seed"][y] for y in shared_years])
+        sb = np.array([mode_best[baseline_key][y] for y in shared_years])
         cb = np.array([cmp_best[y] for y in shared_years])
         t, p = sp_stats.ttest_rel(sb, cb)
         p_adj = min(p * n_comparisons, 1.0)
@@ -1761,12 +1900,12 @@ def run_backtest(
         improvement = np.mean(sb - cb)
         wins = np.sum(cb < sb)
         print(
-            f"    BestRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"    BestRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
             f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
         )
 
     print(f"\n{'=' * 100}")
-    return 0
+    return results
 
 
 class _Tee:
@@ -1843,12 +1982,43 @@ def main():
         type=str,
         nargs="+",
         default=None,
-        help=f"Explicit list of modes to evaluate. Valid: {', '.join(ALL_MODES)}",
+        help=f"Explicit list of legacy modes to evaluate. Valid: {', '.join(ALL_MODES)}",
+    )
+    parser.add_argument(
+        "--bases",
+        type=str,
+        nargs="+",
+        default=None,
+        help=f"Probability bases to evaluate (cross-product with --construction-modes). "
+        f"Valid: {', '.join(PROBABILITY_BASES)}. Use 'all' for all bases.",
+    )
+    parser.add_argument(
+        "--construction-modes",
+        type=str,
+        nargs="+",
+        default=None,
+        help=f"Construction modes to evaluate (cross-product with --bases). "
+        f"Valid: {', '.join(CONSTRUCTION_MODES)}. Use 'all' for all modes.",
     )
     args = parser.parse_args()
 
-    # Resolve mode list: --small-pool > --modes > default (all)
-    if args.small_pool:
+    # Resolve mode list.
+    # New interface: --bases X Y --construction-modes A B → cross-product
+    # Legacy interface: --modes (or --small-pool) → old hardcoded list
+    if args.bases or args.construction_modes:
+        # New base×mode cross-product interface
+        bases = list(PROBABILITY_BASES) if (args.bases and "all" in args.bases) else (args.bases or list(PROBABILITY_BASES))
+        cmodes = list(CONSTRUCTION_MODES) if (args.construction_modes and "all" in args.construction_modes) else (args.construction_modes or list(CONSTRUCTION_MODES))
+        invalid_bases = set(bases) - set(PROBABILITY_BASES)
+        invalid_cmodes = set(cmodes) - set(CONSTRUCTION_MODES)
+        if invalid_bases:
+            parser.error(f"Unknown base(s): {', '.join(sorted(invalid_bases))}. Valid: {', '.join(PROBABILITY_BASES)}")
+        if invalid_cmodes:
+            parser.error(f"Unknown construction mode(s): {', '.join(sorted(invalid_cmodes))}. Valid: {', '.join(CONSTRUCTION_MODES)}")
+        strategy_names = expand_strategies(bases, cmodes)
+        mode_override = tuple(strategy_names)
+        print(f"[strategy registry] {len(bases)} bases × {len(cmodes)} modes = {len(strategy_names)} strategies")
+    elif args.small_pool:
         mode_override = SMALL_POOL_MODES
     elif args.modes:
         invalid = set(args.modes) - set(ALL_MODES)
