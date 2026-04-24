@@ -298,7 +298,7 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 
 #### D2: `upset_tuned`
 - **Status:** IMPLEMENTED (2026-04-24) — shipped as an ADJUSTMENT rather than a base. Composable with every source / construction; tuples produce e.g. `torvik+upset_tuned_confidence`, `odds+contrarian+upset_tuned_f4_first`.
-- **Data:** `data/raw/historical/tournament_results_{year}.json` (2005-2026; already team-ID-normalized to the Torvik / seeds ID scheme — sidesteps the cbbpy ID-mismatch blocker)
+- **Data:** `data/raw/historical/tournament_results_{year}.json` (2005-2026; already team-ID-normalized to the Torvik / seeds ID scheme — was the first adjustment shipped before the cbbpy bridge landed)
 - **Algorithm:**
   1. Walk-forward: compute empirical seed-by-round reach rates from all tournaments in `[2005, test_year)`
   2. For each team t with seed s(t) in the test year, compute model's mean round-r probability across all s(t)-seeds
@@ -584,6 +584,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b4 | Testing Budget (tier configs, kill rules, cut-losses gate) | **DONE** | `--tier budget` runs T1→T2→T3 with automatic pruning |
 | 1b5 | Tournament Oracle Ledger (per-year F4/finals/champ + ranker gap KPI) | **DONE** | `--oracle <year>` + `memory/tournament_oracle.md` — 2023/2026 chaos gap +820/+830, 2024/2025 chalk gap +0/+280 |
 | 1b6 | Chaos Index (pre-tournament regime prediction from Torvik top-of-field) | **DONE** | `--chaos-index` — `mean_top8_barthag` r=−0.668 p=0.006; walk-forward MAE 0.89 beats 1.13 baseline; informational only (no strategy gating yet) |
+| 1b7 | cbbpy team-ID bridge (unblocks A4 Elo, C2 roster_adj, D1 volatile) | **DONE** | `bridge_cbbpy_id()` in `src/data/normalize.py` — longest-prefix match + 12 explicit edge-case aliases; coverage 17/68 → 68/68 on 2026 tournament field (2026-04-24) |
 | 1c | Elo base (A4) | TODO | elo, elo+contrarian, blends |
 | 1d | Massey bases (A5, A6) | TODO | massey_avg, massey_best, blends |
 | 1e | AP base (A8) | TODO | ap_strength |
