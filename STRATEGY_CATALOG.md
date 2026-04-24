@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 420 strategies — 5 sources × (1 + 2 adj + pair chain) × 7 constructions × blends)
+# Auto-generate all permutations (currently 600 strategies — 5 sources × (1 + 2 adj + pair chain) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -363,6 +363,24 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **Why:** Counterpart to `f4_chalk`. Bets against the modal "1-seed in F4" outcome — useful in chaos years per the Chaos Index hypothesis (predicted regime → which mode to use).
 - **File:** `scripts/mc_pool_backtest.py:sample_f4_diverse_brackets()`; same lock test as M3a.
 
+### M3c: `f4_top4` (anchor-restricted F4-first, seeds 1-4)
+- **Status:** IMPLEMENTED (2026-04-24)
+- **Algorithm:** Identical to `f4_first` except the per-region F4-anchor draw is restricted to seeds 1-4. Middle ground between `f4_chalk` (seeds 1-3) and `f4_first` (all seeds). Historically ~85% of F4 spots go to seeds 1-4.
+- **Why:** Closes the anchor-restriction parameter space. If `f4_chalk` (1-3) and `f4_first` (any) bracket the Phase 3 winner's behavior, `f4_top4` is the sweet-spot candidate — chalky enough to match the modal F4 distribution, loose enough to allow the occasional 4-seed regional winner.
+- **File:** `scripts/mc_pool_backtest.py:sample_f4_top4_brackets()`; lock test: `tests/test_anchor_construction_variants.py`
+
+### M4a: `e8_chalk` (anchor-restricted E8-first)
+- **Status:** IMPLEMENTED (2026-04-24)
+- **Algorithm:** Identical to `e8_first` except each of the 8 per-quadrant S16-anchor draws is restricted to seeds 1-6. Top quadrant draws from {1, 4, 5}; bottom from {2, 3, 6}. Falls back to the full quadrant pool if no top-6 seed is in the pool for that quadrant.
+- **Why:** Phase 3 found `seed_f4_first` beats `seed_e8_first`. Two possible causes: (a) E8 locks too many anchors, (b) E8 locks the *wrong* anchors (seeds 7-16 that historically don't reach S16). `e8_chalk` isolates (b) — if it closes the gap against F4-first, the E8 problem was anchor-selection not constraint-count.
+- **File:** `scripts/mc_pool_backtest.py:sample_e8_chalk_brackets()`; same lock test file.
+
+### M4b: `e8_diverse` (anchor-restricted E8-first, no 1-seeds)
+- **Status:** IMPLEMENTED (2026-04-24)
+- **Algorithm:** Identical to `e8_first` except 1-seeds are excluded from the anchor pool. Top-quadrant top-6 eligibility drops from {1, 4, 5} to {4, 5}; bottom quadrant is unaffected (2-seeds still eligible).
+- **Why:** Counterpart to `e8_chalk`. Forces at least one non-1-seed S16 anchor per region. Tests whether aggressive anchor diversity helps E8-first bracket performance in chaos years (matches the Chaos Index hypothesis).
+- **File:** `scripts/mc_pool_backtest.py:sample_e8_diverse_brackets()`; same lock test file.
+
 ### M5: `backward`
 - **Status:** NEW
 - **Algorithm:**
@@ -407,7 +425,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
 | **Adjustments** | contrarian, upset_tuned (2) | coach_adj, roster_adj, momentum, volatile (4) |
-| **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse (7) | backward (1) |
+| **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
 | **Tournament Oracle** | `--oracle <year>` reports F4/finals/champ hits + ranker_gap_espn_pts; ledger in `memory/tournament_oracle.md` | Auto-run inside `run_budget()` after T3 (currently a separate CLI call) |
@@ -599,6 +617,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
 | 2c | Anchor-restricted F4 modes (M3a f4_chalk, M3b f4_diverse) | **DONE** | Post-Phase-3 expansion — tests whether `seed_f4_first`'s edge comes from chalk anchors (M3a) or survives diverse anchors (M3b) (2026-04-24) |
+| 2d | Remaining anchor-restricted modes (M3c f4_top4, M4a e8_chalk, M4b e8_diverse) | **DONE** | Closes the anchor-restriction parameter space around the Phase 3 winner. +180 evaluable permutations; no-run phase per `memory/run_policy.md` (2026-04-24) |
 | 3 | Full permutation evaluation | **DONE** | 2026-04-24 T1→T3 run on 301 candidates in 3.6 min wall-time; 81 killed at T1, 5 at T2; log: `artifacts/experiments/experiment_budget_20260424_155838.json` |
 | 4 | Significance testing + dead-end pruning | **DONE** | 2026-04-24: `seed_f4_first` cleared Bonferroni α=0.02 (ΔP(1st)=+0.53pp, p=0.008, 11/14 yrs); `seed` cleared gate but not Bonferroni (p=0.058). All torvik / pool_wisdom / contrarian / upset_tuned / confidence variants failed. |
 | 5 | Parameter sweeps on top strategies | TODO | T3b — sweep F4-first anchor thresholds, confidence bands around `seed_f4_first`; test against submission ranker |
