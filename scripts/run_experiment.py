@@ -61,9 +61,90 @@ from src.evaluation.testing_budget import (
     select_tier_years,
     stats_for_artifact,
 )
+from src.evaluation.tournament_oracle import (
+    load_ground_truth,
+    report_to_dict,
+    score_portfolio,
+)
 
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "experiments"
+BRACKET_ARTIFACT_DIR = PROJECT_ROOT / "artifacts" / "backtest_brackets"
+DATA_ROOT = PROJECT_ROOT / "data"
 DEFAULT_BASELINE = "seed_forward"
+
+
+def run_oracle_report(year: int) -> dict:
+    """Score a saved backtest-brackets artifact against the tournament oracle.
+
+    Reads ``artifacts/backtest_brackets/backtest_brackets_{year}.json`` (written
+    by ``mc_pool_backtest.py --save-brackets``) and reports, per mode:
+      - max F4 hits / max finals hits / whether the portfolio contained
+        the real champion
+      - which bracket the ranker submitted vs. the best-scoring bracket
+      - ESPN points left on the table by the ranker
+
+    This is the qualitative companion to P(1st): it tells you whether the
+    model *generated* the right answer and whether the ranker *picked* it.
+    Per MEMORY.md §3, the 2026 ranker submitted a 620-pt bracket while the
+    portfolio contained a 1450-pt bracket with 4/4 F4 + correct champion —
+    the ranker_gap_espn_pts KPI surfaces that pattern for every year.
+    """
+    artifact_path = BRACKET_ARTIFACT_DIR / f"backtest_brackets_{year}.json"
+    if not artifact_path.exists():
+        raise FileNotFoundError(
+            f"No saved brackets for {year} at {artifact_path}. "
+            f"Run `python -m scripts.mc_pool_backtest --save-brackets --years {year}` first."
+        )
+    with open(artifact_path) as f:
+        data = json.load(f)
+
+    truth = load_ground_truth(year, DATA_ROOT)
+
+    print(f"\n{'=' * 80}")
+    print(f"TOURNAMENT ORACLE — {year}")
+    print(f"{'=' * 80}")
+    print(f"  Actual F4:        {sorted(truth.final_four)}")
+    print(f"  Actual finalists: {sorted(truth.finalists)}")
+    print(f"  Actual champion:  {truth.champion} ({truth.champion_seed}-seed)")
+    print()
+    print(
+        f"  {'Mode':<20} {'max_F4':>6} {'max_Fn':>6} {'had_ch':>6}  {'submit_F4':>9} {'submit_ch':>9}  {'gap_pts':>8}"
+    )
+    print(f"  {'-' * 78}")
+
+    per_mode = {}
+    for mode_data in data["modes"]:
+        mode = mode_data["mode"]
+        portfolio = mode_data["brackets"]
+        report = score_portfolio(portfolio, truth)
+        per_mode[mode] = report_to_dict(report)
+        print(
+            f"  {mode:<20} "
+            f"{report.max_f4_hits:>6}/4 "
+            f"{report.max_finals_hits:>6}/2 "
+            f"{'yes' if report.portfolio_had_champ else 'no':>6}  "
+            f"{report.submitted_oracle.f4_hits:>9}/4 "
+            f"{('yes' if report.submitted_oracle.champ_hit else 'no'):>9}  "
+            f"{report.ranker_gap_espn_pts:>+8.0f}"
+        )
+
+    # If the gap > 0 in any mode, the ranker picked worse than optimal-in-portfolio.
+    total_gap = sum(m["ranker_gap_espn_pts"] for m in per_mode.values())
+    print(
+        f"\n  Total ranker gap across modes: {total_gap:+.0f} ESPN pts "
+        f"({'ranker under-promoting best brackets' if total_gap > 0 else 'ranker OK'})"
+    )
+
+    return {
+        "year": year,
+        "truth": {
+            "final_four": sorted(truth.final_four),
+            "finalists": sorted(truth.finalists),
+            "champion": truth.champion,
+            "champion_seed": truth.champion_seed,
+        },
+        "per_mode": per_mode,
+    }
 
 
 def run_budget(
@@ -557,7 +638,20 @@ def main():
         default=DEFAULT_BASELINE,
         help=f"Baseline strategy for kill thresholds / significance tests (default: {DEFAULT_BASELINE}).",
     )
+    parser.add_argument(
+        "--oracle",
+        type=int,
+        default=None,
+        metavar="YEAR",
+        help="Score the saved bracket artifact for YEAR against actual tournament "
+        "outcomes (F4 / finalists / champion / ranker gap). Reads "
+        "artifacts/backtest_brackets/backtest_brackets_{YEAR}.json.",
+    )
     args = parser.parse_args()
+
+    if args.oracle is not None:
+        run_oracle_report(args.oracle)
+        return
 
     if args.tier == "budget":
         run_budget(strategies=args.strategies, baseline_key=args.baseline, n_opponents=args.n_opponents)
