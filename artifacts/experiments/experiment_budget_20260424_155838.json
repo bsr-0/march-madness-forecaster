@@ -1,0 +1,1145 @@
+{
+  "baseline": "seed_forward",
+  "timestamp": "20260424_155838",
+  "tiers": {
+    "T1": {
+      "n_candidates": 301,
+      "years": [
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "killed": [
+        [
+          "torvik_confidence",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian_f4_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+upset_tuned",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+upset_tuned_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian+upset_tuned",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian+upset_tuned_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian+upset_tuned_f4_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "torvik+contrarian+upset_tuned_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom_confidence",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian_f4_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+upset_tuned",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+upset_tuned_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+upset_tuned_champ_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian+upset_tuned",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian+upset_tuned_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian+upset_tuned_f4_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "pool_wisdom+contrarian+upset_tuned_champ_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+upset_tuned",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+upset_tuned_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian+upset_tuned",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian+upset_tuned_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "seed+contrarian+upset_tuned_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian_f4_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+upset_tuned",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+upset_tuned_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+upset_tuned_f4_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+upset_tuned_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_e8_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_f4_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_champ_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed_f4_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian_champ_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+upset_tuned",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+upset_tuned_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+upset_tuned_champ_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian+upset_tuned",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian+upset_tuned_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*torvik+0.5*seed+contrarian+upset_tuned_champ_first",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed_champ_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+upset_tuned",
+          "0/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+upset_tuned_e8_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_e8_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_f4_first",
+          "1/8 wins vs baseline (need >= 3)"
+        ],
+        [
+          "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_champ_first",
+          "2/8 wins vs baseline (need >= 3)"
+        ]
+      ],
+      "promoted": [
+        "seed",
+        "0.5*torvik+0.5*seed+contrarian_f4_first",
+        "seed+contrarian_f4_first",
+        "seed_f4_first",
+        "0.5*torvik+0.5*seed",
+        "seed+contrarian+upset_tuned_f4_first",
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first",
+        "0.5*torvik+0.5*seed_champ_first",
+        "torvik",
+        "0.5*torvik+0.5*pool_wisdom+contrarian_e8_first",
+        "seed_forward"
+      ],
+      "stats": {
+        "torvik": {
+          "mean_p_first": 0.04580000000000001,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik_confidence": {
+          "mean_p_first": 0.044300000000000006,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik_e8_first": {
+          "mean_p_first": 0.0373,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik_f4_first": {
+          "mean_p_first": 0.043000000000000003,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik_champ_first": {
+          "mean_p_first": 0.044,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian": {
+          "mean_p_first": 0.033299999999999996,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian_e8_first": {
+          "mean_p_first": 0.024300000000000002,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian_f4_first": {
+          "mean_p_first": 0.042300000000000004,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian_champ_first": {
+          "mean_p_first": 0.0438,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+upset_tuned": {
+          "mean_p_first": 0.039099999999999996,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+upset_tuned_e8_first": {
+          "mean_p_first": 0.0433,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+upset_tuned_f4_first": {
+          "mean_p_first": 0.03949999999999999,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+upset_tuned_champ_first": {
+          "mean_p_first": 0.033,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian+upset_tuned": {
+          "mean_p_first": 0.027000000000000003,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.0408,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.0308,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "torvik+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0264,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom": {
+          "mean_p_first": 0.031200000000000002,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom_confidence": {
+          "mean_p_first": 0.0322,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom_e8_first": {
+          "mean_p_first": 0.029500000000000002,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom_f4_first": {
+          "mean_p_first": 0.0307,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom_champ_first": {
+          "mean_p_first": 0.0288,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian": {
+          "mean_p_first": 0.030899999999999997,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian_e8_first": {
+          "mean_p_first": 0.026799999999999997,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian_f4_first": {
+          "mean_p_first": 0.027500000000000004,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian_champ_first": {
+          "mean_p_first": 0.0296,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+upset_tuned": {
+          "mean_p_first": 0.0354,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+upset_tuned_e8_first": {
+          "mean_p_first": 0.029199999999999997,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+upset_tuned_f4_first": {
+          "mean_p_first": 0.027800000000000002,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+upset_tuned_champ_first": {
+          "mean_p_first": 0.026999999999999996,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian+upset_tuned": {
+          "mean_p_first": 0.026,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.0259,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.0265,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "pool_wisdom+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0183,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed": {
+          "mean_p_first": 0.0583,
+          "wins_vs_baseline": 4,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed_confidence": {
+          "mean_p_first": 0.045,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed_e8_first": {
+          "mean_p_first": 0.043300000000000005,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed_f4_first": {
+          "mean_p_first": 0.0548,
+          "wins_vs_baseline": 5,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed_champ_first": {
+          "mean_p_first": 0.044199999999999996,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian": {
+          "mean_p_first": 0.0429,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian_e8_first": {
+          "mean_p_first": 0.0453,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian_f4_first": {
+          "mean_p_first": 0.0576,
+          "wins_vs_baseline": 5,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian_champ_first": {
+          "mean_p_first": 0.0402,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+upset_tuned": {
+          "mean_p_first": 0.0401,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+upset_tuned_e8_first": {
+          "mean_p_first": 0.0504,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+upset_tuned_f4_first": {
+          "mean_p_first": 0.043800000000000006,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+upset_tuned_champ_first": {
+          "mean_p_first": 0.0411,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian+upset_tuned": {
+          "mean_p_first": 0.036199999999999996,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.0424,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.0496,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0302,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom": {
+          "mean_p_first": 0.0455,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom_e8_first": {
+          "mean_p_first": 0.032,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom_f4_first": {
+          "mean_p_first": 0.0377,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom_champ_first": {
+          "mean_p_first": 0.0368,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian": {
+          "mean_p_first": 0.0402,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian_e8_first": {
+          "mean_p_first": 0.0455,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian_f4_first": {
+          "mean_p_first": 0.046,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian_champ_first": {
+          "mean_p_first": 0.0382,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+upset_tuned": {
+          "mean_p_first": 0.037099999999999994,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+upset_tuned_e8_first": {
+          "mean_p_first": 0.0364,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+upset_tuned_f4_first": {
+          "mean_p_first": 0.0359,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+upset_tuned_champ_first": {
+          "mean_p_first": 0.0339,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned": {
+          "mean_p_first": 0.0259,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.025500000000000002,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.022399999999999996,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0231,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed": {
+          "mean_p_first": 0.0521,
+          "wins_vs_baseline": 5,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed_e8_first": {
+          "mean_p_first": 0.034699999999999995,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed_f4_first": {
+          "mean_p_first": 0.0455,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed_champ_first": {
+          "mean_p_first": 0.046400000000000004,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian": {
+          "mean_p_first": 0.0319,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian_e8_first": {
+          "mean_p_first": 0.0389,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian_f4_first": {
+          "mean_p_first": 0.0581,
+          "wins_vs_baseline": 6,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian_champ_first": {
+          "mean_p_first": 0.046400000000000004,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+upset_tuned": {
+          "mean_p_first": 0.0417,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+upset_tuned_e8_first": {
+          "mean_p_first": 0.0423,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+upset_tuned_f4_first": {
+          "mean_p_first": 0.043300000000000005,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+upset_tuned_champ_first": {
+          "mean_p_first": 0.0344,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian+upset_tuned": {
+          "mean_p_first": 0.034699999999999995,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.029599999999999998,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.0344,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0307,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed": {
+          "mean_p_first": 0.0406,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed_e8_first": {
+          "mean_p_first": 0.0399,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed_f4_first": {
+          "mean_p_first": 0.034,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed_champ_first": {
+          "mean_p_first": 0.038500000000000006,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian": {
+          "mean_p_first": 0.0461,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first": {
+          "mean_p_first": 0.0475,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian_f4_first": {
+          "mean_p_first": 0.0413,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian_champ_first": {
+          "mean_p_first": 0.044899999999999995,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+upset_tuned": {
+          "mean_p_first": 0.0338,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+upset_tuned_e8_first": {
+          "mean_p_first": 0.04,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+upset_tuned_f4_first": {
+          "mean_p_first": 0.0347,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+upset_tuned_champ_first": {
+          "mean_p_first": 0.0425,
+          "wins_vs_baseline": 3,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned": {
+          "mean_p_first": 0.028999999999999998,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_e8_first": {
+          "mean_p_first": 0.0351,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.0311,
+          "wins_vs_baseline": 1,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian+upset_tuned_champ_first": {
+          "mean_p_first": 0.0356,
+          "wins_vs_baseline": 2,
+          "n_years": 8,
+          "zero_years": 0
+        },
+        "seed_forward": {
+          "mean_p_first": 0.0506,
+          "wins_vs_baseline": 0,
+          "n_years": 8,
+          "zero_years": 0
+        }
+      }
+    },
+    "T2": {
+      "n_candidates": 11,
+      "years": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "killed": [
+        [
+          "0.5*torvik+0.5*seed+contrarian_f4_first",
+          "4/14 wins vs baseline (need >= 5)"
+        ],
+        [
+          "seed+contrarian+upset_tuned_f4_first",
+          "3/14 wins vs baseline (need >= 5)"
+        ],
+        [
+          "0.5*torvik+0.5*seed_champ_first",
+          "4/14 wins vs baseline (need >= 5)"
+        ],
+        [
+          "torvik",
+          "3/14 wins vs baseline (need >= 5)"
+        ],
+        [
+          "0.5*torvik+0.5*pool_wisdom+contrarian_e8_first",
+          "2/14 wins vs baseline (need >= 5)"
+        ]
+      ],
+      "promoted": [
+        "seed",
+        "seed_f4_first",
+        "seed+contrarian_f4_first",
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first",
+        "0.5*torvik+0.5*seed",
+        "seed_forward"
+      ],
+      "stats": {
+        "seed": {
+          "mean_p_first": 0.05631428571428571,
+          "wins_vs_baseline": 7,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed+contrarian_f4_first": {
+          "mean_p_first": 0.04745714285714286,
+          "wins_vs_baseline": 4,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed+contrarian_f4_first": {
+          "mean_p_first": 0.0508,
+          "wins_vs_baseline": 6,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed_f4_first": {
+          "mean_p_first": 0.0558,
+          "wins_vs_baseline": 6,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed": {
+          "mean_p_first": 0.045085714285714285,
+          "wins_vs_baseline": 6,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed+contrarian+upset_tuned_f4_first": {
+          "mean_p_first": 0.04408571428571429,
+          "wins_vs_baseline": 3,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first": {
+          "mean_p_first": 0.04637142857142858,
+          "wins_vs_baseline": 6,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed_champ_first": {
+          "mean_p_first": 0.04237142857142857,
+          "wins_vs_baseline": 4,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "torvik": {
+          "mean_p_first": 0.04045714285714285,
+          "wins_vs_baseline": 3,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*pool_wisdom+contrarian_e8_first": {
+          "mean_p_first": 0.03485714285714286,
+          "wins_vs_baseline": 2,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed_forward": {
+          "mean_p_first": 0.05325714285714287,
+          "wins_vs_baseline": 0,
+          "n_years": 14,
+          "zero_years": 0
+        }
+      }
+    },
+    "T3": {
+      "n_candidates": 6,
+      "years": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "final_strategies": [
+        "seed",
+        "seed_f4_first",
+        "seed+contrarian_f4_first",
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first",
+        "0.5*torvik+0.5*seed",
+        "seed_forward"
+      ],
+      "stats": {
+        "seed": {
+          "mean_p_first": 0.05494285714285715,
+          "wins_vs_baseline": 9,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed_f4_first": {
+          "mean_p_first": 0.054728571428571425,
+          "wins_vs_baseline": 11,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed+contrarian_f4_first": {
+          "mean_p_first": 0.049999999999999996,
+          "wins_vs_baseline": 8,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*pool_wisdom+0.5*seed+contrarian_e8_first": {
+          "mean_p_first": 0.04672857142857142,
+          "wins_vs_baseline": 3,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "0.5*torvik+0.5*seed": {
+          "mean_p_first": 0.04587142857142856,
+          "wins_vs_baseline": 4,
+          "n_years": 14,
+          "zero_years": 0
+        },
+        "seed_forward": {
+          "mean_p_first": 0.04947142857142856,
+          "wins_vs_baseline": 0,
+          "n_years": 14,
+          "zero_years": 0
+        }
+      }
+    }
+  },
+  "total_wall_time_min": 3.555925174554189
+}
