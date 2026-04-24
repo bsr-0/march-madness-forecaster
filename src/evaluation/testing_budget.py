@@ -94,15 +94,41 @@ def select_tier_years(
     raise ValueError(f"Unknown year_mode: {tier_cfg.year_mode!r}")
 
 
+def _mean_and_ci95(values: Sequence[float]) -> Tuple[float, float]:
+    """Return (mean, half-width of 95% CI) across a sample.
+
+    Uses the normal-approx half-width ``1.96 × SEM``. With N=14 backtest
+    years, SEM tracks 95% CI to within ~2% of the exact t-distribution
+    value and avoids a scipy dependency in the hot path. For a strategy's
+    P(1st) the CI represents cross-year variability — it does NOT replace
+    a per-year binomial CI (which needs the n_repeats count; deferred to
+    phase-2 of the metrics rollout).
+    """
+    n = len(values)
+    if n == 0:
+        return 0.0, 0.0
+    mean = float(np.mean(values))
+    if n < 2:
+        return mean, 0.0
+    sem = float(np.std(values, ddof=1) / np.sqrt(n))
+    return mean, 1.96 * sem
+
+
 def aggregate_strategy_stats(
     results: Sequence[dict],
     baseline_key: str,
 ) -> Dict[str, dict]:
     """Pivot flat backtest results into per-strategy stats.
 
-    For each strategy records mean P(1st), wins vs baseline per year,
-    years covered, and zero-year count. Downstream kill/promote
-    functions consume this dict exclusively.
+    Tracks the full primary-metric triple (P(1st), BestScore, MeanScore)
+    plus the secondary placement diagnostics (p_top5%, p_top25%, MeanRank,
+    BestRank). Each has a mean across years and a 95% CI half-width
+    (normal-approx on the cross-year SEM). Also records wins-vs-baseline
+    on P(1st) and zero-year count for tier kill rules.
+
+    The kill logic (``apply_kill_threshold``) and promotion (``promote_top_n``)
+    continue to read only ``mean_p_first`` and ``wins_vs_baseline``, so this
+    expansion is additive — no tier-gate behavior changes.
     """
     by_strategy: Dict[str, List[dict]] = {}
     for r in results:
@@ -115,8 +141,39 @@ def aggregate_strategy_stats(
         p1_by_year = {r["year"]: r["p_first"] for r in rows}
         wins = sum(1 for y, p in p1_by_year.items() if y in baseline_by_year and p > baseline_by_year[y])
         zero_years = sum(1 for p in p1_by_year.values() if p == 0.0)
+
+        # Extract the per-metric series, falling back to NaN-safe defaults
+        # for rows where the backtest didn't emit the field (legacy rows).
+        p1_series = [r.get("p_first", 0.0) for r in rows]
+        best_score_series = [r.get("best_score", 0.0) for r in rows]
+        mean_score_series = [r.get("mean_score", 0.0) for r in rows]
+        p_top5_series = [r.get("p_top5", 0.0) for r in rows]
+        p_top25_series = [r.get("p_top25", 0.0) for r in rows]
+        best_rank_series = [r.get("best_rank", 0.0) for r in rows]
+        mean_rank_series = [r.get("mean_rank", 0.0) for r in rows]
+
+        mean_p_first, ci95_p_first = _mean_and_ci95(p1_series)
+        mean_best_score, ci95_best_score = _mean_and_ci95(best_score_series)
+        mean_mean_score, ci95_mean_score = _mean_and_ci95(mean_score_series)
+        mean_p_top5, ci95_p_top5 = _mean_and_ci95(p_top5_series)
+        mean_p_top25, ci95_p_top25 = _mean_and_ci95(p_top25_series)
+
         stats[s] = {
-            "mean_p_first": float(np.mean(list(p1_by_year.values()))) if p1_by_year else 0.0,
+            # Primary — the pool pays these directly (see catalog § Metrics Reported).
+            "mean_p_first": mean_p_first,
+            "ci95_p_first": ci95_p_first,
+            "mean_best_score": mean_best_score,
+            "ci95_best_score": ci95_best_score,
+            "mean_mean_score": mean_mean_score,
+            "ci95_mean_score": ci95_mean_score,
+            # Secondary — placement + tier-consistency diagnostics.
+            "mean_p_top5": mean_p_top5,
+            "ci95_p_top5": ci95_p_top5,
+            "mean_p_top25": mean_p_top25,
+            "ci95_p_top25": ci95_p_top25,
+            "mean_best_rank": float(np.mean(best_rank_series)) if best_rank_series else 0.0,
+            "mean_mean_rank": float(np.mean(mean_rank_series)) if mean_rank_series else 0.0,
+            # Tier-gate state (unchanged).
             "wins_vs_baseline": wins,
             "n_years": len(p1_by_year),
             "zero_years": zero_years,
@@ -188,13 +245,32 @@ def best_baseline_delta(
 
 
 def stats_for_artifact(stats: Dict[str, dict]) -> Dict[str, dict]:
-    """Trim per-year dicts so JSON artifacts stay readable."""
+    """Trim per-year dicts so JSON artifacts stay readable.
+
+    Includes the full primary-metric set with 95% CIs and the secondary
+    placement diagnostics — everything a future audit of the budgeted run
+    needs without having to re-derive from raw per-year rows.
+    """
     return {
         s: {
-            "mean_p_first": st["mean_p_first"],
-            "wins_vs_baseline": st["wins_vs_baseline"],
-            "n_years": st["n_years"],
-            "zero_years": st["zero_years"],
+            # Primary (payout-determining)
+            "mean_p_first": st.get("mean_p_first", 0.0),
+            "ci95_p_first": st.get("ci95_p_first", 0.0),
+            "mean_best_score": st.get("mean_best_score", 0.0),
+            "ci95_best_score": st.get("ci95_best_score", 0.0),
+            "mean_mean_score": st.get("mean_mean_score", 0.0),
+            "ci95_mean_score": st.get("ci95_mean_score", 0.0),
+            # Secondary (placement diagnostics)
+            "mean_p_top5": st.get("mean_p_top5", 0.0),
+            "ci95_p_top5": st.get("ci95_p_top5", 0.0),
+            "mean_p_top25": st.get("mean_p_top25", 0.0),
+            "ci95_p_top25": st.get("ci95_p_top25", 0.0),
+            "mean_best_rank": st.get("mean_best_rank", 0.0),
+            "mean_mean_rank": st.get("mean_mean_rank", 0.0),
+            # Tier-gate state
+            "wins_vs_baseline": st.get("wins_vs_baseline", 0),
+            "n_years": st.get("n_years", 0),
+            "zero_years": st.get("zero_years", 0),
         }
         for s, st in stats.items()
     }

@@ -7,6 +7,8 @@ documented in STRATEGY_CATALOG.md § Testing Budget — if a refactor
 breaks these the tier pipeline silently under-prunes or over-prunes.
 """
 
+import pytest
+
 from src.evaluation.testing_budget import (
     TIER_CONFIGS,
     aggregate_strategy_stats,
@@ -14,21 +16,28 @@ from src.evaluation.testing_budget import (
     best_baseline_delta,
     promote_top_n,
     select_tier_years,
+    stats_for_artifact,
 )
 
 
 BASELINE = "seed_forward"
 
 
-def _mk(mode, year, p_first):
-    return {
+def _mk(mode, year, p_first, **overrides):
+    """Synthetic backtest result row. Primary/secondary fields default to 0."""
+    row = {
         "mode": mode,
         "year": year,
         "p_first": p_first,
         "mean_rank": 0.0,
         "best_rank": 0.0,
         "mean_score": 0.0,
+        "best_score": 0.0,
+        "p_top5": 0.0,
+        "p_top25": 0.0,
     }
+    row.update(overrides)
+    return row
 
 
 def test_tier_configs_match_catalog_contract():
@@ -59,6 +68,56 @@ def test_select_tier_years_full():
     years = [2011, 2012, 2013]
     t2 = TIER_CONFIGS["T2"]
     assert select_tier_years(years, t2) == [2011, 2012, 2013]
+
+
+def test_aggregate_strategy_stats_tracks_primary_metric_triple():
+    """Phase-1 metrics rollout: P(1st), BestScore, MeanScore all aggregated
+    with mean + 95% CI across years. Secondary p_top5/p_top25 too.
+    """
+    results = [
+        _mk(BASELINE, 2023, 0.05, best_score=900, mean_score=800, p_top5=0.10, p_top25=0.25),
+        _mk(BASELINE, 2024, 0.05, best_score=900, mean_score=800, p_top5=0.10, p_top25=0.25),
+        _mk("A", 2023, 0.06, best_score=1400, mean_score=1100, p_top5=0.20, p_top25=0.40),
+        _mk("A", 2024, 0.08, best_score=1500, mean_score=1200, p_top5=0.25, p_top25=0.45),
+    ]
+    stats = aggregate_strategy_stats(results, BASELINE)
+
+    # Primary metrics: all three of the catalog's payout-determining columns.
+    assert stats["A"]["mean_p_first"] == pytest.approx(0.07, abs=1e-9)
+    assert stats["A"]["mean_best_score"] == pytest.approx(1450.0, abs=1e-9)
+    assert stats["A"]["mean_mean_score"] == pytest.approx(1150.0, abs=1e-9)
+    # Secondary placement diagnostics surfaced (used to be dropped).
+    assert stats["A"]["mean_p_top5"] == pytest.approx(0.225, abs=1e-9)
+    assert stats["A"]["mean_p_top25"] == pytest.approx(0.425, abs=1e-9)
+    # CI95 half-widths present and non-negative; must be 0 for a 1-observation series
+    # (but we have 2 years here so non-zero).
+    assert stats["A"]["ci95_p_first"] > 0
+    assert stats["A"]["ci95_best_score"] > 0
+
+
+def test_ci95_halfwidth_is_zero_for_single_year_series():
+    """Single-observation series can't produce a cross-year SEM — CI half-width = 0."""
+    results = [_mk("solo", 2024, 0.06, best_score=1000, mean_score=900)]
+    stats = aggregate_strategy_stats(results, "solo")
+    assert stats["solo"]["ci95_p_first"] == 0.0
+    assert stats["solo"]["ci95_best_score"] == 0.0
+
+
+def test_aggregate_stats_backward_compatible_with_missing_fields():
+    """Rows missing the new p_top5/best_score fields must not crash aggregation.
+
+    Older artifacts (pre-phase-1 metrics rollout) don't have those fields;
+    the aggregator must gracefully default to 0.0 so `--oracle <year>` and
+    other diagnostic readers can still work against old result dicts.
+    """
+    legacy_results = [
+        {"mode": "legacy", "year": 2023, "p_first": 0.05, "mean_rank": 0, "best_rank": 0, "mean_score": 0},
+        {"mode": "legacy", "year": 2024, "p_first": 0.06, "mean_rank": 0, "best_rank": 0, "mean_score": 0},
+    ]
+    stats = aggregate_strategy_stats(legacy_results, "legacy")
+    assert stats["legacy"]["mean_p_first"] == pytest.approx(0.055, abs=1e-9)
+    assert stats["legacy"]["mean_best_score"] == 0.0
+    assert stats["legacy"]["mean_p_top5"] == 0.0
 
 
 def test_aggregate_strategy_stats_wins_and_zero_years():
@@ -191,3 +250,40 @@ def test_best_baseline_delta_picks_largest_positive():
 
 def test_best_baseline_delta_returns_none_when_baseline_missing():
     assert best_baseline_delta({"A": {"mean_p_first": 0.05}}, BASELINE) is None
+
+
+def test_stats_for_artifact_includes_primary_metric_triple_plus_secondaries():
+    """Locks the JSON-artifact contract — every metric surfaced in tier reports
+    must also be serialized, so post-run audits don't lose information."""
+    results = [
+        _mk("A", 2023, 0.06, best_score=1400, mean_score=1100, p_top5=0.20, p_top25=0.40),
+        _mk("A", 2024, 0.08, best_score=1500, mean_score=1200, p_top5=0.25, p_top25=0.45),
+    ]
+    stats = aggregate_strategy_stats(results, "A")
+    artifact = stats_for_artifact(stats)["A"]
+
+    # Primary: payout-determining.
+    for key in (
+        "mean_p_first",
+        "ci95_p_first",
+        "mean_best_score",
+        "ci95_best_score",
+        "mean_mean_score",
+        "ci95_mean_score",
+    ):
+        assert key in artifact, f"primary metric {key!r} missing from artifact"
+
+    # Secondary: placement diagnostics.
+    for key in (
+        "mean_p_top5",
+        "ci95_p_top5",
+        "mean_p_top25",
+        "ci95_p_top25",
+        "mean_best_rank",
+        "mean_mean_rank",
+    ):
+        assert key in artifact, f"secondary metric {key!r} missing from artifact"
+
+    # Values round-trip correctly.
+    assert artifact["mean_best_score"] == pytest.approx(1450.0)
+    assert artifact["mean_p_top5"] == pytest.approx(0.225, abs=1e-9)
