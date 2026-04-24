@@ -579,60 +579,92 @@ def _print_summary(results, strategies, label):
         )
 
 
-def _run_significance_tests(results, strategies):
-    """Paired permutation test on P(1st) per year against seed baseline."""
-    print(f"\n{'=' * 80}")
-    print("SIGNIFICANCE TESTS vs seed_forward (paired permutation, 10K draws)")
-    print(f"{'=' * 80}")
+def _paired_permutation_on_metric(results, strategies, baseline_key, metric_key):
+    """Per-strategy paired permutation test on `metric_key` vs baseline.
 
-    seed_key = "seed_forward" if "seed_forward" in {r["mode"] for r in results} else "seed"
-    seed_by_year = {r["year"]: r["p_first"] for r in results if r["mode"] == seed_key}
+    Returns a sorted list of (strategy, observed_delta, p_value, wins, n_shared_years).
+    One-tailed (H1: strategy > baseline). Mirrors the original P(1st) test shape
+    — hoisted so we can run it on BestScore and MeanScore without duplicating
+    the 40-line test harness.
+    """
+    baseline_by_year = {r["year"]: r.get(metric_key, 0.0) for r in results if r["mode"] == baseline_key}
+    if len(baseline_by_year) < 5:
+        return []
 
-    if len(seed_by_year) < 5:
-        print("  Insufficient seed baseline years for significance testing.")
-        return
-
-    test_results = []
+    out = []
     for s in strategies:
-        if s == seed_key:
+        if s == baseline_key:
             continue
-        s_by_year = {r["year"]: r["p_first"] for r in results if r["mode"] == s}
-        shared = sorted(set(seed_by_year.keys()) & set(s_by_year.keys()))
+        s_by_year = {r["year"]: r.get(metric_key, 0.0) for r in results if r["mode"] == s}
+        shared = sorted(set(baseline_by_year.keys()) & set(s_by_year.keys()))
         if len(shared) < 5:
             continue
 
-        seed_arr = np.array([seed_by_year[y] for y in shared])
+        base_arr = np.array([baseline_by_year[y] for y in shared])
         s_arr = np.array([s_by_year[y] for y in shared])
-        diff = s_arr - seed_arr
+        diff = s_arr - base_arr
 
-        # Paired permutation test (one-tailed: H1 = strategy > seed)
-        observed = np.mean(diff)
+        observed = float(np.mean(diff))
         n_perms = 10000
         rng = np.random.default_rng(42)
         count_ge = 0
         for _ in range(n_perms):
             signs = rng.choice([-1, 1], size=len(diff))
-            perm_mean = np.mean(diff * signs)
-            if perm_mean >= observed:
+            if np.mean(diff * signs) >= observed:
                 count_ge += 1
         p_value = count_ge / n_perms
+        wins = int(np.sum(diff > 0))
+        out.append((s, observed, p_value, wins, len(shared)))
 
-        wins = np.sum(diff > 0)
-        test_results.append((s, observed, p_value, wins, len(shared)))
+    out.sort(key=lambda row: row[2])
+    return out
 
-    # Sort by p-value
-    test_results.sort(key=lambda x: x[2])
 
-    n_tests = len(test_results)
-    bonf_alpha = 0.10 / max(n_tests, 1)
-    print(f"  Tests: {n_tests}, Bonferroni α = {bonf_alpha:.4f}")
-    print(f"  {'Strategy':<30} {'ΔP(1st)':>8} {'p-value':>8} {'Wins':>6} {'Gate':>6}")
-    print(f"  {'-' * 65}")
+def _run_significance_tests(results, strategies):
+    """Paired permutation tests on all three primary metrics vs seed baseline.
 
-    for s, delta, p, wins, n in test_results:
-        gate = "PASS" if p < 0.10 and wins >= 8 else "fail"
-        sig = " *" if p < bonf_alpha else ""
-        print(f"  {s:<30} {delta:>+8.4f} {p:>8.4f} {wins:>3}/{n:<2} {gate:>6}{sig}")
+    Each metric (P(1st), BestScore, MeanScore) gets its own block with a
+    Bonferroni α adjusted across the strategies tested. The catalog's
+    significance gate is still P(1st) + wins>=8/14, but the BestScore and
+    MeanScore blocks catch cases where a strategy wins on ESPN points
+    without winning on P(1st) — useful for money-framing sanity checks.
+    """
+    print(f"\n{'=' * 80}")
+    print("SIGNIFICANCE TESTS vs seed_forward (paired permutation, 10K draws)")
+    print(f"{'=' * 80}")
+
+    baseline_key = "seed_forward" if "seed_forward" in {r["mode"] for r in results} else "seed"
+
+    # (display_name, metric_key, fmt_delta) — same test, different column.
+    metrics = (
+        ("P(1st)", "p_first", "{:>+8.4f}"),
+        ("BestScore", "best_score", "{:>+8.1f}"),
+        ("MeanScore", "mean_score", "{:>+8.1f}"),
+    )
+
+    any_run = False
+    for display, key, delta_fmt in metrics:
+        test_results = _paired_permutation_on_metric(results, strategies, baseline_key, key)
+        if not test_results:
+            print(f"\n  [{display}] Insufficient baseline years for significance testing — skipped.")
+            continue
+        any_run = True
+        n_tests = len(test_results)
+        bonf_alpha = 0.10 / max(n_tests, 1)
+        print(f"\n  [{display}]  Tests: {n_tests}, Bonferroni α = {bonf_alpha:.4f}")
+        print(f"  {'Strategy':<30} {'Δ' + display:>10} {'p-value':>8} {'Wins':>6} {'Gate':>6}")
+        print(f"  {'-' * 70}")
+        for s, delta, p, wins, n in test_results:
+            # Catalog gate (P(1st) only): p<0.10 AND wins>=8/14.
+            # For BestScore / MeanScore we use the same p threshold but label
+            # the gate "PASS" informationally — the canonical Bonferroni lock
+            # lives in MEMORY.md §1 / STRATEGY_CATALOG.md § Significance Gate.
+            gate = "PASS" if p < 0.10 and wins >= 8 else "fail"
+            sig = " *" if p < bonf_alpha else ""
+            print(f"  {s:<30} {delta_fmt.format(delta):>10} {p:>8.4f} {wins:>3}/{n:<2} {gate:>6}{sig}")
+
+    if not any_run:
+        print("  No metrics had enough baseline data for significance testing.")
 
 
 def _save_results(results, label, bases, modes, n_repeats, n_model, n_opponents):

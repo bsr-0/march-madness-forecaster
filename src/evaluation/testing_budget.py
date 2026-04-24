@@ -94,15 +94,45 @@ def select_tier_years(
     raise ValueError(f"Unknown year_mode: {tier_cfg.year_mode!r}")
 
 
+def wilson_ci95(p: float, n: int) -> Tuple[float, float]:
+    """Wilson score interval (95%) for a sample proportion.
+
+    The Wilson interval is the standard choice for binomial proportion
+    uncertainty — better-behaved than the normal approximation at the
+    edges (p near 0 or 1, or small n). Closed form, no scipy.
+
+        center    = (p + z²/(2n)) / (1 + z²/n)
+        halfwidth = z √(p(1−p)/n + z²/(4n²)) / (1 + z²/n)
+
+    where z = 1.96 for 95%.
+
+    Args:
+        p: observed proportion in [0, 1].
+        n: number of Bernoulli trials behind ``p``.
+
+    Returns:
+        (center, halfwidth). If n <= 0, returns (p, 0.0) — no data, no CI.
+    """
+    if n <= 0:
+        return float(p), 0.0
+    z = 1.96
+    z2 = z * z
+    denom = 1.0 + z2 / n
+    center = (p + z2 / (2.0 * n)) / denom
+    halfwidth = z * np.sqrt(p * (1.0 - p) / n + z2 / (4.0 * n * n)) / denom
+    return float(center), float(halfwidth)
+
+
 def _mean_and_ci95(values: Sequence[float]) -> Tuple[float, float]:
     """Return (mean, half-width of 95% CI) across a sample.
 
     Uses the normal-approx half-width ``1.96 × SEM``. With N=14 backtest
     years, SEM tracks 95% CI to within ~2% of the exact t-distribution
     value and avoids a scipy dependency in the hot path. For a strategy's
-    P(1st) the CI represents cross-year variability — it does NOT replace
-    a per-year binomial CI (which needs the n_repeats count; deferred to
-    phase-2 of the metrics rollout).
+    P(1st) the CI represents cross-year variability — complements the
+    per-year binomial CI exposed via ``wilson_ci95`` (cross-year = "how
+    stable across years", per-year = "how sure we are this year's
+    estimate is solid given N trials").
     """
     n = len(values)
     if n == 0:
@@ -178,6 +208,12 @@ def aggregate_strategy_stats(
             "n_years": len(p1_by_year),
             "zero_years": zero_years,
             "p1_by_year": p1_by_year,
+            # Per-year Wilson 95% CI on P(1st). Empty dict if n_trials is
+            # missing (legacy rows). Semantics: binomial uncertainty on
+            # this year's P(1st) estimate given n_trials Bernoulli draws.
+            "p1_wilson_ci_by_year": {
+                r["year"]: wilson_ci95(r.get("p_first", 0.0), int(r.get("n_trials", 0) or 0)) for r in rows
+            },
         }
     return stats
 
