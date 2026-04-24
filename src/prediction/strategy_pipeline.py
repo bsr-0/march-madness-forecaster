@@ -53,7 +53,7 @@ CONSTRUCTIONS = (
 
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom"}
-IMPLEMENTED_ADJUSTMENTS = {"contrarian"}
+IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned"}
 IMPLEMENTED_CONSTRUCTIONS = {"forward", "champ_first", "f4_first", "e8_first", "confidence"}
 
 
@@ -203,6 +203,9 @@ def resolve_pipeline_round_probs(
     adjustments: List[str],
     base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
     pick_dist: Dict[str, Dict[str, float]],
+    *,
+    seeds: Optional[Dict[str, int]] = None,
+    historical_seed_reach_rates: Optional[Dict[int, Dict[str, float]]] = None,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Resolve a pipeline specification into round_probs.
 
@@ -211,9 +214,14 @@ def resolve_pipeline_round_probs(
         adjustments: [adj_name, ...]
         base_round_probs: Pre-computed round_probs for each source
         pick_dist: Public pick distribution (for contrarian adjustment)
+        seeds: Per-team seed map (required for upset_tuned adjustment)
+        historical_seed_reach_rates: Walk-forward seed-by-round empirical
+            rates (required for upset_tuned; produced by
+            ``src.prediction.upset_tuned_probabilities.load_upset_tuned_context``)
 
     Returns:
-        Blended and adjusted round_probs, or None if sources unavailable.
+        Blended and adjusted round_probs, or None if sources unavailable or
+        a required adjustment context is missing.
     """
     from src.prediction.contrarian_probabilities import build_contrarian_round_probs
 
@@ -245,6 +253,12 @@ def resolve_pipeline_round_probs(
     for adj in adjustments:
         if adj == "contrarian":
             result = build_contrarian_round_probs(result, pick_dist)
+        elif adj == "upset_tuned":
+            if seeds is None or historical_seed_reach_rates is None:
+                return None  # Required context not supplied
+            from src.prediction.upset_tuned_probabilities import build_upset_tuned_round_probs
+
+            result = build_upset_tuned_round_probs(result, seeds, historical_seed_reach_rates)
         # Future adjustments:
         # elif adj == "coach_adj":
         #     result = apply_coach_adjustment(result, ...)
