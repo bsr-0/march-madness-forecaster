@@ -116,6 +116,9 @@ CONSTRUCTION_MODES: Tuple[str, ...] = (
     "confidence",  # M6: route per-game by pairwise confidence (lock chalk / sample / boost upsets)
     "f4_chalk",  # M3a: f4_first restricted to top-3 seeds as anchors
     "f4_diverse",  # M3b: f4_first excluding 1-seeds from anchor pool
+    "f4_top4",  # M3c: f4_first restricted to seeds 1-4 as anchors
+    "e8_chalk",  # M4a: e8_first restricted to top seeds (1-6) as S16 anchors
+    "e8_diverse",  # M4b: e8_first excluding 1-seeds from S16 anchor pool
     # New modes added here as implemented (M5 backward)
 )
 
@@ -1031,6 +1034,126 @@ def sample_e8_first_brackets(
     )
 
 
+def sample_f4_top4_brackets(first_round_matchups, round_probs, n_brackets, rng, seeds, regions):
+    """F4-first construction restricted to seeds 1-4 as F4 anchors (M3c).
+
+    Middle ground between ``f4_chalk`` (seeds 1-3 only) and ``f4_first``
+    (all seeds eligible). Directly fills the anchor-restriction parameter
+    space around the Phase 3 winner ``seed_f4_first``. Historically ~85%
+    of F4 spots go to seeds 1-4, so this mode mirrors the modal F4 band
+    while still allowing the occasional 4-seed Cinderella F4 run that
+    ``f4_chalk`` excludes.
+    """
+    return _sample_f4_first_with_anchor_filter(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        seeds,
+        regions,
+        eligible_seeds={1, 2, 3, 4},
+    )
+
+
+def _sample_e8_first_with_anchor_filter(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+    *,
+    eligible_seeds: set,
+    fallback_to_full_pool: bool = True,
+):
+    """Shared core for E8-first variants that restrict the per-quadrant anchor pool.
+
+    Identical to ``sample_e8_first_brackets`` except each of the 8 quadrant
+    anchor candidates is filtered to ``eligible_seeds``. If a quadrant has
+    no eligible teams and ``fallback_to_full_pool=True``, that quadrant
+    falls back to its full team list — so the sampler still produces a
+    complete bracket even when the seed restriction empties a quadrant.
+
+    The S16-lock semantics and sampling are inherited from
+    ``_sample_with_locks`` — only anchor selection differs.
+    """
+    _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
+    teams_by_quadrant: dict = {}
+    for tid in round_probs:
+        raw_region = regions.get(tid, "")
+        region = _region_aliases.get(raw_region, raw_region)
+        if region not in ("East", "West", "South", "Midwest"):
+            continue
+        s = seeds.get(tid, 0)
+        quadrant = "top" if s in _TOP_QUADRANT_SEEDS else "bottom"
+        teams_by_quadrant.setdefault((region, quadrant), []).append(tid)
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        locked: set = set()
+        for region in ("East", "West", "South", "Midwest"):
+            for quadrant in ("top", "bottom"):
+                quad_teams = teams_by_quadrant.get((region, quadrant), [])
+                if not quad_teams:
+                    continue
+                eligible = [t for t in quad_teams if seeds.get(t) in eligible_seeds]
+                pool = eligible if eligible else (quad_teams if fallback_to_full_pool else [])
+                if not pool:
+                    continue
+                s16_weights = [round_probs[t].get("S16", 0.0) for t in pool]
+                locked.add(_draw_categorical(rng, pool, s16_weights))
+        locked_teams_per_sample.append(locked)
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="S16",
+    )
+
+
+def sample_e8_chalk_brackets(first_round_matchups, round_probs, n_brackets, rng, seeds, regions):
+    """E8-first construction restricted to top seeds (1-6) as S16 anchors (M4a).
+
+    Counterpart to `f4_chalk` at the E8-lock level. Every per-quadrant
+    anchor is drawn from the top half of its quadrant's seed range:
+    top quadrant draws from {1, 4, 5}; bottom from {2, 3, 6}. Tests
+    whether the f4 > e8 gap Phase 3 measured comes from "locks the wrong
+    seeds" (in which case chalky anchors should close the gap) vs "locks
+    too many" (in which case even chalky anchors still lose to F4-first).
+    """
+    return _sample_e8_first_with_anchor_filter(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        seeds,
+        regions,
+        eligible_seeds={1, 2, 3, 4, 5, 6},
+    )
+
+
+def sample_e8_diverse_brackets(first_round_matchups, round_probs, n_brackets, rng, seeds, regions):
+    """E8-first construction excluding 1-seeds from the S16 anchor pool (M4b).
+
+    Counterpart to `f4_diverse` at the E8-lock level. The top quadrant of
+    each region must be anchored by a 4-16 seed (no 1-seed allowed); the
+    bottom quadrant is unaffected (2-seeds still eligible). Forces the
+    portfolio to include at least one non-1-seed S16 lock per region.
+    """
+    return _sample_e8_first_with_anchor_filter(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        seeds,
+        regions,
+        eligible_seeds={2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+    )
+
+
 def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rng):
     """Sample N brackets via confidence-routed per-game sampling (M6).
 
@@ -1782,6 +1905,12 @@ def run_backtest(
                 return lambda fr, rp, n, r: sample_f4_chalk_brackets(fr, rp, n, r, seeds, regions)
             elif mode_name == "f4_diverse":
                 return lambda fr, rp, n, r: sample_f4_diverse_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "f4_top4":
+                return lambda fr, rp, n, r: sample_f4_top4_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "e8_chalk":
+                return lambda fr, rp, n, r: sample_e8_chalk_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "e8_diverse":
+                return lambda fr, rp, n, r: sample_e8_diverse_brackets(fr, rp, n, r, seeds, regions)
             # New construction modes register here:
             # elif mode_name == "backward":
             #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
