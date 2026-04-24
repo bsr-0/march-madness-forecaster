@@ -114,6 +114,8 @@ CONSTRUCTION_MODES: Tuple[str, ...] = (
     "f4_first",  # M3: lock 4 F4 teams, fill rest
     "e8_first",  # M4: lock 8 E8 teams, fill rest
     "confidence",  # M6: route per-game by pairwise confidence (lock chalk / sample / boost upsets)
+    "f4_chalk",  # M3a: f4_first restricted to top-3 seeds as anchors
+    "f4_diverse",  # M3b: f4_first excluding 1-seeds from anchor pool
     # New modes added here as implemented (M5 backward)
 )
 
@@ -874,6 +876,107 @@ def sample_f4_first_brackets(
         rng,
         locked_teams_per_sample,
         lock_through_round="E8",
+    )
+
+
+def _sample_f4_first_with_anchor_filter(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+    *,
+    eligible_seeds: set,
+    fallback_to_full_pool: bool = True,
+):
+    """Shared core for F4-first variants that restrict the anchor seed pool.
+
+    Identical to ``sample_f4_first_brackets`` except the per-region anchor
+    candidates are filtered to ``eligible_seeds``. If a region has no
+    teams in the eligible pool and ``fallback_to_full_pool=True``, the
+    region falls back to its full team list (so we don't fail on years
+    where the seed restriction excludes a whole region).
+
+    The lock semantics, sampling, and re-normalization are inherited from
+    ``_sample_with_locks`` — only anchor selection differs.
+    """
+    _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
+    teams_by_region: dict = {r: [] for r in ("East", "West", "South", "Midwest")}
+    for tid in round_probs:
+        raw_region = regions.get(tid, "")
+        region = _region_aliases.get(raw_region, raw_region)
+        if region in teams_by_region:
+            teams_by_region[region].append(tid)
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        locked: set = set()
+        for region in ("East", "West", "South", "Midwest"):
+            region_teams = teams_by_region[region]
+            if not region_teams:
+                continue
+            eligible = [t for t in region_teams if seeds.get(t) in eligible_seeds]
+            pool = eligible if eligible else (region_teams if fallback_to_full_pool else [])
+            if not pool:
+                continue
+            f4_weights = [round_probs[t].get("F4", 0.0) for t in pool]
+            locked.add(_draw_categorical(rng, pool, f4_weights))
+        locked_teams_per_sample.append(locked)
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="E8",
+    )
+
+
+def sample_f4_chalk_brackets(first_round_matchups, round_probs, n_brackets, rng, seeds, regions):
+    """F4-first construction restricted to top-3 seeds as F4 anchors.
+
+    Tests the hypothesis that the F4-first edge (per Phase 3) comes from
+    locking *strong* anchors. Allowing only seeds 1-3 as the per-region
+    F4 anchor concentrates the portfolio's locked teams on actual chalk
+    F4 candidates — historically ~75% of F4 spots go to seeds 1-3.
+
+    If `f4_chalk` beats `f4_first` in the next budget run, the edge is
+    "lock chalk + sample bottom"; if it loses, the edge is "lock with
+    realistic seed-spread anchors including occasional 4-5 seed runs".
+    """
+    return _sample_f4_first_with_anchor_filter(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        seeds,
+        regions,
+        eligible_seeds={1, 2, 3},
+    )
+
+
+def sample_f4_diverse_brackets(first_round_matchups, round_probs, n_brackets, rng, seeds, regions):
+    """F4-first construction excluding 1-seeds from the F4 anchor pool.
+
+    Counterpart to ``f4_chalk``. Forces upset diversity at the F4 lock step
+    by removing 1-seeds from the eligible anchor set — every locked F4
+    anchor is a 2-15 seed. Tests whether the F4-first edge survives when
+    you systematically pick "non-1-seed" F4 representatives.
+
+    Most years have 2-3 of 4 F4 spots taken by 1-seeds, so this mode
+    bets against the modal outcome — high P(1st) variance, useful only
+    in chaos years per the chaos index hypothesis.
+    """
+    return _sample_f4_first_with_anchor_filter(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        seeds,
+        regions,
+        eligible_seeds={2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
     )
 
 
@@ -1675,6 +1778,10 @@ def run_backtest(
                 return lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions)
             elif mode_name == "confidence":
                 return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r)
+            elif mode_name == "f4_chalk":
+                return lambda fr, rp, n, r: sample_f4_chalk_brackets(fr, rp, n, r, seeds, regions)
+            elif mode_name == "f4_diverse":
+                return lambda fr, rp, n, r: sample_f4_diverse_brackets(fr, rp, n, r, seeds, regions)
             # New construction modes register here:
             # elif mode_name == "backward":
             #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)

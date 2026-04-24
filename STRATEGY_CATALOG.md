@@ -37,7 +37,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 300 strategies — 5 sources × (1 + 2 adj + pair chain) × 5 constructions × blends)
+# Auto-generate all permutations (currently 420 strategies — 5 sources × (1 + 2 adj + pair chain) × 7 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -346,6 +346,18 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
   3. Sample E8, F4, CHAMP from round_probs
 - **File:** `scripts/mc_pool_backtest.py:sample_e8_first_brackets()`
 
+### M3a: `f4_chalk` (anchor-restricted F4-first)
+- **Status:** IMPLEMENTED (2026-04-24, post-Phase-3)
+- **Algorithm:** Identical to `f4_first` (M3) except the per-region F4-anchor draw is restricted to teams seeded 1, 2, or 3. Falls back to the full region pool if no top-3 seed is in `round_probs` for a region.
+- **Why:** Phase 3 found `seed_f4_first` is the Bonferroni-significant winner. This variant tests whether the edge comes from locking *strong* anchors specifically. Historically ~75% of F4 spots go to seeds 1-3, so this concentrates the portfolio on the modal F4 outcome.
+- **File:** `scripts/mc_pool_backtest.py:sample_f4_chalk_brackets()`; lock test: `tests/test_f4_anchor_constructions.py`
+
+### M3b: `f4_diverse` (anchor-restricted F4-first, no 1-seeds)
+- **Status:** IMPLEMENTED (2026-04-24, post-Phase-3)
+- **Algorithm:** Identical to `f4_first` except 1-seeds are excluded from the F4-anchor pool — every locked anchor is a 2-15 seed. Falls back to the full region pool if no eligible team exists.
+- **Why:** Counterpart to `f4_chalk`. Bets against the modal "1-seed in F4" outcome — useful in chaos years per the Chaos Index hypothesis (predicted regime → which mode to use).
+- **File:** `scripts/mc_pool_backtest.py:sample_f4_diverse_brackets()`; same lock test as M3a.
+
 ### M5: `backward`
 - **Status:** NEW
 - **Algorithm:**
@@ -390,7 +402,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
 | **Adjustments** | contrarian, upset_tuned (2) | coach_adj, roster_adj, momentum, volatile (4) |
-| **Constructions** | forward, champ_first, f4_first, e8_first, confidence (5) | backward (1) |
+| **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse (7) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
 | **Tournament Oracle** | `--oracle <year>` reports F4/finals/champ hits + ranker_gap_espn_pts; ledger in `memory/tournament_oracle.md` | Auto-run inside `run_budget()` after T3 (currently a separate CLI call) |
@@ -580,6 +592,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **PARTIAL** | D2 upset_tuned DONE 2026-04-24 (as adjustment) — walk-forward seed-by-round calibration; D1 volatile still TODO |
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
+| 2c | Anchor-restricted F4 modes (M3a f4_chalk, M3b f4_diverse) | **DONE** | Post-Phase-3 expansion — tests whether `seed_f4_first`'s edge comes from chalk anchors (M3a) or survives diverse anchors (M3b) (2026-04-24) |
 | 3 | Full permutation evaluation | **DONE** | 2026-04-24 T1→T3 run on 301 candidates in 3.6 min wall-time; 81 killed at T1, 5 at T2; log: `artifacts/experiments/experiment_budget_20260424_155838.json` |
 | 4 | Significance testing + dead-end pruning | **DONE** | 2026-04-24: `seed_f4_first` cleared Bonferroni α=0.02 (ΔP(1st)=+0.53pp, p=0.008, 11/14 yrs); `seed` cleared gate but not Bonferroni (p=0.058). All torvik / pool_wisdom / contrarian / upset_tuned / confidence variants failed. |
 | 5 | Parameter sweeps on top strategies | TODO | T3b — sweep F4-first anchor thresholds, confidence bands around `seed_f4_first`; test against submission ranker |
