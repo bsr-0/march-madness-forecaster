@@ -28,22 +28,45 @@ Everything is cross-producted with construction modes: `..._f4_first`
 
 ### Running experiments
 ```bash
+# Budgeted pipeline (recommended): T1 screen → kill → T2 rank → kill → T3 validate
+# Uses the tier parameters + kill rules from § Testing Budget automatically.
+python -m scripts.run_experiment --tier budget
+
+# Individual tiers (advanced — usually you want --tier budget instead)
+python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 yrs)
+python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
+python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
+
 # Auto-generate all permutations (currently 120 strategies)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
 python -m scripts.run_experiment --strategies "odds+contrarian_f4_first" "0.5*torvik+0.5*pool_wisdom_e8_first"
 
-# Tiered evaluation
-python -m scripts.run_experiment --tier 1      # screen all bases
-python -m scripts.run_experiment --tier 2      # top 5 × all modes
-python -m scripts.run_experiment --tier all    # full sweep
+# Legacy full sweep
+python -m scripts.run_experiment --tier all
 ```
 
 ### Implementation files
 - Pipeline engine: `src/prediction/strategy_pipeline.py`
-- Experiment loop: `scripts/run_experiment.py`
+- Testing Budget helpers (tier config, kill rules, promotion): `src/evaluation/testing_budget.py`
+- Experiment loop: `scripts/run_experiment.py` (`run_budget()` is the canonical entrypoint)
+- Budget lock test: `tests/test_experiment_budget.py`
 - Backtest harness: `scripts/mc_pool_backtest.py` (base×mode registry)
+
+### Catalog maintenance
+
+Keeping this file honest is a project-level invariant. When a PR changes any of the following, update the catalog in the **same commit** or the reader will be lied to:
+
+| Change | Update |
+|--------|--------|
+| New source / adjustment / construction added | `## Implementation status` table, `## Build Order` phase row |
+| Strategy implemented or deleted | Move the row in `## Implementation status`; if deleted, add to `## Deprecated Strategies` |
+| Testing Budget parameters changed (`TIER_CONFIGS`) | `## Testing Budget` table + `tests/test_experiment_budget.py::test_tier_configs_match_catalog_contract` |
+| Build Order phase completed | Flip `TODO` → `**DONE**` in `## Build Order` |
+| Tier kill rules changed | `## Testing Budget` per-tier table, lock test, `run_budget()` cut-losses threshold |
+
+The `test_tier_configs_match_catalog_contract` test is the drift guard — if the budget parameters in code diverge from the catalog's table, it fails CI.
 
 ---
 
@@ -368,6 +391,9 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | **Adjustments** | contrarian (1) | coach_adj, roster_adj, momentum, volatile, upset_tuned (5) |
 | **Constructions** | forward, champ_first, f4_first, e8_first (4) | backward, confidence (2) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
+| **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
+
+_Last verified: 2026-04-24 — see § Catalog maintenance._
 
 ---
 
@@ -531,6 +557,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b | Market bases (A3 odds, A7 spread_power) | **DONE** | odds, spread_power, blends with torvik |
 | 1b2 | Contrarian adjustment (B6) + pool_wisdom (B7) | **DONE** | contrarian chains, pool_wisdom, blends |
 | 1b3 | Experiment loop + permutation generator | **DONE** | 120 auto-generated strategies testable |
+| 1b4 | Testing Budget (tier configs, kill rules, cut-losses gate) | **DONE** | `--tier budget` runs T1→T2→T3 with automatic pruning |
 | 1c | Elo base (A4) | TODO | elo, elo+contrarian, blends |
 | 1d | Massey bases (A5, A6) | TODO | massey_avg, massey_best, blends |
 | 1e | AP base (A8) | TODO | ap_strength |
