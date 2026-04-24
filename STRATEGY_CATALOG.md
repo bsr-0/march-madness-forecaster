@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 1,050 strategies — 5 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 1,470 strategies — 6 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -110,16 +110,19 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/market_probabilities.py` (NEW)
 
 #### A4: `elo`
-- **Status:** NEW (wrapper around existing computation)
-- **Data:** `data/raw/historical/historical_games_{year}.json` — full season game results
-- **Algorithm:** Use existing Elo from `proprietary_metrics.py`:
-  1. Load `IncrementalMetricsEngine` for the year
-  2. Call `compute_as_of(tournament_cutoff_date)`
-  3. Extract `elo_rating` per team
-  4. Normalize to barthag scale: `barthag_i = 1 / (1 + 10^((1500 - elo_i) / 400))`
-  - Elo params: K=38, MOV-adjusted, cross-season carryover (0.75*prior + 0.25*1500)
-- **Years:** 2005-2026
-- **File:** `src/prediction/elo_probabilities.py` (NEW)
+- **Status:** IMPLEMENTED (2026-04-24) — self-contained Elo rather than the production `IncrementalMetricsEngine` (simpler, no hparam-tuning provenance needed for a strategy source). Uses the cbbpy team-ID bridge (phase 1b7) to map game records to canonical tournament IDs.
+- **Data:** `data/raw/historical/historical_games_{year}.json`, filtered to games strictly before Torvik's `tournament_start` (walk-forward safe).
+- **Algorithm:**
+  1. All teams start at Elo 1500.
+  2. Process regular-season games chronologically. After each game:
+     - `expected = 1 / (1 + 10^((opp_elo − self_elo) / 400))`
+     - `adj = K × (actual − expected)`  (K=38 per catalog)
+     - Symmetric: winner gains `adj`, loser loses `adj`
+  3. Bridge each cbbpy team ID to its canonical tournament ID via `bridge_cbbpy_id()`. Teams with fewer than 5 games get the seed-based fallback `max(0.10, 1.0 − seed × 0.04)`.
+  4. Convert final Elo to barthag: `barthag_i = 1 / (1 + 10^((1500 − elo_i) / 400))` — the implied win probability vs a 1500-rated opponent. Same shape as torvik/odds/spread_power barthag, so it slots into `build_torvik_round_probabilities` with zero pipeline work.
+  - **Deviations from catalog spec:** no MOV multiplier (keeps implementation simple; raw Elo already captures the signal); no cross-season carryover (each season is independent — college basketball's annual roster turnover makes prior-year regression noisy).
+- **Years:** 2011-2026 (wherever `historical_games_{year}.json` + Torvik `tournament_start` are both ingested)
+- **File:** `src/prediction/elo_probabilities.py`; lock test: `tests/test_elo_source.py`
 
 #### A5: `massey_avg`
 - **Status:** NEW
@@ -426,7 +429,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
-| **Sources** | seed, torvik, odds, spread_power, pool_wisdom (5) | elo, massey_avg, massey_best, ap_strength (4) |
+| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo (6) | massey_avg, massey_best, ap_strength (3) |
 | **Adjustments** | contrarian, upset_tuned, volatile (3) | coach_adj, roster_adj, momentum (3) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | backward (1) |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
@@ -611,7 +614,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b5 | Tournament Oracle Ledger (per-year F4/finals/champ + ranker gap KPI) | **DONE** | `--oracle <year>` + `memory/tournament_oracle.md` — 2023/2026 chaos gap +820/+830, 2024/2025 chalk gap +0/+280 |
 | 1b6 | Chaos Index (pre-tournament regime prediction from Torvik top-of-field) | **DONE** | `--chaos-index` — `mean_top8_barthag` r=−0.668 p=0.006; walk-forward MAE 0.89 beats 1.13 baseline; informational only (no strategy gating yet) |
 | 1b7 | cbbpy team-ID bridge (unblocks A4 Elo, C2 roster_adj, D1 volatile) | **DONE** | `bridge_cbbpy_id()` in `src/data/normalize.py` — longest-prefix match + 12 explicit edge-case aliases; coverage 17/68 → 68/68 on 2026 tournament field (2026-04-24) |
-| 1c | Elo base (A4) | TODO | elo, elo+contrarian, blends |
+| 1c | Elo base (A4) | **DONE** | Self-contained K=38 Elo from historical_games via cbbpy bridge; 68/68 coverage; +420 `elo_*` permutations (2026-04-24) |
 | 1d | Massey bases (A5, A6) | TODO | massey_avg, massey_best, blends |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
