@@ -393,7 +393,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
 
-_Last verified: 2026-04-24 — see § Catalog maintenance._
+_Last verified: 2026-04-24 — see § Catalog maintenance. Metrics promoted to three-primary (P(1st), BestScore, MeanScore) 2026-04-24._
 
 ---
 
@@ -492,9 +492,17 @@ Strategies that can't cover ≥12 years are excluded from significance testing.
 ```
 
 ### Metrics Reported (per strategy, per year)
-- P(1st) — primary, only metric that pays out
-- MeanRank — secondary diagnostic
-- BestScore — diagnostic (does the strategy produce high-scoring brackets?)
+
+**Primary — the pool pays these directly:**
+- **P(1st)** — fraction of pool runs your submitted bracket finishes first. Only metric that pays in a winner-take-all pool.
+- **BestScore** — ESPN points of the best bracket in your portfolio for the year. This is the raw score that beats (or loses to) the field. P(1st) is derived from `BestScore > max(field_score)`, so calibration failures show up here first.
+- **MeanScore** — ESPN points averaged across the portfolio. Diagnostic for "did this strategy produce a high-scoring fleet, or did P(1st) come from one lucky outlier?"
+
+**Secondary — diagnostic:**
+- MeanRank, BestRank — placement diagnostics; don't pay out but surface portfolio consistency.
+- F4 correctness, Champion correctness — optional per-year oracle checks (see § Tournament Oracle Ledger below once implemented).
+
+All three primaries go in `_print_summary` and `_save_budget_summary` outputs; ESPN scoring is the team-identity score under `--team-identity` (locked per MEMORY.md §1 O26/O27).
 
 ### Significance Gate
 ```
@@ -504,6 +512,7 @@ H1:     P(1st)_new > P(1st)_seed_forward
 Gate:   p < 0.10 (one-tailed)
 Also:   P(1st)_new > P(1st)_seed_forward in ≥ 8/14 years
 ```
+P(1st) is the gate because it's the only metric that converts to money. BestScore is a companion diagnostic — a strategy that improves BestScore but not P(1st) is producing high-ceiling brackets that lose to the field anyway (usually because of opponent-model mis-specification, not scoring shape).
 
 ### Dead-End Criteria
 A strategy is killed if:
