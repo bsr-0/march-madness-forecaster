@@ -59,6 +59,41 @@ Sample size is too small to promote this to a Locked Decision — reopen after 2
 
 ---
 
+## Chaos Index (pre-tournament regime predictor)
+
+`python -m scripts.run_experiment --chaos-index` computes four Torvik-derived pre-Selection-Sunday features and regresses them onto actual mean-F4-seed. Measured 2026-04-24 over 15 tournaments (2011–2026 excl 2020):
+
+| Feature | Pearson r vs actual mean-F4-seed | Significance (n=15) |
+|---------|---:|---|
+| `mean_top8_barthag` | **−0.668** | p ≈ 0.006 |
+| `elite_count_gt_095` | **−0.660** | p ≈ 0.007 |
+| `weakest_1seed_barthag` | **−0.551** | p ≈ 0.033 |
+| `mean_1seed_barthag` | **−0.526** | p ≈ 0.044 |
+| `top4_minus_top30_barthag` | +0.237 | p ≈ 0.396 |
+
+**Direction:** all four significant features correlate *negatively* with chaos — a strong top-of-field forecasts chalk, a thin top forecasts upsets. Intuitive (fewer dominant teams → more paths for mid-seeds to upset into F4).
+
+**Walk-forward skill (LOO, univariate on `mean_top8_barthag`):**
+- MAE = **0.89 seeds** vs mean-of-actuals baseline 1.13 seeds → +0.24 seeds improvement.
+- Locked as a regression floor by `tests/test_chaos_index.py::test_regime_report_walk_forward_mae_beats_trivial_baseline`.
+
+**Per-year predictions:**
+
+| Year | Actual mean-F4-seed | Predicted (LOO) | Notable |
+|------|---:|---:|---|
+| 2011 | 6.50 | 3.64 | Biggest miss — VCU 11 + Butler 8 in F4 is a genuine outlier |
+| 2015 | 2.50 | 2.24 | Correctly predicted chalk |
+| 2019 | 2.75 | 2.77 | Near-perfect |
+| 2023 | 5.75 | 4.59 | Under-predicted chaos magnitude but direction correct |
+| 2025 | 1.00 | 2.57 | Over-predicted chaos (actual was all 1-seeds — the chalkiest possible outcome) |
+| 2026 | 1.75 | 1.38 | Correctly predicted mild chalk |
+
+**Not promoted to Locked Decision yet.** Measured once, n=15, single feature dominates but multi-feature models may overfit. Reopen after 2027 to check whether out-of-sample prediction holds. Until then, the chaos index is informational — no automated strategy switching is gated on it.
+
+**Implementation:** `src/evaluation/chaos_index.py`, locked by `tests/test_chaos_index.py` (correlation sign + walk-forward MAE floor). Report saved to `artifacts/experiments/chaos_index_<ts>.json`.
+
+---
+
 ## Machine-readable counterpart
 
 None. The structured ground truth lives in `data/raw/historical/tournament_results_{year}.json` and the parser in `src/evaluation/tournament_oracle.py::load_ground_truth` converts it to `OracleGroundTruth` on demand. This ledger is editorial overlay.
