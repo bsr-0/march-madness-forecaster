@@ -212,6 +212,109 @@ def run_chaos_index_report() -> dict:
     return report
 
 
+def oracle_sweep_t3_years(
+    years: Sequence[int],
+    strategies: Sequence[str],
+    *,
+    brackets_dir: Optional[Path] = None,
+    data_root: Optional[Path] = None,
+) -> dict:
+    """Score each T3 survivor's per-year portfolio against actual tournament outcomes.
+
+    Reads the saved bracket artifacts written by ``run_backtest(save_brackets=True)``
+    for every year in ``years`` and runs ``score_portfolio`` per (year, strategy).
+    Emits per-year detail and a mean-across-years aggregate per strategy.
+
+    The aggregate's ``mean_ranker_gap_espn_pts`` is the headline KPI — it's
+    the selection/ranking gap (ESPN points left on the table because the
+    ranker didn't promote the best portfolio bracket) averaged across the
+    years the strategy was evaluated on. MEMORY.md §3 flags this as the
+    binding constraint (North Star lever #2).
+
+    Returns:
+        {
+            "per_year": {year: {strategy: PortfolioOracleReport_dict_or_reason}},
+            "aggregate": {strategy: {
+                "mean_ranker_gap_espn_pts": float,
+                "mean_f4_hits": float,
+                "mean_finals_hits": float,
+                "champ_hit_rate": float,
+                "years_scored": int,
+            }},
+        }
+    """
+    brackets_dir = brackets_dir or BRACKET_ARTIFACT_DIR
+    data_root = data_root or DATA_ROOT
+
+    per_year: dict = {}
+    agg: dict = {
+        s: {"ranker_gap_sum": 0.0, "f4_sum": 0, "finals_sum": 0, "champ_hits": 0, "years": 0} for s in strategies
+    }
+
+    print(f"\n{'=' * 80}")
+    print(f"T3 ORACLE SWEEP — {len(strategies)} strategies × {len(years)} years")
+    print(f"{'=' * 80}")
+
+    for year in years:
+        per_year[year] = {}
+        artifact_path = Path(brackets_dir) / f"backtest_brackets_{year}.json"
+        if not artifact_path.exists():
+            for s in strategies:
+                per_year[year][s] = {"skipped": "no bracket artifact"}
+            continue
+        try:
+            truth = load_ground_truth(year, Path(data_root))
+        except (FileNotFoundError, ValueError) as exc:
+            for s in strategies:
+                per_year[year][s] = {"skipped": f"no ground truth ({exc})"}
+            continue
+
+        with open(artifact_path) as f:
+            artifact = json.load(f)
+        portfolios_by_mode = {m["mode"]: m["brackets"] for m in artifact.get("modes", []) if "mode" in m}
+
+        for s in strategies:
+            portfolio = portfolios_by_mode.get(s)
+            if not portfolio:
+                per_year[year][s] = {"skipped": "strategy not in artifact"}
+                continue
+            report = score_portfolio(portfolio, truth)
+            per_year[year][s] = report_to_dict(report)
+            agg[s]["ranker_gap_sum"] += report.ranker_gap_espn_pts
+            agg[s]["f4_sum"] += report.best_score_oracle.f4_hits
+            agg[s]["finals_sum"] += report.best_score_oracle.finals_hits
+            agg[s]["champ_hits"] += 1 if report.best_score_oracle.champ_hit else 0
+            agg[s]["years"] += 1
+
+    # Collapse aggregates to means.
+    aggregate = {}
+    for s, acc in agg.items():
+        n = acc["years"]
+        aggregate[s] = {
+            "mean_ranker_gap_espn_pts": acc["ranker_gap_sum"] / n if n else 0.0,
+            "mean_f4_hits": acc["f4_sum"] / n if n else 0.0,
+            "mean_finals_hits": acc["finals_sum"] / n if n else 0.0,
+            "champ_hit_rate": acc["champ_hits"] / n if n else 0.0,
+            "years_scored": n,
+        }
+
+    # Concise per-strategy summary sorted by ranker gap (smaller = better ranker).
+    ranked = sorted(aggregate.items(), key=lambda kv: kv[1]["mean_ranker_gap_espn_pts"])
+    print(f"  {'Strategy':<30} {'meanGap':>8} {'F4/4':>5} {'Fn/2':>5} {'ChampRate':>10} {'Yrs':>4}")
+    print(f"  {'-' * 68}")
+    for s, row in ranked:
+        print(
+            f"  {s:<30} "
+            f"{row['mean_ranker_gap_espn_pts']:>+8.0f} "
+            f"{row['mean_f4_hits']:>5.2f} "
+            f"{row['mean_finals_hits']:>5.2f} "
+            f"{row['champ_hit_rate']:>10.2f} "
+            f"{row['years_scored']:>4}"
+        )
+
+    return {"per_year": per_year, "aggregate": aggregate}
+
+
 def run_budget(
     strategies: Optional[Sequence[str]] = None,
     baseline_key: str = DEFAULT_BASELINE,
@@ -313,16 +416,31 @@ def run_budget(
         return summary
 
     # --- T3 validate ---
+    # T3 is the only tier that emits saved bracket artifacts — the Oracle
+    # sweep below reads them to measure ranker_gap and F4/finals/champ
+    # hits per year per T3 survivor (catalog § Metrics Reported oracle row;
+    # MEMORY.md §3 ranker lever).
     t3_cfg = TIER_CONFIGS["T3"]
     t3_years = select_tier_years(BACKTEST_YEARS, t3_cfg)
-    t3_results = _run_tier(t2_promoted, t3_cfg, t3_years, n_opponents, label="validate")
+    t3_results = _run_tier(
+        t2_promoted,
+        t3_cfg,
+        t3_years,
+        n_opponents,
+        label="validate",
+        save_brackets=True,
+    )
     _run_significance_tests(t3_results, t2_promoted)
     t3_stats = aggregate_strategy_stats(t3_results, baseline_key)
+
+    # --- T3 Oracle sweep (phase-3 metrics rollout, 2026-04-24) ---
+    oracle_block = oracle_sweep_t3_years(t3_years, t2_promoted)
     summary["tiers"]["T3"] = {
         "n_candidates": len(t2_promoted),
         "years": t3_years,
         "final_strategies": t2_promoted,
         "stats": stats_for_artifact(t3_stats),
+        "oracle": oracle_block,
     }
 
     total_elapsed = time.time() - t_start
@@ -338,8 +456,17 @@ def _run_tier(
     years: Sequence[int],
     n_opponents: int,
     label: str,
+    *,
+    save_brackets: bool = False,
 ) -> List[dict]:
-    """Run a single tier pass and return flat per-(strategy, year) results."""
+    """Run a single tier pass and return flat per-(strategy, year) results.
+
+    When ``save_brackets=True`` (T3 only, by convention), the backtest
+    writes per-year portfolio artifacts to
+    ``artifacts/backtest_brackets/backtest_brackets_{year}.json`` so the
+    Oracle sweep can score T3 finalists against actual tournament
+    outcomes without a second run.
+    """
     print(f"\n{'=' * 80}")
     print(f"TIER {tier_cfg.name} — {label} ({len(strategies)} strategies)")
     print(f"{'=' * 80}")
@@ -347,6 +474,7 @@ def _run_tier(
         f"  n_repeats={tier_cfg.n_repeats}, n_model={tier_cfg.n_model}, "
         f"years={len(years)} ({years[0]}..{years[-1]}), "
         f"target ≤ {tier_cfg.wall_time_target_hours}h"
+        f"{' [save-brackets]' if save_brackets else ''}"
     )
 
     def fitter(train_years):
@@ -364,6 +492,7 @@ def _run_tier(
         opponent_source="pool",
         hparam_fitter=fitter,
         team_identity=True,
+        save_brackets=save_brackets,
     )
     elapsed = time.time() - t0
     target_s = tier_cfg.wall_time_target_hours * 3600
