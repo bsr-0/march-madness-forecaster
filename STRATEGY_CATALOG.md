@@ -580,9 +580,53 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **PARTIAL** | D2 upset_tuned DONE 2026-04-24 (as adjustment) — walk-forward seed-by-round calibration; D1 volatile still TODO |
 | 2a | Backward construction (M5) | TODO | *_backward |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
-| 3 | Full permutation evaluation | TODO | Run per §Testing Budget — T1 screen (≤1hr) → T2 rank (≤3hr) |
-| 4 | Significance testing + dead-end pruning | TODO | T3 validate — Gate: p<0.10, ≥8/14 years; cut losses if <0.3 pp over seed_forward |
-| 5 | Parameter sweeps on top strategies | TODO | T3b — Training window, blend weights, only for T3 survivors |
+| 3 | Full permutation evaluation | **DONE** | 2026-04-24 T1→T3 run on 301 candidates in 3.6 min wall-time; 81 killed at T1, 5 at T2; log: `artifacts/experiments/experiment_budget_20260424_155838.json` |
+| 4 | Significance testing + dead-end pruning | **DONE** | 2026-04-24: `seed_f4_first` cleared Bonferroni α=0.02 (ΔP(1st)=+0.53pp, p=0.008, 11/14 yrs); `seed` cleared gate but not Bonferroni (p=0.058). All torvik / pool_wisdom / contrarian / upset_tuned / confidence variants failed. |
+| 5 | Parameter sweeps on top strategies | TODO | T3b — sweep F4-first anchor thresholds, confidence bands around `seed_f4_first`; test against submission ranker |
+
+---
+
+## Phase 3 Results (2026-04-24)
+
+First full tier-budget run on 301 strategies. Wall-time **3.6 minutes** (target ≤4hr). Kill rules pruned 293 strategies before T3 — exactly the behavior the Testing Budget was designed to produce.
+
+Artifact: `artifacts/experiments/experiment_budget_20260424_155838.json`
+Log: `artifacts/experiments/logs/budget_run_20260424_155835.log`
+
+### T3 significance gate results (paired permutation, 10K draws, full 14-yr window, N=100)
+
+| Strategy | ΔP(1st) vs `seed_forward` | p-value | wins/14 | Gate |
+|---|---:|---:|---:|---|
+| **`seed_f4_first`** | **+0.0053** | **0.008** | **11/14** | **PASS ★ Bonferroni α=0.02** |
+| `seed` | +0.0055 | 0.058 | 9/14 | PASS gate, fails Bonferroni |
+| `seed+contrarian_f4_first` | +0.0005 | 0.436 | 8/14 | fail |
+| `0.5*pool_wisdom+0.5*seed+contrarian_e8_first` | −0.0027 | 0.817 | 3/14 | fail |
+| `0.5*torvik+0.5*seed` | −0.0036 | 0.936 | 4/14 | fail |
+
+### Headline
+
+**`seed_f4_first` is the Phase 3 winner.** Bare seed table × F4-first construction beats the current `seed_forward` baseline by +0.53 pp P(1st) in 11 of 14 years (Bonferroni-significant). This is the first strategy in the composable-pipeline architecture to clear the full significance gate against the baseline.
+
+### What got killed
+
+Every sophisticated candidate failed to survive:
+
+- **`confidence` construction:** killed at T1 (most `*_confidence` variants had zero-year P(1st) or wins<3/8).
+- **`upset_tuned` adjustment:** `seed+contrarian+upset_tuned_f4_first` and `seed+upset_tuned_e8_first` passed T1 but failed T2's wins-vs-baseline threshold. All other `upset_tuned` variants died in T1.
+- **`contrarian` chains:** `seed+contrarian_f4_first` reached T3 but posted ΔP(1st)=+0.0005 (p=0.436, 8/14 wins) — statistically indistinguishable from baseline.
+- **`torvik` and `pool_wisdom` blends:** all made it to T2 but dropped below baseline when evaluated on the full 14-year window. The contrarian-blend variants in particular posted negative deltas.
+
+### Interpretation
+
+1. **Simple and correct beat elaborate and speculative.** The bare seed probability table, paired with F4-first construction, outperforms every torvik/market/upset-tuned variant. This is consistent with MEMORY.md §1's "BSS = 0 ceiling" — fancier prediction sources don't help.
+2. **Construction mode is the binding lever** (North Star priority #3). `seed` with forward construction passed the gate but failed Bonferroni; swapping in F4-first lifted it to Bonferroni-significant. Same source, different construction, materially different result.
+3. **The Testing Budget worked.** 301 strategies screened, dead ends pruned in minutes, the winner surfaced with a rigorous p-value. Total compute: 3.6 minutes. No multi-day babysitting.
+
+### Next steps (Phase 5 candidates)
+
+- Sweep F4-first anchor thresholds and confidence bands around `seed_f4_first` to see if a param variant pushes ΔP(1st) higher without breaking Bonferroni.
+- Test `seed_f4_first` against the submission ranker — MEMORY.md §3 flags the ranker as the binding constraint (North Star lever #2); confirm whether this strategy keeps its edge once picked.
+- Compare `seed_f4_first` against the currently-locked `f4_first_tv` (= `torvik_f4_first`) in MEMORY.md §1 Pool strategy. If the seed-based variant consistently beats the torvik-based variant in a fresh paired run, that's a candidate pool-strategy update.
 
 ---
 
