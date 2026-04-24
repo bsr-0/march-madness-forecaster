@@ -106,7 +106,8 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "contrarian",  # B6: torvik adjusted by ownership gap vs public picks
     "pool_wisdom",  # B7: actual pool picks (or extrapolated) as round probs
     "elo",  # A4: K=38 Elo from historical_games, bridged via cbbpy normalizer
-    # New bases added here as implemented (A5-A6, A8, B3-B5, C1-C3)
+    "massey_avg",  # A5: Massey composite rating (aggregated across ~150 systems)
+    # New bases added here as implemented (A6, A8, B3-B5, C1-C3)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -1866,6 +1867,18 @@ def run_backtest(
         else:
             elo_rp = None
 
+        # --- Massey composite base (A5) ---
+        # Aggregated rating across ~150 ranking systems, bridged to canonical
+        # IDs via the Massey-specific alias table. Returns None for years
+        # where the composite file isn't scraped yet (e.g. 2026 at 2026-04-24).
+        from src.prediction.massey_probabilities import load_massey_avg_barthag
+
+        massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
+        if massey_barthag is not None:
+            massey_avg_rp = build_torvik_round_probabilities(seeds, regions, massey_barthag)
+        else:
+            massey_avg_rp = None
+
         # Probability base registry: base_name → round_probs
         base_round_probs = {
             "seed": seed_rp,
@@ -1873,11 +1886,13 @@ def run_backtest(
             "blend": blend_rp,
             "torvik": torvik_rp,
         }
-        # Only register market + elo bases if data is available for this year
+        # Only register data-dependent bases if data is available for this year
         if odds_rp is not None:
             base_round_probs["odds"] = odds_rp
         if elo_rp is not None:
             base_round_probs["elo"] = elo_rp
+        if massey_avg_rp is not None:
+            base_round_probs["massey_avg"] = massey_avg_rp
         if spread_rp is not None:
             base_round_probs["spread_power"] = spread_rp
 
