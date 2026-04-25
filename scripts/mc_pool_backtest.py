@@ -255,6 +255,31 @@ def default_pool_hyperparameters(train_years: Sequence[int]) -> PoolHyperparamet
     return PoolHyperparameters()
 
 
+class StrategiesFitter:
+    """Picklable, train_years-independent hparam fitter.
+
+    Mirrors the local closures previously used in scripts/run_experiment.py
+    (``def fitter(train_years): return PoolHyperparameters(blend_alpha=0.5,
+    enabled_modes=tuple(strategies))``) — but as a top-level callable class
+    so instances pickle cleanly for ProcessPoolExecutor. Python's default
+    pickle can't reach local closures defined inside another function;
+    top-level classes are reachable via dotted path.
+
+    Behavior is identical to the closure form: every call returns the same
+    PoolHyperparameters regardless of train_years. Use this when you know
+    the strategy set up front (every existing experiment-loop call site
+    matches this shape).
+    """
+
+    def __init__(self, strategies: Sequence[str], blend_alpha: float = 0.5) -> None:
+        self.strategies: Tuple[str, ...] = tuple(strategies)
+        self.blend_alpha: float = blend_alpha
+
+    def __call__(self, train_years: Sequence[int]) -> "PoolHyperparameters":
+        del train_years  # this fitter is train_years-independent by construction
+        return PoolHyperparameters(blend_alpha=self.blend_alpha, enabled_modes=self.strategies)
+
+
 def walk_forward_train_years(test_year: int) -> Tuple[int, ...]:
     """Return the walk-forward training window for a given test year.
 
@@ -1661,6 +1686,688 @@ def build_leverage_tilted_round_probs(model_round_probs, pick_dist, tilt_strengt
 # ---------------------------------------------------------------------------
 
 
+def _empty_year_outcome(year_arg, reason=None):
+    return {
+        "year": year_arg,
+        "skip_reason": reason,
+        "results": [],
+        "saved_modes": None,
+        "manifest_entries": [],
+    }
+
+
+def _run_one_year(
+    year,
+    n_opponents,
+    n_repeats,
+    n_model,
+    opponent_source,
+    hparam_fitter,
+    team_identity,
+    save_brackets,
+    use_cache,
+    write_cache,
+    scoring_vector,
+):
+    """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
+
+    Body is a verbatim move of the former for-loop in run_backtest(). Workers
+    do NOT write the cache manifest themselves — they collect entries and
+    return them so the parent serializes manifest writes after every year.
+    """
+    _year_results = []
+    _year_saved_modes = []
+    _year_manifest_entries = []
+
+    # Walk-forward train window: every entry strictly < year. Single
+    # source of truth for both the prediction model and the pool
+    # hparam fitter.
+    train_years = walk_forward_train_years(year)
+    if len(train_years) < 3:
+        print(f"  {year:<6} SKIP — {len(train_years)} train years (need >= 3)")
+        return _empty_year_outcome(year, f"{len(train_years)} train years (need >= 3)")
+
+    # Fit pool hyperparameters on train_years ONLY. The fitter cannot
+    # see the test year by construction — this is the leakage firewall
+    # for pool-layer knobs (blend_alpha, enabled_modes).
+    # A fitter that reads `year` is a leakage bug.
+    hparams = hparam_fitter(train_years)
+    if not isinstance(hparams, PoolHyperparameters):
+        raise TypeError(f"hparam_fitter returned {type(hparams).__name__}, expected PoolHyperparameters")
+
+    seeds, regions = load_seeds_and_regions(year)
+    if not seeds or not regions:
+        print(f"  {year:<6} SKIP — no seeds/regions")
+        return _empty_year_outcome(year, f"no seeds/regions")
+
+    games = load_tournament_results(year)
+    if not games:
+        print(f"  {year:<6} SKIP — no games")
+        return _empty_year_outcome(year, f"no games")
+
+    # Resolve First Four (play-in) games: the seeds file lists all 68
+    # teams, but R64 games use the FF winners' team IDs.  Swap FF
+    # losers for winners so first_round_matchups has the teams that
+    # actually play R64. Mutates seeds/regions in place (year-local
+    # copies from load_seeds_and_regions, so no shared-state risk).
+    resolve_first_four(games, seeds, regions)
+
+    stats = _load_team_stats(year)
+
+    # Derive the F4 region pairing from the actual games and build
+    # first_round with it. Every bracket (predictions, opponents,
+    # ground truth) uses the same layout so their 63-bit vectors are
+    # directly comparable. Without this, the synthetic tree walker
+    # projects F4 pairings from the hardcoded REGION_ORDER, which only
+    # matches reality in some years — for the rest, build_actual_outcome
+    # silently corrupts the ground-truth vector.
+    try:
+        region_order = derive_f4_region_pairing(games, regions)
+    except ValueError as exc:
+        print(f"  {year:<6} SKIP — could not derive F4 region pairing: {exc}")
+        return _empty_year_outcome(year, f"could not derive F4 region pairing: {exc}")
+
+    first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
+    if len(first_round) != 64:
+        print(f"  {year:<6} SKIP — {len(first_round)} teams (need 64)")
+        return _empty_year_outcome(year, f"{len(first_round)} teams (need 64)")
+
+    # Build actual outcome. Now that region_order matches reality, every
+    # F4 and CHAMP lookup must succeed — any miss is a hard error.
+    actual = build_actual_outcome(first_round, games)
+    # Team-identity scoring needs per-round winner sets (not the bool vector).
+    winners_by_rnd = actual_winners_by_round(games) if team_identity else None
+
+    # Build pairwise probs for opponent bracket generation
+    seed_pw = build_seed_probabilities(seeds)
+
+    # Train noseed model on train_years only, then assert walk-forward.
+    # The assertion catches any regression where train_noseed_model
+    # inadvertently bleeds test-year data into the fit.
+    model = train_noseed_model(max_year=year)
+    assert all(y < year for y in model.train_years), (
+        f"walk-forward violation: noseed model for test year {year} was trained on {model.train_years}"
+    )
+
+    # Build round probs for each mode. blend_alpha comes from the
+    # walked-forward hparams, not a hardcoded magic number.
+    seed_rp = build_seed_round_probabilities(seeds)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+    blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=hparams.blend_alpha)
+
+    # Torvik barthag-based round probabilities (Log5 + MC simulation)
+    barthag = _load_torvik_barthag(year, seeds)
+    torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+
+    # Build opponent distribution (needed before leveraged mode).
+    # pool: empirical pick distribution from pool_hist_results.json for this year;
+    #       pool_size is set to the actual pool's group size.
+    #       Falls back to ESPN if pool history is unavailable for the year.
+    # espn: strict — missing archived picks raise FileNotFoundError.
+    # seed: static SEED_PICK_RATES (year-agnostic fallback).
+    year_n_opponents = n_opponents  # may be overridden below for pool mode
+    if opponent_source == "pool":
+        try:
+            pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
+            pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
+            year_n_opponents = group_size - 1  # pool size excludes model bracket
+        except (FileNotFoundError, KeyError):
+            # No pool history for this year — fall back to ESPN silently.
+            try:
+                pick_dist = build_espn_pick_distribution(year, seeds)
+                year_n_opponents = n_opponents
+            except FileNotFoundError as exc:
+                print(f"  {year:<6} SKIP — {exc}")
+                return _empty_year_outcome(year, f"{exc}")
+    elif opponent_source == "espn":
+        try:
+            pick_dist = build_espn_pick_distribution(year, seeds)
+        except FileNotFoundError as exc:
+            print(f"  {year:<6} SKIP — {exc}")
+            return _empty_year_outcome(year, f"{exc}")
+    else:
+        pick_dist = build_seed_pick_distribution(seeds)
+    pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
+
+    # Load the empirical chalk-bias table once per year. Falls back to the
+    # static _chalk_multiplier table if no artifact is found.
+    from src.data.seed_pick_model import load_chalk_bias_table
+
+    chalk_bias_table = load_chalk_bias_table()
+
+    # -------------------------------------------------------------------
+    # Strategy registry: base × mode cross-product
+    # -------------------------------------------------------------------
+    # Each base produces round_probs (Dict[team_id, Dict[round, float]]).
+    # Each mode produces brackets from round_probs via a sampler function.
+    # New bases/modes register here; the cross-product is automatic.
+
+    # --- Market-implied probability bases (A3, A7) ---
+    from src.prediction.market_probabilities import (
+        load_market_ratings,
+        load_spread_power_ratings,
+    )
+
+    market_barthag = load_market_ratings(year, seeds)
+    if market_barthag is not None:
+        odds_rp = build_torvik_round_probabilities(seeds, regions, market_barthag)
+    else:
+        odds_rp = None
+
+    spread_barthag = load_spread_power_ratings(year, seeds)
+    if spread_barthag is not None:
+        spread_rp = build_torvik_round_probabilities(seeds, regions, spread_barthag)
+    else:
+        spread_rp = None
+
+    # --- Elo base (A4) ---
+    # Self-contained K=38 Elo from historical_games, bridged via the
+    # cbbpy ID normalizer to canonical tournament IDs, then MC-sim'd
+    # to round_probs via the same torvik machinery.
+    from src.prediction.elo_probabilities import load_elo_barthag
+
+    elo_barthag = load_elo_barthag(year, seeds, Path("data"))
+    if elo_barthag is not None:
+        elo_rp = build_torvik_round_probabilities(seeds, regions, elo_barthag)
+    else:
+        elo_rp = None
+
+    # --- Massey composite base (A5) ---
+    # Aggregated rating across ~150 ranking systems, bridged to canonical
+    # IDs via the Massey-specific alias table. Returns None for years
+    # where the composite file isn't scraped yet (e.g. 2026 at 2026-04-24).
+    from src.prediction.massey_probabilities import load_massey_avg_barthag
+
+    massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
+    if massey_barthag is not None:
+        massey_avg_rp = build_torvik_round_probabilities(seeds, regions, massey_barthag)
+    else:
+        massey_avg_rp = None
+
+    # Massey-best (A6): walk-forward Brier selection over 56+ per-system
+    # rankers (POM, SAG, MOR, BAR, etc.), picking the system with lowest
+    # cumulative Brier on tournament games in years strictly < year.
+    # Falls back gracefully to None when no system qualifies (e.g.
+    # pre-2011 test years without enough historical data).
+    from src.prediction.massey_best_probabilities import (
+        build_massey_best_round_probabilities,
+    )
+
+    massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+
+    # AP-strength (A8): final-pre-tournament AP poll → barthag, MC via the
+    # shared torvik round-probs builder. Falls back to None if the year is
+    # missing from ap_poll_data.json (e.g., 2020 COVID).
+    from src.prediction.ap_probabilities import load_ap_strength_barthag
+
+    ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), Path("data"))
+    if ap_barthag is not None:
+        ap_strength_rp = build_torvik_round_probabilities(seeds, regions, ap_barthag)
+    else:
+        ap_strength_rp = None
+
+    # Stacked meta-learner (B5): Ridge regression over all Category-A
+    # bases. Walk-forward: fits on game-level barthag diffs from years
+    # strictly < year, then blends the test year's barthag values using
+    # the learned coefficients. Returns None if <3 usable prior years
+    # or if any Category-A source is missing for the test year.
+    from src.prediction.stacked_probabilities import build_stacked_round_probabilities
+
+    stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+
+    # Probability base registry: base_name → round_probs
+    base_round_probs = {
+        "seed": seed_rp,
+        "noseed": noseed_rp,
+        "blend": blend_rp,
+        "torvik": torvik_rp,
+    }
+    # Only register data-dependent bases if data is available for this year
+    if odds_rp is not None:
+        base_round_probs["odds"] = odds_rp
+    if elo_rp is not None:
+        base_round_probs["elo"] = elo_rp
+    if massey_avg_rp is not None:
+        base_round_probs["massey_avg"] = massey_avg_rp
+    if massey_best_rp is not None:
+        base_round_probs["massey_best"] = massey_best_rp
+    if spread_rp is not None:
+        base_round_probs["spread_power"] = spread_rp
+    if ap_strength_rp is not None:
+        base_round_probs["ap_strength"] = ap_strength_rp
+    if stacked_rp is not None:
+        base_round_probs["stacked"] = stacked_rp
+
+    # --- Contrarian and pool-wisdom bases (B6, B7) ---
+    from src.prediction.contrarian_probabilities import (
+        build_contrarian_round_probs,
+        load_pool_wisdom_ratings,
+    )
+
+    # Contrarian: adjust torvik by ownership gap against public picks
+    contrarian_rp = build_contrarian_round_probs(torvik_rp, pick_dist)
+    base_round_probs["contrarian"] = contrarian_rp
+
+    # Pool wisdom: actual pool picks or extrapolated from bias signature
+    pool_rp = load_pool_wisdom_ratings(year, seeds)
+    if pool_rp is not None:
+        base_round_probs["pool_wisdom"] = pool_rp
+
+    # Upset-tuned context: walk-forward seed-by-round historical reach rates.
+    # Computed once per test year; consumed by the upset_tuned adjustment
+    # inside resolve_pipeline_round_probs. Uses only tournaments < year.
+    from src.prediction.upset_tuned_probabilities import load_upset_tuned_context
+
+    upset_tuned_ctx = load_upset_tuned_context(year)
+
+    # Volatile context: per-team [0,1]-normalized game-margin volatility
+    # from pre-tournament regular-season games. Consumed by the volatile
+    # adjustment. Walk-forward-safe: only uses games strictly before the
+    # Torvik tournament_start cutoff.
+    from src.prediction.volatile_probabilities import load_team_volatility
+
+    team_volatility = load_team_volatility(year, seeds.keys(), Path("data"))
+
+    # Roster context: per-team top-5 mean WARP from cbbpy_rosters_{year}.json,
+    # bridged to canonical IDs via the cbbpy bridge. Consumed by the
+    # roster_adj adjustment. Walk-forward-safe: only reads the year's
+    # roster file. Missing file (rare) → empty dict; downstream resolver
+    # treats absent teams as the neutral z=0 fallback.
+    from src.prediction.roster_adj_probabilities import load_team_talent
+
+    team_talent = load_team_talent(year, seeds.keys(), Path("data"))
+
+    # Coach context: per-team count of head coach's prior NCAA tournament
+    # appearances, cumulated only over Seasons strictly < year (Kaggle
+    # MTeamCoaches × MNCAATourneySeeds). Consumed by the coach_adj
+    # adjustment (one-sided +0..+3% multiplicative boost based on
+    # log-experience). Walk-forward-safe by construction.
+    from src.prediction.coach_adj_probabilities import load_coach_experience
+
+    coach_experience = load_coach_experience(year, seeds.keys(), Path("data"))
+
+    # Momentum context: per-team Jan→Mar four-factor-margin delta from
+    # torvik_four_factors_{year}_*.json monthly snapshots. Consumed by
+    # the momentum adjustment (two-sided tanh-saturated ±3% boost/penalty
+    # based on late-season efficiency trajectory). Walk-forward-safe:
+    # only reads the year's snapshot files. Missing snapshots → empty
+    # dict; downstream resolver treats absent teams as delta=0 (neutral).
+    from src.prediction.momentum_probabilities import load_team_momentum
+
+    team_momentum = load_team_momentum(year, seeds.keys(), Path("data"))
+
+    # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
+    def _make_sampler(mode_name):
+        """Return a sampler function for the given construction mode."""
+        if mode_name == "forward":
+            return sample_model_brackets
+        elif mode_name == "champ_first":
+            return lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r)
+        elif mode_name == "f4_first":
+            return lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "e8_first":
+            return lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "confidence":
+            return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r)
+        elif mode_name == "f4_chalk":
+            return lambda fr, rp, n, r: sample_f4_chalk_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "f4_diverse":
+            return lambda fr, rp, n, r: sample_f4_diverse_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "f4_top4":
+            return lambda fr, rp, n, r: sample_f4_top4_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "e8_chalk":
+            return lambda fr, rp, n, r: sample_e8_chalk_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "e8_diverse":
+            return lambda fr, rp, n, r: sample_e8_diverse_brackets(fr, rp, n, r, seeds, regions)
+        # New construction modes register here:
+        # elif mode_name == "backward":
+        #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
+        else:
+            raise ValueError(f"Unknown construction mode: {mode_name}")
+
+    # Build mode_sampler_specs from the strategy registry.
+    # Supports both legacy mode names (e.g. "f4_first_tv") and new
+    # base×mode names (e.g. "torvik_f4_first").
+    mode_sampler_specs = []
+
+    # Legacy modes: hardcoded specs for backward compatibility
+    legacy_specs = {
+        "seed": ("seed", seed_rp, sample_model_brackets),
+        "noseed": ("noseed", noseed_rp, sample_model_brackets),
+        "blend": ("blend", blend_rp, sample_model_brackets),
+        "torvik": ("torvik", torvik_rp, sample_model_brackets),
+        "champ_first_tv": (
+            "champ_first_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
+        ),
+        "champ_first_chalkfade_tv": (
+            "champ_first_chalkfade_tv",
+            torvik_rp,
+            lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
+                fr, rp, n, r, seeds, _cbt
+            ),
+        ),
+        "f4_first_tv": (
+            "f4_first_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
+        ),
+        "e8_first_tv": (
+            "e8_first_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
+        ),
+        "det_champ_tv": (
+            "det_champ_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                fr,
+                rp,
+                n,
+                r,
+                seeds,
+                regions,
+                pick_dist,
+                "det_champ_tv",
+            ),
+        ),
+        "det_f4_tv": (
+            "det_f4_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                fr,
+                rp,
+                n,
+                r,
+                seeds,
+                regions,
+                pick_dist,
+                "det_f4_tv",
+            ),
+        ),
+        "det_e8_tv": (
+            "det_e8_tv",
+            torvik_rp,
+            lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                fr,
+                rp,
+                n,
+                r,
+                seeds,
+                regions,
+                pick_dist,
+                "det_e8_tv",
+            ),
+        ),
+    }
+
+    from src.prediction.strategy_pipeline import (
+        parse_pipeline,
+        resolve_pipeline_round_probs,
+    )
+
+    for mode_name in hparams.enabled_modes:
+        # Try legacy name first
+        if mode_name in legacy_specs:
+            mode_sampler_specs.append(legacy_specs[mode_name])
+            continue
+
+        # Try simple base×mode cross-product (e.g. "torvik_f4_first")
+        resolved_simple = False
+        if "_" in mode_name:
+            for i in range(len(mode_name)):
+                if mode_name[i] == "_":
+                    candidate_base = mode_name[:i]
+                    candidate_mode = mode_name[i + 1 :]
+                    if candidate_base in base_round_probs and candidate_mode in CONSTRUCTION_MODES:
+                        rp = base_round_probs[candidate_base]
+                        sampler = _make_sampler(candidate_mode)
+                        mode_sampler_specs.append((mode_name, rp, sampler))
+                        resolved_simple = True
+                        break
+
+        if resolved_simple:
+            continue
+
+        # Try pipeline resolution (e.g. "odds+contrarian_f4_first",
+        # "0.7*torvik+0.3*odds+contrarian_e8_first")
+        try:
+            sources, adjustments, construction = parse_pipeline(mode_name)
+            pipeline_rp = resolve_pipeline_round_probs(
+                sources,
+                adjustments,
+                base_round_probs,
+                pick_dist,
+                seeds=seeds,
+                historical_seed_reach_rates=upset_tuned_ctx,
+                team_volatility=team_volatility,
+                team_talent=team_talent,
+                coach_experience=coach_experience,
+                team_momentum=team_momentum,
+            )
+            if pipeline_rp is not None:
+                sampler = _make_sampler(construction)
+                mode_sampler_specs.append((mode_name, pipeline_rp, sampler))
+            else:
+                print(f"  WARNING: pipeline '{mode_name}' sources not available for year {year}, skipping")
+        except (ValueError, KeyError) as exc:
+            print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
+
+    # year_rng is shared across opponent generation + tournament
+    # simulation per repeat. Bracket sampling uses a per-(mode, year)
+    # child rng (make_mode_rng) so caching one mode's brackets never
+    # perturbs another mode's draws and the live loop matches the
+    # offline cache builder. See src/data/strategy_cache.make_mode_rng.
+    year_rng = np.random.default_rng(42 + year)
+
+    # Team-id lookup for cache encode/decode. Lazy-loaded once per
+    # year — empty dict if the cache hasn't been initialized yet.
+    team_lookup = load_team_lookup() if (use_cache or write_cache) else {}
+    cache_manifest = Manifest.load() if (use_cache or write_cache) else None
+
+    for mode_name, rp, sampler in mode_sampler_specs:
+        # Per-(mode, year) bracket-sampling rng. Order-independent and
+        # fully isolated from year_rng, so the inner repeat-loop's
+        # opponent / simulation rng consumption is unchanged whether
+        # this mode hits or misses the bracket cache.
+        bracket_rng = make_mode_rng(mode_name, year)
+        cache_key = compute_cache_key(
+            strategy_id=mode_name,
+            year=year,
+            rng_seed=CACHE_PARENT_SEED,
+            code_version=str(STRATEGY_CACHE_VERSION),
+            data_version=BRACKET_DATA_VERSION,
+            model_version=BRACKET_MODEL_VERSION,
+        )
+        model_brackets = None
+        if use_cache:
+            try:
+                cached = load_brackets(cache_key, cache_manifest)
+            except KeyError:
+                cached = None
+            except ValueError as exc:
+                print(f"  {year:<6} {mode_name:<10} CACHE STALE ({exc}) — recomputing")
+                cached = None
+            if cached is not None and cached.shape[0] == n_model and team_lookup:
+                model_brackets = array_to_brackets(cached, first_round, team_lookup)
+                print(f"  {year:<6} {mode_name:<10} CACHE HIT  key={cache_key}")
+            elif cached is not None:
+                # Shape or lookup mismatch — log and fall through to live
+                # compute. n_model differs from cached count, or the
+                # team_id_lookup hasn't been populated for this team set.
+                print(
+                    f"  {year:<6} {mode_name:<10} CACHE SHAPE MISS "
+                    f"(cached={cached.shape[0]}, want={n_model}) — recomputing"
+                )
+        if model_brackets is None:
+            model_brackets = sampler(first_round, rp, n_model, bracket_rng)
+            if write_cache and team_lookup:
+                bracket_array = brackets_to_array(model_brackets, first_round, team_lookup)
+                entry = save_brackets(
+                    cache_key,
+                    bracket_array,
+                    strategy_id=mode_name,
+                    year=year,
+                    rng_seed=CACHE_PARENT_SEED,
+                    code_version=str(STRATEGY_CACHE_VERSION),
+                    data_version=BRACKET_DATA_VERSION,
+                    model_version=BRACKET_MODEL_VERSION,
+                    provenance={"sampler": mode_name, "n_brackets": n_model, "from_run_backtest": True},
+                )
+                _year_manifest_entries.append(entry)
+                print(f"  {year:<6} {mode_name:<10} CACHE WRITE key={cache_key}")
+
+        # Score all model brackets against actual outcome (for reporting
+        # BestScr / MeanScr and for --save-brackets).
+        if team_identity:
+            model_scores_actual = score_brackets_team_identity(
+                model_brackets,
+                winners_by_rnd,
+                first_round,
+                ESPN_SCORING,
+            )
+        else:
+            model_scores_actual = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
+
+        # For each repeat: simulate a tournament outcome, generate
+        # opponents, score everything against that SIMULATED outcome,
+        # rank.  Under --team-identity the ranking uses simulated
+        # outcomes (not the actual result) so that mean_rank reflects
+        # the pre-tournament information the ranker would actually
+        # have — fixing the ρ = −1.000 artifact where ranking against
+        # the known actual outcome trivially agreed with
+        # score_team_identity.
+        all_ranks = np.zeros((n_model, n_repeats))
+
+        for rep in range(n_repeats):
+            opp = generate_opponent_brackets(
+                year_n_opponents,
+                first_round,
+                seed_pw,
+                pick_dist,
+                seeds,
+                year_rng,
+            )
+            if team_identity:
+                # Simulate one tournament outcome for this repeat.
+                sim_outcomes, sim_by_round = simulate_tournament_outcomes(
+                    n_tournaments=1,
+                    first_round_matchups=first_round,
+                    matchup_probs=seed_pw,
+                    seeds=seeds,
+                    noise_std=0.16,
+                    rng=year_rng,
+                )
+                sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                model_scores_sim = score_brackets_team_identity(
+                    model_brackets,
+                    sim_winners,
+                    first_round,
+                    ESPN_SCORING,
+                )
+                opp_scores = score_brackets_team_identity(
+                    opp,
+                    sim_winners,
+                    first_round,
+                    ESPN_SCORING,
+                )
+            else:
+                model_scores_sim = model_scores_actual
+                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+
+            # Rank each model bracket against this opponent field
+            for m in range(n_model):
+                # How many opponents scored strictly higher + 1
+                better = np.sum(opp_scores > model_scores_sim[m])
+                tied = np.sum(opp_scores == model_scores_sim[m])
+                # Average rank among ties (model is 1 of the tied group)
+                all_ranks[m, rep] = better + 1 + tied / 2.0
+
+        # Per-bracket average rank across repeats
+        bracket_mean_ranks = all_ranks.mean(axis=1)
+        # Best bracket = lowest average rank
+        best_bracket_idx = np.argmin(bracket_mean_ranks)
+        best_rank = bracket_mean_ranks[best_bracket_idx]
+        mean_rank = bracket_mean_ranks.mean()
+
+        # P(1st) across all brackets x repeats
+        p_first = (all_ranks == 1.0).mean()
+        p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
+        p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
+        # Count of binary win/lose trials behind p_first — needed by the
+        # downstream Wilson-CI computation (phase-2 metrics rollout).
+        n_trials = int(all_ranks.size)
+
+        best_score = float(model_scores_actual[best_bracket_idx])
+        mean_score = float(model_scores_actual.mean())
+
+        print(
+            f"  {year:<6} {mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
+            f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
+            f"{best_score:8.0f} {mean_score:8.0f}"
+        )
+
+        _year_results.append(
+            {
+                "year": year,
+                "mode": mode_name,
+                "best_rank": best_rank,
+                "mean_rank": mean_rank,
+                "best_score": best_score,
+                "mean_score": mean_score,
+                "p_first": p_first,
+                "p_top5": p_top5,
+                "p_top25": p_top25,
+                "n_trials": n_trials,
+            }
+        )
+
+        # Serialize pick-level brackets when --save-brackets is active.
+        if save_brackets:
+            winners_by_rnd = actual_winners_by_round(games)
+            ti_scores = score_brackets_team_identity(
+                model_brackets,
+                winners_by_rnd,
+                first_round,
+                ESPN_SCORING,
+            )
+            mode_bracket_records = []
+            for m in range(n_model):
+                picks = picks_by_round(model_brackets[m], first_round)
+                champion = list(picks["CHAMP"])[0] if picks["CHAMP"] else None
+                final_four = sorted(picks["F4"]) if picks["F4"] else []
+                mode_bracket_records.append(
+                    {
+                        "bracket_idx": m,
+                        "score_team_identity": float(ti_scores[m]),
+                        "score_shape": float(model_scores_actual[m]),
+                        "mean_rank": float(bracket_mean_ranks[m]),
+                        "champion": champion,
+                        "final_four": final_four,
+                        "picks": {rnd: sorted(teams) for rnd, teams in picks.items()},
+                    }
+                )
+            mode_bracket_records.sort(key=lambda x: -x["score_team_identity"])
+            _year_saved_modes.append(
+                {
+                    "mode": mode_name,
+                    "brackets": mode_bracket_records,
+                }
+            )
+
+    # opt_seed, opt_blend, opt_torvik, hedge_tv: DEPRECATED 2026-04-12.
+    # See MEMORY.md §2 D6 and COUNCIL_LESSONS.md §3 rows 23-25 for evidence.
+
+    return {
+        "year": year,
+        "skip_reason": None,
+        "results": _year_results,
+        "saved_modes": _year_saved_modes if _year_saved_modes else None,
+        "manifest_entries": _year_manifest_entries,
+    }
+
+
 def run_backtest(
     years=None,
     n_opponents=N_OPPONENTS,
@@ -1672,6 +2379,7 @@ def run_backtest(
     team_identity=False,
     use_cache: bool = False,
     write_cache: bool = False,
+    workers: int = 1,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -1730,648 +2438,53 @@ def run_backtest(
     results = []
     saved_brackets = {}  # year -> list of per-mode bracket dicts
 
-    for year in years:
-        # Walk-forward train window: every entry strictly < year. Single
-        # source of truth for both the prediction model and the pool
-        # hparam fitter.
-        train_years = walk_forward_train_years(year)
-        if len(train_years) < 3:
-            print(f"  {year:<6} SKIP — {len(train_years)} train years (need >= 3)")
-            continue
-
-        # Fit pool hyperparameters on train_years ONLY. The fitter cannot
-        # see the test year by construction — this is the leakage firewall
-        # for pool-layer knobs (blend_alpha, enabled_modes).
-        # A fitter that reads `year` is a leakage bug.
-        hparams = hparam_fitter(train_years)
-        if not isinstance(hparams, PoolHyperparameters):
-            raise TypeError(f"hparam_fitter returned {type(hparams).__name__}, expected PoolHyperparameters")
-
-        seeds, regions = load_seeds_and_regions(year)
-        if not seeds or not regions:
-            print(f"  {year:<6} SKIP — no seeds/regions")
-            continue
-
-        games = load_tournament_results(year)
-        if not games:
-            print(f"  {year:<6} SKIP — no games")
-            continue
-
-        # Resolve First Four (play-in) games: the seeds file lists all 68
-        # teams, but R64 games use the FF winners' team IDs.  Swap FF
-        # losers for winners so first_round_matchups has the teams that
-        # actually play R64. Mutates seeds/regions in place (year-local
-        # copies from load_seeds_and_regions, so no shared-state risk).
-        resolve_first_four(games, seeds, regions)
-
-        stats = _load_team_stats(year)
-
-        # Derive the F4 region pairing from the actual games and build
-        # first_round with it. Every bracket (predictions, opponents,
-        # ground truth) uses the same layout so their 63-bit vectors are
-        # directly comparable. Without this, the synthetic tree walker
-        # projects F4 pairings from the hardcoded REGION_ORDER, which only
-        # matches reality in some years — for the rest, build_actual_outcome
-        # silently corrupts the ground-truth vector.
-        try:
-            region_order = derive_f4_region_pairing(games, regions)
-        except ValueError as exc:
-            print(f"  {year:<6} SKIP — could not derive F4 region pairing: {exc}")
-            continue
-
-        first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
-        if len(first_round) != 64:
-            print(f"  {year:<6} SKIP — {len(first_round)} teams (need 64)")
-            continue
-
-        # Build actual outcome. Now that region_order matches reality, every
-        # F4 and CHAMP lookup must succeed — any miss is a hard error.
-        actual = build_actual_outcome(first_round, games)
-        # Team-identity scoring needs per-round winner sets (not the bool vector).
-        winners_by_rnd = actual_winners_by_round(games) if team_identity else None
-
-        # Build pairwise probs for opponent bracket generation
-        seed_pw = build_seed_probabilities(seeds)
-
-        # Train noseed model on train_years only, then assert walk-forward.
-        # The assertion catches any regression where train_noseed_model
-        # inadvertently bleeds test-year data into the fit.
-        model = train_noseed_model(max_year=year)
-        assert all(y < year for y in model.train_years), (
-            f"walk-forward violation: noseed model for test year {year} was trained on {model.train_years}"
-        )
-
-        # Build round probs for each mode. blend_alpha comes from the
-        # walked-forward hparams, not a hardcoded magic number.
-        seed_rp = build_seed_round_probabilities(seeds)
-        noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
-        blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=hparams.blend_alpha)
-
-        # Torvik barthag-based round probabilities (Log5 + MC simulation)
-        barthag = _load_torvik_barthag(year, seeds)
-        torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-
-        # Build opponent distribution (needed before leveraged mode).
-        # pool: empirical pick distribution from pool_hist_results.json for this year;
-        #       pool_size is set to the actual pool's group size.
-        #       Falls back to ESPN if pool history is unavailable for the year.
-        # espn: strict — missing archived picks raise FileNotFoundError.
-        # seed: static SEED_PICK_RATES (year-agnostic fallback).
-        year_n_opponents = n_opponents  # may be overridden below for pool mode
-        if opponent_source == "pool":
-            try:
-                pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
-                pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
-                year_n_opponents = group_size - 1  # pool size excludes model bracket
-            except (FileNotFoundError, KeyError):
-                # No pool history for this year — fall back to ESPN silently.
-                try:
-                    pick_dist = build_espn_pick_distribution(year, seeds)
-                    year_n_opponents = n_opponents
-                except FileNotFoundError as exc:
-                    print(f"  {year:<6} SKIP — {exc}")
-                    continue
-        elif opponent_source == "espn":
-            try:
-                pick_dist = build_espn_pick_distribution(year, seeds)
-            except FileNotFoundError as exc:
-                print(f"  {year:<6} SKIP — {exc}")
-                continue
-        else:
-            pick_dist = build_seed_pick_distribution(seeds)
-        pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
-
-        # Load the empirical chalk-bias table once per year. Falls back to the
-        # static _chalk_multiplier table if no artifact is found.
-        from src.data.seed_pick_model import load_chalk_bias_table
-
-        chalk_bias_table = load_chalk_bias_table()
-
-        # -------------------------------------------------------------------
-        # Strategy registry: base × mode cross-product
-        # -------------------------------------------------------------------
-        # Each base produces round_probs (Dict[team_id, Dict[round, float]]).
-        # Each mode produces brackets from round_probs via a sampler function.
-        # New bases/modes register here; the cross-product is automatic.
-
-        # --- Market-implied probability bases (A3, A7) ---
-        from src.prediction.market_probabilities import (
-            load_market_ratings,
-            load_spread_power_ratings,
-        )
-
-        market_barthag = load_market_ratings(year, seeds)
-        if market_barthag is not None:
-            odds_rp = build_torvik_round_probabilities(seeds, regions, market_barthag)
-        else:
-            odds_rp = None
-
-        spread_barthag = load_spread_power_ratings(year, seeds)
-        if spread_barthag is not None:
-            spread_rp = build_torvik_round_probabilities(seeds, regions, spread_barthag)
-        else:
-            spread_rp = None
-
-        # --- Elo base (A4) ---
-        # Self-contained K=38 Elo from historical_games, bridged via the
-        # cbbpy ID normalizer to canonical tournament IDs, then MC-sim'd
-        # to round_probs via the same torvik machinery.
-        from src.prediction.elo_probabilities import load_elo_barthag
-
-        elo_barthag = load_elo_barthag(year, seeds, Path("data"))
-        if elo_barthag is not None:
-            elo_rp = build_torvik_round_probabilities(seeds, regions, elo_barthag)
-        else:
-            elo_rp = None
-
-        # --- Massey composite base (A5) ---
-        # Aggregated rating across ~150 ranking systems, bridged to canonical
-        # IDs via the Massey-specific alias table. Returns None for years
-        # where the composite file isn't scraped yet (e.g. 2026 at 2026-04-24).
-        from src.prediction.massey_probabilities import load_massey_avg_barthag
-
-        massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
-        if massey_barthag is not None:
-            massey_avg_rp = build_torvik_round_probabilities(seeds, regions, massey_barthag)
-        else:
-            massey_avg_rp = None
-
-        # Massey-best (A6): walk-forward Brier selection over 56+ per-system
-        # rankers (POM, SAG, MOR, BAR, etc.), picking the system with lowest
-        # cumulative Brier on tournament games in years strictly < year.
-        # Falls back gracefully to None when no system qualifies (e.g.
-        # pre-2011 test years without enough historical data).
-        from src.prediction.massey_best_probabilities import (
-            build_massey_best_round_probabilities,
-        )
-
-        massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
-
-        # AP-strength (A8): final-pre-tournament AP poll → barthag, MC via the
-        # shared torvik round-probs builder. Falls back to None if the year is
-        # missing from ap_poll_data.json (e.g., 2020 COVID).
-        from src.prediction.ap_probabilities import load_ap_strength_barthag
-
-        ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), Path("data"))
-        if ap_barthag is not None:
-            ap_strength_rp = build_torvik_round_probabilities(seeds, regions, ap_barthag)
-        else:
-            ap_strength_rp = None
-
-        # Stacked meta-learner (B5): Ridge regression over all Category-A
-        # bases. Walk-forward: fits on game-level barthag diffs from years
-        # strictly < year, then blends the test year's barthag values using
-        # the learned coefficients. Returns None if <3 usable prior years
-        # or if any Category-A source is missing for the test year.
-        from src.prediction.stacked_probabilities import build_stacked_round_probabilities
-
-        stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
-
-        # Probability base registry: base_name → round_probs
-        base_round_probs = {
-            "seed": seed_rp,
-            "noseed": noseed_rp,
-            "blend": blend_rp,
-            "torvik": torvik_rp,
-        }
-        # Only register data-dependent bases if data is available for this year
-        if odds_rp is not None:
-            base_round_probs["odds"] = odds_rp
-        if elo_rp is not None:
-            base_round_probs["elo"] = elo_rp
-        if massey_avg_rp is not None:
-            base_round_probs["massey_avg"] = massey_avg_rp
-        if massey_best_rp is not None:
-            base_round_probs["massey_best"] = massey_best_rp
-        if spread_rp is not None:
-            base_round_probs["spread_power"] = spread_rp
-        if ap_strength_rp is not None:
-            base_round_probs["ap_strength"] = ap_strength_rp
-        if stacked_rp is not None:
-            base_round_probs["stacked"] = stacked_rp
-
-        # --- Contrarian and pool-wisdom bases (B6, B7) ---
-        from src.prediction.contrarian_probabilities import (
-            build_contrarian_round_probs,
-            load_pool_wisdom_ratings,
-        )
-
-        # Contrarian: adjust torvik by ownership gap against public picks
-        contrarian_rp = build_contrarian_round_probs(torvik_rp, pick_dist)
-        base_round_probs["contrarian"] = contrarian_rp
-
-        # Pool wisdom: actual pool picks or extrapolated from bias signature
-        pool_rp = load_pool_wisdom_ratings(year, seeds)
-        if pool_rp is not None:
-            base_round_probs["pool_wisdom"] = pool_rp
-
-        # Upset-tuned context: walk-forward seed-by-round historical reach rates.
-        # Computed once per test year; consumed by the upset_tuned adjustment
-        # inside resolve_pipeline_round_probs. Uses only tournaments < year.
-        from src.prediction.upset_tuned_probabilities import load_upset_tuned_context
-
-        upset_tuned_ctx = load_upset_tuned_context(year)
-
-        # Volatile context: per-team [0,1]-normalized game-margin volatility
-        # from pre-tournament regular-season games. Consumed by the volatile
-        # adjustment. Walk-forward-safe: only uses games strictly before the
-        # Torvik tournament_start cutoff.
-        from src.prediction.volatile_probabilities import load_team_volatility
-
-        team_volatility = load_team_volatility(year, seeds.keys(), Path("data"))
-
-        # Roster context: per-team top-5 mean WARP from cbbpy_rosters_{year}.json,
-        # bridged to canonical IDs via the cbbpy bridge. Consumed by the
-        # roster_adj adjustment. Walk-forward-safe: only reads the year's
-        # roster file. Missing file (rare) → empty dict; downstream resolver
-        # treats absent teams as the neutral z=0 fallback.
-        from src.prediction.roster_adj_probabilities import load_team_talent
-
-        team_talent = load_team_talent(year, seeds.keys(), Path("data"))
-
-        # Coach context: per-team count of head coach's prior NCAA tournament
-        # appearances, cumulated only over Seasons strictly < year (Kaggle
-        # MTeamCoaches × MNCAATourneySeeds). Consumed by the coach_adj
-        # adjustment (one-sided +0..+3% multiplicative boost based on
-        # log-experience). Walk-forward-safe by construction.
-        from src.prediction.coach_adj_probabilities import load_coach_experience
-
-        coach_experience = load_coach_experience(year, seeds.keys(), Path("data"))
-
-        # Momentum context: per-team Jan→Mar four-factor-margin delta from
-        # torvik_four_factors_{year}_*.json monthly snapshots. Consumed by
-        # the momentum adjustment (two-sided tanh-saturated ±3% boost/penalty
-        # based on late-season efficiency trajectory). Walk-forward-safe:
-        # only reads the year's snapshot files. Missing snapshots → empty
-        # dict; downstream resolver treats absent teams as delta=0 (neutral).
-        from src.prediction.momentum_probabilities import load_team_momentum
-
-        team_momentum = load_team_momentum(year, seeds.keys(), Path("data"))
-
-        # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
-        def _make_sampler(mode_name):
-            """Return a sampler function for the given construction mode."""
-            if mode_name == "forward":
-                return sample_model_brackets
-            elif mode_name == "champ_first":
-                return lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r)
-            elif mode_name == "f4_first":
-                return lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "e8_first":
-                return lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "confidence":
-                return lambda fr, rp, n, r: sample_confidence_brackets(fr, rp, n, r)
-            elif mode_name == "f4_chalk":
-                return lambda fr, rp, n, r: sample_f4_chalk_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "f4_diverse":
-                return lambda fr, rp, n, r: sample_f4_diverse_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "f4_top4":
-                return lambda fr, rp, n, r: sample_f4_top4_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "e8_chalk":
-                return lambda fr, rp, n, r: sample_e8_chalk_brackets(fr, rp, n, r, seeds, regions)
-            elif mode_name == "e8_diverse":
-                return lambda fr, rp, n, r: sample_e8_diverse_brackets(fr, rp, n, r, seeds, regions)
-            # New construction modes register here:
-            # elif mode_name == "backward":
-            #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
-            else:
-                raise ValueError(f"Unknown construction mode: {mode_name}")
-
-        # Build mode_sampler_specs from the strategy registry.
-        # Supports both legacy mode names (e.g. "f4_first_tv") and new
-        # base×mode names (e.g. "torvik_f4_first").
-        mode_sampler_specs = []
-
-        # Legacy modes: hardcoded specs for backward compatibility
-        legacy_specs = {
-            "seed": ("seed", seed_rp, sample_model_brackets),
-            "noseed": ("noseed", noseed_rp, sample_model_brackets),
-            "blend": ("blend", blend_rp, sample_model_brackets),
-            "torvik": ("torvik", torvik_rp, sample_model_brackets),
-            "champ_first_tv": (
-                "champ_first_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
-            ),
-            "champ_first_chalkfade_tv": (
-                "champ_first_chalkfade_tv",
-                torvik_rp,
-                lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
-                    fr, rp, n, r, seeds, _cbt
-                ),
-            ),
-            "f4_first_tv": (
-                "f4_first_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
-            ),
-            "e8_first_tv": (
-                "e8_first_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
-            ),
-            "det_champ_tv": (
-                "det_champ_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_champ_tv",
-                ),
-            ),
-            "det_f4_tv": (
-                "det_f4_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_f4_tv",
-                ),
-            ),
-            "det_e8_tv": (
-                "det_e8_tv",
-                torvik_rp,
-                lambda fr, rp, n, r: _deterministic_bracket_sampler(
-                    fr,
-                    rp,
-                    n,
-                    r,
-                    seeds,
-                    regions,
-                    pick_dist,
-                    "det_e8_tv",
-                ),
-            ),
-        }
-
-        from src.prediction.strategy_pipeline import (
-            parse_pipeline,
-            resolve_pipeline_round_probs,
-        )
-
-        for mode_name in hparams.enabled_modes:
-            # Try legacy name first
-            if mode_name in legacy_specs:
-                mode_sampler_specs.append(legacy_specs[mode_name])
-                continue
-
-            # Try simple base×mode cross-product (e.g. "torvik_f4_first")
-            resolved_simple = False
-            if "_" in mode_name:
-                for i in range(len(mode_name)):
-                    if mode_name[i] == "_":
-                        candidate_base = mode_name[:i]
-                        candidate_mode = mode_name[i + 1 :]
-                        if candidate_base in base_round_probs and candidate_mode in CONSTRUCTION_MODES:
-                            rp = base_round_probs[candidate_base]
-                            sampler = _make_sampler(candidate_mode)
-                            mode_sampler_specs.append((mode_name, rp, sampler))
-                            resolved_simple = True
-                            break
-
-            if resolved_simple:
-                continue
-
-            # Try pipeline resolution (e.g. "odds+contrarian_f4_first",
-            # "0.7*torvik+0.3*odds+contrarian_e8_first")
-            try:
-                sources, adjustments, construction = parse_pipeline(mode_name)
-                pipeline_rp = resolve_pipeline_round_probs(
-                    sources,
-                    adjustments,
-                    base_round_probs,
-                    pick_dist,
-                    seeds=seeds,
-                    historical_seed_reach_rates=upset_tuned_ctx,
-                    team_volatility=team_volatility,
-                    team_talent=team_talent,
-                    coach_experience=coach_experience,
-                    team_momentum=team_momentum,
-                )
-                if pipeline_rp is not None:
-                    sampler = _make_sampler(construction)
-                    mode_sampler_specs.append((mode_name, pipeline_rp, sampler))
-                else:
-                    print(f"  WARNING: pipeline '{mode_name}' sources not available for year {year}, skipping")
-            except (ValueError, KeyError) as exc:
-                print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
-
-        # year_rng is shared across opponent generation + tournament
-        # simulation per repeat. Bracket sampling uses a per-(mode, year)
-        # child rng (make_mode_rng) so caching one mode's brackets never
-        # perturbs another mode's draws and the live loop matches the
-        # offline cache builder. See src/data/strategy_cache.make_mode_rng.
-        year_rng = np.random.default_rng(42 + year)
-
-        # Team-id lookup for cache encode/decode. Lazy-loaded once per
-        # year — empty dict if the cache hasn't been initialized yet.
-        team_lookup = load_team_lookup() if (use_cache or write_cache) else {}
-        cache_manifest = Manifest.load() if (use_cache or write_cache) else None
-
-        for mode_name, rp, sampler in mode_sampler_specs:
-            # Per-(mode, year) bracket-sampling rng. Order-independent and
-            # fully isolated from year_rng, so the inner repeat-loop's
-            # opponent / simulation rng consumption is unchanged whether
-            # this mode hits or misses the bracket cache.
-            bracket_rng = make_mode_rng(mode_name, year)
-            cache_key = compute_cache_key(
-                strategy_id=mode_name,
-                year=year,
-                rng_seed=CACHE_PARENT_SEED,
-                code_version=str(STRATEGY_CACHE_VERSION),
-                data_version=BRACKET_DATA_VERSION,
-                model_version=BRACKET_MODEL_VERSION,
-            )
-            model_brackets = None
-            if use_cache:
-                try:
-                    cached = load_brackets(cache_key, cache_manifest)
-                except KeyError:
-                    cached = None
-                except ValueError as exc:
-                    print(f"  {year:<6} {mode_name:<10} CACHE STALE ({exc}) — recomputing")
-                    cached = None
-                if cached is not None and cached.shape[0] == n_model and team_lookup:
-                    model_brackets = array_to_brackets(cached, first_round, team_lookup)
-                    print(f"  {year:<6} {mode_name:<10} CACHE HIT  key={cache_key}")
-                elif cached is not None:
-                    # Shape or lookup mismatch — log and fall through to live
-                    # compute. n_model differs from cached count, or the
-                    # team_id_lookup hasn't been populated for this team set.
-                    print(
-                        f"  {year:<6} {mode_name:<10} CACHE SHAPE MISS "
-                        f"(cached={cached.shape[0]}, want={n_model}) — recomputing"
-                    )
-            if model_brackets is None:
-                model_brackets = sampler(first_round, rp, n_model, bracket_rng)
-                if write_cache and team_lookup:
-                    bracket_array = brackets_to_array(model_brackets, first_round, team_lookup)
-                    entry = save_brackets(
-                        cache_key,
-                        bracket_array,
-                        strategy_id=mode_name,
-                        year=year,
-                        rng_seed=CACHE_PARENT_SEED,
-                        code_version=str(STRATEGY_CACHE_VERSION),
-                        data_version=BRACKET_DATA_VERSION,
-                        model_version=BRACKET_MODEL_VERSION,
-                        provenance={"sampler": mode_name, "n_brackets": n_model, "from_run_backtest": True},
-                    )
-                    cache_manifest.append(entry)
-                    cache_manifest.save()
-                    print(f"  {year:<6} {mode_name:<10} CACHE WRITE key={cache_key}")
-
-            # Score all model brackets against actual outcome (for reporting
-            # BestScr / MeanScr and for --save-brackets).
-            if team_identity:
-                model_scores_actual = score_brackets_team_identity(
-                    model_brackets,
-                    winners_by_rnd,
-                    first_round,
-                    ESPN_SCORING,
-                )
-            else:
-                model_scores_actual = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
-
-            # For each repeat: simulate a tournament outcome, generate
-            # opponents, score everything against that SIMULATED outcome,
-            # rank.  Under --team-identity the ranking uses simulated
-            # outcomes (not the actual result) so that mean_rank reflects
-            # the pre-tournament information the ranker would actually
-            # have — fixing the ρ = −1.000 artifact where ranking against
-            # the known actual outcome trivially agreed with
-            # score_team_identity.
-            all_ranks = np.zeros((n_model, n_repeats))
-
-            for rep in range(n_repeats):
-                opp = generate_opponent_brackets(
-                    year_n_opponents,
-                    first_round,
-                    seed_pw,
-                    pick_dist,
-                    seeds,
-                    year_rng,
-                )
-                if team_identity:
-                    # Simulate one tournament outcome for this repeat.
-                    sim_outcomes, sim_by_round = simulate_tournament_outcomes(
-                        n_tournaments=1,
-                        first_round_matchups=first_round,
-                        matchup_probs=seed_pw,
-                        seeds=seeds,
-                        noise_std=0.16,
-                        rng=year_rng,
-                    )
-                    sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
-                    model_scores_sim = score_brackets_team_identity(
-                        model_brackets,
-                        sim_winners,
-                        first_round,
-                        ESPN_SCORING,
-                    )
-                    opp_scores = score_brackets_team_identity(
-                        opp,
-                        sim_winners,
-                        first_round,
-                        ESPN_SCORING,
-                    )
-                else:
-                    model_scores_sim = model_scores_actual
-                    opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
-
-                # Rank each model bracket against this opponent field
-                for m in range(n_model):
-                    # How many opponents scored strictly higher + 1
-                    better = np.sum(opp_scores > model_scores_sim[m])
-                    tied = np.sum(opp_scores == model_scores_sim[m])
-                    # Average rank among ties (model is 1 of the tied group)
-                    all_ranks[m, rep] = better + 1 + tied / 2.0
-
-            # Per-bracket average rank across repeats
-            bracket_mean_ranks = all_ranks.mean(axis=1)
-            # Best bracket = lowest average rank
-            best_bracket_idx = np.argmin(bracket_mean_ranks)
-            best_rank = bracket_mean_ranks[best_bracket_idx]
-            mean_rank = bracket_mean_ranks.mean()
-
-            # P(1st) across all brackets x repeats
-            p_first = (all_ranks == 1.0).mean()
-            p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
-            p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
-            # Count of binary win/lose trials behind p_first — needed by the
-            # downstream Wilson-CI computation (phase-2 metrics rollout).
-            n_trials = int(all_ranks.size)
-
-            best_score = float(model_scores_actual[best_bracket_idx])
-            mean_score = float(model_scores_actual.mean())
-
-            print(
-                f"  {year:<6} {mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
-                f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
-                f"{best_score:8.0f} {mean_score:8.0f}"
-            )
-
-            results.append(
-                {
-                    "year": year,
-                    "mode": mode_name,
-                    "best_rank": best_rank,
-                    "mean_rank": mean_rank,
-                    "best_score": best_score,
-                    "mean_score": mean_score,
-                    "p_first": p_first,
-                    "p_top5": p_top5,
-                    "p_top25": p_top25,
-                    "n_trials": n_trials,
-                }
-            )
-
-            # Serialize pick-level brackets when --save-brackets is active.
-            if save_brackets:
-                winners_by_rnd = actual_winners_by_round(games)
-                ti_scores = score_brackets_team_identity(
-                    model_brackets,
-                    winners_by_rnd,
-                    first_round,
-                    ESPN_SCORING,
-                )
-                mode_bracket_records = []
-                for m in range(n_model):
-                    picks = picks_by_round(model_brackets[m], first_round)
-                    champion = list(picks["CHAMP"])[0] if picks["CHAMP"] else None
-                    final_four = sorted(picks["F4"]) if picks["F4"] else []
-                    mode_bracket_records.append(
-                        {
-                            "bracket_idx": m,
-                            "score_team_identity": float(ti_scores[m]),
-                            "score_shape": float(model_scores_actual[m]),
-                            "mean_rank": float(bracket_mean_ranks[m]),
-                            "champion": champion,
-                            "final_four": final_four,
-                            "picks": {rnd: sorted(teams) for rnd, teams in picks.items()},
-                        }
-                    )
-                mode_bracket_records.sort(key=lambda x: -x["score_team_identity"])
-                saved_brackets.setdefault(year, []).append(
-                    {
-                        "mode": mode_name,
-                        "brackets": mode_bracket_records,
-                    }
-                )
-
-        # opt_seed, opt_blend, opt_torvik, hedge_tv: DEPRECATED 2026-04-12.
-        # See MEMORY.md §2 D6 and COUNCIL_LESSONS.md §3 rows 23-25 for evidence.
-
+    pending_manifest_entries: list = []
+    job_args = (
+        n_opponents,
+        n_repeats,
+        n_model,
+        opponent_source,
+        hparam_fitter,
+        team_identity,
+        save_brackets,
+        use_cache,
+        write_cache,
+        scoring_vector,
+    )
+
+    def _absorb(outcome: dict) -> None:
+        results.extend(outcome["results"])
+        if outcome["saved_modes"]:
+            saved_brackets[outcome["year"]] = outcome["saved_modes"]
+        pending_manifest_entries.extend(outcome["manifest_entries"])
+
+    if workers <= 1:
+        # Sequential — bit-exact identical to pre-parallelism behavior.
+        for year in years:
+            _absorb(_run_one_year(year, *job_args))
+    else:
+        # ProcessPoolExecutor across years. Each year is self-contained:
+        # walk-forward fit, opponent/sim rng, bracket rng all derive from
+        # `year` alone, so the order workers complete in doesn't affect
+        # per-(year, mode) results. Output prints in completion order, not
+        # year order, by design (see --workers help text in run_experiment.py).
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+
+        effective_workers = min(workers, len(years))
+        print(f"  [parallel] dispatching {len(years)} years across {effective_workers} workers")
+        with ProcessPoolExecutor(max_workers=effective_workers) as ex:
+            futures = {ex.submit(_run_one_year, year, *job_args): year for year in years}
+            for fut in as_completed(futures):
+                _absorb(fut.result())
+
+    # Serialize manifest writes once, after all years complete. Workers
+    # collect entries locally and return them; we merge them into the
+    # on-disk manifest here so parallel workers don't race on save().
+    if pending_manifest_entries:
+        manifest_for_save = Manifest.load()
+        for entry in pending_manifest_entries:
+            manifest_for_save.append(entry)
+        manifest_for_save.save()
     if not results:
         print("\nNo results.")
         return []

@@ -41,7 +41,7 @@ from scripts.mc_pool_backtest import (
     CONSTRUCTION_MODES,
     BACKTEST_YEARS,
     run_backtest,
-    PoolHyperparameters,
+    StrategiesFitter,
     expand_strategies,
 )
 from src.prediction.strategy_pipeline import (
@@ -322,6 +322,7 @@ def run_budget(
     *,
     use_cache: bool = False,
     write_cache: bool = False,
+    workers: int = 1,
 ) -> dict:
     """Run the full T1 → kill → T2 → kill → T3 budgeted pipeline.
 
@@ -374,6 +375,7 @@ def run_budget(
         label="screen",
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
     t1_stats = aggregate_strategy_stats(t1_results, baseline_key)
     t1_survivors, t1_killed = apply_kill_threshold(t1_stats, t1_cfg, baseline_key)
@@ -403,6 +405,7 @@ def run_budget(
         label="rank",
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
     t2_stats = aggregate_strategy_stats(t2_results, baseline_key)
     t2_survivors, t2_killed = apply_kill_threshold(t2_stats, t2_cfg, baseline_key)
@@ -450,6 +453,7 @@ def run_budget(
         save_brackets=True,
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
     _run_significance_tests(t3_results, t2_promoted)
     t3_stats = aggregate_strategy_stats(t3_results, baseline_key)
@@ -481,6 +485,7 @@ def _run_tier(
     save_brackets: bool = False,
     use_cache: bool = False,
     write_cache: bool = False,
+    workers: int = 1,
 ) -> List[dict]:
     """Run a single tier pass and return flat per-(strategy, year) results.
 
@@ -500,11 +505,7 @@ def _run_tier(
         f"{' [save-brackets]' if save_brackets else ''}"
     )
 
-    def fitter(train_years):
-        return PoolHyperparameters(
-            blend_alpha=0.5,
-            enabled_modes=tuple(strategies),
-        )
+    fitter = StrategiesFitter(strategies, blend_alpha=0.5)
 
     t0 = time.time()
     results = run_backtest(
@@ -518,6 +519,7 @@ def _run_tier(
         save_brackets=save_brackets,
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
     elapsed = time.time() - t0
     target_s = tier_cfg.wall_time_target_hours * 3600
@@ -548,7 +550,7 @@ def _save_budget_summary(summary: dict) -> Path:
     return out_path
 
 
-def run_tier1(n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False):
+def run_tier1(n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False, workers=1):
     """Tier 1: Every base × forward mode. Identifies best bases."""
     bases = list(PROBABILITY_BASES)
     modes = ["forward"]
@@ -561,16 +563,32 @@ def run_tier1(n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, wri
         label="tier1",
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
 
 
 def run_tier2(
-    top_n=5, tier1_results=None, n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False
+    top_n=5,
+    tier1_results=None,
+    n_repeats=100,
+    n_model=50,
+    n_opponents=30,
+    *,
+    use_cache=False,
+    write_cache=False,
+    workers=1,
 ):
     """Tier 2: Top N bases from Tier 1 × all construction modes."""
     if tier1_results is None:
         print("Running Tier 1 first to identify top bases...")
-        tier1_results = run_tier1(n_repeats, n_model, n_opponents, use_cache=use_cache, write_cache=write_cache)
+        tier1_results = run_tier1(
+            n_repeats,
+            n_model,
+            n_opponents,
+            use_cache=use_cache,
+            write_cache=write_cache,
+            workers=workers,
+        )
 
     # Rank bases by mean P(1st) across years
     base_p1 = {}
@@ -597,6 +615,7 @@ def run_tier2(
         label="tier2",
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
 
 
@@ -609,6 +628,7 @@ def run_permutations(
     *,
     use_cache=False,
     write_cache=False,
+    workers=1,
 ):
     """Run all valid permutations of source × adjustments × construction."""
     strategies = generate_all_permutations(
@@ -627,6 +647,7 @@ def run_permutations(
         label="permutations",
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
 
 
@@ -639,6 +660,7 @@ def _run_pipeline_sweep(
     *,
     use_cache=False,
     write_cache=False,
+    workers=1,
 ):
     """Run backtest for pipeline-specified strategies."""
     n_strategies = len(strategies)
@@ -651,11 +673,7 @@ def _run_pipeline_sweep(
 
     t0 = time.time()
 
-    def experiment_fitter(train_years):
-        return PoolHyperparameters(
-            blend_alpha=0.5,
-            enabled_modes=tuple(strategies),
-        )
+    experiment_fitter = StrategiesFitter(strategies, blend_alpha=0.5)
 
     results = run_backtest(
         years=None,
@@ -667,6 +685,7 @@ def _run_pipeline_sweep(
         team_identity=True,
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
 
     elapsed = time.time() - t0
@@ -693,6 +712,7 @@ def _run_sweep(
     *,
     use_cache=False,
     write_cache=False,
+    workers=1,
 ):
     """Run backtest for all base × mode combinations."""
     strategies = expand_strategies(bases, modes)
@@ -710,12 +730,9 @@ def _run_sweep(
 
     t0 = time.time()
 
-    # Build a fitter that enables exactly our strategies
-    def experiment_fitter(train_years):
-        return PoolHyperparameters(
-            blend_alpha=0.5,
-            enabled_modes=tuple(strategies),
-        )
+    # Picklable fitter that enables exactly our strategies (top-level
+    # callable class so workers can pickle it for parallel dispatch).
+    experiment_fitter = StrategiesFitter(strategies, blend_alpha=0.5)
 
     results = run_backtest(
         years=None,
@@ -727,6 +744,7 @@ def _run_sweep(
         team_identity=True,
         use_cache=use_cache,
         write_cache=write_cache,
+        workers=workers,
     )
 
     elapsed = time.time() - t0
@@ -970,6 +988,19 @@ def main():
         "STRATEGY_CACHE_VERSION bump to populate the cache; subsequent "
         "--use-cache runs hit it for free.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Parallelize the per-year backtest loop across N worker processes "
+        "(default 1 = sequential). Each worker is a full Python process; memory "
+        "scales linearly. Output prints in completion order, not year order. "
+        "Bit-exact with the serial run because each year creates its own RNG "
+        "from the (year, mode) seed (Phase 4.2 RNG isolation). Recommended "
+        "starting point: --workers $(nproc) capped at the year count "
+        "(~14 backtest years).",
+    )
     args = parser.parse_args()
 
     if args.oracle is not None:
@@ -979,7 +1010,11 @@ def main():
         run_chaos_index_report()
         return
 
-    cache_kwargs = {"use_cache": args.use_cache, "write_cache": args.write_cache}
+    cache_kwargs = {
+        "use_cache": args.use_cache,
+        "write_cache": args.write_cache,
+        "workers": args.workers,
+    }
 
     if args.tier == "budget":
         run_budget(
