@@ -319,6 +319,9 @@ def run_budget(
     strategies: Optional[Sequence[str]] = None,
     baseline_key: str = DEFAULT_BASELINE,
     n_opponents: int = 30,
+    *,
+    use_cache: bool = False,
+    write_cache: bool = False,
 ) -> dict:
     """Run the full T1 → kill → T2 → kill → T3 budgeted pipeline.
 
@@ -363,7 +366,15 @@ def run_budget(
     # --- T1 screen ---
     t1_cfg = TIER_CONFIGS["T1"]
     t1_years = select_tier_years(BACKTEST_YEARS, t1_cfg)
-    t1_results = _run_tier(strategies, t1_cfg, t1_years, n_opponents, label="screen")
+    t1_results = _run_tier(
+        strategies,
+        t1_cfg,
+        t1_years,
+        n_opponents,
+        label="screen",
+        use_cache=use_cache,
+        write_cache=write_cache,
+    )
     t1_stats = aggregate_strategy_stats(t1_results, baseline_key)
     t1_survivors, t1_killed = apply_kill_threshold(t1_stats, t1_cfg, baseline_key)
     _print_kill_report(t1_killed, t1_cfg.name)
@@ -384,7 +395,15 @@ def run_budget(
     # --- T2 rank ---
     t2_cfg = TIER_CONFIGS["T2"]
     t2_years = select_tier_years(BACKTEST_YEARS, t2_cfg)
-    t2_results = _run_tier(t1_promoted, t2_cfg, t2_years, n_opponents, label="rank")
+    t2_results = _run_tier(
+        t1_promoted,
+        t2_cfg,
+        t2_years,
+        n_opponents,
+        label="rank",
+        use_cache=use_cache,
+        write_cache=write_cache,
+    )
     t2_stats = aggregate_strategy_stats(t2_results, baseline_key)
     t2_survivors, t2_killed = apply_kill_threshold(t2_stats, t2_cfg, baseline_key)
     _print_kill_report(t2_killed, t2_cfg.name)
@@ -429,6 +448,8 @@ def run_budget(
         n_opponents,
         label="validate",
         save_brackets=True,
+        use_cache=use_cache,
+        write_cache=write_cache,
     )
     _run_significance_tests(t3_results, t2_promoted)
     t3_stats = aggregate_strategy_stats(t3_results, baseline_key)
@@ -458,6 +479,8 @@ def _run_tier(
     label: str,
     *,
     save_brackets: bool = False,
+    use_cache: bool = False,
+    write_cache: bool = False,
 ) -> List[dict]:
     """Run a single tier pass and return flat per-(strategy, year) results.
 
@@ -493,6 +516,8 @@ def _run_tier(
         hparam_fitter=fitter,
         team_identity=True,
         save_brackets=save_brackets,
+        use_cache=use_cache,
+        write_cache=write_cache,
     )
     elapsed = time.time() - t0
     target_s = tier_cfg.wall_time_target_hours * 3600
@@ -523,18 +548,29 @@ def _save_budget_summary(summary: dict) -> Path:
     return out_path
 
 
-def run_tier1(n_repeats=100, n_model=50, n_opponents=30):
+def run_tier1(n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False):
     """Tier 1: Every base × forward mode. Identifies best bases."""
     bases = list(PROBABILITY_BASES)
     modes = ["forward"]
-    return _run_sweep(bases, modes, n_repeats, n_model, n_opponents, label="tier1")
+    return _run_sweep(
+        bases,
+        modes,
+        n_repeats,
+        n_model,
+        n_opponents,
+        label="tier1",
+        use_cache=use_cache,
+        write_cache=write_cache,
+    )
 
 
-def run_tier2(top_n=5, tier1_results=None, n_repeats=100, n_model=50, n_opponents=30):
+def run_tier2(
+    top_n=5, tier1_results=None, n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False
+):
     """Tier 2: Top N bases from Tier 1 × all construction modes."""
     if tier1_results is None:
         print("Running Tier 1 first to identify top bases...")
-        tier1_results = run_tier1(n_repeats, n_model, n_opponents)
+        tier1_results = run_tier1(n_repeats, n_model, n_opponents, use_cache=use_cache, write_cache=write_cache)
 
     # Rank bases by mean P(1st) across years
     base_p1 = {}
@@ -552,7 +588,16 @@ def run_tier2(top_n=5, tier1_results=None, n_repeats=100, n_model=50, n_opponent
 
     print(f"\nTier 2: Top {top_n} bases = {top_bases}")
     modes = list(CONSTRUCTION_MODES)
-    return _run_sweep(top_bases, modes, n_repeats, n_model, n_opponents, label="tier2")
+    return _run_sweep(
+        top_bases,
+        modes,
+        n_repeats,
+        n_model,
+        n_opponents,
+        label="tier2",
+        use_cache=use_cache,
+        write_cache=write_cache,
+    )
 
 
 def run_permutations(
@@ -561,6 +606,9 @@ def run_permutations(
     n_repeats=100,
     n_model=50,
     n_opponents=30,
+    *,
+    use_cache=False,
+    write_cache=False,
 ):
     """Run all valid permutations of source × adjustments × construction."""
     strategies = generate_all_permutations(
@@ -571,10 +619,27 @@ def run_permutations(
     print(f"\nGenerated {len(strategies)} strategy permutations:")
     for s in strategies:
         print(f"  {s}")
-    return _run_pipeline_sweep(strategies, n_repeats, n_model, n_opponents, label="permutations")
+    return _run_pipeline_sweep(
+        strategies,
+        n_repeats,
+        n_model,
+        n_opponents,
+        label="permutations",
+        use_cache=use_cache,
+        write_cache=write_cache,
+    )
 
 
-def _run_pipeline_sweep(strategies, n_repeats, n_model, n_opponents, label="pipeline"):
+def _run_pipeline_sweep(
+    strategies,
+    n_repeats,
+    n_model,
+    n_opponents,
+    label="pipeline",
+    *,
+    use_cache=False,
+    write_cache=False,
+):
     """Run backtest for pipeline-specified strategies."""
     n_strategies = len(strategies)
     print(f"\n{'=' * 80}")
@@ -600,6 +665,8 @@ def _run_pipeline_sweep(strategies, n_repeats, n_model, n_opponents, label="pipe
         opponent_source="pool",
         hparam_fitter=experiment_fitter,
         team_identity=True,
+        use_cache=use_cache,
+        write_cache=write_cache,
     )
 
     elapsed = time.time() - t0
@@ -616,7 +683,17 @@ def _run_pipeline_sweep(strategies, n_repeats, n_model, n_opponents, label="pipe
     return results
 
 
-def _run_sweep(bases, modes, n_repeats, n_model, n_opponents, label="sweep"):
+def _run_sweep(
+    bases,
+    modes,
+    n_repeats,
+    n_model,
+    n_opponents,
+    label="sweep",
+    *,
+    use_cache=False,
+    write_cache=False,
+):
     """Run backtest for all base × mode combinations."""
     strategies = expand_strategies(bases, modes)
     n_strategies = len(strategies)
@@ -648,6 +725,8 @@ def _run_sweep(bases, modes, n_repeats, n_model, n_opponents, label="sweep"):
         opponent_source="pool",
         hparam_fitter=experiment_fitter,
         team_identity=True,
+        use_cache=use_cache,
+        write_cache=write_cache,
     )
 
     elapsed = time.time() - t0
@@ -874,6 +953,23 @@ def main():
         "years: Torvik top-of-field features, walk-forward predicted mean-F4-seed, "
         "per-feature correlation with actual chaos. Output saved to artifacts/experiments/.",
     )
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Read per-(mode, year) brackets from artifacts/strategy_cache/ when "
+        "the cache key matches; fall back to live sampling on miss. Hit rate is "
+        "tied to STRATEGY_CACHE_VERSION + (mode, year, parent_seed=42); see "
+        "src/data/strategy_cache.py for the full key schema. Populate first "
+        "via scripts/build_probability_cache.py + scripts/build_bracket_cache.py.",
+    )
+    parser.add_argument(
+        "--write-cache",
+        action="store_true",
+        help="On every cache miss, encode the freshly-sampled brackets and "
+        "persist them under the same key. Use this on the first run after a "
+        "STRATEGY_CACHE_VERSION bump to populate the cache; subsequent "
+        "--use-cache runs hit it for free.",
+    )
     args = parser.parse_args()
 
     if args.oracle is not None:
@@ -883,31 +979,52 @@ def main():
         run_chaos_index_report()
         return
 
+    cache_kwargs = {"use_cache": args.use_cache, "write_cache": args.write_cache}
+
     if args.tier == "budget":
-        run_budget(strategies=args.strategies, baseline_key=args.baseline, n_opponents=args.n_opponents)
+        run_budget(
+            strategies=args.strategies,
+            baseline_key=args.baseline,
+            n_opponents=args.n_opponents,
+            **cache_kwargs,
+        )
     elif args.tier == "3":
         strategies = args.strategies or list(generate_all_permutations(implemented_only=True))
         if args.baseline not in strategies:
             strategies.append(args.baseline)
         t3_cfg = TIER_CONFIGS["T3"]
         t3_years = select_tier_years(BACKTEST_YEARS, t3_cfg)
-        results = _run_tier(strategies, t3_cfg, t3_years, args.n_opponents, label="validate")
+        results = _run_tier(strategies, t3_cfg, t3_years, args.n_opponents, label="validate", **cache_kwargs)
         _run_significance_tests(results, strategies)
     elif args.permutations:
-        run_permutations(args.max_blend, args.max_adj, args.n_repeats, args.n_model, args.n_opponents)
+        run_permutations(
+            args.max_blend,
+            args.max_adj,
+            args.n_repeats,
+            args.n_model,
+            args.n_opponents,
+            **cache_kwargs,
+        )
     elif args.strategies:
-        _run_pipeline_sweep(args.strategies, args.n_repeats, args.n_model, args.n_opponents, label="custom")
+        _run_pipeline_sweep(
+            args.strategies,
+            args.n_repeats,
+            args.n_model,
+            args.n_opponents,
+            label="custom",
+            **cache_kwargs,
+        )
     elif args.tier == "1":
-        run_tier1(args.n_repeats, args.n_model, args.n_opponents)
+        run_tier1(args.n_repeats, args.n_model, args.n_opponents, **cache_kwargs)
     elif args.tier == "2":
-        run_tier2(args.top_n, None, args.n_repeats, args.n_model, args.n_opponents)
+        run_tier2(args.top_n, None, args.n_repeats, args.n_model, args.n_opponents, **cache_kwargs)
     elif args.tier == "all":
-        tier1 = run_tier1(args.n_repeats, args.n_model, args.n_opponents)
-        run_tier2(args.top_n, tier1, args.n_repeats, args.n_model, args.n_opponents)
+        tier1 = run_tier1(args.n_repeats, args.n_model, args.n_opponents, **cache_kwargs)
+        run_tier2(args.top_n, tier1, args.n_repeats, args.n_model, args.n_opponents, **cache_kwargs)
     elif args.bases or args.modes:
         bases = args.bases or list(PROBABILITY_BASES)
         modes = args.modes or list(CONSTRUCTION_MODES)
-        _run_sweep(bases, modes, args.n_repeats, args.n_model, args.n_opponents)
+        _run_sweep(bases, modes, args.n_repeats, args.n_model, args.n_opponents, **cache_kwargs)
     else:
         parser.print_help()
 
