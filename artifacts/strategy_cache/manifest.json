@@ -1,259 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-25T00:29:52",
+  "generated_at": "2026-04-25T18:57:00",
   "entries": [
-    {
-      "strategy_id": "torvik",
-      "year": 2023,
-      "cache_key": "8dec0760d6651292",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/8dec0760d6651292.npz",
-      "content_hash": "1f6437c323cb48257d0dc671b70df725cf03c7480a94e345801904f2f0ae45de",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
-      }
-    },
-    {
-      "strategy_id": "f4_first_tv",
-      "year": 2023,
-      "cache_key": "da407a3b7adf4c07",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/da407a3b7adf4c07.npz",
-      "content_hash": "18dff177c5b6d97fd915e8be82bbe2983ae81bfe3263b85049dcf29dbc767e5b",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
-      }
-    },
-    {
-      "strategy_id": "e8_first_tv",
-      "year": 2023,
-      "cache_key": "7b3a9a391e3ea439",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/7b3a9a391e3ea439.npz",
-      "content_hash": "83c3a40b79570a69596e365ff016e211cb87e5404ae7fef1c9b7dc0e02dbef8b",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
-      }
-    },
-    {
-      "strategy_id": "torvik",
-      "year": 2024,
-      "cache_key": "533800925b151646",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/533800925b151646.npz",
-      "content_hash": "d4e471201bd7a58eba517e8485dda8b8a891dff7537126e98c904525d5c1280b",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
-      }
-    },
-    {
-      "strategy_id": "f4_first_tv",
-      "year": 2024,
-      "cache_key": "861e39b765a2bc7e",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/861e39b765a2bc7e.npz",
-      "content_hash": "57d28bbc81dacdd5d053f2e4b8d38c78f38208253d09abd010daf47cb83db8e4",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
-      }
-    },
-    {
-      "strategy_id": "e8_first_tv",
-      "year": 2024,
-      "cache_key": "36348b89756a0f21",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/36348b89756a0f21.npz",
-      "content_hash": "bc7410c3325a16b04ac13f890e4b5463fe21d42f28273a98aa78519211f56f5e",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
-      }
-    },
-    {
-      "strategy_id": "torvik",
-      "year": 2025,
-      "cache_key": "27c52d7ea011f27d",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/27c52d7ea011f27d.npz",
-      "content_hash": "c531a817ad963d4ba7397388d7e3dfb5c49dbbfbc649643bf91e95e92c0bba94",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
-      }
-    },
-    {
-      "strategy_id": "f4_first_tv",
-      "year": 2025,
-      "cache_key": "bca431c445c19613",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/bca431c445c19613.npz",
-      "content_hash": "7c119efe77e94a2fb6b378b1b24b24e86f35aea9795798b55ac82186e3d12f50",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
-      }
-    },
-    {
-      "strategy_id": "e8_first_tv",
-      "year": 2025,
-      "cache_key": "5ebf7be05cb9b990",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/5ebf7be05cb9b990.npz",
-      "content_hash": "59d20dbcb1f3dff4d6eaa059419dfa7fead0bd43cbde5def59efb3fec89c5b57",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
-      }
-    },
-    {
-      "strategy_id": "torvik",
-      "year": 2026,
-      "cache_key": "9b9559823a04285c",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/9b9559823a04285c.npz",
-      "content_hash": "2472dfd6804ae905b2a8a9b85afd4089b56aa52cf8b7fe8305b4ad25a47333fd",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
-      }
-    },
-    {
-      "strategy_id": "f4_first_tv",
-      "year": 2026,
-      "cache_key": "bd5262e08e1d52fc",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/bd5262e08e1d52fc.npz",
-      "content_hash": "2fbbdc3f533cabccf04f17447193dc61e263a3f3aa096f79a3809d1717444b60",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
-      }
-    },
-    {
-      "strategy_id": "e8_first_tv",
-      "year": 2026,
-      "cache_key": "de0c25bdcf7705cb",
-      "rng_seed": "frozen-2026-04-18",
-      "code_version": "450c54fc045b",
-      "data_version": "backtest_brackets_2026-04-18",
-      "model_version": "shape-baseline-pre-O27",
-      "artifact_kind": "brackets",
-      "artifact_path": "brackets/de0c25bdcf7705cb.npz",
-      "content_hash": "2b6e7335ae662105e1b5c1fe14dc69f407aba0275298454805c8614b42eab90d",
-      "shape": [
-        50,
-        63
-      ],
-      "dtype": "uint16",
-      "generated_at": "2026-04-25T00:29:52",
-      "provenance": {
-        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
-      }
-    },
     {
       "strategy_id": "GROUND_TRUTH",
       "year": 2005,
@@ -672,6 +420,75 @@
       "generated_at": "2026-04-25T00:29:52",
       "provenance": {
         "source": "data/raw/historical/tournament_results_2026.json"
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2026,
+      "cache_key": "f72f5ac16c945875",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "torvik+seed=42",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/f72f5ac16c945875.npz",
+      "content_hash": "27e322811837dded436057b9ef7809d00d62a1dd7f29d8fef9456426d8bbb136",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T18:56:47",
+      "provenance": {
+        "sampler": "torvik",
+        "n_brackets": 50,
+        "from_run_backtest": true
+      }
+    },
+    {
+      "strategy_id": "f4_first_tv",
+      "year": 2026,
+      "cache_key": "2376b7879b020a27",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "torvik+seed=42",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/2376b7879b020a27.npz",
+      "content_hash": "210241c87593827de4e05a31557efef4d3df6d920d21a392464e7619c0fa4ff0",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T18:56:47",
+      "provenance": {
+        "sampler": "f4_first_tv",
+        "n_brackets": 50,
+        "from_run_backtest": true
+      }
+    },
+    {
+      "strategy_id": "e8_first_tv",
+      "year": 2026,
+      "cache_key": "a2425e2e1caa0cc9",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "torvik+seed=42",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/a2425e2e1caa0cc9.npz",
+      "content_hash": "97622acb09da8fc71459966e2456b10c9e659ed2f11e88bb1787ba38db167df5",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T18:56:47",
+      "provenance": {
+        "sampler": "e8_first_tv",
+        "n_brackets": 50,
+        "from_run_backtest": true
       }
     }
   ]
