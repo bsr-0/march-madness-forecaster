@@ -33,6 +33,24 @@ TEAM_LOOKUP_PATH = CACHE_ROOT / "team_id_lookup.json"
 SCHEMA_VERSION = 1
 N_GAMES = 63  # 32 R64 + 16 R32 + 8 S16 + 4 E8 + 2 F4 + 1 CHAMP
 
+# Manually-bumped sampler-logic version. Lives in the cache_key as the
+# "code_version" component for new entries (Phase 2+ probability cache,
+# Phase 3+ bracket cache, Phase 4 live-loop writes). Bump when ANY of:
+#   - sampler RNG consumption pattern changes (sample_*_brackets in
+#     scripts/mc_pool_backtest.py)
+#   - build_torvik_round_probabilities or upstream Log5/MC math changes
+#   - picks_by_round / brackets_to_array encoding changes
+#   - make_mode_rng derivation below changes
+# Pre-existing migration entries (rng_seed='frozen-2026-04-18') were
+# hashed with a one-time git SHA; they remain loadable independently.
+STRATEGY_CACHE_VERSION = 1
+
+# Round layout in the (n_brackets, 63) alphabetical-within-round encoding.
+# Sum of sizes == N_GAMES.
+_ROUND_ORDER = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
+_ROUND_SIZES = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
+_ROUND_OFFSETS = {"R64": 0, "R32": 32, "S16": 48, "E8": 56, "F4": 60, "CHAMP": 62}
+
 SeedT = Union[int, str]
 
 
@@ -312,3 +330,81 @@ def verify_manifest(manifest: Optional[Manifest] = None) -> list[str]:
         if content_hash(abs_path) != entry.content_hash:
             issues.append(f"content hash mismatch: {entry.artifact_path}")
     return issues
+
+
+def make_mode_rng(
+    mode_name: str,
+    year: int,
+    parent_seed: int = 42,
+) -> np.random.Generator:
+    """Deterministic per-(mode, year) child rng derived from a parent seed.
+
+    Decouples per-mode rng streams so caching one mode's brackets never
+    perturbs another mode's draws — and so the live experiment loop and
+    the offline cache builder produce identical brackets regardless of
+    mode iteration order. The (mode_name, year) pair selects a unique
+    child stream of the parent_seed entropy.
+    """
+    h = hashlib.sha256(f"{mode_name}|{year}".encode()).digest()
+    spawn_key = tuple(int.from_bytes(h[i : i + 4], "big") for i in (0, 4, 8, 12))
+    ss = np.random.SeedSequence(entropy=parent_seed, spawn_key=spawn_key)
+    return np.random.default_rng(ss)
+
+
+def array_to_brackets(
+    bracket_array: np.ndarray,
+    first_round: list,
+    lookup: dict[str, int],
+) -> np.ndarray:
+    """Decode (n_brackets, 63) uint16 alphabetical-within-round → (n_brackets, 63) bool.
+
+    Inverse of ``brackets_to_array`` in scripts/build_bracket_cache.py. The
+    cached form stores per-round winner team-ids alphabetically; the dense
+    form stores one bool per game (True = top-listed team of the slot won).
+    The dense form is what the experiment loop's scoring/ranking pipeline
+    consumes, so cache hits must be decoded back to dense before use.
+
+    Walk: for each round, look up that round's cached winner *set*, then
+    pair-walk the current matchup list to set the per-game bool based on
+    which side's team is in the set. Order within a round doesn't matter
+    because we only need set membership.
+    """
+    if bracket_array.dtype != np.uint16:
+        raise ValueError(f"bracket_array must be uint16, got {bracket_array.dtype}")
+    if bracket_array.ndim != 2 or bracket_array.shape[1] != N_GAMES:
+        raise ValueError(f"bracket_array must be (n_brackets, {N_GAMES}), got {bracket_array.shape}")
+    if len(first_round) != 64:
+        raise ValueError(f"first_round must have 64 teams, got {len(first_round)}")
+
+    inverse_lookup = {v: k for k, v in lookup.items()}
+    n = bracket_array.shape[0]
+    out = np.zeros((n, N_GAMES), dtype=bool)
+
+    for m in range(n):
+        winners_by_round: dict[str, set[str]] = {}
+        for rnd in _ROUND_ORDER:
+            offset = _ROUND_OFFSETS[rnd]
+            size = _ROUND_SIZES[rnd]
+            ids = bracket_array[m, offset : offset + size]
+            winners_by_round[rnd] = {inverse_lookup[int(tid)] for tid in ids}
+
+        current = list(first_round)
+        gi = 0
+        for rnd in _ROUND_ORDER:
+            nxt: list[str] = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                if t1 in winners_by_round[rnd]:
+                    out[m, gi] = True
+                    nxt.append(t1)
+                elif t2 in winners_by_round[rnd]:
+                    out[m, gi] = False
+                    nxt.append(t2)
+                else:
+                    raise ValueError(
+                        f"bracket {m} round {rnd} game {g}: neither {t1!r} nor {t2!r} "
+                        f"in cached winner set — cache inconsistent with first_round layout"
+                    )
+                gi += 1
+            current = nxt
+    return out
