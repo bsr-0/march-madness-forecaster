@@ -1935,6 +1935,15 @@ def run_backtest(
 
         team_talent = load_team_talent(year, seeds.keys(), Path("data"))
 
+        # Coach context: per-team count of head coach's prior NCAA tournament
+        # appearances, cumulated only over Seasons strictly < year (Kaggle
+        # MTeamCoaches × MNCAATourneySeeds). Consumed by the coach_adj
+        # adjustment (one-sided +0..+3% multiplicative boost based on
+        # log-experience). Walk-forward-safe by construction.
+        from src.prediction.coach_adj_probabilities import load_coach_experience
+
+        coach_experience = load_coach_experience(year, seeds.keys(), Path("data"))
+
         # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
         def _make_sampler(mode_name):
             """Return a sampler function for the given construction mode."""
@@ -2082,6 +2091,7 @@ def run_backtest(
                     historical_seed_reach_rates=upset_tuned_ctx,
                     team_volatility=team_volatility,
                     team_talent=team_talent,
+                    coach_experience=coach_experience,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)

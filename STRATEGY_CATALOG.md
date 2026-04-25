@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 3,080 strategies — 7 sources × (1 + 4 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 4,480 strategies — 7 sources × (1 + 5 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -249,17 +249,23 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 ### Category C: Feature-Enriched Ratings
 
 #### C1: `coach_adj`
-- **Status:** NEW
-- **Data:** `data/kaggle/MTeamCoaches.csv` + tournament results history
+- **Status:** IMPLEMENTED (2026-04-25) — shipped as an ADJUSTMENT (not a base) for composability with every source × construction. Builds a per-coach prior-tournament-appearance count via Kaggle `MTeamCoaches.csv` × `MNCAATourneySeeds.csv`, joining to the canonical tournament ID via a `MTeamSpellings.csv`-driven bridge.
+- **Data:**
+  - `data/kaggle/MTeamCoaches.csv` — per-(season, kaggle_team_id) head coach. Mid-season swaps resolved by max tenure (`LastDayNum − FirstDayNum`).
+  - `data/kaggle/MNCAATourneySeeds.csv` — set of (season, kaggle_team_id) pairs that made the tournament. Used to count appearances.
+  - `data/kaggle/MTeamSpellings.csv` — canonical → Kaggle TeamID bridge via a name-normalization cascade (`__` → ` `, `_s__` → `'s `, `_a_m` → ` a&m`, `saint_` → `st `) plus a 2-entry manual alias table (`maryland_baltimore_county` → `umbc`, `st__john_s__ny` → `st john's`). Coverage: **68/68 on the 2026 tournament field**.
 - **Algorithm:**
-  1. Start with torvik barthag
-  2. For each team's coach, compute tournament experience: count of prior NCAA tournament appearances as head coach
-  3. Apply multiplicative adjustment: `barthag *= (1 + 0.01 * min(log(1 + appearances), 3))`
-  - Caps at ~3% bonus for veteran coaches (10+ appearances)
-  - First-time coaches get no adjustment (0 appearances → 0 bonus)
-  - Walk-forward: only count appearances in years < test_year
-- **Years:** 2008-2026
-- **File:** `src/prediction/enriched_probabilities.py` (NEW)
+  1. For each test year Y, build cumulative coach appearances: for every Season < Y where (season, team) is in `MNCAATourneySeeds`, increment that season's primary head coach's count.
+  2. For each team in Y, look up Y's primary head coach via MTeamCoaches and attach the cumulative count.
+  3. `bump = min(log(1 + apps), 3.0)`; `factor = 1.0 + 0.01 × bump` ∈ [1.00, 1.03].
+  4. `adjusted[r] = base[r] × factor`. Re-normalize per round to bracket team-counts {64, 32, 16, 8, 4, 2}.
+  - **Asymmetric (one-sided per spec):** zero-experience coaches get factor=1.0 (no boost). The cap binds at ~19 prior appearances (`log(20) ≈ 3`); even a 50-app legend stays at +3%.
+  - **Deliberate deviation from catalog spec:** the spec called for adjustment at the barthag level. Applied at the round_probs level (same pattern as `volatile` / `upset_tuned` / `roster_adj`) for composability — every source × construction gets a `_+coach_adj_*` variant for free.
+- **Walk-forward contract:** appearances for year Y are cumulated only over Seasons strictly < Y. The current-year coach lookup is taken from Y itself, but no statistics from Y enter the count.
+- **Fallback:** Team unbridged → 0 apps. Team's Y-coach not in MTeamCoaches → 0 apps. Both produce factor=1.0 (informationally neutral).
+- **2026 sanity (top-10 by prior apps):** Tennessee 29 (Barnes), Michigan State 27 (Izzo), Kansas 26 (Self), Gonzaga 25 (Few), Arkansas 24 (Calipari), Houston 21 (Sampson), Purdue 17 (Painter), TCU 15 (Dixon), UCLA 15 (Cronin), Texas 13.
+- **Years:** 2011-2026 (Kaggle data covers 1985-2025).
+- **File:** `src/prediction/coach_adj_probabilities.py`; lock test: `tests/test_coach_adj_adjustment.py` (13 tests).
 
 #### C2: `roster_adj`
 - **Status:** IMPLEMENTED (2026-04-25) — shipped as an ADJUSTMENT (not a base) for composability with every source × construction. Uses the cbbpy team-ID bridge (phase 1b7) to map per-player roster records to canonical tournament IDs.
@@ -431,7 +437,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
-| **Adjustments** | contrarian, upset_tuned, volatile, roster_adj (4) | coach_adj, momentum (2) |
+| **Adjustments** | contrarian, upset_tuned, volatile, roster_adj, coach_adj (5) | momentum (1) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
@@ -639,7 +645,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
-| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **PARTIAL** | C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged, per-round renorm; 11 lock tests). C1 coach_adj + C3 momentum still TODO. |
+| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **PARTIAL** | C1 coach_adj DONE 2026-04-25 (one-sided log-experience × +3% cap, MTeamCoaches × MNCAATourneySeeds, 68/68 bridge; 13 lock tests). C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged; 11 lock tests). C3 momentum still TODO. |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
 | 2a | Backward construction (M5) | **KILLED 2026-04-25** | Spec-faithful impl is a strategic duplicate of `champ_first` under the marginal-independence sampler. Resurrection requires plumbing `barthag` through the construction-mode dispatcher (architectural lift, separate phase). See § Deprecated Strategies. |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
@@ -706,7 +712,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 | A6 `massey_best` | 1d-2 | Per-system Brier-selection harness (none today) | All 150+ Massey systems are already on disk (`data/raw/external_{SYSTEM}_{year}.json`); we currently only consume the pre-aggregated composite (`A5 massey_avg`). `massey_best` walks each tournament and *picks the system with best cumulative Brier on years < test_year*. Different signal from A5 — selects the single best ranker rather than ensembling them. | ~4-5 files: per-system loader, Brier accumulator module, walk-forward selection harness, source wrapper, lock test. |
 | A8 `ap_strength` | 1e | Verify `data/kaggle/ap_poll_data.json` ingestion is current | Captures *public-perception* signal that's distinct from efficiency metrics — useful for opponent modeling (the field anchors on rankings, not barthag). Adds another orthogonal source for B4 `consensus`. | 1 file (`src/prediction/ap_probabilities.py`) + lock test. Algorithm is straightforward (rank → barthag table). |
 | B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
-| C1 `coach_adj` | 1g | Needs `data/kaggle/MTeamCoaches.csv` | Tournament-experience adjustment. Captures the "veteran coach effect" that team-level efficiency misses. Composes with every source. | 1 file + lock test; data is small. |
+| ~~C1 `coach_adj`~~ | ~~1g~~ | ~~Needs `data/kaggle/MTeamCoaches.csv`~~ | ~~Tournament-experience adjustment.~~ — **DONE 2026-04-25** (`src/prediction/coach_adj_probabilities.py`, 13 lock tests, 68/68 bridge coverage). |
 | ~~C2 `roster_adj`~~ | ~~1g~~ | ~~UNBLOCKED by cbbpy bridge (1b7)~~ | ~~Top-5 player WARP adjustment.~~ — **DONE 2026-04-25** (`src/prediction/roster_adj_probabilities.py`, 11 lock tests). |
 | C3 `momentum` | 1g | Needs Torvik four-factor monthly snapshots ingested for 2008-2026 | January→March efficiency-trend adjustment. Composable with every source/construction. | 1 file + ingestion verification + lock test. |
 
@@ -733,12 +739,12 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 
 | What | Status |
 |------|--------|
-| Next `--tier budget` run on the now-3,080-strategy catalog (Phase 3 ran on 301; +2,779 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
+| Next `--tier budget` run on the now-4,480-strategy catalog (Phase 3 ran on 301; +4,179 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
 | Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
 
 ### Why these matter (orthogonality, not just count)
 
-The catalog is at ~3,080 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+The catalog is at ~4,480 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
 - ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
