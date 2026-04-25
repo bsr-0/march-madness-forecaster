@@ -33,6 +33,10 @@ from pathlib import Path
 
 import pytest
 
+# All tests here are backtest-regression locks (cache vs live equivalence).
+# Marker so CI's `pytest -m "backtest_regression"` step picks them up.
+pytestmark = pytest.mark.backtest_regression
+
 
 def _have_repo_team_lookup() -> bool:
     repo_root = Path(__file__).resolve().parents[1]

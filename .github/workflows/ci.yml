@@ -180,6 +180,14 @@ jobs:
       - name: Leakage tests
         run: pytest tests/ -m "leakage" -v --tb=short -q
 
+      - name: Backtest regression / equivalence tests
+        # Locks workers=1 vs workers=N bit-equality (Phase 1.A / Phase 2),
+        # opponent_strategy="per_mode" workers-equivalence (Q3 option A),
+        # and cached-vs-live bracket equivalence (Phase 5). These tests
+        # are skip-clean if torvik / tournament_results / pool_history
+        # data is missing; everything they need is committed in the repo.
+        run: pytest tests/ -m "backtest_regression" --timeout=600 --tb=short -q
+
       - name: Track test count
         run: |
           TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')

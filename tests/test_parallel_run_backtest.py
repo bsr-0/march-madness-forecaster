@@ -30,6 +30,11 @@ from pathlib import Path
 
 import pytest
 
+# All tests here are backtest-regression locks (parallel + opponent-strategy
+# determinism). Marker so CI's `pytest -m "backtest_regression"` step picks
+# them up — without it they were collected by `--co` but never executed.
+pytestmark = pytest.mark.backtest_regression
+
 
 def test_parallel_matches_sequential_on_torvik_2025_2026() -> None:
     """workers=1 and workers=2 produce bit-equal results for torvik × 2025+2026."""
