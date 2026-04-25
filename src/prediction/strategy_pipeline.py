@@ -31,6 +31,7 @@ SOURCES = (
     "massey_avg",  # A5
     "massey_best",  # A6
     "spread_power",  # A7
+    "ap_strength",  # A8
     "pool_wisdom",  # B7
 )
 
@@ -58,7 +59,17 @@ CONSTRUCTIONS = (
 )
 
 # Which sources and adjustments are actually implemented and available
-IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom", "elo", "massey_avg", "massey_best"}
+IMPLEMENTED_SOURCES = {
+    "seed",
+    "torvik",
+    "odds",
+    "spread_power",
+    "pool_wisdom",
+    "elo",
+    "massey_avg",
+    "massey_best",
+    "ap_strength",
+}
 IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile", "roster_adj", "coach_adj", "momentum"}
 IMPLEMENTED_CONSTRUCTIONS = {
     "forward",

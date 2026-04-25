@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 7,920 strategies — 8 sources × (1 + 6 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 9,900 strategies — 9 sources × (1 + 6 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -176,16 +176,23 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/market_probabilities.py` (NEW, same file as A3)
 
 #### A8: `ap_strength`
-- **Status:** NEW
-- **Data:** `data/kaggle/ap_poll_data.json` — weekly AP rankings
-- **Algorithm:**
-  1. Load final pre-tournament AP poll
-  2. Ranked teams: `barthag = 1.0 - (rank / 50)` (rank 1 = 0.98, rank 25 = 0.50)
-  3. Unranked but receiving votes: barthag = 0.45
-  4. Unranked, no votes: barthag from seed-based estimate
-  - Simple but captures public perception, which matters for opponent modeling
-- **Years:** 2008-2026
-- **File:** `src/prediction/ap_probabilities.py` (NEW)
+- **Status:** IMPLEMENTED (2026-04-25) — closes the Category-A source dimension. Captures *public-perception* signal that's distinct from efficiency metrics (torvik/odds/elo/massey) — the field anchors on AP rankings when picking brackets, so this source carries the *anchor* the opponent field is using even though it ignores efficiency.
+- **Data:** `data/kaggle/ap_poll_data.json` — 16,195 weekly AP poll rows, years 2008-2026 (2020 absent — COVID). Each row carries `{year, week, team_no, team, seed, round, w, l, ap_votes, ap_rank, rank}`.
+- **Algorithm (catalog spec):**
+  1. Final pre-tournament poll = `max(week)` for the test year (e.g., 2026 → week 19; 2024 → week 21; auto-handles year-to-year week-count drift).
+  2. For each canonical tournament team:
+     - **ap_rank ∈ [1, 25]**: `barthag = 1.0 - (ap_rank / 50)` → rank 1 ⇒ 0.98, rank 25 ⇒ 0.50.
+     - **ap_rank > 25 with ap_votes > 0** (receiving votes): flat barthag = 0.45.
+     - **Otherwise** (unranked, no votes, or team not in poll): seed-based fallback `max(0.10, 1.0 - 0.04 × seed)` (same shape as torvik/elo/massey fallback).
+  3. Output values clipped to [0.10, 0.99].
+- **Bridge:** AP `team` display name → MTeams TeamID via `MTeamSpellings.csv`, then canonical_id → MTeams TeamID via the same cascade as C1 coach_adj (`__` → space, `_s__` → `'s `, `_a_m` → ` a&m`, `saint_` → `st `) plus the 2-entry alias table.
+  - **Important:** the AP file's own `team_no` field is in a *different* ID space than Kaggle's `MTeams.csv` (e.g., AP `team_no=1207` is "Duke" but MTeams TeamID 1207 is "Georgetown"), so it's deliberately ignored. The bridge joins on the AP `team` *display name*, not `team_no`.
+  - Cascade is inline-duplicated from `coach_adj_probabilities` (~30 LOC) — refactor to shared module if a third Kaggle source ships.
+- **2026 sanity:** top-5 barthag values = Duke (0.98 — rank 1), Arizona (0.96 — rank 2), Michigan (0.94 — rank 3), Florida (0.92 — rank 4), Houston (0.90 — rank 5). Exact alignment with week-19 AP poll.
+- **Walk-forward contract:** `load_ap_strength_barthag(year=Y)` consumes only year=Y rows. Each test year computed in isolation.
+- **Fallback:** Year missing from AP file (e.g., 2020) → loader returns None → source unavailable for that year (downstream strategies skip, same pattern as odds/elo missing-data years). Team unbridged or absent from poll → seed-based fallback per algorithm step 3.
+- **Years:** 2008-2026 (excluding 2020).
+- **File:** `src/prediction/ap_probabilities.py`; lock test: `tests/test_ap_source.py` (13 tests).
 
 ---
 
@@ -460,7 +467,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
-| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg, massey_best (8) | ap_strength (1) |
+| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg, massey_best, ap_strength (9) | _(none)_ |
 | **Adjustments** | contrarian, upset_tuned, volatile, roster_adj, coach_adj, momentum (6) | _(none)_ |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
@@ -667,7 +674,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1c | Elo base (A4) | **DONE** | Self-contained K=38 Elo from historical_games via cbbpy bridge; 68/68 coverage; +420 `elo_*` permutations (2026-04-24) |
 | 1d | Massey bases (A5, A6) | **DONE** | A5 massey_avg DONE 2026-04-24 (pre-aggregated composite + 6-alias ID bridge; 68/68 2025 coverage). A6 massey_best DONE 2026-04-25 (walk-forward Brier selection over 56+ per-system rankers; min_games=500 eligibility; 14 lock tests). |
 | 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | **DONE** | Shipped 2026-04-25 in phase 1d. `src/prediction/massey_best_probabilities.py`; top-5 for 2026 cluster at mean Brier 0.172-0.181; 47 eligible systems. |
-| 1e | AP base (A8) | TODO | ap_strength |
+| 1e | AP base (A8) | **DONE** | A8 ap_strength shipped 2026-04-25 (final-pre-tournament AP poll → barthag, rank/votes/seed-fallback algorithm, AP-team-name → MTeams TeamID bridge; 13 lock tests, 68/68 2026 coverage). |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **DONE** | C1 coach_adj DONE 2026-04-25 (one-sided log-experience × +3% cap, MTeamCoaches × MNCAATourneySeeds, 68/68 bridge; 13 lock tests). C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged; 11 lock tests). C3 momentum DONE 2026-04-25 (Jan→Mar Dean-Oliver four-factor-margin delta × tanh(x·10) × ±3% cap; 68/68 snapshot coverage; 14 lock tests). |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
@@ -734,7 +741,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 | ID | Phase | Blocker / Prereq | Why it's worth it | Scope |
 |----|-------|------------------|-------------------|-------|
 | ~~A6 `massey_best`~~ | ~~1d-2~~ | ~~Per-system Brier-selection harness (none today)~~ | ~~All 150+ Massey systems are already on disk.~~ — **DONE 2026-04-25** (`src/prediction/massey_best_probabilities.py`, 14 lock tests, walk-forward Brier selection over 56+ systems with min_games=500 eligibility). |
-| A8 `ap_strength` | 1e | Verify `data/kaggle/ap_poll_data.json` ingestion is current | Captures *public-perception* signal that's distinct from efficiency metrics — useful for opponent modeling (the field anchors on rankings, not barthag). Adds another orthogonal source for B4 `consensus`. | 1 file (`src/prediction/ap_probabilities.py`) + lock test. Algorithm is straightforward (rank → barthag table). |
+| ~~A8 `ap_strength`~~ | ~~1e~~ | ~~Verify `data/kaggle/ap_poll_data.json` ingestion is current~~ | ~~Captures *public-perception* signal.~~ — **DONE 2026-04-25** (`src/prediction/ap_probabilities.py`, 13 lock tests, 68/68 2026 coverage; bridge via AP team display name → MTeamSpellings → MTeams TeamID since AP `team_no` is in a different ID space than Kaggle MTeams). |
 | B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
 | ~~C1 `coach_adj`~~ | ~~1g~~ | ~~Needs `data/kaggle/MTeamCoaches.csv`~~ | ~~Tournament-experience adjustment.~~ — **DONE 2026-04-25** (`src/prediction/coach_adj_probabilities.py`, 13 lock tests, 68/68 bridge coverage). |
 | ~~C2 `roster_adj`~~ | ~~1g~~ | ~~UNBLOCKED by cbbpy bridge (1b7)~~ | ~~Top-5 player WARP adjustment.~~ — **DONE 2026-04-25** (`src/prediction/roster_adj_probabilities.py`, 11 lock tests). |
@@ -763,12 +770,12 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 
 | What | Status |
 |------|--------|
-| Next `--tier budget` run on the now-7,920-strategy catalog (Phase 3 ran on 301; +7,619 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj, C3 momentum, A6 massey_best) | **Authorized 2026-04-25** — operator will run on their machine as an "initial result set". Expected wall-time ~100-115 min at T1+T2+T3 full rigor. Do not trigger from this session. |
+| Next `--tier budget` run on the now-9,900-strategy catalog (Phase 3 ran on 301; +9,599 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj, C3 momentum, A6 massey_best, A8 ap_strength) | **Authorized 2026-04-25** — operator will run on their machine as an "initial result set". Expected wall-time ~120-140 min at T1+T2+T3 full rigor (linear extrapolation from Phase 3's 3.6 min on 301 strategies). Do not trigger from this session. |
 | Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
 
 ### Why these matter (orthogonality, not just count)
 
-The catalog is at ~7,920 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+The catalog is at ~9,900 evaluable permutations — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
 - ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
