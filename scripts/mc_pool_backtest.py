@@ -108,7 +108,8 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "elo",  # A4: K=38 Elo from historical_games, bridged via cbbpy normalizer
     "massey_avg",  # A5: Massey composite rating (aggregated across ~150 systems)
     "massey_best",  # A6: walk-forward Brier-selected single Massey system
-    # New bases added here as implemented (A8, B3-B5, C1-C3)
+    "ap_strength",  # A8: final-pre-tournament AP poll → barthag (rank/votes/seed-fallback)
+    # New bases added here as implemented (B3-B5)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -1891,6 +1892,17 @@ def run_backtest(
 
         massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
 
+        # AP-strength (A8): final-pre-tournament AP poll → barthag, MC via the
+        # shared torvik round-probs builder. Falls back to None if the year is
+        # missing from ap_poll_data.json (e.g., 2020 COVID).
+        from src.prediction.ap_probabilities import load_ap_strength_barthag
+
+        ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), Path("data"))
+        if ap_barthag is not None:
+            ap_strength_rp = build_torvik_round_probabilities(seeds, regions, ap_barthag)
+        else:
+            ap_strength_rp = None
+
         # Probability base registry: base_name → round_probs
         base_round_probs = {
             "seed": seed_rp,
@@ -1909,6 +1921,8 @@ def run_backtest(
             base_round_probs["massey_best"] = massey_best_rp
         if spread_rp is not None:
             base_round_probs["spread_power"] = spread_rp
+        if ap_strength_rp is not None:
+            base_round_probs["ap_strength"] = ap_strength_rp
 
         # --- Contrarian and pool-wisdom bases (B6, B7) ---
         from src.prediction.contrarian_probabilities import (
