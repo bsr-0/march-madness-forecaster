@@ -45,6 +45,21 @@ N_GAMES = 63  # 32 R64 + 16 R32 + 8 S16 + 4 E8 + 2 F4 + 1 CHAMP
 # hashed with a one-time git SHA; they remain loadable independently.
 STRATEGY_CACHE_VERSION = 1
 
+# Shared data/model version strings for the production torvik bracket
+# cache. Both the offline builder (scripts/build_bracket_cache.py) and
+# the live experiment loop's --write-cache path use these so cache keys
+# match round-trip. The probability cache lives one layer up; its
+# constants travel with it.
+BRACKET_DATA_VERSION = "torvik+seed=42"
+BRACKET_MODEL_VERSION = "torvik-barthag-v1"
+PROBABILITY_DATA_VERSION = "tournament_seeds+torvik_barthag"
+PROBABILITY_MODEL_VERSION = "torvik-barthag-v1"
+
+# Parent seed feeding make_mode_rng — kept as a named constant so the
+# cache key component is greppable. Matches build_bracket_cache.py's
+# RNG_SEED.
+CACHE_PARENT_SEED = 42
+
 # Round layout in the (n_brackets, 63) alphabetical-within-round encoding.
 # Sum of sizes == N_GAMES.
 _ROUND_ORDER = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
@@ -349,6 +364,51 @@ def make_mode_rng(
     spawn_key = tuple(int.from_bytes(h[i : i + 4], "big") for i in (0, 4, 8, 12))
     ss = np.random.SeedSequence(entropy=parent_seed, spawn_key=spawn_key)
     return np.random.default_rng(ss)
+
+
+def brackets_to_array(
+    model_brackets: np.ndarray,
+    first_round: list,
+    lookup: dict[str, int],
+) -> np.ndarray:
+    """Encode (n_brackets, 63) bool dense → (n_brackets, 63) uint16 alphabetical-within-round.
+
+    Tree-walk: for each round, pair-walk the current matchup list using the
+    dense bool to pick a winner, sort the round's winners alphabetically,
+    and stamp them into the cache row. Self-contained — no dependency on
+    picks_by_round in src.simulation.pool_competition (so the data layer
+    doesn't pull scipy/sklearn at import time).
+
+    Inverse of ``array_to_brackets`` below; round-trip lock-tested in
+    tests/test_strategy_cache_loop_integration.py.
+    """
+    if model_brackets.ndim != 2 or model_brackets.shape[1] != N_GAMES:
+        raise ValueError(f"model_brackets must be (n, {N_GAMES}), got {model_brackets.shape}")
+    if len(first_round) != 64:
+        raise ValueError(f"first_round must have 64 teams, got {len(first_round)}")
+
+    n = model_brackets.shape[0]
+    out = np.zeros((n, N_GAMES), dtype=np.uint16)
+    for m in range(n):
+        current = list(first_round)
+        gi = 0
+        per_round: dict[str, list[str]] = {}
+        for rnd in _ROUND_ORDER:
+            nxt: list[str] = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                winner = t1 if model_brackets[m, gi] else t2
+                nxt.append(winner)
+                gi += 1
+            per_round[rnd] = sorted(nxt)
+            current = nxt
+        cursor = 0
+        for rnd in _ROUND_ORDER:
+            size = _ROUND_SIZES[rnd]
+            for i, name in enumerate(per_round[rnd]):
+                out[m, cursor + i] = lookup[name]
+            cursor += size
+    return out
 
 
 def array_to_brackets(
