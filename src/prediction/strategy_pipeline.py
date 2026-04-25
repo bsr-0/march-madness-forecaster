@@ -58,7 +58,7 @@ CONSTRUCTIONS = (
 
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom", "elo", "massey_avg"}
-IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile"}
+IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile", "roster_adj"}
 IMPLEMENTED_CONSTRUCTIONS = {
     "forward",
     "champ_first",
@@ -223,6 +223,7 @@ def resolve_pipeline_round_probs(
     seeds: Optional[Dict[str, int]] = None,
     historical_seed_reach_rates: Optional[Dict[int, Dict[str, float]]] = None,
     team_volatility: Optional[Dict[str, float]] = None,
+    team_talent: Optional[Dict[str, float]] = None,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Resolve a pipeline specification into round_probs.
 
@@ -235,6 +236,9 @@ def resolve_pipeline_round_probs(
         team_volatility: Per-team [0,1]-normalized volatility
             (required for volatile adjustment; produced by
             ``src.prediction.volatile_probabilities.load_team_volatility``)
+        team_talent: Per-team top-5 mean WARP (required for roster_adj
+            adjustment; produced by
+            ``src.prediction.roster_adj_probabilities.load_team_talent``).
         historical_seed_reach_rates: Walk-forward seed-by-round empirical
             rates (required for upset_tuned; produced by
             ``src.prediction.upset_tuned_probabilities.load_upset_tuned_context``)
@@ -285,6 +289,12 @@ def resolve_pipeline_round_probs(
             from src.prediction.volatile_probabilities import build_volatile_round_probs
 
             result = build_volatile_round_probs(result, team_volatility)
+        elif adj == "roster_adj":
+            if team_talent is None:
+                return None  # Required context not supplied
+            from src.prediction.roster_adj_probabilities import build_roster_adj_round_probs
+
+            result = build_roster_adj_round_probs(result, team_talent)
         # Future adjustments:
         # elif adj == "coach_adj":
         #     result = apply_coach_adjustment(result, ...)
