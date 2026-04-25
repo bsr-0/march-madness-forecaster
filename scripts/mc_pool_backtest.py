@@ -1926,6 +1926,15 @@ def run_backtest(
 
         team_volatility = load_team_volatility(year, seeds.keys(), Path("data"))
 
+        # Roster context: per-team top-5 mean WARP from cbbpy_rosters_{year}.json,
+        # bridged to canonical IDs via the cbbpy bridge. Consumed by the
+        # roster_adj adjustment. Walk-forward-safe: only reads the year's
+        # roster file. Missing file (rare) → empty dict; downstream resolver
+        # treats absent teams as the neutral z=0 fallback.
+        from src.prediction.roster_adj_probabilities import load_team_talent
+
+        team_talent = load_team_talent(year, seeds.keys(), Path("data"))
+
         # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
         def _make_sampler(mode_name):
             """Return a sampler function for the given construction mode."""
@@ -2072,6 +2081,7 @@ def run_backtest(
                     seeds=seeds,
                     historical_seed_reach_rates=upset_tuned_ctx,
                     team_volatility=team_volatility,
+                    team_talent=team_talent,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)

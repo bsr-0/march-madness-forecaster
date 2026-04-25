@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 1,960 strategies — 7 sources × (1 + 3 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 3,080 strategies — 7 sources × (1 + 4 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -262,18 +262,18 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/enriched_probabilities.py` (NEW)
 
 #### C2: `roster_adj`
-- **Status:** NEW
-- **Data:** `data/raw/historical/cbbpy_rosters_{year}.json`
+- **Status:** IMPLEMENTED (2026-04-25) — shipped as an ADJUSTMENT (not a base) for composability with every source × construction. Uses the cbbpy team-ID bridge (phase 1b7) to map per-player roster records to canonical tournament IDs.
+- **Data:** `data/raw/historical/cbbpy_rosters_{year}.json` — every player has a `warp` field directly from cbbpy (no proxy needed). Coverage: 65+/68 of 2026 tournament field bridges cleanly; the rest fall back to neutral z=0.
 - **Algorithm:**
-  1. Start with torvik barthag
-  2. For each team, compute top-5 player aggregate: `team_talent = mean(top-5 WARP)`
-  3. Compute league-average top-5 WARP across all tournament teams
-  4. Apply adjustment: `barthag *= (1 + 0.02 * (team_talent - league_avg) / league_std)`
-  - Caps at ±4% adjustment
-  - Captures star-player effect that team-level efficiency metrics miss
-- **Fallback:** Missing roster → torvik unchanged
-- **Years:** 2008-2026
-- **File:** `src/prediction/enriched_probabilities.py` (NEW)
+  1. For each tournament team, take the top-5 players by `warp` (filtered to those with ≥5 games played to drop garbage-time-only entries).
+  2. Compute team talent = mean of those top-5 WARPs.
+  3. Compute league mean and stddev across the per-team top-5 values (only over teams with rosters; missing teams don't drag the mean).
+  4. For each team t and round r: `z_t = (talent_t − league_mean) / league_std`, `factor = 1 + clip(0.02 × z_t, ±0.04)`, `adjusted[r] = base[r] × factor`. Re-normalize per round to bracket team-counts {64, 32, 16, 8, 4, 2}.
+  - **Effect:** strong-roster teams get +1 to +4% advancement boost; weak-roster teams get matching penalty. Cap survives even pathological z=±100 outliers (factor stays in [0.96, 1.04]).
+  - **Deliberate deviation from catalog spec:** the spec called for adjustment at the barthag level. We apply at the round_probs level (same pattern as `volatile` / `upset_tuned`) for composability — every source × construction gets a `_+roster_adj_*` variant for free.
+- **Fallback:** Missing team → neutral z=0 (no adjustment, then renorm).
+- **Years:** 2003-2026 (cbbpy_rosters files exist for the full historical window).
+- **File:** `src/prediction/roster_adj_probabilities.py`; lock test: `tests/test_roster_adj_adjustment.py` (11 tests).
 
 #### C3: `momentum`
 - **Status:** NEW
@@ -431,7 +431,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
-| **Adjustments** | contrarian, upset_tuned, volatile (3) | coach_adj, roster_adj, momentum (3) |
+| **Adjustments** | contrarian, upset_tuned, volatile, roster_adj (4) | coach_adj, momentum (2) |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
@@ -639,7 +639,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
-| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
+| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **PARTIAL** | C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged, per-round renorm; 11 lock tests). C1 coach_adj + C3 momentum still TODO. |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
 | 2a | Backward construction (M5) | **KILLED 2026-04-25** | Spec-faithful impl is a strategic duplicate of `champ_first` under the marginal-independence sampler. Resurrection requires plumbing `barthag` through the construction-mode dispatcher (architectural lift, separate phase). See § Deprecated Strategies. |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
@@ -707,7 +707,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 | A8 `ap_strength` | 1e | Verify `data/kaggle/ap_poll_data.json` ingestion is current | Captures *public-perception* signal that's distinct from efficiency metrics — useful for opponent modeling (the field anchors on rankings, not barthag). Adds another orthogonal source for B4 `consensus`. | 1 file (`src/prediction/ap_probabilities.py`) + lock test. Algorithm is straightforward (rank → barthag table). |
 | B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
 | C1 `coach_adj` | 1g | Needs `data/kaggle/MTeamCoaches.csv` | Tournament-experience adjustment. Captures the "veteran coach effect" that team-level efficiency misses. Composes with every source. | 1 file + lock test; data is small. |
-| C2 `roster_adj` | 1g | UNBLOCKED by cbbpy bridge (1b7) | Top-5 player WARP adjustment. Captures star-player effect missed by team metrics. Roster files (`cbbpy_rosters_{year}.json`) are already on disk and now bridge cleanly to canonical IDs. | 1 file + lock test. |
+| ~~C2 `roster_adj`~~ | ~~1g~~ | ~~UNBLOCKED by cbbpy bridge (1b7)~~ | ~~Top-5 player WARP adjustment.~~ — **DONE 2026-04-25** (`src/prediction/roster_adj_probabilities.py`, 11 lock tests). |
 | C3 `momentum` | 1g | Needs Torvik four-factor monthly snapshots ingested for 2008-2026 | January→March efficiency-trend adjustment. Composable with every source/construction. | 1 file + ingestion verification + lock test. |
 
 ### Construction modes still to ship
@@ -733,12 +733,12 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 
 | What | Status |
 |------|--------|
-| Next `--tier budget` run on the now-1,960-strategy catalog (Phase 3 ran on 301; +1,659 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
+| Next `--tier budget` run on the now-3,080-strategy catalog (Phase 3 ran on 301; +2,779 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
 | Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
 
 ### Why these matter (orthogonality, not just count)
 
-The catalog is at ~1,960 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+The catalog is at ~3,080 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
 - ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
