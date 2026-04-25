@@ -1,0 +1,678 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-04-25T00:29:52",
+  "entries": [
+    {
+      "strategy_id": "torvik",
+      "year": 2023,
+      "cache_key": "8dec0760d6651292",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/8dec0760d6651292.npz",
+      "content_hash": "1f6437c323cb48257d0dc671b70df725cf03c7480a94e345801904f2f0ae45de",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
+      }
+    },
+    {
+      "strategy_id": "f4_first_tv",
+      "year": 2023,
+      "cache_key": "da407a3b7adf4c07",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/da407a3b7adf4c07.npz",
+      "content_hash": "18dff177c5b6d97fd915e8be82bbe2983ae81bfe3263b85049dcf29dbc767e5b",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
+      }
+    },
+    {
+      "strategy_id": "e8_first_tv",
+      "year": 2023,
+      "cache_key": "7b3a9a391e3ea439",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/7b3a9a391e3ea439.npz",
+      "content_hash": "83c3a40b79570a69596e365ff016e211cb87e5404ae7fef1c9b7dc0e02dbef8b",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2023.json"
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2024,
+      "cache_key": "533800925b151646",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/533800925b151646.npz",
+      "content_hash": "d4e471201bd7a58eba517e8485dda8b8a891dff7537126e98c904525d5c1280b",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
+      }
+    },
+    {
+      "strategy_id": "f4_first_tv",
+      "year": 2024,
+      "cache_key": "861e39b765a2bc7e",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/861e39b765a2bc7e.npz",
+      "content_hash": "57d28bbc81dacdd5d053f2e4b8d38c78f38208253d09abd010daf47cb83db8e4",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
+      }
+    },
+    {
+      "strategy_id": "e8_first_tv",
+      "year": 2024,
+      "cache_key": "36348b89756a0f21",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/36348b89756a0f21.npz",
+      "content_hash": "bc7410c3325a16b04ac13f890e4b5463fe21d42f28273a98aa78519211f56f5e",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2024.json"
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2025,
+      "cache_key": "27c52d7ea011f27d",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/27c52d7ea011f27d.npz",
+      "content_hash": "c531a817ad963d4ba7397388d7e3dfb5c49dbbfbc649643bf91e95e92c0bba94",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
+      }
+    },
+    {
+      "strategy_id": "f4_first_tv",
+      "year": 2025,
+      "cache_key": "bca431c445c19613",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/bca431c445c19613.npz",
+      "content_hash": "7c119efe77e94a2fb6b378b1b24b24e86f35aea9795798b55ac82186e3d12f50",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
+      }
+    },
+    {
+      "strategy_id": "e8_first_tv",
+      "year": 2025,
+      "cache_key": "5ebf7be05cb9b990",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/5ebf7be05cb9b990.npz",
+      "content_hash": "59d20dbcb1f3dff4d6eaa059419dfa7fead0bd43cbde5def59efb3fec89c5b57",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2025.json"
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2026,
+      "cache_key": "9b9559823a04285c",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/9b9559823a04285c.npz",
+      "content_hash": "2472dfd6804ae905b2a8a9b85afd4089b56aa52cf8b7fe8305b4ad25a47333fd",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
+      }
+    },
+    {
+      "strategy_id": "f4_first_tv",
+      "year": 2026,
+      "cache_key": "bd5262e08e1d52fc",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/bd5262e08e1d52fc.npz",
+      "content_hash": "2fbbdc3f533cabccf04f17447193dc61e263a3f3aa096f79a3809d1717444b60",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
+      }
+    },
+    {
+      "strategy_id": "e8_first_tv",
+      "year": 2026,
+      "cache_key": "de0c25bdcf7705cb",
+      "rng_seed": "frozen-2026-04-18",
+      "code_version": "450c54fc045b",
+      "data_version": "backtest_brackets_2026-04-18",
+      "model_version": "shape-baseline-pre-O27",
+      "artifact_kind": "brackets",
+      "artifact_path": "brackets/de0c25bdcf7705cb.npz",
+      "content_hash": "2b6e7335ae662105e1b5c1fe14dc69f407aba0275298454805c8614b42eab90d",
+      "shape": [
+        50,
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "snapshot_source": "artifacts/backtest_brackets/backtest_brackets_2026.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2005,
+      "cache_key": "outcomes-2005",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2005.npz",
+      "content_hash": "14e0883accd3de192c1e179c0a74a0107a87c1099951da2952b3ec95ed6ecd6f",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2005.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2006,
+      "cache_key": "outcomes-2006",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2006.npz",
+      "content_hash": "c4e1d933cc749005616abd2fcf36cabfa978e23a8914001d394c5797666ab829",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2006.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2007,
+      "cache_key": "outcomes-2007",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2007.npz",
+      "content_hash": "63cd3581690d748a7c7735587d1f572393130c7c4f3250dc498c61e546218719",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2007.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2008,
+      "cache_key": "outcomes-2008",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2008.npz",
+      "content_hash": "88337982a5e82c3638a9fba6d8a7024c6ceecf722598be6c9183733c47a6b9be",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2008.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2009,
+      "cache_key": "outcomes-2009",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2009.npz",
+      "content_hash": "b237286ecd06a57e69eca430471c8f5e818f6e47a9410c96c925960293e2b846",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2009.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2010,
+      "cache_key": "outcomes-2010",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2010.npz",
+      "content_hash": "6d48d36a65304b513bf0bf7ba194eae4b9a373419e33d0d721c9623fbb815864",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2010.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2011,
+      "cache_key": "outcomes-2011",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2011.npz",
+      "content_hash": "b34b43b3cf7c4e19ad9f02dff97dfc6e00ff66f8c101ffb3417c774b246bd83b",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2011.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2012,
+      "cache_key": "outcomes-2012",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2012.npz",
+      "content_hash": "211b3c07c8fb49e21158b1b568f4fc59fa312db77e884bd944b9c3c6fdd7f750",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2012.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2013,
+      "cache_key": "outcomes-2013",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2013.npz",
+      "content_hash": "288c1014c791740c8a052808cacf9e62abd32c57cbf7f41dcb5de38824a877bc",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2013.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2014,
+      "cache_key": "outcomes-2014",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2014.npz",
+      "content_hash": "000b6fe7e31b3584d99d1d0abd507f4066f8e637f82e0beff9650a540c5b78db",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2014.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2015,
+      "cache_key": "outcomes-2015",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2015.npz",
+      "content_hash": "561b2d3a40d0d529b6e0aee0cdc06f75f2b80ef35bf5b0f96e6c9712f002dbbc",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2015.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2016,
+      "cache_key": "outcomes-2016",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2016.npz",
+      "content_hash": "baa494061d835f1c7e68cd93f6d6c02fe953b8c9e284f001c01196079b86960c",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2016.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2017,
+      "cache_key": "outcomes-2017",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2017.npz",
+      "content_hash": "23b08e0d491b264aa58d72cbe4e474f629cd63678fb0279a94ee0c7e36f6f94f",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2017.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2018,
+      "cache_key": "outcomes-2018",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2018.npz",
+      "content_hash": "37d2639361549f80d6e03470125c0e1084dcbcd01a34d5deb184911a0a3ebb5b",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2018.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2019,
+      "cache_key": "outcomes-2019",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2019.npz",
+      "content_hash": "79145a45c6048e048db34e0be6015e7410d8950c685328e7c58be944453b5b9a",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2019.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2021,
+      "cache_key": "outcomes-2021",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2021.npz",
+      "content_hash": "c8fd15244d92840c8ff83a17f56f3d2cced74c834ebcffad953c78e29b7b118e",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2021.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2022,
+      "cache_key": "outcomes-2022",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2022.npz",
+      "content_hash": "dd0fe4bdcac2dd11b9a0ab19991c9013a61bd72ffafa668469fce48a5cec9ea2",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2022.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2023,
+      "cache_key": "outcomes-2023",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2023.npz",
+      "content_hash": "74017bec8b766cd43b03e9b43c404189222a003c401abee61196b389c8c1a99f",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2023.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2024,
+      "cache_key": "outcomes-2024",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2024.npz",
+      "content_hash": "6e19aeedc653147ad18114f0f4f1831ccde0c8aa490882c0b38b729ee0f6f4dd",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2024.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2025,
+      "cache_key": "outcomes-2025",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2025.npz",
+      "content_hash": "b53a06236c2789e3adb3c9849edc7ddb553e9929e1692990f64e8a35fa9d9e47",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2025.json"
+      }
+    },
+    {
+      "strategy_id": "GROUND_TRUTH",
+      "year": 2026,
+      "cache_key": "outcomes-2026",
+      "rng_seed": "N/A",
+      "code_version": "450c54fc045b",
+      "data_version": "historical_tournament_results",
+      "model_version": "N/A",
+      "artifact_kind": "outcomes",
+      "artifact_path": "outcomes/2026.npz",
+      "content_hash": "cc95af8524e98fadc7984910b7a6f5574985a5600b04590ec26643284d24f4a5",
+      "shape": [
+        63
+      ],
+      "dtype": "uint16",
+      "generated_at": "2026-04-25T00:29:52",
+      "provenance": {
+        "source": "data/raw/historical/tournament_results_2026.json"
+      }
+    }
+  ]
+}

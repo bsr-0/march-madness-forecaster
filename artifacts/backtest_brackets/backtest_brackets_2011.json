@@ -1,0 +1,4410 @@
+{
+  "year": 2011,
+  "modes": [
+    {
+      "mode": "seed_forward",
+      "brackets": [
+        {
+          "bracket_idx": 39,
+          "score_team_identity": 1020.0,
+          "score_shape": 1020.0,
+          "mean_rank": 23.415,
+          "champion": "connecticut",
+          "final_four": [
+            "connecticut",
+            "louisville"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "tennessee",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "villanova",
+              "washington",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "louisville",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "syracuse",
+              "washington",
+              "wisconsin"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "louisville",
+              "notre_dame",
+              "ohio_state",
+              "washington",
+              "wisconsin"
+            ],
+            "E8": [
+              "connecticut",
+              "florida",
+              "louisville",
+              "washington"
+            ],
+            "F4": [
+              "connecticut",
+              "louisville"
+            ],
+            "CHAMP": [
+              "connecticut"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 17,
+          "score_team_identity": 750.0,
+          "score_shape": 750.0,
+          "mean_rank": 19.72,
+          "champion": "pittsburgh",
+          "final_four": [
+            "kentucky",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "gonzaga",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "memphis",
+              "michigan",
+              "morehead_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "kentucky",
+              "memphis",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "vanderbilt",
+              "wisconsin",
+              "xavier"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "north_carolina",
+              "pittsburgh",
+              "purdue"
+            ],
+            "E8": [
+              "connecticut",
+              "kansas",
+              "kentucky",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kentucky",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 32,
+          "score_team_identity": 650.0,
+          "score_shape": 650.0,
+          "mean_rank": 24.045,
+          "champion": "kentucky",
+          "final_four": [
+            "kansas",
+            "kentucky"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "michigan",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "northern_colorado",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "ucla",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "kansas",
+              "kentucky",
+              "north_carolina",
+              "ohio_state",
+              "purdue",
+              "richmond",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida_state",
+              "kansas",
+              "kentucky",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "wisconsin"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "kentucky",
+              "wisconsin"
+            ],
+            "F4": [
+              "kansas",
+              "kentucky"
+            ],
+            "CHAMP": [
+              "kentucky"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 19,
+          "score_team_identity": 640.0,
+          "score_shape": 640.0,
+          "mean_rank": 17.285,
+          "champion": "pittsburgh",
+          "final_four": [
+            "north_carolina",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "louisville",
+              "marquette",
+              "michigan_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "utah_state",
+              "villanova",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "marquette",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "richmond",
+              "st__john_s__ny",
+              "temple",
+              "texas",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "E8": [
+              "connecticut",
+              "kansas",
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "F4": [
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 40,
+          "score_team_identity": 630.0,
+          "score_shape": 630.0,
+          "mean_rank": 17.795,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "florida"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "michigan_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "texas",
+              "texas_a_m",
+              "villanova",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "richmond",
+              "san_diego_state",
+              "texas",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "north_carolina",
+              "pittsburgh",
+              "san_diego_state"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "kansas",
+              "north_carolina"
+            ],
+            "F4": [
+              "duke",
+              "florida"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 49,
+          "score_team_identity": 600.0,
+          "score_shape": 600.0,
+          "mean_rank": 15.74,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "notre_dame"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "tennessee",
+              "texas",
+              "virginia_commonwealth",
+              "washington",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "texas",
+              "wisconsin",
+              "xavier"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "E8": [
+              "duke",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "notre_dame"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 13,
+          "score_team_identity": 590.0,
+          "score_shape": 590.0,
+          "mean_rank": 18.76,
+          "champion": "ohio_state",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "marquette",
+              "memphis",
+              "michigan",
+              "michigan_state",
+              "morehead_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "saint_peter_s",
+              "san_diego_state",
+              "st__john_s__ny",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "villanova",
+              "washington",
+              "wisconsin"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "texas",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "S16": [
+              "brigham_young",
+              "connecticut",
+              "georgetown",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "texas"
+            ],
+            "E8": [
+              "connecticut",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 20,
+          "score_team_identity": 580.0,
+          "score_shape": 580.0,
+          "mean_rank": 18.145,
+          "champion": "ohio_state",
+          "final_four": [
+            "ohio_state",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "belmont",
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "temple",
+              "tennessee",
+              "texas",
+              "ucla",
+              "washington",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "temple",
+              "tennessee",
+              "texas",
+              "xavier"
+            ],
+            "S16": [
+              "connecticut",
+              "florida",
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "texas",
+              "xavier"
+            ],
+            "E8": [
+              "connecticut",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 21,
+          "score_team_identity": 570.0,
+          "score_shape": 570.0,
+          "mean_rank": 21.165,
+          "champion": "kansas",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "washington",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "florida",
+              "florida_state",
+              "kansas",
+              "kentucky",
+              "michigan",
+              "missouri",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "S16": [
+              "arizona",
+              "brigham_young",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "purdue",
+              "san_diego_state",
+              "wisconsin"
+            ],
+            "E8": [
+              "arizona",
+              "brigham_young",
+              "kansas",
+              "ohio_state"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 23,
+          "score_team_identity": 570.0,
+          "score_shape": 570.0,
+          "mean_rank": 19.85,
+          "champion": "ohio_state",
+          "final_four": [
+            "florida",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "louisville",
+              "memphis",
+              "michigan",
+              "michigan_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "princeton",
+              "san_diego_state",
+              "syracuse",
+              "texas",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "S16": [
+              "connecticut",
+              "florida",
+              "georgetown",
+              "ohio_state",
+              "pittsburgh",
+              "syracuse",
+              "texas",
+              "vanderbilt"
+            ],
+            "E8": [
+              "connecticut",
+              "florida",
+              "ohio_state",
+              "vanderbilt"
+            ],
+            "F4": [
+              "florida",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 9,
+          "score_team_identity": 560.0,
+          "score_shape": 560.0,
+          "mean_rank": 19.89,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "pittsburgh",
+              "saint_peter_s",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "connecticut",
+              "duke",
+              "kansas_state",
+              "kentucky",
+              "marquette",
+              "nevada_las_vegas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "st__john_s__ny",
+              "ucla",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "washington"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "kentucky",
+              "notre_dame",
+              "pittsburgh",
+              "st__john_s__ny",
+              "vanderbilt",
+              "washington"
+            ],
+            "E8": [
+              "duke",
+              "kentucky",
+              "notre_dame",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 24,
+          "score_team_identity": 560.0,
+          "score_shape": 560.0,
+          "mean_rank": 15.065,
+          "champion": "pittsburgh",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "pittsburgh",
+              "syracuse"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 36,
+          "score_team_identity": 560.0,
+          "score_shape": 560.0,
+          "mean_rank": 15.635,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "bucknell",
+              "butler",
+              "duke",
+              "florida",
+              "florida_state",
+              "georgetown",
+              "georgia",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas",
+              "ucla",
+              "vanderbilt",
+              "villanova",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "kansas",
+              "ohio_state"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 16,
+          "score_team_identity": 550.0,
+          "score_shape": 550.0,
+          "mean_rank": 17.59,
+          "champion": "kansas",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "missouri",
+              "morehead_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "washington",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "texas_a_m",
+              "wisconsin",
+              "xavier"
+            ],
+            "S16": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 0,
+          "score_team_identity": 540.0,
+          "score_shape": 540.0,
+          "mean_rank": 19.315,
+          "champion": "kansas",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "memphis",
+              "michigan_state",
+              "morehead_state",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas_a_m",
+              "villanova",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "north_carolina",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas_a_m"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "ohio_state",
+              "purdue",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "kansas",
+              "ohio_state"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 15,
+          "score_team_identity": 530.0,
+          "score_shape": 530.0,
+          "mean_rank": 18.065,
+          "champion": "north_carolina",
+          "final_four": [
+            "north_carolina",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "akron",
+              "arizona",
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "georgia",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "michigan",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "villanova",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "xavier"
+            ],
+            "S16": [
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "north_carolina",
+              "pittsburgh",
+              "purdue"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "F4": [
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "north_carolina"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 1,
+          "score_team_identity": 520.0,
+          "score_shape": 520.0,
+          "mean_rank": 19.075,
+          "champion": "pittsburgh",
+          "final_four": [
+            "north_carolina",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "georgia",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "michigan",
+              "missouri",
+              "morehead_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas",
+              "ucla",
+              "villanova",
+              "virginia_commonwealth",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "texas",
+              "ucla",
+              "villanova",
+              "xavier"
+            ],
+            "S16": [
+              "kansas",
+              "kentucky",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh",
+              "san_diego_state",
+              "ucla"
+            ],
+            "E8": [
+              "kansas",
+              "north_carolina",
+              "pittsburgh",
+              "san_diego_state"
+            ],
+            "F4": [
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 7,
+          "score_team_identity": 520.0,
+          "score_shape": 520.0,
+          "mean_rank": 20.655,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "florida"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "temple",
+              "tennessee",
+              "texas",
+              "washington",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "cincinnati",
+              "duke",
+              "florida",
+              "george_mason",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "notre_dame",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "texas",
+              "washington"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "washington"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky"
+            ],
+            "F4": [
+              "duke",
+              "florida"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 22,
+          "score_team_identity": 520.0,
+          "score_shape": 520.0,
+          "mean_rank": 14.695,
+          "champion": "ohio_state",
+          "final_four": [
+            "ohio_state",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "memphis",
+              "michigan",
+              "michigan_state",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "memphis",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "vanderbilt",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state"
+            ],
+            "F4": [
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 28,
+          "score_team_identity": 520.0,
+          "score_shape": 520.0,
+          "mean_rank": 17.955,
+          "champion": "kansas",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas_a_m",
+              "vanderbilt",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "vanderbilt",
+              "washington",
+              "west_virginia"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "syracuse"
+            ],
+            "E8": [
+              "connecticut",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 41,
+          "score_team_identity": 510.0,
+          "score_shape": 510.0,
+          "mean_rank": 17.27,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "florida"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "bucknell",
+              "butler",
+              "cincinnati",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "bucknell",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas",
+              "washington",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "kansas",
+              "ohio_state"
+            ],
+            "F4": [
+              "duke",
+              "florida"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 6,
+          "score_team_identity": 500.0,
+          "score_shape": 500.0,
+          "mean_rank": 17.715,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "belmont",
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "memphis",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "vanderbilt",
+              "xavier"
+            ],
+            "S16": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "kansas",
+              "kansas_state",
+              "north_carolina",
+              "ohio_state",
+              "purdue"
+            ],
+            "E8": [
+              "brigham_young",
+              "duke",
+              "kansas",
+              "north_carolina"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 25,
+          "score_team_identity": 500.0,
+          "score_shape": 500.0,
+          "mean_rank": 21.51,
+          "champion": "north_carolina",
+          "final_four": [
+            "kansas",
+            "north_carolina"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "brigham_young",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "georgia",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "villanova",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "clemson",
+              "connecticut",
+              "florida",
+              "kansas",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "tennessee",
+              "utah_state",
+              "xavier"
+            ],
+            "S16": [
+              "arizona",
+              "florida",
+              "kansas",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state"
+            ],
+            "E8": [
+              "arizona",
+              "florida",
+              "kansas",
+              "north_carolina"
+            ],
+            "F4": [
+              "kansas",
+              "north_carolina"
+            ],
+            "CHAMP": [
+              "north_carolina"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 37,
+          "score_team_identity": 500.0,
+          "score_shape": 500.0,
+          "mean_rank": 15.695,
+          "champion": "ohio_state",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgia",
+              "gonzaga",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "richmond",
+              "saint_peter_s",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "utah_state",
+              "virginia_commonwealth",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas",
+              "virginia_commonwealth",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 31,
+          "score_team_identity": 490.0,
+          "score_shape": 490.0,
+          "mean_rank": 20.75,
+          "champion": "ohio_state",
+          "final_four": [
+            "notre_dame",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "michigan",
+              "morehead_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "saint_peter_s",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "cincinnati",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "st__john_s__ny",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "west_virginia",
+              "xavier"
+            ],
+            "S16": [
+              "arizona",
+              "florida",
+              "kansas_state",
+              "notre_dame",
+              "ohio_state",
+              "san_diego_state",
+              "vanderbilt",
+              "xavier"
+            ],
+            "E8": [
+              "kansas_state",
+              "notre_dame",
+              "ohio_state",
+              "san_diego_state"
+            ],
+            "F4": [
+              "notre_dame",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 47,
+          "score_team_identity": 490.0,
+          "score_shape": 490.0,
+          "mean_rank": 20.33,
+          "champion": "ohio_state",
+          "final_four": [
+            "brigham_young",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "memphis",
+              "michigan",
+              "missouri",
+              "morehead_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas",
+              "ucla",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "illinois",
+              "kansas_state",
+              "kentucky",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas"
+            ],
+            "S16": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "kansas_state",
+              "notre_dame",
+              "ohio_state",
+              "richmond",
+              "syracuse"
+            ],
+            "E8": [
+              "brigham_young",
+              "duke",
+              "notre_dame",
+              "ohio_state"
+            ],
+            "F4": [
+              "brigham_young",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 14,
+          "score_team_identity": 480.0,
+          "score_shape": 480.0,
+          "mean_rank": 22.7,
+          "champion": "pittsburgh",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "george_mason",
+              "illinois",
+              "indiana_state",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "memphis",
+              "michigan_state",
+              "morehead_state",
+              "north_carolina",
+              "northern_colorado",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "st__john_s__ny",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "uc_santa_barbara",
+              "utah_state",
+              "virginia_commonwealth",
+              "washington",
+              "wisconsin"
+            ],
+            "R32": [
+              "cincinnati",
+              "duke",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "memphis",
+              "michigan_state",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "st__john_s__ny",
+              "texas_a_m",
+              "utah_state",
+              "washington"
+            ],
+            "S16": [
+              "cincinnati",
+              "duke",
+              "kansas",
+              "kentucky",
+              "pittsburgh",
+              "purdue",
+              "st__john_s__ny",
+              "washington"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "kentucky",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 27,
+          "score_team_identity": 480.0,
+          "score_shape": 480.0,
+          "mean_rank": 17.025,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "memphis",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas_a_m",
+              "ucla",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "cincinnati",
+              "duke",
+              "george_mason",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "ucla",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "kansas",
+              "kentucky",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh",
+              "san_diego_state",
+              "st__john_s__ny"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 44,
+          "score_team_identity": 480.0,
+          "score_shape": 480.0,
+          "mean_rank": 19.68,
+          "champion": "pittsburgh",
+          "final_four": [
+            "pittsburgh",
+            "syracuse"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "washington",
+              "west_virginia"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "florida",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "utah_state"
+            ],
+            "S16": [
+              "florida",
+              "kentucky",
+              "louisville",
+              "michigan",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "louisville",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "F4": [
+              "pittsburgh",
+              "syracuse"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 34,
+          "score_team_identity": 470.0,
+          "score_shape": 470.0,
+          "mean_rank": 18.84,
+          "champion": "ohio_state",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "illinois",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "long_island_university",
+              "louisville",
+              "marquette",
+              "michigan_state",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia"
+            ],
+            "R32": [
+              "arizona",
+              "cincinnati",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "louisville",
+              "marquette",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "marquette",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 4,
+          "score_team_identity": 460.0,
+          "score_shape": 460.0,
+          "mean_rank": 20.185,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "notre_dame"
+          ],
+          "picks": {
+            "R64": [
+              "belmont",
+              "brigham_young",
+              "bucknell",
+              "butler",
+              "cincinnati",
+              "duke",
+              "florida",
+              "georgetown",
+              "georgia",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "villanova",
+              "west_virginia",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "duke",
+              "florida",
+              "georgetown",
+              "illinois",
+              "kansas_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "texas",
+              "west_virginia"
+            ],
+            "S16": [
+              "butler",
+              "cincinnati",
+              "duke",
+              "florida",
+              "illinois",
+              "notre_dame",
+              "ohio_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "notre_dame",
+              "ohio_state"
+            ],
+            "F4": [
+              "duke",
+              "notre_dame"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 38,
+          "score_team_identity": 460.0,
+          "score_shape": 460.0,
+          "mean_rank": 17.705,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "florida"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "georgetown",
+              "georgia",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "memphis",
+              "michigan",
+              "morehead_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "villanova",
+              "wisconsin"
+            ],
+            "R32": [
+              "brigham_young",
+              "cincinnati",
+              "duke",
+              "florida",
+              "georgia",
+              "kansas",
+              "kentucky",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "syracuse",
+              "temple",
+              "texas",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "syracuse",
+              "temple"
+            ],
+            "E8": [
+              "duke",
+              "florida",
+              "notre_dame",
+              "ohio_state"
+            ],
+            "F4": [
+              "duke",
+              "florida"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 2,
+          "score_team_identity": 450.0,
+          "score_shape": 450.0,
+          "mean_rank": 16.55,
+          "champion": "ohio_state",
+          "final_four": [
+            "notre_dame",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "S16": [
+              "brigham_young",
+              "duke",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "san_diego_state",
+              "syracuse",
+              "wisconsin"
+            ],
+            "E8": [
+              "brigham_young",
+              "duke",
+              "notre_dame",
+              "ohio_state"
+            ],
+            "F4": [
+              "notre_dame",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 5,
+          "score_team_identity": 450.0,
+          "score_shape": 450.0,
+          "mean_rank": 20.42,
+          "champion": "kansas",
+          "final_four": [
+            "kansas",
+            "texas"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "bucknell",
+              "butler",
+              "clemson",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan_state",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "wisconsin"
+            ],
+            "R32": [
+              "florida",
+              "georgetown",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas"
+            ],
+            "S16": [
+              "florida",
+              "kansas",
+              "kentucky",
+              "notre_dame",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse",
+              "texas"
+            ],
+            "E8": [
+              "kansas",
+              "pittsburgh",
+              "syracuse",
+              "texas"
+            ],
+            "F4": [
+              "kansas",
+              "texas"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 35,
+          "score_team_identity": 450.0,
+          "score_shape": 450.0,
+          "mean_rank": 19.775,
+          "champion": "ohio_state",
+          "final_four": [
+            "ohio_state",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "georgia",
+              "illinois",
+              "kansas",
+              "long_island_university",
+              "louisville",
+              "marquette",
+              "michigan",
+              "michigan_state",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "utah_state",
+              "vanderbilt",
+              "villanova",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "long_island_university",
+              "louisville",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "utah_state"
+            ],
+            "S16": [
+              "arizona",
+              "florida",
+              "georgetown",
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "arizona",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 33,
+          "score_team_identity": 440.0,
+          "score_shape": 440.0,
+          "mean_rank": 21.515,
+          "champion": "ohio_state",
+          "final_four": [
+            "louisville",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "butler",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "saint_peter_s",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "washington",
+              "west_virginia",
+              "wofford",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "cincinnati",
+              "duke",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "ucla"
+            ],
+            "S16": [
+              "arizona",
+              "kansas_state",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "san_diego_state",
+              "ucla"
+            ],
+            "E8": [
+              "arizona",
+              "louisville",
+              "ohio_state",
+              "ucla"
+            ],
+            "F4": [
+              "louisville",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 3,
+          "score_team_identity": 430.0,
+          "score_shape": 430.0,
+          "mean_rank": 18.855,
+          "champion": "kansas",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "memphis",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "west_virginia",
+              "wisconsin",
+              "wofford"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "georgia",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "ohio_state",
+              "pittsburgh",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "wofford"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "syracuse",
+              "temple"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "pittsburgh",
+              "syracuse"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 8,
+          "score_team_identity": 430.0,
+          "score_shape": 430.0,
+          "mean_rank": 15.035,
+          "champion": "pittsburgh",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "belmont",
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgia",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "villanova",
+              "virginia_commonwealth",
+              "west_virginia",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "louisville",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "louisville",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 10,
+          "score_team_identity": 430.0,
+          "score_shape": 430.0,
+          "mean_rank": 17.135,
+          "champion": "kansas",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "belmont",
+              "brigham_young",
+              "bucknell",
+              "butler",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "west_virginia",
+              "xavier"
+            ],
+            "R32": [
+              "belmont",
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kentucky",
+              "louisville",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "S16": [
+              "duke",
+              "florida",
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 42,
+          "score_team_identity": 430.0,
+          "score_shape": 430.0,
+          "mean_rank": 18.725,
+          "champion": "pittsburgh",
+          "final_four": [
+            "ohio_state",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "cincinnati",
+              "clemson",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "georgia",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "michigan",
+              "michigan_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "connecticut",
+              "duke",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "michigan_state",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "texas_a_m",
+              "vanderbilt"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "michigan_state",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "syracuse",
+              "vanderbilt"
+            ],
+            "E8": [
+              "duke",
+              "ohio_state",
+              "pittsburgh",
+              "vanderbilt"
+            ],
+            "F4": [
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 46,
+          "score_team_identity": 430.0,
+          "score_shape": 430.0,
+          "mean_rank": 17.335,
+          "champion": "pittsburgh",
+          "final_four": [
+            "ohio_state",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "florida_state",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "illinois",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan",
+              "missouri",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "temple",
+              "texas",
+              "ucla",
+              "vanderbilt",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "georgetown",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "temple",
+              "texas",
+              "ucla",
+              "vanderbilt",
+              "west_virginia",
+              "xavier"
+            ],
+            "S16": [
+              "connecticut",
+              "duke",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "ucla",
+              "xavier"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 26,
+          "score_team_identity": 420.0,
+          "score_shape": 420.0,
+          "mean_rank": 20.845,
+          "champion": "notre_dame",
+          "final_four": [
+            "notre_dame",
+            "san_diego_state"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "marquette",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "saint_peter_s",
+              "san_diego_state",
+              "syracuse",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "uc_santa_barbara",
+              "ucla",
+              "vanderbilt",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse",
+              "ucla",
+              "vanderbilt",
+              "west_virginia"
+            ],
+            "S16": [
+              "duke",
+              "kansas",
+              "kansas_state",
+              "notre_dame",
+              "san_diego_state",
+              "syracuse",
+              "ucla",
+              "west_virginia"
+            ],
+            "E8": [
+              "kansas_state",
+              "notre_dame",
+              "san_diego_state",
+              "syracuse"
+            ],
+            "F4": [
+              "notre_dame",
+              "san_diego_state"
+            ],
+            "CHAMP": [
+              "notre_dame"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 30,
+          "score_team_identity": 420.0,
+          "score_shape": 420.0,
+          "mean_rank": 19.105,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "louisville",
+              "marquette",
+              "michigan",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "princeton",
+              "richmond",
+              "saint_peter_s",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "texas_a_m",
+              "ucla",
+              "utah_state",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgetown",
+              "kansas",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse",
+              "utah_state",
+              "west_virginia"
+            ],
+            "S16": [
+              "brigham_young",
+              "cincinnati",
+              "duke",
+              "kansas",
+              "notre_dame",
+              "pittsburgh",
+              "syracuse",
+              "west_virginia"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "pittsburgh",
+              "syracuse"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 43,
+          "score_team_identity": 420.0,
+          "score_shape": 420.0,
+          "mean_rank": 18.175,
+          "champion": "ohio_state",
+          "final_four": [
+            "notre_dame",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida_state",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "memphis",
+              "michigan",
+              "missouri",
+              "morehead_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "texas",
+              "uc_santa_barbara",
+              "ucla",
+              "utah_state",
+              "vanderbilt",
+              "villanova",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "R32": [
+              "brigham_young",
+              "duke",
+              "georgetown",
+              "kansas",
+              "kentucky",
+              "marquette",
+              "missouri",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "texas",
+              "ucla",
+              "vanderbilt",
+              "washington",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "ucla",
+              "washington"
+            ],
+            "E8": [
+              "duke",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "notre_dame",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 18,
+          "score_team_identity": 410.0,
+          "score_shape": 410.0,
+          "mean_rank": 14.835,
+          "champion": "duke",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "brigham_young",
+              "bucknell",
+              "cincinnati",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "oakland",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "richmond",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "tennessee",
+              "texas_a_m",
+              "ucla",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "brigham_young",
+              "cincinnati",
+              "duke",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "ucla"
+            ],
+            "S16": [
+              "duke",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "san_diego_state",
+              "syracuse",
+              "ucla"
+            ],
+            "E8": [
+              "duke",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "duke"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 29,
+          "score_team_identity": 380.0,
+          "score_shape": 380.0,
+          "mean_rank": 20.23,
+          "champion": "kansas",
+          "final_four": [
+            "duke",
+            "kansas"
+          ],
+          "picks": {
+            "R64": [
+              "akron",
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "illinois",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "north_carolina",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "wofford",
+              "xavier"
+            ],
+            "R32": [
+              "connecticut",
+              "duke",
+              "florida",
+              "gonzaga",
+              "kansas",
+              "louisville",
+              "north_carolina",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "syracuse",
+              "temple",
+              "texas",
+              "texas_a_m",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "gonzaga",
+              "kansas",
+              "ohio_state",
+              "purdue",
+              "syracuse",
+              "temple",
+              "wisconsin"
+            ],
+            "E8": [
+              "duke",
+              "kansas",
+              "ohio_state",
+              "wisconsin"
+            ],
+            "F4": [
+              "duke",
+              "kansas"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 45,
+          "score_team_identity": 330.0,
+          "score_shape": 330.0,
+          "mean_rank": 19.49,
+          "champion": "kansas",
+          "final_four": [
+            "kansas",
+            "ohio_state"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "bucknell",
+              "clemson",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "villanova",
+              "washington",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "brigham_young",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "missouri",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "temple",
+              "texas",
+              "vanderbilt",
+              "washington",
+              "xavier"
+            ],
+            "S16": [
+              "brigham_young",
+              "kansas",
+              "missouri",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "texas",
+              "xavier"
+            ],
+            "E8": [
+              "kansas",
+              "ohio_state",
+              "pittsburgh",
+              "texas"
+            ],
+            "F4": [
+              "kansas",
+              "ohio_state"
+            ],
+            "CHAMP": [
+              "kansas"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 11,
+          "score_team_identity": 300.0,
+          "score_shape": 300.0,
+          "mean_rank": 21.07,
+          "champion": "pittsburgh",
+          "final_four": [
+            "north_carolina",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "cincinnati",
+              "connecticut",
+              "duke",
+              "florida",
+              "georgetown",
+              "kansas",
+              "kansas_state",
+              "louisville",
+              "marquette",
+              "michigan",
+              "michigan_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "syracuse",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "villanova",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "wofford"
+            ],
+            "R32": [
+              "cincinnati",
+              "duke",
+              "florida",
+              "kansas_state",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "penn_state",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "st__john_s__ny",
+              "syracuse",
+              "texas",
+              "vanderbilt",
+              "villanova"
+            ],
+            "S16": [
+              "nevada_las_vegas",
+              "north_carolina",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "st__john_s__ny",
+              "texas",
+              "villanova"
+            ],
+            "E8": [
+              "north_carolina",
+              "pittsburgh",
+              "purdue",
+              "texas"
+            ],
+            "F4": [
+              "north_carolina",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 12,
+          "score_team_identity": 280.0,
+          "score_shape": 280.0,
+          "mean_rank": 21.485,
+          "champion": "ohio_state",
+          "final_four": [
+            "ohio_state",
+            "st__john_s__ny"
+          ],
+          "picks": {
+            "R64": [
+              "arizona",
+              "butler",
+              "connecticut",
+              "duke",
+              "florida",
+              "kansas",
+              "kansas_state",
+              "louisville",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "northern_colorado",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "princeton",
+              "purdue",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "ucla",
+              "vanderbilt",
+              "villanova",
+              "virginia_commonwealth",
+              "washington",
+              "west_virginia",
+              "wisconsin",
+              "wofford",
+              "xavier"
+            ],
+            "R32": [
+              "arizona",
+              "duke",
+              "louisville",
+              "missouri",
+              "nevada_las_vegas",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh",
+              "purdue",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "ucla",
+              "washington",
+              "west_virginia",
+              "wisconsin"
+            ],
+            "S16": [
+              "duke",
+              "louisville",
+              "notre_dame",
+              "ohio_state",
+              "st__john_s__ny",
+              "syracuse",
+              "temple",
+              "wisconsin"
+            ],
+            "E8": [
+              "duke",
+              "notre_dame",
+              "ohio_state",
+              "st__john_s__ny"
+            ],
+            "F4": [
+              "ohio_state",
+              "st__john_s__ny"
+            ],
+            "CHAMP": [
+              "ohio_state"
+            ]
+          }
+        },
+        {
+          "bracket_idx": 48,
+          "score_team_identity": 280.0,
+          "score_shape": 280.0,
+          "mean_rank": 18.88,
+          "champion": "pittsburgh",
+          "final_four": [
+            "duke",
+            "pittsburgh"
+          ],
+          "picks": {
+            "R64": [
+              "brigham_young",
+              "connecticut",
+              "duke",
+              "florida",
+              "george_mason",
+              "georgia",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "kentucky",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "nevada_las_vegas",
+              "north_carolina",
+              "notre_dame",
+              "ohio_state",
+              "old_dominion",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "san_diego_state",
+              "st__john_s__ny",
+              "tennessee",
+              "texas",
+              "texas_a_m",
+              "vanderbilt",
+              "virginia_commonwealth",
+              "west_virginia",
+              "wisconsin",
+              "xavier"
+            ],
+            "R32": [
+              "duke",
+              "georgia",
+              "indiana_state",
+              "kansas",
+              "kansas_state",
+              "louisville",
+              "memphis",
+              "michigan_state",
+              "missouri",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "purdue",
+              "st__john_s__ny",
+              "west_virginia"
+            ],
+            "S16": [
+              "duke",
+              "indiana_state",
+              "kansas",
+              "notre_dame",
+              "ohio_state",
+              "penn_state",
+              "pittsburgh",
+              "st__john_s__ny"
+            ],
+            "E8": [
+              "duke",
+              "notre_dame",
+              "ohio_state",
+              "pittsburgh"
+            ],
+            "F4": [
+              "duke",
+              "pittsburgh"
+            ],
+            "CHAMP": [
+              "pittsburgh"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

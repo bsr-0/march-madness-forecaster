@@ -32,6 +32,7 @@ SOURCES = (
     "massey_best",  # A6
     "spread_power",  # A7
     "ap_strength",  # A8
+    "stacked",  # B5
     "pool_wisdom",  # B7
 )
 
@@ -69,6 +70,7 @@ IMPLEMENTED_SOURCES = {
     "massey_avg",
     "massey_best",
     "ap_strength",
+    "stacked",
 }
 IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile", "roster_adj", "coach_adj", "momentum"}
 IMPLEMENTED_CONSTRUCTIONS = {
