@@ -391,16 +391,14 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `scripts/mc_pool_backtest.py:sample_e8_diverse_brackets()`; same lock test file.
 
 ### M5: `backward`
-- **Status:** NEW
-- **Algorithm:**
+- **Status:** **KILLED 2026-04-25** — spec-faithful implementation produces a strategic duplicate of `champ_first` under the existing sampler infrastructure. See § Deprecated Strategies for full rationale.
+- **Original spec (preserved for reference):**
   1. Draw champion from CHAMP probability distribution
   2. Draw F4 from `P(team makes F4 | this champion won)` — conditioned probabilities
-  3. Draw E8 from `P(team makes E8 | this F4)` — conditioned
-  4. Continue backward: S16, R32, R64
-  5. Each round's picks are conditioned on the downstream results already decided
-  - **Key difference from champ_first:** champ_first locks the champion then fills R64 FORWARD independently. Backward makes every pick conditioned on the final result. If you pick a 7-seed champion, your R64 picks near that 7-seed reflect that the 7-seed is good enough to win it all.
-  - **Computing conditioned probabilities:** `P(team makes E8 | F4 team X) = P(team makes E8 AND team X makes F4) / P(team X makes F4)`. These are computed from the same MC simulation that produces round_probs, by tracking joint advancement counts.
-- **File:** `scripts/mc_pool_backtest.py:sample_backward_brackets()` (NEW)
+  3. Continue backward: E8, S16, R32, R64
+  - **Why it dies:** every existing sampler (`sample_model_brackets`, `_sample_with_locks`, etc.) draws each game using pairwise-normalized round_probs *marginals* under a path-consistency constraint. The "joint" the backward conditional would slice into is therefore the marginal-independence joint, and Bayesian conditioning on it is mathematically equivalent to direct sampling — i.e., `champ_first`. The "different anchor philosophy" framing is normative, not distributional.
+  - **What would resurrect it:** plumbing `barthag` (or cached MC samples) through the construction-mode dispatcher so backward could sample from the true Log5+barthag joint instead of the marginal-independence joint. That's a separate architectural lift, not a strategy addition.
+- **File:** Not implemented. Stub at `scripts/mc_pool_backtest.py:1954` left commented out.
 
 ### M6: `confidence`
 - **Status:** IMPLEMENTED (2026-04-24)
@@ -434,7 +432,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
 | **Adjustments** | contrarian, upset_tuned, volatile (3) | coach_adj, roster_adj, momentum (3) |
-| **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | backward (1) |
+| **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
 | **Tournament Oracle** | `--oracle <year>` + auto-run inside `run_budget()` T3 (2026-04-24, phase-3 metrics rollout); F4/finals/champ hits + ranker_gap_espn_pts per (year, strategy); ledger in `memory/tournament_oracle.md` | Drift-guard test hooking oracle output into T3 gate |
@@ -481,7 +479,7 @@ Example if top 5 = {odds, consensus, momentum, volatile, massey_avg}:
 | 20 | `odds_champ_first` | A3 | M2 |
 | 21 | `odds_f4_first` | A3 | M3 |
 | 22 | `odds_e8_first` | A3 | M4 |
-| 23 | `odds_backward` | A3 | M5 |
+| ~~23~~ | ~~`odds_backward`~~ | ~~A3~~ | ~~M5~~ — KILLED 2026-04-25 |
 | 24 | `odds_confidence` | A3 | M6 |
 | 25-30 | `consensus_*` | B4 | M1-M6 |
 | 31-36 | `momentum_*` | C3 | M1-M6 |
@@ -495,14 +493,14 @@ Top 3 (base, mode) pairs from Tier 2 with parameter and training window variatio
 
 | # | Strategy | Variation |
 |---|----------|-----------|
-| 49 | `consensus_backward_blend60` | consensus with 60/20/20 weights instead of equal |
-| 50 | `consensus_backward_blend80` | consensus with 80% market weight |
+| ~~49~~ | ~~`consensus_backward_blend60`~~ | ~~consensus with 60/20/20 weights instead of equal~~ — depends on M5 (KILLED 2026-04-25) |
+| ~~50~~ | ~~`consensus_backward_blend80`~~ | ~~consensus with 80% market weight~~ — depends on M5 (KILLED 2026-04-25) |
 | 51 | `volatile_confidence_low` | volatility noise × 0.5 |
 | 52 | `volatile_confidence_high` | volatility noise × 2.0 |
 | 53 | `odds_confidence_tight` | confidence thresholds: 0.90 / 0.70 |
 | 54 | `odds_confidence_wide` | confidence thresholds: 0.80 / 0.55 |
 | 55 | `momentum_f4_first_strong` | momentum adjustment ±5% instead of ±3% |
-| 56 | `stacked_backward` | meta-learned weights + backward construction |
+| ~~56~~ | ~~`stacked_backward`~~ | ~~meta-learned weights + backward construction~~ — depends on M5 (KILLED 2026-04-25) |
 | 57 | `market_torvik_e8_first_70` | 70% market / 30% torvik blend |
 | 58 | `upset_tuned_confidence` | calibrated upset rates + confidence routing |
 
@@ -643,7 +641,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | TODO | adjustment chains |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
-| 2a | Backward construction (M5) | TODO | *_backward |
+| 2a | Backward construction (M5) | **KILLED 2026-04-25** | Spec-faithful impl is a strategic duplicate of `champ_first` under the marginal-independence sampler. Resurrection requires plumbing `barthag` through the construction-mode dispatcher (architectural lift, separate phase). See § Deprecated Strategies. |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
 | 2c | Anchor-restricted F4 modes (M3a f4_chalk, M3b f4_diverse) | **DONE** | Post-Phase-3 expansion — tests whether `seed_f4_first`'s edge comes from chalk anchors (M3a) or survives diverse anchors (M3b) (2026-04-24) |
 | 2d | Remaining anchor-restricted modes (M3c f4_top4, M4a e8_chalk, M4b e8_diverse) | **DONE** | Closes the anchor-restriction parameter space around the Phase 3 winner. +180 evaluable permutations; no-run phase per `memory/run_policy.md` (2026-04-24) |
@@ -714,9 +712,13 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 
 ### Construction modes still to ship
 
-| ID | Phase | What | Why it's worth it | Scope |
-|----|-------|------|-------------------|-------|
-| M5 `backward` | 2a | Champion → F4 → E8 → … → R64, every earlier-round pick conditioned on the downstream picks already drawn | **The only consistency-by-construction mode in a sea of forward-fill modes.** All existing modes (`forward`, `champ_first`, `f4_first`, `e8_first`, anchor variants, `confidence`) sample earlier rounds *independently of* the anchors already locked, which can produce internally-inconsistent brackets (champion losing in R32). `backward` eliminates that whole class of pathology by conditioning every pick on downstream survivors. | Largest open phase. Requires computing joint probabilities `P(team T survives round R | downstream survivors)` — the existing `round_probs` table doesn't carry that conditional structure. Real engineering lift before the mode is even runnable. |
+_(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `champ_first`. The construction-mode design space is exhausted at the marginal-independence sampling level. Resurrecting `backward` requires plumbing `barthag` through the dispatcher so it can sample from the Log5+barthag joint — see "Architectural lifts" below.)_
+
+### Architectural lifts (not strategy additions, but unblock new strategy classes)
+
+| Item | Why | Scope | Unlocks |
+|------|-----|-------|---------|
+| Plumb `barthag` through the construction-mode dispatcher | All current samplers (`sample_model_brackets`, `_sample_with_locks`, etc.) sample each game from pairwise-normalized round_probs *marginals*. The true Log5+barthag joint that produces those marginals is invisible at sample time. Plumbing barthag through would let new modes sample from the joint directly. | Modify `_make_sampler` in `mc_pool_backtest.py` to accept `barthag` (optional kwarg for modes that need it); modes that don't, ignore it. ~3 files: dispatcher, one-shot test, catalog. | Resurrects M5 `backward` (joint sampling); enables future modes that need joint access (e.g., "draw the whole bracket from one Log5 MC sample"). |
 
 ### Validation & guardrails
 
@@ -739,7 +741,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 The catalog is at ~1,960 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
-- **`backward` (M5)** is the only construction mode that enforces internal bracket consistency. Every other mode samples earlier rounds independently of the anchors already locked.
+- ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
 - **`massey_best` (A6)** is the only source that *selects* a single best ranker per year via Brier; everything else either uses one fixed model or ensembles them statically.
 - **C1/C2/C3 enriched bases** introduce roster-, coach-, and trajectory-level signal that no efficiency metric on its own captures.
 
@@ -758,3 +760,4 @@ Each of these closes a *kind of strategy the current catalog literally cannot ex
 | GNN/Transformer prediction models | No BSS improvement over LR | Removed |
 | Pool marginal blend | Null result — doesn't change rankings | O21 |
 | 50-bracket random sampling | Convergence test proved it measures noise (2026-04-23) | To be replaced |
+| M5 `backward` construction | Spec-faithful impl produces a strategic duplicate of `champ_first` under the existing marginal-independence sampler. The catalog spec assumes "downstream conditioning" produces a different distribution from forward-fill, but Bayesian conditioning on the marginal-independence joint is mathematically equivalent to direct sampling from that joint — i.e., the same distribution `champ_first` already produces. Resurrection requires plumbing `barthag` through the dispatcher so backward can sample from the true Log5+barthag joint instead — listed as an "architectural lift" in § Outstanding Work, not a strategy addition. (2026-04-25) | KILLED — strategic duplicate |
