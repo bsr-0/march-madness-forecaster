@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Data containers
 
+
 @dataclass
 class GameRecord:
     """One team-side row from a single game."""
@@ -194,6 +195,7 @@ class ProprietaryTeamMetrics:
 
 # Engine
 
+
 class ProprietaryMetricsEngine:
     """Compute all proprietary advanced metrics from game-level box scores."""
 
@@ -231,8 +233,7 @@ class ProprietaryMetricsEngine:
                     from ...exceptions import LeakageError
 
                     raise LeakageError(
-                        f"cutoff_date={cutoff_date} is after tournament start "
-                        f"{tournament_start} for {cutoff_year}."
+                        f"cutoff_date={cutoff_date} is after tournament start {tournament_start} for {cutoff_year}."
                     )
             except ImportError:
                 pass
@@ -1282,6 +1283,7 @@ class ProprietaryMetricsEngine:
 
 # Converter: team_games JSON -> GameRecord
 
+
 def team_games_to_game_records(
     team_games: List[Dict],
     season_year: int,
@@ -1430,6 +1432,7 @@ def team_games_to_game_records(
 
 
 # IncrementalMetricsEngine
+
 
 class IncrementalMetricsEngine:
     """Compute team metrics incrementally using only games before a given date."""
@@ -1734,19 +1737,13 @@ class IncrementalMetricsEngine:
             n_conf = min(len(conf_games), 5)
             metrics.conf_tourney_games = n_conf
             if n_conf > 0:
-                metrics.conf_tourney_margin = sum(
-                    g.points - g.opp_points for g in conf_games
-                ) / n_conf
+                metrics.conf_tourney_margin = sum(g.points - g.opp_points for g in conf_games) / n_conf
 
             n_all = len(all_window_games)
             metrics.late_season_games = n_all
             if n_all > 0:
-                metrics.late_season_margin = sum(
-                    g.points - g.opp_points for g in all_window_games
-                ) / n_all
-                metrics.late_season_win_pct = sum(
-                    1 for g in all_window_games if g.points > g.opp_points
-                ) / n_all
+                metrics.late_season_margin = sum(g.points - g.opp_points for g in all_window_games) / n_all
+                metrics.late_season_win_pct = sum(1 for g in all_window_games if g.points > g.opp_points) / n_all
 
     def compute_h2h_record(self, team1_id: str, team2_id: str) -> float:
         """Team1 win rate vs team2 from current point-in-time games."""
@@ -1902,8 +1899,22 @@ class IncrementalMetricsEngine:
         style_mismatch = (tempo_diff * eff_diff) / 600.0
 
         _SEED_EXPECTED_EM = {
-            1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
-            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21,
+            1: 28,
+            2: 21,
+            3: 16,
+            4: 12,
+            5: 9,
+            6: 6,
+            7: 4,
+            8: 2,
+            9: 0,
+            10: -2,
+            11: -4,
+            12: -6,
+            13: -9,
+            14: -12,
+            15: -16,
+            16: -21,
         }
         residual1 = (v1[0] - v1[1]) - _SEED_EXPECTED_EM.get(seed1, 0)
         residual2 = (v2[0] - v2[1]) - _SEED_EXPECTED_EM.get(seed2, 0)
@@ -1921,18 +1932,23 @@ class IncrementalMetricsEngine:
             seed_interaction = 0.0
             seed_diff = 0.0
 
-        interactions = np.array([
-            tempo_interaction, style_mismatch, seed_em_residual_diff,
-            sos_seed_interaction, three_pt_var_seed_interaction,
-            seed_interaction, seed_diff,
-        ])
+        interactions = np.array(
+            [
+                tempo_interaction,
+                style_mismatch,
+                seed_em_residual_diff,
+                sos_seed_interaction,
+                three_pt_var_seed_interaction,
+                seed_interaction,
+                seed_diff,
+            ]
+        )
 
         result = np.concatenate([diff, absolute, interactions])
         from .feature_engineering import MATCHUP_DIM
 
         assert result.shape[0] == MATCHUP_DIM, (
-            f"build_matchup_vector produced {result.shape[0]}-dim vector, "
-            f"expected MATCHUP_DIM={MATCHUP_DIM}."
+            f"build_matchup_vector produced {result.shape[0]}-dim vector, expected MATCHUP_DIM={MATCHUP_DIM}."
         )
         return result
 
@@ -1970,6 +1986,7 @@ def _load_cbbpy_team_map(csv_path: Optional[str] = None) -> Dict[str, str]:
 
 
 # Converter: Torvik/public data -> GameRecord
+
 
 def torvik_to_game_records(
     torvik_teams: List[Dict],

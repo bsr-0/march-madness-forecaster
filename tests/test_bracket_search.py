@@ -18,12 +18,15 @@ from src.optimization.bracket_search import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_predict_fn(bias: float = 0.6):
     """Create a deterministic predict_fn where team with lower ID wins with `bias`."""
+
     def predict(t1: str, t2: str) -> float:
         if t1 < t2:
             return bias
         return 1.0 - bias
+
     return predict
 
 
@@ -53,6 +56,7 @@ def make_simple_bracket() -> SearchBracket:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestBracketPick:
     def test_construction(self):
@@ -154,8 +158,7 @@ class TestHillClimbOptimizer:
         optimizer = HillClimbOptimizer(
             predict_fn=make_predict_fn(),
             config=BracketSearchConfig(max_iterations=100, max_no_improve=20),
-            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05,
-                          "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
+            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05, "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
         )
         bracket = make_simple_bracket()
         bracket.fitness = optimizer.evaluate_bracket(bracket)
@@ -201,8 +204,7 @@ class TestSimulatedAnnealingOptimizer:
         optimizer = SimulatedAnnealingOptimizer(
             predict_fn=make_predict_fn(),
             config=SAConfig(max_iterations=100),
-            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05,
-                          "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
+            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05, "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
         )
         bracket = make_simple_bracket()
         result = optimizer.optimize(bracket)
@@ -213,8 +215,7 @@ class TestSimulatedAnnealingOptimizer:
         optimizer = SimulatedAnnealingOptimizer(
             predict_fn=make_predict_fn(),
             config=SAConfig(max_iterations=500, initial_temperature=1.0, cooling_rate=0.99),
-            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05,
-                          "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
+            public_picks={"A": 0.30, "B": 0.05, "C": 0.10, "D": 0.05, "E": 0.20, "F": 0.05, "G": 0.05, "H": 0.02},
         )
         bracket = make_simple_bracket()
         bracket.fitness = optimizer.evaluate_bracket(bracket)
@@ -231,7 +232,7 @@ class TestSimulatedAnnealingOptimizer:
             min_temperature=0.001,
         )
         # After 100 iterations: temp = 1.0 * 0.95^100 ≈ 0.0059
-        expected_temp = 1.0 * (0.95 ** 100)
+        expected_temp = 1.0 * (0.95**100)
         assert expected_temp > config.min_temperature
         assert expected_temp < config.initial_temperature
 

@@ -1,6 +1,5 @@
 """Baseline model training — loyo module."""
 
-
 import logging
 import os
 import re
@@ -163,9 +162,9 @@ def _run_loyo_validation(
         model_feature_names = [f"f_{i}" for i in range(feature_dim)]
         if feature_names is not None and len(feature_names) != feature_dim:
             logger.warning(
-                "LOYO: feature name mismatch (%d names vs %d columns). "
-                "Using generic names for CV.",
-                len(feature_names), feature_dim,
+                "LOYO: feature name mismatch (%d names vs %d columns). Using generic names for CV.",
+                len(feature_names),
+                feature_dim,
             )
 
     for year in years:
@@ -193,9 +192,7 @@ def _run_loyo_validation(
             # Slice feature names to match pruned dimension
             if len(model_feature_names) == len(_loyo_keep_mask):
                 _year_feature_names = [
-                    model_feature_names[i]
-                    for i in range(len(_loyo_keep_mask))
-                    if _loyo_keep_mask[i]
+                    model_feature_names[i] for i in range(len(_loyo_keep_mask)) if _loyo_keep_mask[i]
                 ]
 
         data_by_year[year] = {
@@ -244,7 +241,9 @@ def _run_loyo_validation(
                     logger.warning(
                         "LOYO PIT metadata: year %d latest regular-season date %s "
                         "is after Selection Sunday %s; capping at Selection Sunday.",
-                        year, latest_game, selection_sunday,
+                        year,
+                        latest_game,
+                        selection_sunday,
                     )
                     latest_game = selection_sunday
 
@@ -275,7 +274,10 @@ def _run_loyo_validation(
             }
             logger.info(
                 "LOYO PIT summary: %d/%d folds passed, %d violations, %d warnings",
-                n_passed, n_folds, n_violations, n_warnings,
+                n_passed,
+                n_folds,
+                n_violations,
+                n_warnings,
             )
         except Exception as pit_exc:
             logger.error("LOYO PIT validation failed: %s", pit_exc)
@@ -311,8 +313,8 @@ def _run_loyo_validation(
         "scaler": None,
         "selector": None,
         "selected_names": model_feature_names,
-        "ensemble_models": {},    # {name: model}
-        "ensemble_weights": {},   # {name: weight}
+        "ensemble_models": {},  # {name: model}
+        "ensemble_weights": {},  # {name: weight}
     }
 
     def train_fn(X_tr, y_tr, _margins_tr, fold_feature_names, w_tr):
@@ -334,7 +336,8 @@ def _run_loyo_validation(
         if LIGHTGBM_AVAILABLE:
             lgb = LightGBMRanker()
             lgb.train(
-                X_tr, y_tr,
+                X_tr,
+                y_tr,
                 feature_names=_fold_transforms["selected_names"],
                 num_rounds=200,
                 early_stopping_rounds=None,
@@ -347,7 +350,8 @@ def _run_loyo_validation(
             try:
                 xgb = XGBoostRanker()
                 xgb.train(
-                    X_tr, y_tr,
+                    X_tr,
+                    y_tr,
                     feature_names=_fold_transforms["selected_names"],
                     num_rounds=200,
                     early_stopping_rounds=None,
@@ -359,7 +363,8 @@ def _run_loyo_validation(
 
         if SKLEARN_AVAILABLE:
             logit = LogisticRegression(
-                C=1.0, max_iter=2000,
+                C=1.0,
+                max_iter=2000,
                 random_state=pipeline.config.random_seed,
             )
             logit.fit(X_tr, y_tr, sample_weight=w_tr)
@@ -379,9 +384,7 @@ def _run_loyo_validation(
 
         # Equal weights across trained models
         if not _fold_transforms["ensemble_weights"] and trained:
-            _fold_transforms["ensemble_weights"] = {
-                name: 1.0 / len(trained) for name in trained
-            }
+            _fold_transforms["ensemble_weights"] = {name: 1.0 / len(trained) for name in trained}
 
         # Return the primary model for interface compatibility
         if "lgb" in trained:
@@ -417,7 +420,7 @@ def _run_loyo_validation(
                         p = m.predict(X_pred)
                     elif isinstance(m, XGBoostRanker):
                         p = m.predict(X_pred)
-                    elif hasattr(m, 'predict_probability'):
+                    elif hasattr(m, "predict_probability"):
                         p = m.predict_probability(X_pred)
                     else:
                         p = m.predict_proba(X_pred)[:, 1]
@@ -539,4 +542,3 @@ def _run_loyo_validation(
         loyo_result["admission_gate"] = {"error": str(gate_exc)}
 
     return loyo_result
-

@@ -109,10 +109,7 @@ class TestGetStrategyProfile:
         assert profile.scoring_system == "flat"
 
     def test_contrarian_increases_with_pool_size(self):
-        strengths = [
-            get_strategy_profile(size).contrarian_strength
-            for size in [10, 50, 500, 5000]
-        ]
+        strengths = [get_strategy_profile(size).contrarian_strength for size in [10, 50, 500, 5000]]
         assert strengths == sorted(strengths), "Contrarian strength should increase with pool size"
 
 
@@ -164,6 +161,7 @@ class TestScoringSystemAdapter:
     def test_standard_sqrt_dampening(self):
         """Standard uses sqrt(weight) dampening."""
         import math
+
         adapter = get_scoring_adapter("standard")
         ratio = 1.0
         champ_adj = adapter.adjust_leverage_ratio("CHAMP", ratio)
@@ -273,7 +271,13 @@ class TestPayoutStructure:
         base_no_payout = get_strategy_profile(100, payout_structure="tiered")
         # Tiered multipliers are all 1.0, so re-normalization is a no-op
         for key in ["chalk", "balanced", "contrarian", "targeted"]:
-            assert abs(base_no_payout.strategy_mix[key] - get_strategy_profile(100, payout_structure="tiered").strategy_mix[key]) < 0.001
+            assert (
+                abs(
+                    base_no_payout.strategy_mix[key]
+                    - get_strategy_profile(100, payout_structure="tiered").strategy_mix[key]
+                )
+                < 0.001
+            )
 
     def test_payout_invalid_raises(self):
         with pytest.raises(ValueError, match="Invalid payout_structure"):
@@ -285,9 +289,7 @@ class TestPayoutStructure:
             for size in [5, 30, 100, 500, 5000]:
                 profile = get_strategy_profile(size, payout_structure=payout)
                 total = sum(profile.strategy_mix.values())
-                assert abs(total - 1.0) < 0.01, (
-                    f"payout={payout}, size={size}: mix sums to {total}"
-                )
+                assert abs(total - 1.0) < 0.01, f"payout={payout}, size={size}: mix sums to {total}"
 
     def test_payout_structure_stored_on_profile(self):
         profile = get_strategy_profile(100, payout_structure="top_3")
@@ -307,7 +309,9 @@ class TestPayoutStructure:
     def test_contrarian_override_after_payout(self):
         """contrarian_override should take precedence over payout adjustment."""
         profile = get_strategy_profile(
-            100, payout_structure="winner_take_all", contrarian_override=5.0,
+            100,
+            payout_structure="winner_take_all",
+            contrarian_override=5.0,
         )
         assert profile.contrarian_strength == 5.0
 
@@ -345,6 +349,7 @@ class TestVarianceTarget:
     def test_variance_target_affects_pool_dynamics(self):
         """Different variance targets should produce different recommendations."""
         from src.optimization.leverage import calculate_pool_dynamics
+
         model = {"duke": 0.15, "gonzaga": 0.10}
         public = {"duke": 0.25, "gonzaga": 0.08}
 

@@ -124,9 +124,11 @@ def validate_stage_output(
     """
     if prob < clip_lo or prob > clip_hi:
         logger.warning(
-            "Stage '%s' produced out-of-bounds probability %.6f "
-            "(bounds [%.4f, %.4f]); clipping.",
-            stage_name, prob, clip_lo, clip_hi,
+            "Stage '%s' produced out-of-bounds probability %.6f (bounds [%.4f, %.4f]); clipping.",
+            stage_name,
+            prob,
+            clip_lo,
+            clip_hi,
         )
         return float(np.clip(prob, clip_lo, clip_hi))
     return prob
@@ -258,15 +260,11 @@ def run_ablation_ladder(
     stages["raw"] = raw_probs.copy()
 
     # Stage 1: calibrated
-    cal_probs = np.array([
-        apply_calibration(p, calibrator, clip_lo, clip_hi) for p in raw_probs
-    ])
+    cal_probs = np.array([apply_calibration(p, calibrator, clip_lo, clip_hi) for p in raw_probs])
     stages["calibrated"] = cal_probs
 
     # Stage 2: shrunk
-    shrunk_probs = np.array([
-        apply_tournament_shrinkage(p, shrinkage) for p in cal_probs
-    ])
+    shrunk_probs = np.array([apply_tournament_shrinkage(p, shrinkage) for p in cal_probs])
     stages["shrunk"] = shrunk_probs
 
     # Stage 3: clipped (final)
@@ -287,9 +285,7 @@ def run_ablation_ladder(
         # Log loss
         eps = 1e-15
         clipped = np.clip(probs, eps, 1.0 - eps)
-        metrics["log_loss"] = float(
-            -np.mean(outcomes * np.log(clipped) + (1 - outcomes) * np.log(1 - clipped))
-        )
+        metrics["log_loss"] = float(-np.mean(outcomes * np.log(clipped) + (1 - outcomes) * np.log(1 - clipped)))
 
         # Absolute movement from previous stage
         if prev_probs is not None:
@@ -373,8 +369,7 @@ def validate_probability_stage(
 
     if movements.mean() > max_movement_pct:
         result["warnings"].append(
-            f"Stage '{stage_name}' mean movement {movements.mean():.4f} "
-            f"exceeds threshold {max_movement_pct:.4f}"
+            f"Stage '{stage_name}' mean movement {movements.mean():.4f} exceeds threshold {max_movement_pct:.4f}"
         )
 
     large_frac = float((movements > large_move_threshold).mean())

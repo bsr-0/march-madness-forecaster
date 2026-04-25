@@ -9,7 +9,13 @@ def _default_year() -> int:
     """Current calendar year — used as the default --year across CLI commands."""
     return datetime.date.today().year
 
-from ..pipeline.tournament_pipeline import DataRequirementError, TournamentPipeline, ForecastConfig, run_pipeline_to_file
+
+from ..pipeline.tournament_pipeline import (
+    DataRequirementError,
+    TournamentPipeline,
+    ForecastConfig,
+    run_pipeline_to_file,
+)
 from ..governance import ProductionValidationError
 
 
@@ -92,8 +98,7 @@ def _build_pipeline_config(args, path_overrides=None):
         probability_profile=getattr(args, "probability_profile", "production"),
         mode=getattr(args, "mode", "calibration"),
     )
-    for key in ("preseason_ap_json", "coach_tournament_json", "conf_champions_json",
-                "betting_odds_json"):
+    for key in ("preseason_ap_json", "coach_tournament_json", "conf_champions_json", "betting_odds_json"):
         if key in path_overrides:
             config_kwargs[key] = path_overrides[key]
 
@@ -124,10 +129,7 @@ def _run_pipeline_and_report(config, output_path):
 
 def _guard_production_2026(config):
     """Raise if generic command is being used as a production 2026 entrypoint."""
-    if (
-        getattr(config, "probability_profile", None) == "production"
-        and getattr(config, "year", None) == 2026
-    ):
+    if getattr(config, "probability_profile", None) == "production" and getattr(config, "year", None) == 2026:
         raise ProductionValidationError(
             "Production 2026 runs must use the dedicated entrypoint: "
             "python src/run_production_2026.py or 'march-madness run-production-2026'"
@@ -173,14 +175,24 @@ def _resolve_manifest_paths(args, manifest, base_dir):
         "year": getattr(args, "year", None) or int(manifest.get("year", 2026)),
         "teams_json": resolve_path(getattr(args, "input", None) or artifacts.get("teams_json")),
         "torvik_json": resolve_path(getattr(args, "torvik", None) or artifacts.get("torvik_json")),
-        "historical_games_json": resolve_path(getattr(args, "historical_games", None) or artifacts.get("historical_games_json")),
-        "sports_reference_json": resolve_path(getattr(args, "sports_reference", None) or artifacts.get("sports_reference_json")),
+        "historical_games_json": resolve_path(
+            getattr(args, "historical_games", None) or artifacts.get("historical_games_json")
+        ),
+        "sports_reference_json": resolve_path(
+            getattr(args, "sports_reference", None) or artifacts.get("sports_reference_json")
+        ),
         "public_picks_json": resolve_path(getattr(args, "public_picks", None) or artifacts.get("public_picks_json")),
         "roster_json": resolve_path(getattr(args, "rosters", None) or artifacts.get("rosters_json")),
-        "transfer_portal_json": resolve_path(getattr(args, "transfer_portal", None) or artifacts.get("transfer_portal_json")),
+        "transfer_portal_json": resolve_path(
+            getattr(args, "transfer_portal", None) or artifacts.get("transfer_portal_json")
+        ),
         "preseason_ap_json": resolve_path(getattr(args, "preseason_ap", None) or artifacts.get("preseason_ap_json")),
-        "coach_tournament_json": resolve_path(getattr(args, "coach_tournament", None) or artifacts.get("coach_tournament_json")),
-        "conf_champions_json": resolve_path(getattr(args, "conf_champions", None) or artifacts.get("conf_champions_json")),
+        "coach_tournament_json": resolve_path(
+            getattr(args, "coach_tournament", None) or artifacts.get("coach_tournament_json")
+        ),
+        "conf_champions_json": resolve_path(
+            getattr(args, "conf_champions", None) or artifacts.get("conf_champions_json")
+        ),
         "betting_odds_json": resolve_path(getattr(args, "betting_odds", None) or artifacts.get("odds_json")),
         "scoring_rules_json": resolve_path(getattr(args, "scoring_rules", None) or artifacts.get("scoring_rules_json")),
     }
@@ -191,38 +203,39 @@ def add_common_pipeline_args(parser):
     parser.add_argument("--year", type=int, default=None, help="Season year (default: current year)")
     parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     parser.add_argument("--pool-size", type=int, default=100, help="Bracket pool size")
-    parser.add_argument("--injury-noise-samples", type=int, default=10000,
-                        help="Player-level injury/noise MC samples per matchup")
+    parser.add_argument(
+        "--injury-noise-samples", type=int, default=10000, help="Player-level injury/noise MC samples per matchup"
+    )
     parser.add_argument("--seed", type=int, default=None, help="Random seed (default: current year)")
-    parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"],
-                        default="temperature")
+    parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"], default="temperature")
     parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping")
     parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory")
     parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks")
     parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Max feed age in hours")
     parser.add_argument("--min-public-sources", type=int, default=2, help="Min independent public pick sources")
-    parser.add_argument("--min-rapm-players-per-team", type=int, default=5,
-                        help="Min non-zero RAPM players per team")
-    parser.add_argument("--bracket-source", default="auto",
-                        help="Bracket source: auto, bigdance, sports_reference, or path")
+    parser.add_argument("--min-rapm-players-per-team", type=int, default=5, help="Min non-zero RAPM players per team")
+    parser.add_argument(
+        "--bracket-source", default="auto", help="Bracket source: auto, bigdance, sports_reference, or path"
+    )
     parser.add_argument("--bracket-json", default=None, help="Pre-fetched bracket JSON path")
-    parser.add_argument("--multi-year-games-dir", default="auto",
-                        help="Dir with per-year historical JSONs. 'auto' or 'none'.")
+    parser.add_argument(
+        "--multi-year-games-dir", default="auto", help="Dir with per-year historical JSONs. 'auto' or 'none'."
+    )
     parser.add_argument("--dev-years", default=None, help="Comma-separated dev years")
     parser.add_argument("--holdout-years", default=None, help="Comma-separated holdout years")
-    parser.add_argument("--probability-profile", choices=["production", "experimental"],
-                        default="production")
+    parser.add_argument("--probability-profile", choices=["production", "experimental"], default="production")
     parser.add_argument("--mode", choices=["calibration", "ev"], default="calibration")
-    parser.add_argument("--calibration-years", default=None,
-                        help="Comma-separated tournament years for calibrator fitting")
-    parser.add_argument("--require-freeze", action="store_true",
-                        help="Require freeze artifact before running")
+    parser.add_argument(
+        "--calibration-years", default=None, help="Comma-separated tournament years for calibrator fitting"
+    )
+    parser.add_argument("--require-freeze", action="store_true", help="Require freeze artifact before running")
     parser.add_argument("--freeze-file", default="pipeline_freeze.json", help="Freeze artifact path")
     parser.add_argument("--mc-calibration", default=None, help="MC calibration artifact JSON")
     parser.add_argument("--enable-gnn", action="store_true", help="Enable GNN training")
     parser.add_argument("--enable-transformer", action="store_true", help="Enable transformer training")
-    parser.add_argument("--enable-embedding-projections", action="store_true",
-                        help="Enable embedding projection models")
+    parser.add_argument(
+        "--enable-embedding-projections", action="store_true", help="Enable embedding projection models"
+    )
     parser.add_argument("--kaggle-dir", default=None, help="Path to Kaggle CSV directory")
 
 

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NETRanking:
     """NCAA NET ranking for a team."""
+
     team_name: str
     team_id: str
     net_ranking: int
@@ -68,19 +69,29 @@ class WomensNETScraper:
         logger.info("Loaded %d women's NET rankings for %d", len(rankings), year)
         return rankings
 
-    def estimate_from_seeds(
-        self, seed_map: Dict[str, int], total_teams: int = 360
-    ) -> Dict[str, NETRanking]:
+    def estimate_from_seeds(self, seed_map: Dict[str, int], total_teams: int = 360) -> Dict[str, NETRanking]:
         """Estimate NET rankings from tournament seeds.
 
         Historical correlation: seed 1 ≈ NET 1-4, seed 2 ≈ NET 5-12, etc.
         """
         # Map seeds to approximate NET ranking ranges
         seed_to_net_center = {
-            1: 3, 2: 8, 3: 14, 4: 20,
-            5: 28, 6: 35, 7: 42, 8: 52,
-            9: 60, 10: 68, 11: 55, 12: 48,
-            13: 90, 14: 120, 15: 180, 16: 280,
+            1: 3,
+            2: 8,
+            3: 14,
+            4: 20,
+            5: 28,
+            6: 35,
+            7: 42,
+            8: 52,
+            9: 60,
+            10: 68,
+            11: 55,
+            12: 48,
+            13: 90,
+            14: 120,
+            15: 180,
+            16: 280,
         }
 
         rankings = {}

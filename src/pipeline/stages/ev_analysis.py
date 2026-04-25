@@ -64,15 +64,13 @@ def refresh_ev_analysis(
             "Call pipeline.run() first to train models and generate initial EV analysis."
         )
     if pipeline.config.mode != "ev":
-        raise RuntimeError(
-            "refresh_ev_analysis() is only available in EV mode. "
-            f"Current mode: {pipeline.config.mode}"
-        )
+        raise RuntimeError(f"refresh_ev_analysis() is only available in EV mode. Current mode: {pipeline.config.mode}")
 
     from ...optimization.live_refresh import LivePicksRefreshWorkflow
 
     workflow = LivePicksRefreshWorkflow.from_pipeline_run(
-        pipeline, pipeline._last_ev_report,
+        pipeline,
+        pipeline._last_ev_report,
     )
     result = workflow.refresh(
         force=force,
@@ -116,9 +114,7 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
 
     # Build team metadata
     team_metadata = {
-        team_id: TeamMetadata(
-            team_name=team.name, seed=team.seed, region=team.region
-        )
+        team_id: TeamMetadata(team_name=team.name, seed=team.seed, region=team.region)
         for team_id, team in pipeline.team_struct.items()
     }
 
@@ -131,9 +127,7 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
         pipeline.config.ev_pool_size,
         scoring_system=ev_scoring_name,
         contrarian_override=(
-            pipeline.config.ev_contrarian_strength
-            if pipeline.config.ev_contrarian_strength != 1.0
-            else None
+            pipeline.config.ev_contrarian_strength if pipeline.config.ev_contrarian_strength != 1.0 else None
         ),
         payout_structure=pipeline.config.ev_payout_structure,
     )
@@ -154,17 +148,18 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
                 create_archetypes,
                 get_archetype_mix,
             )
+
             archetype_mix = get_archetype_mix(
                 pipeline.config.ev_pool_type,
                 overrides=pipeline.config.ev_archetype_overrides,
             )
             archetypes = create_archetypes(archetype_mix)
             # Build seed lookup from team metadata
-            seed_lookup = {
-                tid: tm.seed for tid, tm in team_metadata.items()
-            }
+            seed_lookup = {tid: tm.seed for tid, tm in team_metadata.items()}
             archetype_pick_dist = blend_archetype_picks(
-                archetypes, model_round_probs, public_picks,
+                archetypes,
+                model_round_probs,
+                public_picks,
                 seeds=seed_lookup,
             )
             logger.info(
@@ -191,9 +186,7 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
     # The Pareto brackets from analyze_pool() provide good starting seeds;
     # SimulatedAnnealingOptimizer navigates the 2^63 space from those seeds
     # to find higher-EV configurations that pure sampling misses.
-    effective_public_for_search = (
-        archetype_pick_dist if archetype_pick_dist is not None else public_picks
-    )
+    effective_public_for_search = archetype_pick_dist if archetype_pick_dist is not None else public_picks
     pool_analysis.pareto_brackets = _optimize_pareto_brackets_with_search(
         pipeline=pipeline,
         pool_analysis=pool_analysis,
@@ -231,22 +224,14 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
     ]
 
     # Model vs public divergence for championship
-    championship_odds = {
-        team_id: probs.get("CHAMP", 0.0)
-        for team_id, probs in model_round_probs.items()
-    }
+    championship_odds = {team_id: probs.get("CHAMP", 0.0) for team_id, probs in model_round_probs.items()}
     for team_id, model_prob in championship_odds.items():
         pub_prob = public_picks.get(team_id, {}).get("CHAMP", 0.0)
         if pub_prob > 0.01 or model_prob > 0.01:
-            ev.model_vs_public_divergence[team_id] = round(
-                model_prob - pub_prob, 4
-            )
+            ev.model_vs_public_divergence[team_id] = round(model_prob - pub_prob, 4)
 
     # Pareto brackets summary
-    ev.pareto_brackets = [
-        b.to_dict() if hasattr(b, "to_dict") else {}
-        for b in pool_analysis.pareto_brackets[:5]
-    ]
+    ev.pareto_brackets = [b.to_dict() if hasattr(b, "to_dict") else {} for b in pool_analysis.pareto_brackets[:5]]
 
     # Pool EV analysis by strategy
     ev.pool_ev_analysis = pool_analysis.strategy_evs if hasattr(pool_analysis, "strategy_evs") else {}
@@ -283,15 +268,14 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
                 team_regions=team_regions,
                 scoring_system=ev_scoring,
             )
-            profile_names = [
-                p.strip()
-                for p in pipeline.config.espn_risk_profiles.split(",")
-            ]
+            profile_names = [p.strip() for p in pipeline.config.espn_risk_profiles.split(",")]
 
             # Convert the top Pareto bracket (BracketConfiguration) to a
             # SearchBracket so the SA optimizer inside generate() can work.
             seed_bracket = _bracket_config_to_search_bracket(
-                pool_analysis.pareto_brackets[0], _teams_by_region, predict_fn,
+                pool_analysis.pareto_brackets[0],
+                _teams_by_region,
+                predict_fn,
             )
 
             espn_results = portfolio.generate(
@@ -302,9 +286,7 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
             ev.espn_portfolio = [
                 {
                     "profile": name,
-                    "bracket": bracket.to_submission_dict()
-                    if hasattr(bracket, "to_submission_dict")
-                    else {},
+                    "bracket": bracket.to_submission_dict() if hasattr(bracket, "to_submission_dict") else {},
                 }
                 for name, bracket in espn_results
             ]
@@ -331,7 +313,10 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
             scoring_system=ev_scoring,
             target_percentiles=[
                 pipeline.config.ev_target_percentile,
-                0.01, 0.05, 0.10, 0.25,
+                0.01,
+                0.05,
+                0.10,
+                0.25,
             ],
         )
         ev.win_probabilities = pool_sim_result.get_best_win_probabilities()
@@ -393,8 +378,7 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
             logger.warning("Protocol v2 ESPN optimizer failed: %s", exc)
 
     logger.info(
-        "EV Mode: pool_size=%d, scoring=%s, strategy=%s, "
-        "leverage_picks=%d, fade_picks=%d, win_probs=%s",
+        "EV Mode: pool_size=%d, scoring=%s, strategy=%s, leverage_picks=%d, fade_picks=%d, win_probs=%s",
         ev.pool_size,
         ev.scoring_system,
         ev.recommended_strategy,
@@ -443,6 +427,7 @@ def _build_first_round_matchups(pipeline) -> List[str]:
 # Pool competition simulation (Phase 4)
 # ------------------------------------------------------------------
 
+
 def _run_pool_competition_simulation(
     pipeline,
     pareto_brackets: List,
@@ -474,9 +459,7 @@ def _run_pool_competition_simulation(
     from ...simulation.monte_carlo import TournamentBracket, TournamentTeam
 
     # Build TournamentBracket to get first_round_matchups
-    teams_by_region: Dict[str, List[TournamentTeam]] = {
-        r: [] for r in ["East", "West", "South", "Midwest"]
-    }
+    teams_by_region: Dict[str, List[TournamentTeam]] = {r: [] for r in ["East", "West", "South", "Midwest"]}
     seeds: Dict[str, int] = {}
     for team_id, team in pipeline.team_struct.items():
         if team.region not in teams_by_region:
@@ -496,9 +479,7 @@ def _run_pool_competition_simulation(
 
     # Sort by seed for standard bracket construction
     for region in teams_by_region:
-        teams_by_region[region] = sorted(
-            teams_by_region[region], key=lambda t: t.seed
-        )
+        teams_by_region[region] = sorted(teams_by_region[region], key=lambda t: t.seed)
 
     bracket = TournamentBracket.create_standard_bracket(teams_by_region)
     first_round = bracket.first_round_matchups
@@ -515,14 +496,13 @@ def _run_pool_competition_simulation(
 
     # Convert Pareto brackets to winner-list format
     model_brackets, model_metadata = _pareto_brackets_to_winner_lists(
-        pipeline, pareto_brackets, first_round,
+        pipeline,
+        pareto_brackets,
+        first_round,
     )
 
     if not model_brackets:
-        logger.warning(
-            "No valid model brackets for competition simulation; "
-            "generating chalk bracket as fallback."
-        )
+        logger.warning("No valid model brackets for competition simulation; generating chalk bracket as fallback.")
         chalk_winners = _generate_chalk_winners(first_round, matchup_probs)
         model_brackets = [{"winners": chalk_winners}]
         model_metadata = [{"id": "chalk_fallback", "strategy": "chalk"}]
@@ -579,14 +559,18 @@ def _pareto_brackets_to_winner_lists(
         is a list of {"winners": [team_id, ...]} dicts.
     """
     SEED_ORDER = [
-        (1, 16), (8, 9), (5, 12), (4, 13),
-        (6, 11), (3, 14), (7, 10), (2, 15),
+        (1, 16),
+        (8, 9),
+        (5, 12),
+        (4, 13),
+        (6, 11),
+        (3, 14),
+        (7, 10),
+        (2, 15),
     ]
 
     # Build seed-to-team mapping by region
-    by_region: Dict[str, Dict[int, str]] = {
-        r: {} for r in ("East", "West", "South", "Midwest")
-    }
+    by_region: Dict[str, Dict[int, str]] = {r: {} for r in ("East", "West", "South", "Midwest")}
     for team_id, team in pipeline.team_struct.items():
         if team.region in by_region:
             by_region[team.region][team.seed] = team_id
@@ -672,21 +656,22 @@ def _pareto_brackets_to_winner_lists(
         game_key = "CHAMP_1"
         winner = picks.get(game_key)
         if winner is None:
-            winner = bracket.champion if hasattr(bracket, "champion") else (
-                f4_winners[0] if f4_winners else ""
-            )
+            winner = bracket.champion if hasattr(bracket, "champion") else (f4_winners[0] if f4_winners else "")
         winners.append(winner)
 
         if len(winners) == 63:
             model_brackets.append({"winners": winners})
-            model_metadata.append({
-                "id": f"pareto_{b_idx}",
-                "strategy": getattr(bracket, "strategy", "unknown"),
-            })
+            model_metadata.append(
+                {
+                    "id": f"pareto_{b_idx}",
+                    "strategy": getattr(bracket, "strategy", "unknown"),
+                }
+            )
         else:
             logger.warning(
                 "Pareto bracket %d produced %d winners (expected 63), skipping",
-                b_idx, len(winners),
+                b_idx,
+                len(winners),
             )
 
     return model_brackets, model_metadata
@@ -801,10 +786,7 @@ def _optimize_pareto_brackets_with_search(
         team_seeds[team_id] = team.seed
 
     # Championship-level public picks summary for optimizer fallback
-    champ_public = {
-        tid: probs.get("CHAMP", 0.01)
-        for tid, probs in public_picks.items()
-    }
+    champ_public = {tid: probs.get("CHAMP", 0.01) for tid, probs in public_picks.items()}
 
     predict_fn = pipeline.predict_probability
     sa_config = SAConfig(
@@ -829,17 +811,22 @@ def _optimize_pareto_brackets_with_search(
     for bracket_config in pool_analysis.pareto_brackets:
         try:
             search_bracket = _bracket_config_to_search_bracket(
-                bracket_config, teams_by_region, predict_fn,
+                bracket_config,
+                teams_by_region,
+                predict_fn,
             )
             optimized = optimizer.optimize(search_bracket)
             new_config = _search_bracket_to_bracket_config(
-                optimized, bracket_config, teams_by_region,
+                optimized,
+                bracket_config,
+                teams_by_region,
             )
             refined.append(new_config)
         except Exception as exc:
             logger.warning(
                 "Bracket search optimizer failed for '%s' bracket: %s",
-                getattr(bracket_config, "strategy", "unknown"), exc,
+                getattr(bracket_config, "strategy", "unknown"),
+                exc,
             )
             refined.append(bracket_config)
 
@@ -889,10 +876,15 @@ def _bracket_config_to_search_bracket(
             else:
                 loser = t2 if winner == t1 else t1
             p_val = predict_fn(winner, loser)
-            picks_list.append(BracketPick(
-                round_num=0, game_idx=game_idx,
-                winner_id=winner, loser_id=loser, win_probability=p_val,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=0,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=p_val,
+                )
+            )
             r64.append(winner)
             game_idx += 1
         region_r64[region] = r64
@@ -913,10 +905,15 @@ def _bracket_config_to_search_bracket(
             else:
                 loser = t2 if winner == t1 else t1
             p_val = predict_fn(winner, loser)
-            picks_list.append(BracketPick(
-                round_num=1, game_idx=game_idx,
-                winner_id=winner, loser_id=loser, win_probability=p_val,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=1,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=p_val,
+                )
+            )
             r32.append(winner)
             game_idx += 1
         region_r32[region] = r32
@@ -937,10 +934,15 @@ def _bracket_config_to_search_bracket(
             else:
                 loser = t2 if winner == t1 else t1
             p_val = predict_fn(winner, loser)
-            picks_list.append(BracketPick(
-                round_num=2, game_idx=game_idx,
-                winner_id=winner, loser_id=loser, win_probability=p_val,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=2,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=p_val,
+                )
+            )
             s16.append(winner)
             game_idx += 1
         region_s16[region] = s16
@@ -959,10 +961,15 @@ def _bracket_config_to_search_bracket(
         else:
             loser = t2 if winner == t1 else t1
         p_val = predict_fn(winner, loser)
-        picks_list.append(BracketPick(
-            round_num=3, game_idx=game_idx,
-            winner_id=winner, loser_id=loser, win_probability=p_val,
-        ))
+        picks_list.append(
+            BracketPick(
+                round_num=3,
+                game_idx=game_idx,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=p_val,
+            )
+        )
         region_e8[region] = winner
         game_idx += 1
 
@@ -983,10 +990,15 @@ def _bracket_config_to_search_bracket(
         else:
             loser = t2 if winner == t1 else t1
         p_val = predict_fn(winner, loser)
-        picks_list.append(BracketPick(
-            round_num=4, game_idx=game_idx,
-            winner_id=winner, loser_id=loser, win_probability=p_val,
-        ))
+        picks_list.append(
+            BracketPick(
+                round_num=4,
+                game_idx=game_idx,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=p_val,
+            )
+        )
         f4_winners.append(winner)
         game_idx += 1
 
@@ -1001,13 +1013,19 @@ def _bracket_config_to_search_bracket(
         else:
             loser = t2 if winner == t1 else t1
         p_val = predict_fn(winner, loser)
-        picks_list.append(BracketPick(
-            round_num=5, game_idx=game_idx,
-            winner_id=winner, loser_id=loser, win_probability=p_val,
-        ))
+        picks_list.append(
+            BracketPick(
+                round_num=5,
+                game_idx=game_idx,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=p_val,
+            )
+        )
         champion = winner
 
     from ...optimization.bracket_search import SearchBracket
+
     return SearchBracket(picks=picks_list, champion=champion)
 
 

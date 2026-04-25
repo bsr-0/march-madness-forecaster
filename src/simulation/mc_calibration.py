@@ -32,6 +32,7 @@ FIRST_ROUND_MATCHUPS = {
 def _is_tournament_game(date_str: str, year: int) -> bool:
     from datetime import date as _dtdate
     from ..pipeline.config import TOURNAMENT_START_DATES
+
     try:
         parts = date_str.split("-")
         game_year = int(parts[0])
@@ -317,8 +318,15 @@ def calibrate_mc_parameters(
             per_year_scores: Dict[int, float] = {}
             for yr in dev_years:
                 scored = _score_year(
-                    yr, historical_dir, ns, rc, num_simulations,
-                    em_slope, seed_slope, random_seed, parallel_workers,
+                    yr,
+                    historical_dir,
+                    ns,
+                    rc,
+                    num_simulations,
+                    em_slope,
+                    seed_slope,
+                    random_seed,
+                    parallel_workers,
                 )
                 if scored is None:
                     continue
@@ -330,8 +338,15 @@ def calibrate_mc_parameters(
             holdout_scores = []
             for yr in holdout_years:
                 scored = _score_year(
-                    yr, historical_dir, ns, rc, num_simulations,
-                    em_slope, seed_slope, random_seed, parallel_workers,
+                    yr,
+                    historical_dir,
+                    ns,
+                    rc,
+                    num_simulations,
+                    em_slope,
+                    seed_slope,
+                    random_seed,
+                    parallel_workers,
                 )
                 if scored is None:
                     continue

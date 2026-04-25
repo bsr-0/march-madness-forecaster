@@ -95,14 +95,16 @@ def find_pool_bias(analysis: dict) -> list[dict]:
 
         # A team picked as champion by >20% of a 30-person pool is heavily concentrated
         if champ_pct > 15 or f4_pct > 30:
-            biases.append({
-                "team": team,
-                "champ_pct": champ_pct,
-                "f4_pct": f4_pct,
-                "e8_pct": e8_pct,
-                "signal": "OVER-PICKED",
-                "strategy": "FADE — pool is concentrated here, low leverage",
-            })
+            biases.append(
+                {
+                    "team": team,
+                    "champ_pct": champ_pct,
+                    "f4_pct": f4_pct,
+                    "e8_pct": e8_pct,
+                    "signal": "OVER-PICKED",
+                    "strategy": "FADE — pool is concentrated here, low leverage",
+                }
+            )
 
     return biases
 
@@ -119,9 +121,9 @@ def print_report(pool_data: dict, year_filter: str = None):
             continue
 
         n = analysis["n_brackets"]
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  {year} Pool Analysis ({n} brackets)")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Champion concentration
         print(f"\n  Champion picks:")
@@ -165,9 +167,9 @@ def print_report(pool_data: dict, year_filter: str = None):
 
     # Cross-year patterns
     if not year_filter:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  Cross-Year Patterns")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         all_champs = Counter()
         all_f4 = Counter()

@@ -79,8 +79,7 @@ class TournamentBracketData:
                 key=lambda t: t.seed,
             )
             seed_map = {t.seed: t for t in region_teams}
-            for high, low in [(1, 16), (2, 15), (3, 14), (4, 13),
-                              (5, 12), (6, 11), (7, 10), (8, 9)]:
+            for high, low in [(1, 16), (2, 15), (3, 14), (4, 13), (5, 12), (6, 11), (7, 10), (8, 9)]:
                 t_high = seed_map.get(high)
                 t_low = seed_map.get(low)
                 if t_high and t_low:

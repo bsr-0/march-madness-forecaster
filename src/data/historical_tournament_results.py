@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TournamentGame:
     """A single tournament game result."""
+
     year: int
     round_name: str  # "R64", "R32", "S16", "E8", "F4", "NCG"
     team1_id: str
@@ -117,7 +118,8 @@ def save_tournament_results(
     with open(path, "w") as f:
         json.dump(
             {"year": year, "games": [asdict(g) for g in games]},
-            f, indent=2,
+            f,
+            indent=2,
         )
     logger.info("Saved %d tournament games to %s", len(games), path)
 

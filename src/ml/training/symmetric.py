@@ -85,9 +85,7 @@ THREE_PT_VAR_SEED_IDX = MATCHUP_3PT_VAR_SEED_IDX
 SEED_DIFF_IDX = MATCHUP_SEED_DIFF_IDX
 
 # Import-time assertion: catch dimension drift immediately
-assert DIFF_END == TEAM_FEATURE_DIM, (
-    f"DIFF_END={DIFF_END} != TEAM_FEATURE_DIM={TEAM_FEATURE_DIM}"
-)
+assert DIFF_END == TEAM_FEATURE_DIM, f"DIFF_END={DIFF_END} != TEAM_FEATURE_DIM={TEAM_FEATURE_DIM}"
 
 
 def swap_matchup_vector(x: np.ndarray) -> np.ndarray:
@@ -109,10 +107,7 @@ def swap_matchup_vector(x: np.ndarray) -> np.ndarray:
         ValueError: If the vector has fewer than 78 dimensions.
     """
     if x.shape[0] < MATCHUP_DIM:
-        raise ValueError(
-            f"Matchup vector must have >= {MATCHUP_DIM} dimensions, "
-            f"got {x.shape[0]}."
-        )
+        raise ValueError(f"Matchup vector must have >= {MATCHUP_DIM} dimensions, got {x.shape[0]}.")
 
     swapped = x.copy()
 
@@ -149,10 +144,7 @@ def swap_matchup_batch(X: np.ndarray) -> np.ndarray:
         Swapped feature matrix of shape (N, D).
     """
     if X.ndim != 2 or X.shape[1] < MATCHUP_DIM:
-        raise ValueError(
-            f"Expected 2D array with >= {MATCHUP_DIM} columns, "
-            f"got shape {X.shape}."
-        )
+        raise ValueError(f"Expected 2D array with >= {MATCHUP_DIM} columns, got shape {X.shape}.")
 
     swapped = X.copy()
 
@@ -203,9 +195,7 @@ def symmetric_augment(
     """
     n = len(y)
     if X.shape[0] != n:
-        raise ValueError(
-            f"X and y length mismatch: X has {X.shape[0]} rows, y has {n}."
-        )
+        raise ValueError(f"X and y length mismatch: X has {X.shape[0]} rows, y has {n}.")
 
     # Create swapped versions
     X_swap = swap_matchup_batch(X)
@@ -240,7 +230,8 @@ def symmetric_augment(
 
     logger.info(
         "Symmetric augmentation: %d → %d samples (2× expansion).",
-        n, 2 * n,
+        n,
+        2 * n,
     )
 
     return X_aug, y_aug, margins_aug, rw_aug, sk_aug

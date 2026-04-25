@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 # Result containers
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RegressionGateResult:
     """Outcome of comparing current run against a stored baseline."""
@@ -78,13 +79,9 @@ class BacktestResult:
             "elapsed_seconds": self.elapsed_seconds,
             "aggregate_report": self.aggregate_report.to_dict(),
             "risk_report": self.risk_report,
-            "regression_gate": (
-                self.regression_gate.to_dict() if self.regression_gate else None
-            ),
+            "regression_gate": (self.regression_gate.to_dict() if self.regression_gate else None),
             "per_year_brier": {str(k): v for k, v in self.per_year_brier.items()},
-            "per_year_calibration_ece": {
-                str(k): v for k, v in self.per_year_calibration_ece.items()
-            },
+            "per_year_calibration_ece": {str(k): v for k, v in self.per_year_calibration_ece.items()},
         }
 
     def summary(self) -> str:
@@ -103,9 +100,7 @@ class BacktestResult:
                 ece = self.per_year_calibration_ece.get(year, float("nan"))
                 lines.append(f"  {year}: Brier={brier:.4f}  ECE={ece:.4f}")
             briers = list(self.per_year_brier.values())
-            lines.append(
-                f"  Mean={np.mean(briers):.4f}  Std={np.std(briers, ddof=1):.4f}"
-            )
+            lines.append(f"  Mean={np.mean(briers):.4f}  Std={np.std(briers, ddof=1):.4f}")
             lines.append("")
 
         if self.regression_gate:
@@ -129,6 +124,7 @@ class BacktestResult:
 # ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
+
 
 class BacktestHarness:
     """Unified LOYO backtesting orchestrator.
@@ -154,6 +150,7 @@ class BacktestHarness:
 
         # Defer import to avoid circular deps at module level
         from ..ml.evaluation.loyo_protocol import LOYO_YEARS
+
         self.years = years or list(LOYO_YEARS)
 
     def run(self) -> BacktestResult:
@@ -175,10 +172,7 @@ class BacktestHarness:
         if skipped:
             logger.warning("No tournament results for years: %s", skipped)
         if not years_to_eval:
-            raise ValueError(
-                f"No tournament results for any requested year. "
-                f"Available: {available}"
-            )
+            raise ValueError(f"No tournament results for any requested year. Available: {available}")
 
         # Check historical games exist
         for year in list(years_to_eval):
@@ -190,9 +184,7 @@ class BacktestHarness:
         if not years_to_eval:
             raise ValueError(f"No historical data found in {self.historical_dir}")
 
-        logger.info(
-            "Backtest harness: %d years: %s", len(years_to_eval), years_to_eval
-        )
+        logger.info("Backtest harness: %d years: %s", len(years_to_eval), years_to_eval)
 
         backtester = KaggleBacktester(historical_results_dir=results_dir)
         year_reports: List[EvaluationReport] = []
@@ -204,8 +196,12 @@ class BacktestHarness:
             logger.info("LOYO fold: held-out year = %d", held_out_year)
 
             predictions, actual_games = self._run_year(
-                held_out_year, results_dir, get_tournament_games_for_eval,
-                TournamentPipeline, ForecastConfig, DataRequirementError,
+                held_out_year,
+                results_dir,
+                get_tournament_games_for_eval,
+                TournamentPipeline,
+                ForecastConfig,
+                DataRequirementError,
             )
 
             if not actual_games:
@@ -213,27 +209,21 @@ class BacktestHarness:
                 continue
 
             # Score via KaggleBacktester
-            bt_result = backtester.evaluate_predictions(
-                predictions, actual_games, held_out_year
-            )
+            bt_result = backtester.evaluate_predictions(predictions, actual_games, held_out_year)
             year_briers[held_out_year] = bt_result.brier_score
 
             # Build structured EvaluationReport
-            eval_report = self._build_eval_report(
-                held_out_year, predictions, actual_games, bt_result
-            )
+            eval_report = self._build_eval_report(held_out_year, predictions, actual_games, bt_result)
             year_reports.append(eval_report)
 
-            ece = (
-                eval_report.calibration_report.ece
-                if eval_report.calibration_report
-                else float("nan")
-            )
+            ece = eval_report.calibration_report.ece if eval_report.calibration_report else float("nan")
             year_ece[held_out_year] = ece
 
             logger.info(
                 "  %d: Brier=%.4f  ECE=%.4f  Accuracy=%.1f%%",
-                held_out_year, bt_result.brier_score, ece,
+                held_out_year,
+                bt_result.brier_score,
+                ece,
                 bt_result.accuracy * 100,
             )
 
@@ -273,7 +263,13 @@ class BacktestHarness:
     # ------------------------------------------------------------------
 
     def _run_year(
-        self, year, results_dir, get_games_fn, Pipeline, PipelineConfig, DataReqError,
+        self,
+        year,
+        results_dir,
+        get_games_fn,
+        Pipeline,
+        PipelineConfig,
+        DataReqError,
     ) -> Tuple[Dict, List]:
         """Run pipeline for one held-out year. Falls back to seed baseline on failure."""
         predictions: Dict = {}
@@ -290,6 +286,7 @@ class BacktestHarness:
 
             # Dev years = full LOYO set minus held-out year and COVID 2020
             from ..ml.evaluation.loyo_protocol import LOYO_YEARS as _ALL_LOYO
+
             all_candidate_years = sorted(set(list(_ALL_LOYO) + self.years))
             dev_years = [y for y in all_candidate_years if y != year and y != 2020]
 
@@ -372,9 +369,7 @@ class BacktestHarness:
                 predictions[(t1, t2)] = 1.0 - hist_rate
         return predictions
 
-    def _build_eval_report(
-        self, year: int, predictions: Dict, actual_games: List, bt_result
-    ) -> EvaluationReport:
+    def _build_eval_report(self, year: int, predictions: Dict, actual_games: List, bt_result) -> EvaluationReport:
         """Build a structured EvaluationReport from raw predictions + outcomes."""
         # Convert to arrays for bootstrap metrics
         preds_arr = []
@@ -393,16 +388,18 @@ class BacktestHarness:
             preds_arr.append(pred)
             outcomes_arr.append(outcome)
 
-            eval_games.append(EvalGame(
-                team1_id=t1,
-                team2_id=t2,
-                team1_seed=game.get("team1_seed", 8),
-                team2_seed=game.get("team2_seed", 8),
-                round_name=game.get("round", "unknown"),
-                prediction=pred,
-                outcome=outcome,
-                year=year,
-            ))
+            eval_games.append(
+                EvalGame(
+                    team1_id=t1,
+                    team2_id=t2,
+                    team1_seed=game.get("team1_seed", 8),
+                    team2_seed=game.get("team2_seed", 8),
+                    round_name=game.get("round", "unknown"),
+                    prediction=pred,
+                    outcome=outcome,
+                    year=year,
+                )
+            )
 
         preds_np = np.array(preds_arr)
         outcomes_np = np.array(outcomes_arr)
@@ -411,11 +408,15 @@ class BacktestHarness:
         global_metrics = {}
         if len(preds_np) > 0:
             global_metrics["brier_score"] = bootstrap_metric(
-                brier_score, preds_np, outcomes_np,
+                brier_score,
+                preds_np,
+                outcomes_np,
                 n_bootstrap=self.n_bootstrap,
             )
             global_metrics["log_loss"] = bootstrap_metric(
-                log_loss, preds_np, outcomes_np,
+                log_loss,
+                preds_np,
+                outcomes_np,
                 n_bootstrap=self.n_bootstrap,
             )
 
@@ -424,7 +425,8 @@ class BacktestHarness:
         if eval_games:
             try:
                 round_report = compute_round_analysis(
-                    eval_games, n_bootstrap=self.n_bootstrap,
+                    eval_games,
+                    n_bootstrap=self.n_bootstrap,
                 )
             except Exception as e:
                 logger.warning("Round analysis failed for %d: %s", year, e)
@@ -457,9 +459,7 @@ class BacktestHarness:
             reproducibility=ReproducibilityInfo.capture(random_seed=42),
         )
 
-    def _build_aggregate(
-        self, year_reports: List[EvaluationReport]
-    ) -> AggregateEvaluationReport:
+    def _build_aggregate(self, year_reports: List[EvaluationReport]) -> AggregateEvaluationReport:
         """Aggregate per-year reports into a single AggregateEvaluationReport."""
         # Pool all per-year Brier/log-loss estimates into aggregate CIs
         aggregate_metrics: Dict[str, BootstrapResult] = {}
@@ -504,9 +504,7 @@ class BacktestHarness:
             reproducibility=ReproducibilityInfo.capture(random_seed=42),
         )
 
-    def _run_regression_gate(
-        self, year_briers: Dict[int, float]
-    ) -> RegressionGateResult:
+    def _run_regression_gate(self, year_briers: Dict[int, float]) -> RegressionGateResult:
         """Compare current Brier against stored baseline using statistical threshold."""
         from ..ml.evaluation.loyo_protocol import compute_ablation_threshold
 
@@ -526,15 +524,9 @@ class BacktestHarness:
         if passed and delta <= 0:
             msg = "Current run improves on baseline."
         elif passed:
-            msg = (
-                f"Current run is {delta:.4f} worse than baseline, "
-                f"but within statistical tolerance ({tolerance:.4f})."
-            )
+            msg = f"Current run is {delta:.4f} worse than baseline, but within statistical tolerance ({tolerance:.4f})."
         else:
-            msg = (
-                f"REGRESSION: Current run is {delta:.4f} worse than baseline, "
-                f"exceeding tolerance ({tolerance:.4f})."
-            )
+            msg = f"REGRESSION: Current run is {delta:.4f} worse than baseline, exceeding tolerance ({tolerance:.4f})."
 
         return RegressionGateResult(
             passed=passed,
@@ -549,6 +541,7 @@ class BacktestHarness:
 # ---------------------------------------------------------------------------
 # Baseline artifact I/O
 # ---------------------------------------------------------------------------
+
 
 def save_baseline(result: BacktestResult, path: str, notes: str = "") -> None:
     """Save a backtest result as a regression baseline artifact."""

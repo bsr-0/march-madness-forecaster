@@ -24,6 +24,7 @@ from src.exceptions import DataRequirementError
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_team(team_id, seed, region, champ):
     return PublicPicks(
         team_id=team_id,
@@ -48,10 +49,22 @@ def _realistic_consensus(n_teams=64):
     """
     # Per-seed average champ% across 4 regions (sums to ~100%)
     seed_champ = {
-        1: 11.0, 2: 5.5, 3: 3.0, 4: 1.5,
-        5: 0.8, 6: 0.5, 7: 0.3, 8: 0.15,
-        9: 0.08, 10: 0.04, 11: 0.03, 12: 0.02,
-        13: 0.005, 14: 0.003, 15: 0.001, 16: 0.001,
+        1: 11.0,
+        2: 5.5,
+        3: 3.0,
+        4: 1.5,
+        5: 0.8,
+        6: 0.5,
+        7: 0.3,
+        8: 0.15,
+        9: 0.08,
+        10: 0.04,
+        11: 0.03,
+        12: 0.02,
+        13: 0.005,
+        14: 0.003,
+        15: 0.001,
+        16: 0.001,
     }
     regions = ["East", "West", "South", "Midwest"]
     teams = {}
@@ -72,8 +85,8 @@ def _realistic_consensus(n_teams=64):
 # Tests: validate_consensus_plausibility
 # ---------------------------------------------------------------------------
 
-class TestValidateConsensusPlausibility:
 
+class TestValidateConsensusPlausibility:
     def test_realistic_consensus_no_warnings(self):
         consensus = _realistic_consensus()
         warnings = validate_consensus_plausibility(consensus)
@@ -128,11 +141,12 @@ class TestValidateConsensusPlausibility:
 # Tests: min_sources enforcement
 # ---------------------------------------------------------------------------
 
-class TestMinSourcesEnforcement:
 
+class TestMinSourcesEnforcement:
     def _mock_fetch(self, source_data):
         def _side_effect(source_name, scraper, year):
             return source_data.get(source_name)
+
         return _side_effect
 
     def test_raises_when_below_min_sources(self):
@@ -177,8 +191,8 @@ class TestMinSourcesEnforcement:
 # Tests: cache staleness
 # ---------------------------------------------------------------------------
 
-class TestCacheStaleness:
 
+class TestCacheStaleness:
     def test_fresh_cache_loaded(self):
         """Cache file < 7 days old → loaded."""
         with tempfile.TemporaryDirectory() as tmpdir:

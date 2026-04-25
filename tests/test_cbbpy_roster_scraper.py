@@ -143,7 +143,9 @@ def test_cbbpy_roster_scraper_builds_rosters_with_rapm(monkeypatch, tmp_path):
             return pd.DataFrame([{"position": "SG", "class": "JR"}])
 
     scraper = CBBpyRosterScraper(cache_dir=str(tmp_path))
-    monkeypatch.setattr(scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+    monkeypatch.setattr(
+        scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None
+    )
 
     payload = scraper.fetch_rosters(2026)
     assert payload
@@ -162,6 +164,7 @@ def test_cbbpy_roster_scraper_builds_rosters_with_rapm(monkeypatch, tmp_path):
 
 def test_pbp_disabled_by_default(monkeypatch, tmp_path):
     """PBP is disabled by default; no PBP rows collected."""
+
     class DummyCBBpy:
         @staticmethod
         def get_games_season(year, info=False, box=True, pbp=False):
@@ -174,7 +177,9 @@ def test_pbp_disabled_by_default(monkeypatch, tmp_path):
             return pd.DataFrame([{"position": "SG", "class": "JR"}])
 
     scraper = CBBpyRosterScraper(cache_dir=str(tmp_path))
-    monkeypatch.setattr(scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+    monkeypatch.setattr(
+        scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None
+    )
     # Ensure env var is not set.
     monkeypatch.delenv("CBBPY_ROSTER_ENABLE_PBP", raising=False)
 

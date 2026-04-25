@@ -36,9 +36,15 @@ logger = logging.getLogger(__name__)
 # cross-layer import (data module should not import from pipeline).
 # These are fixed historical dates that change only when new seasons are added.
 _SELECTION_SUNDAY_DATES: Dict[int, date] = {
-    2016: date(2016, 3, 13), 2017: date(2017, 3, 12), 2018: date(2018, 3, 11),
-    2019: date(2019, 3, 17), 2021: date(2021, 3, 14), 2022: date(2022, 3, 13),
-    2023: date(2023, 3, 12), 2024: date(2024, 3, 17), 2025: date(2025, 3, 16),
+    2016: date(2016, 3, 13),
+    2017: date(2017, 3, 12),
+    2018: date(2018, 3, 11),
+    2019: date(2019, 3, 17),
+    2021: date(2021, 3, 14),
+    2022: date(2022, 3, 13),
+    2023: date(2023, 3, 12),
+    2024: date(2024, 3, 17),
+    2025: date(2025, 3, 16),
     2026: date(2026, 3, 15),
 }
 
@@ -163,14 +169,16 @@ class KaggleDataLoader:
                 continue
             region = seed_str[0]
             seed_num = int("".join(c for c in seed_str[1:] if c.isdigit()) or "16")
-            result.append({
-                "team_id": self._canonical_id(kaggle_id),
-                "team_name": self._team_name(kaggle_id),
-                "kaggle_team_id": kaggle_id,
-                "seed": seed_num,
-                "seed_str": seed_str,
-                "region": region,
-            })
+            result.append(
+                {
+                    "team_id": self._canonical_id(kaggle_id),
+                    "team_name": self._team_name(kaggle_id),
+                    "kaggle_team_id": kaggle_id,
+                    "seed": seed_num,
+                    "seed_str": seed_str,
+                    "region": region,
+                }
+            )
         logger.info("Loaded %d tournament seeds for %d from Kaggle CSV", len(result), season)
         return result
 
@@ -223,14 +231,19 @@ class KaggleDataLoader:
                 continue
             if ordinal_rank is not None and ordinal_rank > 500:
                 logger.debug(
-                    "Massey Ordinals: unusually high rank %d for team %d "
-                    "in system '%s' day %d (season %d)",
-                    ordinal_rank, kaggle_id, system, day_num, season,
+                    "Massey Ordinals: unusually high rank %d for team %d in system '%s' day %d (season %d)",
+                    ordinal_rank,
+                    kaggle_id,
+                    system,
+                    day_num,
+                    season,
                 )
-            by_system[system][day_num].append({
-                "kaggle_id": kaggle_id,
-                "rank": ordinal_rank,
-            })
+            by_system[system][day_num].append(
+                {
+                    "kaggle_id": kaggle_id,
+                    "rank": ordinal_rank,
+                }
+            )
 
         # Auto-compute max_day from Selection Sunday + DayZero if not provided
         if max_day is None:
@@ -239,7 +252,8 @@ class KaggleDataLoader:
             max_day = _compute_max_ranking_day(season, dz)
             logger.debug(
                 "Massey Ordinals for %d: auto-computed max_day=%d from Selection Sunday",
-                season, max_day,
+                season,
+                max_day,
             )
 
         # Guard: if ranking_day_num is explicitly provided, validate it
@@ -249,7 +263,9 @@ class KaggleDataLoader:
                 logger.warning(
                     "Massey Ordinals for %d: ranking_day_num=%d exceeds max_day=%d; "
                     "clamping to max_day to prevent leakage",
-                    season, ranking_day_num, max_day,
+                    season,
+                    ranking_day_num,
+                    max_day,
                 )
                 ranking_day_num = max_day
 
@@ -266,9 +282,11 @@ class KaggleDataLoader:
                     excluded = [d for d in available_days if d > max_day]
                     if excluded and system == next(iter(by_system)):  # Log once
                         logger.info(
-                            "Massey Ordinals for %d: excluded %d post-ceiling days "
-                            "(max_day=%d, excluded max=%d)",
-                            season, len(excluded), max_day, max(excluded),
+                            "Massey Ordinals for %d: excluded %d post-ceiling days (max_day=%d, excluded max=%d)",
+                            season,
+                            len(excluded),
+                            max_day,
+                            max(excluded),
                         )
                     if safe_days:
                         available_days = safe_days
@@ -276,7 +294,9 @@ class KaggleDataLoader:
                         logger.warning(
                             "Massey Ordinals for %d system '%s': no days <= max_day=%d; "
                             "skipping system to prevent leakage (available days: %s)",
-                            season, system, max_day,
+                            season,
+                            system,
+                            max_day,
                             sorted(available_days)[:5],
                         )
                         continue
@@ -308,9 +328,11 @@ class KaggleDataLoader:
                 )
             if n_duplicates > 0:
                 logger.warning(
-                    "Massey Ordinals for %d system '%s' day %d: "
-                    "%d duplicate team entries (last entry wins)",
-                    season, system, target_day, n_duplicates,
+                    "Massey Ordinals for %d system '%s' day %d: %d duplicate team entries (last entry wins)",
+                    season,
+                    system,
+                    target_day,
+                    n_duplicates,
                 )
             result[system] = team_map
 
@@ -318,7 +340,9 @@ class KaggleDataLoader:
         n_teams = max((len(v) for v in result.values()), default=0)
         logger.info(
             "Loaded Massey Ordinals for %d: %d systems, up to %d teams each",
-            season, n_systems, n_teams,
+            season,
+            n_systems,
+            n_teams,
         )
         return result
 
@@ -335,7 +359,9 @@ class KaggleDataLoader:
         suitable for saving via ExternalRatingsLoader.save_system().
         """
         ordinals = self.load_massey_ordinals(
-            season, ranking_day_num=ranking_day_num, max_day=max_day,
+            season,
+            ranking_day_num=ranking_day_num,
+            max_day=max_day,
         )
         if not ordinals:
             return {}
@@ -350,13 +376,15 @@ class KaggleDataLoader:
                 # Invert rank to a rating (higher = better)
                 rating = max(n_teams - entry.ordinal_rank + 1, 0)
                 normalized = 1.0 - (entry.ordinal_rank - 1) / max(n_teams - 1, 1)
-                entries.append({
-                    "team_name": entry.team_name,
-                    "team_id": entry.team_id,
-                    "rating": float(rating),
-                    "ranking": entry.ordinal_rank,
-                    "normalized": round(normalized, 6),
-                })
+                entries.append(
+                    {
+                        "team_name": entry.team_name,
+                        "team_id": entry.team_id,
+                        "rating": float(rating),
+                        "ranking": entry.ordinal_rank,
+                        "normalized": round(normalized, 6),
+                    }
+                )
             result[system] = entries
 
         return result
@@ -381,14 +409,16 @@ class KaggleDataLoader:
             coach = row.get("CoachName", "").strip()
             if not kaggle_id or not coach:
                 continue
-            result.append({
-                "team_id": self._canonical_id(kaggle_id),
-                "team_name": self._team_name(kaggle_id),
-                "kaggle_team_id": kaggle_id,
-                "coach_name": coach,
-                "first_day_num": self._int(row.get("FirstDayNum")),
-                "last_day_num": self._int(row.get("LastDayNum")),
-            })
+            result.append(
+                {
+                    "team_id": self._canonical_id(kaggle_id),
+                    "team_name": self._team_name(kaggle_id),
+                    "kaggle_team_id": kaggle_id,
+                    "coach_name": coach,
+                    "first_day_num": self._int(row.get("FirstDayNum")),
+                    "last_day_num": self._int(row.get("LastDayNum")),
+                }
+            )
         return result
 
     # ------------------------------------------------------------------
@@ -437,14 +467,16 @@ class KaggleDataLoader:
             return []
         result: List[Dict] = []
         for row in self._read_csv(path):
-            result.append({
-                "season": self._int(row.get("Season")),
-                "day_zero": row.get("DayZero", ""),
-                "region_w": row.get("RegionW", ""),
-                "region_x": row.get("RegionX", ""),
-                "region_y": row.get("RegionY", ""),
-                "region_z": row.get("RegionZ", ""),
-            })
+            result.append(
+                {
+                    "season": self._int(row.get("Season")),
+                    "day_zero": row.get("DayZero", ""),
+                    "region_w": row.get("RegionW", ""),
+                    "region_x": row.get("RegionX", ""),
+                    "region_y": row.get("RegionY", ""),
+                    "region_z": row.get("RegionZ", ""),
+                }
+            )
         return result
 
     # ------------------------------------------------------------------
@@ -592,22 +624,38 @@ class KaggleDataLoader:
                 l_poss = l_fga - l_or + l_to + 0.475 * l_fta
                 possessions = (w_poss + l_poss) / 2.0
 
-                game.update({
-                    "possessions": possessions,
-                    "fgm": w_fgm, "fga": w_fga,
-                    "fg3m": w_fgm3, "fg3a": w_fga3,
-                    "ftm": w_ftm, "fta": w_fta,
-                    "orb": w_or, "drb": w_dr,
-                    "ast": w_ast, "turnovers": w_to,
-                    "stl": w_stl, "blk": w_blk, "pf": w_pf,
-                    # Opponent box score
-                    "opp_fgm": l_fgm, "opp_fga": l_fga,
-                    "opp_fg3m": l_fgm3, "opp_fg3a": l_fga3,
-                    "opp_ftm": l_ftm, "opp_fta": l_fta,
-                    "opp_orb": l_or, "opp_drb": l_dr,
-                    "opp_ast": l_ast, "opp_turnovers": l_to,
-                    "opp_stl": l_stl, "opp_blk": l_blk, "opp_pf": l_pf,
-                })
+                game.update(
+                    {
+                        "possessions": possessions,
+                        "fgm": w_fgm,
+                        "fga": w_fga,
+                        "fg3m": w_fgm3,
+                        "fg3a": w_fga3,
+                        "ftm": w_ftm,
+                        "fta": w_fta,
+                        "orb": w_or,
+                        "drb": w_dr,
+                        "ast": w_ast,
+                        "turnovers": w_to,
+                        "stl": w_stl,
+                        "blk": w_blk,
+                        "pf": w_pf,
+                        # Opponent box score
+                        "opp_fgm": l_fgm,
+                        "opp_fga": l_fga,
+                        "opp_fg3m": l_fgm3,
+                        "opp_fg3a": l_fga3,
+                        "opp_ftm": l_ftm,
+                        "opp_fta": l_fta,
+                        "opp_orb": l_or,
+                        "opp_drb": l_dr,
+                        "opp_ast": l_ast,
+                        "opp_turnovers": l_to,
+                        "opp_stl": l_stl,
+                        "opp_blk": l_blk,
+                        "opp_pf": l_pf,
+                    }
+                )
 
             result.append(game)
 
@@ -628,21 +676,37 @@ class KaggleDataLoader:
                 "num_ot": num_ot,
             }
             if detailed:
-                mirror.update({
-                    "possessions": possessions,
-                    "fgm": l_fgm, "fga": l_fga,
-                    "fg3m": l_fgm3, "fg3a": l_fga3,
-                    "ftm": l_ftm, "fta": l_fta,
-                    "orb": l_or, "drb": l_dr,
-                    "ast": l_ast, "turnovers": l_to,
-                    "stl": l_stl, "blk": l_blk, "pf": l_pf,
-                    "opp_fgm": w_fgm, "opp_fga": w_fga,
-                    "opp_fg3m": w_fgm3, "opp_fg3a": w_fga3,
-                    "opp_ftm": w_ftm, "opp_fta": w_fta,
-                    "opp_orb": w_or, "opp_drb": w_dr,
-                    "opp_ast": w_ast, "opp_turnovers": w_to,
-                    "opp_stl": w_stl, "opp_blk": w_blk, "opp_pf": w_pf,
-                })
+                mirror.update(
+                    {
+                        "possessions": possessions,
+                        "fgm": l_fgm,
+                        "fga": l_fga,
+                        "fg3m": l_fgm3,
+                        "fg3a": l_fga3,
+                        "ftm": l_ftm,
+                        "fta": l_fta,
+                        "orb": l_or,
+                        "drb": l_dr,
+                        "ast": l_ast,
+                        "turnovers": l_to,
+                        "stl": l_stl,
+                        "blk": l_blk,
+                        "pf": l_pf,
+                        "opp_fgm": w_fgm,
+                        "opp_fga": w_fga,
+                        "opp_fg3m": w_fgm3,
+                        "opp_fg3a": w_fga3,
+                        "opp_ftm": w_ftm,
+                        "opp_fta": w_fta,
+                        "opp_orb": w_or,
+                        "opp_drb": w_dr,
+                        "opp_ast": w_ast,
+                        "opp_turnovers": w_to,
+                        "opp_stl": w_stl,
+                        "opp_blk": w_blk,
+                        "opp_pf": w_pf,
+                    }
+                )
             result.append(mirror)
 
         logger.info("Loaded %d game rows from %s for %d", len(result), csv_name, season)
@@ -700,8 +764,12 @@ class MasseyOrdinalEntry:
     """A single Massey Ordinal entry for a team in a given system."""
 
     __slots__ = (
-        "system_name", "team_id", "team_name",
-        "kaggle_team_id", "ordinal_rank", "ranking_day_num",
+        "system_name",
+        "team_id",
+        "team_name",
+        "kaggle_team_id",
+        "ordinal_rank",
+        "ranking_day_num",
     )
 
     def __init__(

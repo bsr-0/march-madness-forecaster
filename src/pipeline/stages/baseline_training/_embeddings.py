@@ -1,6 +1,5 @@
 """Baseline model training — embeddings module."""
 
-
 import logging
 
 from ....data.models.game_flow import GameFlow
@@ -61,10 +60,13 @@ def _construct_schedule_graph(pipeline, teams: List[Team]) -> ScheduleGraph:
     # learn from outcomes it is later evaluated on (Issue 2).
     boundary = pipeline._validation_sort_key_boundary
     pre_tournament_games = [
-        g for g in pipeline.all_game_flows
+        g
+        for g in pipeline.all_game_flows
         if not pipeline._is_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"))
-        and (boundary is None
-             or pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")) < boundary)
+        and (
+            boundary is None
+            or pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")) < boundary
+        )
     ]
 
     seen_games = set()
@@ -81,10 +83,13 @@ def _construct_schedule_graph(pipeline, teams: List[Team]) -> ScheduleGraph:
             pm1 = pipeline.proprietary_metrics.get(game.team1_id)
             pm2 = pipeline.proprietary_metrics.get(game.team2_id)
             if pm1 is not None and pm2 is not None:
-                xp_margin = float(
-                    (pm1.offensive_xp_per_possession - pm2.defensive_xp_per_possession)
-                    - (pm2.offensive_xp_per_possession - pm1.defensive_xp_per_possession)
-                ) * 70.0  # scale to per-game margin (approx 70 possessions)
+                xp_margin = (
+                    float(
+                        (pm1.offensive_xp_per_possession - pm2.defensive_xp_per_possession)
+                        - (pm2.offensive_xp_per_possession - pm1.defensive_xp_per_possession)
+                    )
+                    * 70.0
+                )  # scale to per-game margin (approx 70 possessions)
 
         graph.add_game(
             ScheduleEdge(
@@ -101,8 +106,6 @@ def _construct_schedule_graph(pipeline, teams: List[Team]) -> ScheduleGraph:
     return graph
 
 
-
-
 def _run_gnn(pipeline, graph: ScheduleGraph) -> Dict:
     multi_hop = compute_multi_hop_sos(graph, hops=3)
     pagerank = graph.compute_pagerank_sos()
@@ -114,10 +117,12 @@ def _run_gnn(pipeline, graph: ScheduleGraph) -> Dict:
     # GNN disabled — use fallback embedding from graph statistics.
     pipeline.gnn_embeddings = {}
     for team_id in graph.team_ids:
-        pipeline.gnn_embeddings[team_id] = np.array([
-            multi_hop.get(team_id, 0.0),
-            pagerank.get(team_id, 0.0),
-        ])
+        pipeline.gnn_embeddings[team_id] = np.array(
+            [
+                multi_hop.get(team_id, 0.0),
+                pagerank.get(team_id, 0.0),
+            ]
+        )
 
     # FIX M5: Defer SOS refinement (same as PyG path above).
     pipeline._sos_refinement_pending = (multi_hop, pagerank)
@@ -126,10 +131,12 @@ def _run_gnn(pipeline, graph: ScheduleGraph) -> Dict:
     val_teams = [t for t in graph.team_ids if t not in training_era_teams]
     if val_teams and pipeline.feature_engineer.team_features:
         mh_preds = np.array([multi_hop.get(t, 0.0) for t in val_teams])
-        actual_ems = np.array([
-            getattr(pipeline.feature_engineer.team_features.get(t), "adj_efficiency_margin", 0.0) / 30.0
-            for t in val_teams
-        ])
+        actual_ems = np.array(
+            [
+                getattr(pipeline.feature_engineer.team_features.get(t), "adj_efficiency_margin", 0.0) / 30.0
+                for t in val_teams
+            ]
+        )
         fallback_mse = float(np.mean((mh_preds - actual_ems) ** 2))
         pipeline.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + fallback_mse) * 0.7, 0.1, 0.4))
     else:
@@ -141,8 +148,6 @@ def _run_gnn(pipeline, graph: ScheduleGraph) -> Dict:
         "nodes": graph.n_teams,
         "edges": len(graph.edges),
     }
-
-
 
 
 def _apply_sos_refinement(pipeline, multi_hop: Dict[str, float], pagerank: Dict[str, float]) -> None:
@@ -166,8 +171,6 @@ def _apply_sos_refinement(pipeline, multi_hop: Dict[str, float], pagerank: Dict[
         feats.multi_hop_sos = float(mh)
 
         pipeline.team_features[team_id] = feats.to_vector(include_embeddings=False)
-
-
 
 
 def _apply_win_quality_metrics(pipeline, graph: ScheduleGraph) -> None:
@@ -194,16 +197,12 @@ def _apply_win_quality_metrics(pipeline, graph: ScheduleGraph) -> None:
         feats.dominance_ratio = float(metrics.get("dominance_ratio", 1.0))
         pipeline.team_features[team_id] = feats.to_vector(include_embeddings=False)
 
-    n_enriched = sum(
-        1 for tid in pipeline.feature_engineer.team_features
-        if tid in win_quality
-    )
+    n_enriched = sum(1 for tid in pipeline.feature_engineer.team_features if tid in win_quality)
     logger.info(
         "Win quality metrics: enriched %d/%d teams (best_win_pctile, paper_tiger, dominance)",
-        n_enriched, len(pipeline.feature_engineer.team_features),
+        n_enriched,
+        len(pipeline.feature_engineer.team_features),
     )
-
-
 
 
 def _run_transformer(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
@@ -216,14 +215,20 @@ def _run_transformer(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         # regular-season sequences (Issue 3).
         boundary = pipeline._validation_sort_key_boundary
         pre_tournament = [
-            g for g in games
+            g
+            for g in games
             if not pipeline._is_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"))
-            and (boundary is None
-                 or pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")) < boundary)
+            and (
+                boundary is None
+                or pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")) < boundary
+            )
         ]
         ordered_games = sorted(
             pre_tournament,
-            key=lambda g: (pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")), g.game_id),
+            key=lambda g: (
+                pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")),
+                g.game_id,
+            ),
         )
 
         for idx, game in enumerate(ordered_games):
@@ -285,8 +290,6 @@ def _run_transformer(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     }
 
 
-
-
 def _train_embedding_projections(
     pipeline,
     game_flows: Dict[str, List[GameFlow]],
@@ -335,9 +338,7 @@ def _train_embedding_projections(
         X = np.array(X_rows)
         y = np.array(y_rows)
 
-        lr = LogisticRegression(
-            max_iter=500, C=1.0, solver="lbfgs", random_state=pipeline.config.random_seed
-        )
+        lr = LogisticRegression(max_iter=500, C=1.0, solver="lbfgs", random_state=pipeline.config.random_seed)
         lr.fit(X, y)
 
         if emb_name == "gnn":
@@ -348,4 +349,3 @@ def _train_embedding_projections(
         stats[f"{emb_name}_projection_samples"] = len(y_rows)
 
     return stats
-

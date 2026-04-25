@@ -68,4 +68,5 @@ class CalibrationStage:
 
 def _noop_ctx():
     from contextlib import nullcontext
+
     return nullcontext()

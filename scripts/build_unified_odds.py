@@ -135,10 +135,7 @@ def _build_season(season: int) -> int:
     mls = sum(1 for g in deduped if g.moneyline_home != 0)
 
     sources_str = ", ".join(f"{s}={c}" for s, c in sorted(source_counts.items()))
-    print(
-        f"  {season}: {len(deduped)} games ({sources_str}), "
-        f"{len(unique_teams)} teams, {spreads} spreads, {mls} MLs"
-    )
+    print(f"  {season}: {len(deduped)} games ({sources_str}), {len(unique_teams)} teams, {spreads} spreads, {mls} MLs")
     return len(deduped)
 
 
@@ -153,7 +150,7 @@ def main():
         # Auto-detect available seasons from raw files
         seasons = set()
         for f in os.listdir(RAW_DIR):
-            m = re.search(r'(\d{4})', f)
+            m = re.search(r"(\d{4})", f)
             if m:
                 seasons.add(int(m.group(1)))
         seasons = sorted(s for s in seasons if 2008 <= s <= 2026)

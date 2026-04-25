@@ -79,22 +79,20 @@ class FavoriteLongshotBiasCorrector:
         # Determine which direction to regress
         if probability > self.threshold:
             # Heavy favorite - regress toward historical
-            corrected = (
-                (1.0 - self.regression_strength) * probability
-                + self.regression_strength * historical
-            )
+            corrected = (1.0 - self.regression_strength) * probability + self.regression_strength * historical
         elif probability < (1.0 - self.threshold):
             # Heavy underdog (team1 is big underdog)
-            corrected = (
-                (1.0 - self.regression_strength) * probability
-                + self.regression_strength * historical
-            )
+            corrected = (1.0 - self.regression_strength) * probability + self.regression_strength * historical
         else:
             corrected = probability
 
         logger.debug(
             "FLB correction: %.4f -> %.4f (seeds %d vs %d, historical=%.3f)",
-            probability, corrected, seed1, seed2, historical,
+            probability,
+            corrected,
+            seed1,
+            seed2,
+            historical,
         )
 
         return corrected

@@ -300,6 +300,7 @@ def get_tier3_constants() -> List[PipelineConstant]:
     """Return all Tier 3 constants from the registry."""
     return [c for c in CONSTANT_REGISTRY if c.tier == 3]
 
+
 def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
     return [c for c in CONSTANT_REGISTRY if c.tier == tier]
 
@@ -1030,6 +1031,7 @@ def _compute_ece(probs: np.ndarray, outcomes: np.ndarray, n_bins: int = 10) -> f
         ece += (count / len(probs)) * abs(avg_pred - avg_outcome)
     return float(ece)
 
+
 def _bootstrap_brier_ci(
     probs: np.ndarray,
     outcomes: np.ndarray,
@@ -1457,6 +1459,7 @@ class HoldoutEvaluator:
             if getattr(config, "use_market_features", False):
                 try:
                     from ...data.scrapers.unified_odds import load_unified_odds_by_team as _load_uobt
+
                     for _odir in [str(self.historical_dir / ".." / "betting_odds"), "data/processed/betting_odds"]:
                         _odds_by_team = _load_uobt(train_year, data_dir=_odir)
                         if _odds_by_team:
@@ -1515,6 +1518,7 @@ class HoldoutEvaluator:
                 # Coach tournament experience overlay.
                 if _coach_apps:
                     import numpy as _np
+
                     for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
                         _apps = _coach_apps.get(_tid, 0)
                         if _apps > 0:
@@ -1522,12 +1526,14 @@ class HoldoutEvaluator:
 
                 if _odds_by_team:
                     from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf
+
                     for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
                         _mf = _ctmf(_tid, g.game_date, _odds_by_team.get(_tid, []))
                         _v[52] = _mf["market_implied_prob"]
                         _v[53] = _mf["market_spread"]
 
                 from ...data.features.ablation import apply_ablation
+
                 apply_ablation(v1, config)
                 apply_ablation(v2, config)
 
@@ -1647,6 +1653,7 @@ class HoldoutEvaluator:
         if getattr(config, "use_market_features", False):
             try:
                 from ...data.scrapers.unified_odds import load_unified_odds_by_team as _load_uobt
+
                 for _odir in [str(self.historical_dir / ".." / "betting_odds"), "data/processed/betting_odds"]:
                     _ho_odds_by_team = _load_uobt(holdout_year, data_dir=_odir)
                     if _ho_odds_by_team:
@@ -1706,12 +1713,14 @@ class HoldoutEvaluator:
 
             if _ho_odds_by_team:
                 from ...data.scrapers.unified_odds import compute_team_market_features as _ctmf
+
                 for _v, _tid in ((v1, t1), (v2, t2)):
                     _mf = _ctmf(_tid, tournament_cutoff, _ho_odds_by_team.get(_tid, []))
                     _v[52] = _mf["market_implied_prob"]
                     _v[53] = _mf["market_spread"]
 
             from ...data.features.ablation import apply_ablation
+
             apply_ablation(v1, config)
             apply_ablation(v2, config)
 
@@ -1972,8 +1981,8 @@ class HoldoutEvaluator:
 
         return report
 
-@dataclass
 
+@dataclass
 class RDOFAuditReport:
     """Formats and outputs the full RDoF audit report.
 
@@ -2408,6 +2417,7 @@ def check_holdout_contamination(
             f"holdout years or revert config to the locked version."
         ),
     }
+
 
 def run_rdof_audit(
     historical_dir: str = "data/raw/historical",

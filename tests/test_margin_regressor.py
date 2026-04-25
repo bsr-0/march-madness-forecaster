@@ -5,6 +5,7 @@ import pytest
 
 try:
     import lightgbm
+
     LGB_AVAILABLE = True
 except ImportError:
     LGB_AVAILABLE = False
@@ -100,7 +101,7 @@ class TestLightGBMMarginRegressor:
         # Narrower scale → more extreme probability for same margin
         assert prob_narrow > prob_wide
         assert prob_narrow > 0.9  # Very confident with scale=2
-        assert prob_wide < 0.7   # Less confident with scale=20
+        assert prob_wide < 0.7  # Less confident with scale=20
 
     def test_untrained_model_raises(self):
         """Predicting without training should raise."""

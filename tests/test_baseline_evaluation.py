@@ -25,6 +25,7 @@ from src.exceptions import IntegrityError
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_classification_data(
     n_train: int = 200,
     n_val: int = 63,
@@ -155,9 +156,7 @@ class TestBaselineEvaluator:
     """Full Phase 5 pipeline: train, evaluate, gate."""
 
     def test_passes_on_separable_data(self):
-        train_X, train_y, val_X, val_y = _make_classification_data(
-            separability=2.0
-        )
+        train_X, train_y, val_X, val_y = _make_classification_data(separability=2.0)
         evaluator = BaselineEvaluator(
             brier_threshold=0.30,
             min_bracket_ev_above_coinflip=-1000,  # easy threshold
@@ -216,9 +215,7 @@ class TestBaselineEvaluator:
         train_X, train_y, val_X, val_y = _make_classification_data(n_val=4)
         rounds = np.array(["R64", "R32", "S16", "E8"])
         evaluator = BaselineEvaluator(strict=False)
-        results = evaluator.run(
-            train_X, train_y, val_X, val_y, round_labels=rounds
-        )
+        results = evaluator.run(train_X, train_y, val_X, val_y, round_labels=rounds)
         # EV should differ from the no-round-label case
         assert "logistic_regression" in results.models
 
