@@ -1,0 +1,210 @@
+{
+  "purpose": "Council 64 action #3 \u2014 opponent-model noise-floor ceiling",
+  "kill_gate": "if mean(gap) < 3 rank positions, kill opponent-calibration track",
+  "definitions": {
+    "best_score": "oracle pick from 50 \u2014 highest score_team_identity",
+    "ranker_score": "MC ranker pick \u2014 bracket with lowest mean_rank",
+    "gap": "ranker_rank_in_pool - best_rank_in_pool"
+  },
+  "years": [
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "rows": [
+    {
+      "year": 2023,
+      "mode": "torvik",
+      "n_pool": 18,
+      "n_portfolio": 50,
+      "pool_winner_pts": 720,
+      "best_score": 1260.0,
+      "best_bracket_idx": 9,
+      "best_rank_in_pool": 1,
+      "ranker_score": 440.0,
+      "ranker_bracket_idx": 49,
+      "ranker_rank_in_pool": 18,
+      "gap": 17
+    },
+    {
+      "year": 2023,
+      "mode": "f4_first_tv",
+      "n_pool": 18,
+      "n_portfolio": 50,
+      "pool_winner_pts": 720,
+      "best_score": 820.0,
+      "best_bracket_idx": 10,
+      "best_rank_in_pool": 1,
+      "ranker_score": 620.0,
+      "ranker_bracket_idx": 26,
+      "ranker_rank_in_pool": 7,
+      "gap": 6
+    },
+    {
+      "year": 2023,
+      "mode": "e8_first_tv",
+      "n_pool": 18,
+      "n_portfolio": 50,
+      "pool_winner_pts": 720,
+      "best_score": 1130.0,
+      "best_bracket_idx": 1,
+      "best_rank_in_pool": 1,
+      "ranker_score": 680.0,
+      "ranker_bracket_idx": 39,
+      "ranker_rank_in_pool": 5,
+      "gap": 4
+    },
+    {
+      "year": 2024,
+      "mode": "torvik",
+      "n_pool": 25,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1380,
+      "best_score": 1420.0,
+      "best_bracket_idx": 38,
+      "best_rank_in_pool": 1,
+      "ranker_score": 1420.0,
+      "ranker_bracket_idx": 38,
+      "ranker_rank_in_pool": 1,
+      "gap": 0
+    },
+    {
+      "year": 2024,
+      "mode": "f4_first_tv",
+      "n_pool": 25,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1380,
+      "best_score": 1390.0,
+      "best_bracket_idx": 12,
+      "best_rank_in_pool": 1,
+      "ranker_score": 1270.0,
+      "ranker_bracket_idx": 18,
+      "ranker_rank_in_pool": 2,
+      "gap": 1
+    },
+    {
+      "year": 2024,
+      "mode": "e8_first_tv",
+      "n_pool": 25,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1380,
+      "best_score": 1290.0,
+      "best_bracket_idx": 13,
+      "best_rank_in_pool": 2,
+      "ranker_score": 920.0,
+      "ranker_bracket_idx": 6,
+      "ranker_rank_in_pool": 6,
+      "gap": 4
+    },
+    {
+      "year": 2025,
+      "mode": "torvik",
+      "n_pool": 32,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1600,
+      "best_score": 1420.0,
+      "best_bracket_idx": 17,
+      "best_rank_in_pool": 6,
+      "ranker_score": 1270.0,
+      "ranker_bracket_idx": 15,
+      "ranker_rank_in_pool": 10,
+      "gap": 4
+    },
+    {
+      "year": 2025,
+      "mode": "f4_first_tv",
+      "n_pool": 32,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1600,
+      "best_score": 1450.0,
+      "best_bracket_idx": 9,
+      "best_rank_in_pool": 5,
+      "ranker_score": 1170.0,
+      "ranker_bracket_idx": 19,
+      "ranker_rank_in_pool": 13,
+      "gap": 8
+    },
+    {
+      "year": 2025,
+      "mode": "e8_first_tv",
+      "n_pool": 32,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1600,
+      "best_score": 1490.0,
+      "best_bracket_idx": 12,
+      "best_rank_in_pool": 4,
+      "ranker_score": 1050.0,
+      "ranker_bracket_idx": 26,
+      "ranker_rank_in_pool": 17,
+      "gap": 13
+    },
+    {
+      "year": 2026,
+      "mode": "torvik",
+      "n_pool": 30,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1350,
+      "best_score": 1550.0,
+      "best_bracket_idx": 40,
+      "best_rank_in_pool": 1,
+      "ranker_score": 940.0,
+      "ranker_bracket_idx": 42,
+      "ranker_rank_in_pool": 10,
+      "gap": 9
+    },
+    {
+      "year": 2026,
+      "mode": "f4_first_tv",
+      "n_pool": 30,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1350,
+      "best_score": 1450.0,
+      "best_bracket_idx": 46,
+      "best_rank_in_pool": 1,
+      "ranker_score": 620.0,
+      "ranker_bracket_idx": 11,
+      "ranker_rank_in_pool": 24,
+      "gap": 23
+    },
+    {
+      "year": 2026,
+      "mode": "e8_first_tv",
+      "n_pool": 30,
+      "n_portfolio": 50,
+      "pool_winner_pts": 1350,
+      "best_score": 1320.0,
+      "best_bracket_idx": 43,
+      "best_rank_in_pool": 2,
+      "ranker_score": 960.0,
+      "ranker_bracket_idx": 15,
+      "ranker_rank_in_pool": 10,
+      "gap": 8
+    }
+  ],
+  "by_mode": {
+    "torvik": {
+      "mean_gap": 7.5,
+      "max_gap": 17,
+      "n_years": 4
+    },
+    "f4_first_tv": {
+      "mean_gap": 9.5,
+      "max_gap": 23,
+      "n_years": 4
+    },
+    "e8_first_tv": {
+      "mean_gap": 7.25,
+      "max_gap": 13,
+      "n_years": 4
+    }
+  },
+  "overall": {
+    "mean_gap": 8.083333333333334,
+    "max_gap": 23,
+    "n_obs": 12,
+    "kill_threshold": 3,
+    "kill_opponent_calibration_track": false
+  },
+  "generated": "2026-04-25T04:32:28"
+}
