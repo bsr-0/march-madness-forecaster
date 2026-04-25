@@ -182,6 +182,70 @@ def load_brackets(cache_key: str, manifest: Optional[Manifest] = None) -> np.nda
         return z["brackets"]
 
 
+def save_probabilities(
+    cache_key: str,
+    probabilities: np.ndarray,
+    team_ids: np.ndarray,
+    *,
+    strategy_id: str,
+    year: int,
+    rng_seed: SeedT,
+    code_version: str,
+    data_version: str,
+    model_version: str,
+    provenance: Optional[dict] = None,
+) -> CacheEntry:
+    """Cache (n_teams, 6) round-advancement probabilities for one (source, year).
+
+    `strategy_id` here names the probability source (base + adjustments only,
+    no construction mode) — multiple bracket strategies can share one
+    probability artifact. team_ids is the parallel uint16 column mapping
+    rows back to the global team_id_lookup.
+    """
+    if probabilities.dtype != np.float32:
+        raise ValueError(f"probabilities must be float32, got {probabilities.dtype}")
+    if probabilities.ndim != 2 or probabilities.shape[1] != 6:
+        raise ValueError(f"probabilities must be (n_teams, 6), got {probabilities.shape}")
+    if team_ids.dtype != np.uint16:
+        raise ValueError(f"team_ids must be uint16, got {team_ids.dtype}")
+    if team_ids.shape != (probabilities.shape[0],):
+        raise ValueError(f"team_ids must be ({probabilities.shape[0]},), got {team_ids.shape}")
+    rel_path = f"probabilities/{cache_key}.npz"
+    abs_path = CACHE_ROOT / rel_path
+    abs_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(abs_path, probabilities=probabilities, team_ids=team_ids)
+    return CacheEntry(
+        strategy_id=strategy_id,
+        year=year,
+        cache_key=cache_key,
+        rng_seed=rng_seed,
+        code_version=code_version,
+        data_version=data_version,
+        model_version=model_version,
+        artifact_kind="probabilities",
+        artifact_path=rel_path,
+        content_hash=content_hash(abs_path),
+        shape=tuple(probabilities.shape),
+        dtype="float32",
+        generated_at=datetime.now().isoformat(timespec="seconds"),
+        provenance=provenance or {},
+    )
+
+
+def load_probabilities(cache_key: str, manifest: Optional[Manifest] = None) -> tuple[np.ndarray, np.ndarray]:
+    """Return (probabilities, team_ids). Raises on missing or hash mismatch."""
+    manifest = manifest or Manifest.load()
+    matches = [e for e in manifest.entries if e.cache_key == cache_key and e.artifact_kind == "probabilities"]
+    if not matches:
+        raise KeyError(f"No probabilities cache entry for key {cache_key}")
+    entry = matches[0]
+    abs_path = CACHE_ROOT / entry.artifact_path
+    if content_hash(abs_path) != entry.content_hash:
+        raise ValueError(f"Content hash mismatch for {abs_path} — cache tampered or stale")
+    with np.load(abs_path) as z:
+        return z["probabilities"], z["team_ids"]
+
+
 def save_outcomes(
     year: int,
     outcomes: np.ndarray,
