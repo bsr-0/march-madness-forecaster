@@ -18,7 +18,6 @@ Run:
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
@@ -34,7 +33,11 @@ from scripts.mc_pool_backtest import (  # noqa: E402
     load_seeds_and_regions,
 )
 from src.data.strategy_cache import (  # noqa: E402
+    CACHE_PARENT_SEED,
     Manifest,
+    PROBABILITY_DATA_VERSION,
+    PROBABILITY_MODEL_VERSION,
+    STRATEGY_CACHE_VERSION,
     compute_cache_key,
     load_team_lookup,
     save_probabilities,
@@ -42,14 +45,7 @@ from src.data.strategy_cache import (  # noqa: E402
 )
 
 ROUND_ORDER = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
-RNG_SEED = 42  # build_torvik_round_probabilities seeds rng=42 internally
 PROBABILITY_SOURCE = "torvik"
-MODEL_VERSION = "torvik-barthag-v1"
-DATA_VERSION = "tournament_seeds+torvik_barthag"
-
-
-def git_sha_short() -> str:
-    return subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"], cwd=PROJECT_ROOT).decode().strip()
 
 
 def round_probs_to_array(round_probs: dict, lookup: dict[str, int]) -> tuple[np.ndarray, np.ndarray]:
@@ -81,7 +77,7 @@ def ensure_team_lookup_covers(team_names: set[str]) -> dict[str, int]:
     return lookup
 
 
-def build_one_year(year: int, code_version: str) -> int:
+def build_one_year(year: int) -> int:
     """Compute and cache probabilities for one year. Returns cache hits added."""
     seeds, regions = load_seeds_and_regions(year)
     barthag = _load_torvik_barthag(year, seeds)
@@ -96,10 +92,10 @@ def build_one_year(year: int, code_version: str) -> int:
     cache_key = compute_cache_key(
         strategy_id=PROBABILITY_SOURCE,
         year=year,
-        rng_seed=RNG_SEED,
-        code_version=code_version,
-        data_version=DATA_VERSION,
-        model_version=MODEL_VERSION,
+        rng_seed=CACHE_PARENT_SEED,
+        code_version=str(STRATEGY_CACHE_VERSION),
+        data_version=PROBABILITY_DATA_VERSION,
+        model_version=PROBABILITY_MODEL_VERSION,
     )
     entry = save_probabilities(
         cache_key,
@@ -107,10 +103,10 @@ def build_one_year(year: int, code_version: str) -> int:
         team_ids,
         strategy_id=PROBABILITY_SOURCE,
         year=year,
-        rng_seed=RNG_SEED,
-        code_version=code_version,
-        data_version=DATA_VERSION,
-        model_version=MODEL_VERSION,
+        rng_seed=CACHE_PARENT_SEED,
+        code_version=str(STRATEGY_CACHE_VERSION),
+        data_version=PROBABILITY_DATA_VERSION,
+        model_version=PROBABILITY_MODEL_VERSION,
         provenance={"builder": "build_torvik_round_probabilities", "n_sims": 10000},
     )
 
@@ -132,10 +128,9 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    code_version = git_sha_short()
     n_added = 0
     for year in args.years:
-        n_added += build_one_year(year, code_version)
+        n_added += build_one_year(year)
     print(f"\nwrote {n_added} probability entries")
     print("manifest at artifacts/strategy_cache/manifest.json")
 

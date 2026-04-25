@@ -42,7 +42,19 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Project imports
 # ---------------------------------------------------------------------------
 from src.data.seed_pick_model import SEED_PICK_RATES
-from src.data.strategy_cache import make_mode_rng
+from src.data.strategy_cache import (
+    BRACKET_DATA_VERSION,
+    BRACKET_MODEL_VERSION,
+    CACHE_PARENT_SEED,
+    Manifest,
+    STRATEGY_CACHE_VERSION,
+    array_to_brackets,
+    compute_cache_key,
+    load_brackets,
+    load_team_lookup,
+    make_mode_rng,
+    save_brackets,
+)
 from src.prediction.noseed_model import (
     TRAIN_YEARS,
     train_noseed_model,
@@ -1658,6 +1670,8 @@ def run_backtest(
     hparam_fitter: HparamFitter = default_pool_hyperparameters,
     save_brackets=False,
     team_identity=False,
+    use_cache: bool = False,
+    write_cache: bool = False,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -2159,13 +2173,63 @@ def run_backtest(
         # offline cache builder. See src/data/strategy_cache.make_mode_rng.
         year_rng = np.random.default_rng(42 + year)
 
+        # Team-id lookup for cache encode/decode. Lazy-loaded once per
+        # year — empty dict if the cache hasn't been initialized yet.
+        team_lookup = load_team_lookup() if (use_cache or write_cache) else {}
+        cache_manifest = Manifest.load() if (use_cache or write_cache) else None
+
         for mode_name, rp, sampler in mode_sampler_specs:
             # Per-(mode, year) bracket-sampling rng. Order-independent and
             # fully isolated from year_rng, so the inner repeat-loop's
             # opponent / simulation rng consumption is unchanged whether
-            # this mode hits or misses a future bracket cache.
+            # this mode hits or misses the bracket cache.
             bracket_rng = make_mode_rng(mode_name, year)
-            model_brackets = sampler(first_round, rp, n_model, bracket_rng)
+            cache_key = compute_cache_key(
+                strategy_id=mode_name,
+                year=year,
+                rng_seed=CACHE_PARENT_SEED,
+                code_version=str(STRATEGY_CACHE_VERSION),
+                data_version=BRACKET_DATA_VERSION,
+                model_version=BRACKET_MODEL_VERSION,
+            )
+            model_brackets = None
+            if use_cache:
+                try:
+                    cached = load_brackets(cache_key, cache_manifest)
+                except KeyError:
+                    cached = None
+                except ValueError as exc:
+                    print(f"  {year:<6} {mode_name:<10} CACHE STALE ({exc}) — recomputing")
+                    cached = None
+                if cached is not None and cached.shape[0] == n_model and team_lookup:
+                    model_brackets = array_to_brackets(cached, first_round, team_lookup)
+                    print(f"  {year:<6} {mode_name:<10} CACHE HIT  key={cache_key}")
+                elif cached is not None:
+                    # Shape or lookup mismatch — log and fall through to live
+                    # compute. n_model differs from cached count, or the
+                    # team_id_lookup hasn't been populated for this team set.
+                    print(
+                        f"  {year:<6} {mode_name:<10} CACHE SHAPE MISS "
+                        f"(cached={cached.shape[0]}, want={n_model}) — recomputing"
+                    )
+            if model_brackets is None:
+                model_brackets = sampler(first_round, rp, n_model, bracket_rng)
+                if write_cache and team_lookup:
+                    bracket_array = brackets_to_array(model_brackets, first_round, team_lookup)
+                    entry = save_brackets(
+                        cache_key,
+                        bracket_array,
+                        strategy_id=mode_name,
+                        year=year,
+                        rng_seed=CACHE_PARENT_SEED,
+                        code_version=str(STRATEGY_CACHE_VERSION),
+                        data_version=BRACKET_DATA_VERSION,
+                        model_version=BRACKET_MODEL_VERSION,
+                        provenance={"sampler": mode_name, "n_brackets": n_model, "from_run_backtest": True},
+                    )
+                    cache_manifest.append(entry)
+                    cache_manifest.save()
+                    print(f"  {year:<6} {mode_name:<10} CACHE WRITE key={cache_key}")
 
             # Score all model brackets against actual outcome (for reporting
             # BestScr / MeanScr and for --save-brackets).
