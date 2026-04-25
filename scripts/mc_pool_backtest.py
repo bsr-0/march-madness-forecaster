@@ -109,7 +109,7 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "massey_avg",  # A5: Massey composite rating (aggregated across ~150 systems)
     "massey_best",  # A6: walk-forward Brier-selected single Massey system
     "ap_strength",  # A8: final-pre-tournament AP poll → barthag (rank/votes/seed-fallback)
-    # New bases added here as implemented (B3-B5)
+    "stacked",  # B5: Ridge meta-learner blending all Category-A bases (walk-forward)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -1903,6 +1903,15 @@ def run_backtest(
         else:
             ap_strength_rp = None
 
+        # Stacked meta-learner (B5): Ridge regression over all Category-A
+        # bases. Walk-forward: fits on game-level barthag diffs from years
+        # strictly < year, then blends the test year's barthag values using
+        # the learned coefficients. Returns None if <3 usable prior years
+        # or if any Category-A source is missing for the test year.
+        from src.prediction.stacked_probabilities import build_stacked_round_probabilities
+
+        stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+
         # Probability base registry: base_name → round_probs
         base_round_probs = {
             "seed": seed_rp,
@@ -1923,6 +1932,8 @@ def run_backtest(
             base_round_probs["spread_power"] = spread_rp
         if ap_strength_rp is not None:
             base_round_probs["ap_strength"] = ap_strength_rp
+        if stacked_rp is not None:
+            base_round_probs["stacked"] = stacked_rp
 
         # --- Contrarian and pool-wisdom bases (B6, B7) ---
         from src.prediction.contrarian_probabilities import (
