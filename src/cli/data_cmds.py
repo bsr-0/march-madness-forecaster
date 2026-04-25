@@ -80,6 +80,7 @@ def ingest_historical(args):
 def ingest_extended_historical(args):
     """Run extended historical ingestion across all available sources."""
     import logging
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     from ..data.ingestion.extended_historical_ingest import (
@@ -175,10 +176,7 @@ def data_availability(args):
         )
 
     total = len(summary)
-    complete = sum(
-        1 for d in summary.values()
-        if all(d.values())
-    )
+    complete = sum(1 for d in summary.values() if all(d.values()))
     print(f"\n{complete}/{total} years fully complete")
     return 0
 
@@ -220,6 +218,7 @@ def repair_dates(args):
 # Argument registration
 # ---------------------------------------------------------------------------
 
+
 def register(subparsers):
     # --- ingest ---
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")
@@ -243,7 +242,11 @@ def register(subparsers):
     ingest_parser.add_argument("--skip-public-picks", action="store_true", help="Skip public picks scrape")
     ingest_parser.add_argument("--skip-sports-reference", action="store_true", help="Skip Sports Reference scrape")
     ingest_parser.add_argument("--skip-rosters", action="store_true", help="Skip player roster ingestion")
-    ingest_parser.add_argument("--skip-historical-games", action="store_true", help="Skip historical games scrape (slow cbbpy day-by-day fetch)")
+    ingest_parser.add_argument(
+        "--skip-historical-games",
+        action="store_true",
+        help="Skip historical games scrape (slow cbbpy day-by-day fetch)",
+    )
     ingest_parser.add_argument(
         "--historical-games-since",
         default=None,
@@ -370,7 +373,9 @@ def register(subparsers):
     ext_hist_parser.add_argument("--skip-torvik", action="store_true", help="Skip Torvik ratings")
     ext_hist_parser.add_argument("--skip-external-ratings", action="store_true", help="Skip external ratings")
     ext_hist_parser.add_argument("--kaggle-dir", default=None, help="Path to Kaggle CSV directory")
-    ext_hist_parser.add_argument("--scraper-delay", type=float, default=3.5, help="Delay between scraper requests (seconds)")
+    ext_hist_parser.add_argument(
+        "--scraper-delay", type=float, default=3.5, help="Delay between scraper requests (seconds)"
+    )
     ext_hist_parser.set_defaults(func=ingest_extended_historical)
 
     # --- materialize-features ---
@@ -461,10 +466,15 @@ def register(subparsers):
         help="Re-fetch and repair game dates in historical JSON files",
     )
     repair_parser.add_argument(
-        "--seasons", default=None,
+        "--seasons",
+        default=None,
         help="Comma-separated seasons or range (e.g. '2017,2018' or '2005-2024'). Default: all existing files.",
     )
-    repair_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical_games_YYYY.json files")
+    repair_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with historical_games_YYYY.json files"
+    )
     repair_parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
-    repair_parser.add_argument("--force-slow", action="store_true", help="Use slow day-by-day date fetch for all seasons")
+    repair_parser.add_argument(
+        "--force-slow", action="store_true", help="Use slow day-by-day date fetch for all seasons"
+    )
     repair_parser.set_defaults(func=repair_dates)

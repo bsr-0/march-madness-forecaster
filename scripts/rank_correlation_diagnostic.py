@@ -91,8 +91,7 @@ def generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, n_target=
     return list(unique.values())
 
 
-def compute_actual_placement(bracket_bool, actual_outcome, first_round, seed_pw,
-                             pick_dist, seeds, rng):
+def compute_actual_placement(bracket_bool, actual_outcome, first_round, seed_pw, pick_dist, seeds, rng):
     """Compute average placement of a bracket across many opponent draws.
 
     Returns mean rank (1 = best) across N_PLACEMENT_TRIALS pools.
@@ -109,9 +108,7 @@ def compute_actual_placement(bracket_bool, actual_outcome, first_round, seed_pw,
             chalk_noise_std=CHALK_NOISE_STD,
         )
         opp_scores = score_brackets_against_outcome(opp, actual_outcome, SCORING_VECTOR)
-        model_score = score_brackets_against_outcome(
-            bracket_bool.reshape(1, -1), actual_outcome, SCORING_VECTOR
-        )[0]
+        model_score = score_brackets_against_outcome(bracket_bool.reshape(1, -1), actual_outcome, SCORING_VECTOR)[0]
         # Rank: 1 = best. Count how many opponents scored higher + 1.
         rank = int(np.sum(opp_scores > model_score)) + 1
         ranks.append(rank)
@@ -176,9 +173,9 @@ def run_year(year, rng):
         bool_arr_sim = _picks_dict_to_bool_array(bkt["picks"], cli_first_round, ROUND_NAMES)
 
         # Actual score against real outcomes
-        actual_score = float(score_brackets_against_outcome(
-            bool_arr_actual.reshape(1, -1), actual_outcome, SCORING_VECTOR
-        )[0])
+        actual_score = float(
+            score_brackets_against_outcome(bool_arr_actual.reshape(1, -1), actual_outcome, SCORING_VECTOR)[0]
+        )
 
         # P(1st) via MC
         p1 = compute_bracket_win_probability(
@@ -194,21 +191,27 @@ def run_year(year, rng):
 
         # Actual placement via repeated opponent simulation
         placement = compute_actual_placement(
-            bool_arr_actual, actual_outcome, first_round, seed_pw,
-            pick_dist, seeds,
+            bool_arr_actual,
+            actual_outcome,
+            first_round,
+            seed_pw,
+            pick_dist,
+            seeds,
             rng=np.random.default_rng(rng.integers(0, 2**31)),
         )
 
         p1_values.append(p1)
         placements.append(placement)
-        details.append({
-            "champion": bkt["champion"],
-            "risk": bkt["risk_level"],
-            "ev": bkt["expected_points"],
-            "actual_score": actual_score,
-            "p1": p1,
-            "mean_rank": placement,
-        })
+        details.append(
+            {
+                "champion": bkt["champion"],
+                "risk": bkt["risk_level"],
+                "ev": bkt["expected_points"],
+                "actual_score": actual_score,
+                "p1": p1,
+                "mean_rank": placement,
+            }
+        )
 
     # Spearman: P(1st) rank vs actual placement rank
     # Higher P(1st) should predict lower (better) placement
@@ -230,8 +233,10 @@ def main():
     print("RANK-CORRELATION DIAGNOSTIC")
     print("Does predicted P(1st) predict actual pool placement?")
     print("=" * 80)
-    print(f"Settings: {N_OPPONENTS} opponents, {N_TOURNAMENTS_P1} MC sims, "
-          f"{N_PLACEMENT_TRIALS} placement trials, chalk_noise_std={CHALK_NOISE_STD}")
+    print(
+        f"Settings: {N_OPPONENTS} opponents, {N_TOURNAMENTS_P1} MC sims, "
+        f"{N_PLACEMENT_TRIALS} placement trials, chalk_noise_std={CHALK_NOISE_STD}"
+    )
     print()
 
     rng = np.random.default_rng(42)
@@ -245,16 +250,19 @@ def main():
 
         results.append(r)
         sig = "*" if r["p_value"] < 0.10 else ""
-        print(f"  {year}: rho={r['spearman_rho']:+.3f} (p={r['p_value']:.3f}){sig}  "
-              f"n={r['n_brackets']} brackets")
+        print(f"  {year}: rho={r['spearman_rho']:+.3f} (p={r['p_value']:.3f}){sig}  n={r['n_brackets']} brackets")
 
         # Show top and bottom bracket
         top = r["details"][0]
         bot = r["details"][-1]
-        print(f"         Top P(1st): {top['champion']} P1={top['p1']:.1%} "
-              f"score={top['actual_score']:.0f} rank={top['mean_rank']:.1f}")
-        print(f"         Bot P(1st): {bot['champion']} P1={bot['p1']:.1%} "
-              f"score={bot['actual_score']:.0f} rank={bot['mean_rank']:.1f}")
+        print(
+            f"         Top P(1st): {top['champion']} P1={top['p1']:.1%} "
+            f"score={top['actual_score']:.0f} rank={top['mean_rank']:.1f}"
+        )
+        print(
+            f"         Bot P(1st): {bot['champion']} P1={bot['p1']:.1%} "
+            f"score={bot['actual_score']:.0f} rank={bot['mean_rank']:.1f}"
+        )
 
     if not results:
         print("\nNo years could be evaluated.")
@@ -306,15 +314,19 @@ def main():
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / "rank_correlation_diagnostic.json"
     with open(out_path, "w") as f:
-        json.dump({
-            "results": results,
-            "aggregate": {
-                "mean_rho": mean_rho,
-                "median_rho": median_rho,
-                "positive_frac": positive_frac,
-                "n_years": len(results),
+        json.dump(
+            {
+                "results": results,
+                "aggregate": {
+                    "mean_rho": mean_rho,
+                    "median_rho": median_rho,
+                    "positive_frac": positive_frac,
+                    "n_years": len(results),
+                },
             },
-        }, f, indent=2)
+            f,
+            indent=2,
+        )
     print(f"\nResults saved to {out_path}")
 
 

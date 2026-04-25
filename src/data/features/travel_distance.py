@@ -47,7 +47,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "california": (37.8719, -122.2585),
     "cal": (37.8719, -122.2585),
     "smu": (32.8426, -96.7830),
-
     # Big Ten
     "michigan_state": (42.7251, -84.4791),
     "michigan": (42.2681, -83.7486),
@@ -67,7 +66,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "usc": (34.0224, -118.2851),
     "oregon": (44.0448, -123.0726),
     "washington": (47.6553, -122.3035),
-
     # Big 12
     "kansas": (38.9543, -95.2558),
     "baylor": (31.5487, -97.1142),
@@ -89,7 +87,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "arizona": (32.2319, -110.9501),
     "arizona_state": (33.4242, -111.9281),
     "utah": (40.7649, -111.8421),
-
     # SEC
     "kentucky": (38.0280, -84.5043),
     "tennessee": (35.9544, -83.9295),
@@ -107,7 +104,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "vanderbilt": (36.1441, -86.8066),
     "texas_a_and_m": (30.6187, -96.3365),
     "texas_a&m": (30.6187, -96.3365),
-
     # Big East
     "villanova": (40.0348, -75.3399),
     "uconn": (41.8077, -72.2540),
@@ -121,13 +117,11 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "st_john_s": (40.7203, -73.7949),
     "depaul": (41.8786, -87.6500),
     "georgetown": (38.9076, -77.0723),
-
     # WCC
     "gonzaga": (47.6588, -117.4018),
     "saint_mary_s": (37.8400, -122.1065),
     "san_francisco": (37.7749, -122.4194),
     "byu": (40.2519, -111.6493),
-
     # AAC / Mountain West / Other
     "memphis": (35.1175, -89.9711),
     "wichita_state": (37.6872, -97.3301),
@@ -139,7 +133,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "wyoming": (41.3149, -105.5666),
     "air_force": (38.9983, -104.8613),
     "fresno_state": (36.8134, -119.7465),
-
     # Mid-Majors
     "loyola_chicago": (41.9981, -87.6587),
     "gonzaga": (47.6588, -117.4018),
@@ -161,7 +154,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "colgate": (42.8192, -75.5348),
     "yale": (41.3112, -72.9246),
     "princeton": (40.3487, -74.6593),
-
     # Ivy League
     "harvard": (42.3736, -71.1097),
     "penn": (39.9522, -75.1932),
@@ -169,7 +161,6 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "cornell": (42.4534, -76.4735),
     "brown": (41.8268, -71.4025),
     "dartmouth": (43.7044, -72.2887),
-
     # MEAC/SWAC/Patriot/Horizon/etc.
     "norfolk_state": (36.8842, -76.2593),
     "north_carolina_central": (35.9746, -78.8986),

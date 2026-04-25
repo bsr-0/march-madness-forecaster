@@ -164,8 +164,7 @@ def _load_unified_backtest(target_year: int) -> Dict:
         return {}
 
     with_target_year = [
-        item for item in parsed
-        if any(r.get("year") == target_year for r in item[1].get("results", []))
+        item for item in parsed if any(r.get("year") == target_year for r in item[1].get("results", []))
     ]
     if with_target_year:
         with_target_year.sort(key=lambda x: x[0], reverse=True)
@@ -191,12 +190,16 @@ def _load_unified_backtest(target_year: int) -> Dict:
             "round_weighted_brier": cal.get("rw_brier"),
             "brier": cal.get("brier"),
             "accuracy": cal.get("accuracy"),
-        } if cal else {},
+        }
+        if cal
+        else {},
         "espn_pool": {
             "pool_size": ev.get("pool_size"),
             "rank_position": ev.get("pool_rank"),
             "score": ev.get("pool_score"),
-        } if ev else {},
+        }
+        if ev
+        else {},
     }
 
 
@@ -210,7 +213,7 @@ def _parse_fixed_feature_set() -> List[str]:
     end_bracket = block.find("]")
     if start_bracket == -1 or end_bracket == -1:
         return []
-    raw = block[start_bracket:end_bracket + 1]
+    raw = block[start_bracket : end_bracket + 1]
     lines = []
     for line in raw.splitlines():
         line = line.strip()
@@ -283,8 +286,7 @@ def _summarize_training(holdout_year: int) -> Dict:
         "games_per_season": games_per_season,
         "sources": ["cbbpy", "sportsipy", "barttorvik"],
         "notes": (
-            f"Training window spans {min_date} to {max_date}. "
-            f"Holdout season {holdout_year} excluded from training."
+            f"Training window spans {min_date} to {max_date}. Holdout season {holdout_year} excluded from training."
         ),
     }
 
@@ -322,7 +324,9 @@ def _build_predictions() -> Dict:
                     "team1": {"name": t1.get("team_name") or t1.get("name"), "seed": seed1},
                     "team2": {"name": t2.get("team_name") or t2.get("name"), "seed": seed2},
                     "team1_win_prob": win_prob,
-                    "predicted_winner": (t1.get("team_name") or t1.get("name")) if win_prob >= 0.5 else (t2.get("team_name") or t2.get("name")),
+                    "predicted_winner": (t1.get("team_name") or t1.get("name"))
+                    if win_prob >= 0.5
+                    else (t2.get("team_name") or t2.get("name")),
                 }
             )
 

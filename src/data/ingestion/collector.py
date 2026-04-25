@@ -448,8 +448,7 @@ class RealDataCollector:
         # opp_* fields are zero (e.g. leakage guard blocks four_factors endpoint).
         if torvik_payload and historical_team_rows:
             _needs_dff = any(
-                abs(float(t.get("opp_effective_fg_pct", 0) or 0)) < 1e-6
-                for t in torvik_payload.get("teams", [])
+                abs(float(t.get("opp_effective_fg_pct", 0) or 0)) < 1e-6 for t in torvik_payload.get("teams", [])
             )
             if _needs_dff:
                 _dff_updated = _compute_defensive_ff_from_games(torvik_payload, historical_team_rows)

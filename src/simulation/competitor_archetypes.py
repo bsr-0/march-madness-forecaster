@@ -28,6 +28,7 @@ import numpy as np
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ArchetypeParameters:
     """Configuration for a single competitor archetype."""
@@ -40,6 +41,7 @@ class ArchetypeParameters:
 # ---------------------------------------------------------------------------
 # Base class
 # ---------------------------------------------------------------------------
+
 
 class CompetitorArchetype(ABC):
     """Abstract base for competitor behavioral models."""
@@ -99,9 +101,7 @@ class CompetitorArchetype(ABC):
             p1_public = public_picks.get(t1, {}).get(round_name, 0.5)
             seed1 = seeds.get(t1, 8)
 
-            pick_prob = self.predict_pick_probability(
-                t1, round_name, p1_model, p1_public, seed1
-            )
+            pick_prob = self.predict_pick_probability(t1, round_name, p1_model, p1_public, seed1)
             pick_prob = max(0.01, min(0.99, pick_prob))
 
             winner = t1 if rng.rand() < pick_prob else t2
@@ -115,6 +115,7 @@ class CompetitorArchetype(ABC):
 # Concrete archetypes
 # ---------------------------------------------------------------------------
 
+
 class ChalkPicker(CompetitorArchetype):
     """Follows public consensus and seed lines.
 
@@ -124,14 +125,21 @@ class ChalkPicker(CompetitorArchetype):
     """
 
     def __init__(self, prevalence: float = 0.35):
-        super().__init__(ArchetypeParameters(
-            name="chalk_picker",
-            description="Follows seeds and public consensus",
-            prevalence=prevalence,
-        ))
+        super().__init__(
+            ArchetypeParameters(
+                name="chalk_picker",
+                description="Follows seeds and public consensus",
+                prevalence=prevalence,
+            )
+        )
 
     def predict_pick_probability(
-        self, team_id, round_name, model_prob, public_pct, seed,
+        self,
+        team_id,
+        round_name,
+        model_prob,
+        public_pct,
+        seed,
     ) -> float:
         # Seed strength: lower seed = stronger (1-seed → 1.0, 16-seed → 0.0)
         seed_strength = max(0.0, (17 - seed) / 16.0)
@@ -147,14 +155,21 @@ class ChaosSeeker(CompetitorArchetype):
     """
 
     def __init__(self, prevalence: float = 0.20):
-        super().__init__(ArchetypeParameters(
-            name="chaos_seeker",
-            description="Aggressively picks upsets and underdogs",
-            prevalence=prevalence,
-        ))
+        super().__init__(
+            ArchetypeParameters(
+                name="chaos_seeker",
+                description="Aggressively picks upsets and underdogs",
+                prevalence=prevalence,
+            )
+        )
 
     def predict_pick_probability(
-        self, team_id, round_name, model_prob, public_pct, seed,
+        self,
+        team_id,
+        round_name,
+        model_prob,
+        public_pct,
+        seed,
     ) -> float:
         # Chaos seekers favor underdogs: seed attractiveness inverts seed order
         # 16-seed → 1.0 (very attractive), 1-seed → 0.0625 (unattractive)
@@ -173,14 +188,21 @@ class ExpertMimic(CompetitorArchetype):
     """
 
     def __init__(self, prevalence: float = 0.35):
-        super().__init__(ArchetypeParameters(
-            name="expert_mimic",
-            description="Follows analytics/model predictions closely",
-            prevalence=prevalence,
-        ))
+        super().__init__(
+            ArchetypeParameters(
+                name="expert_mimic",
+                description="Follows analytics/model predictions closely",
+                prevalence=prevalence,
+            )
+        )
 
     def predict_pick_probability(
-        self, team_id, round_name, model_prob, public_pct, seed,
+        self,
+        team_id,
+        round_name,
+        model_prob,
+        public_pct,
+        seed,
     ) -> float:
         return 0.85 * model_prob + 0.15 * public_pct
 
@@ -193,15 +215,22 @@ class Homer(CompetitorArchetype):
     """
 
     def __init__(self, prevalence: float = 0.10, homer_boost: float = 1.5):
-        super().__init__(ArchetypeParameters(
-            name="homer",
-            description="Geographic/alma-mater bias on certain teams",
-            prevalence=prevalence,
-        ))
+        super().__init__(
+            ArchetypeParameters(
+                name="homer",
+                description="Geographic/alma-mater bias on certain teams",
+                prevalence=prevalence,
+            )
+        )
         self.homer_boost = homer_boost
 
     def predict_pick_probability(
-        self, team_id, round_name, model_prob, public_pct, seed,
+        self,
+        team_id,
+        round_name,
+        model_prob,
+        public_pct,
+        seed,
     ) -> float:
         # ~10% chance of homer bias on any team (simulates random loyalty)
         # In production, this would use geographic data or pool demographics
@@ -295,11 +324,7 @@ def get_calibrated_mix(
     if years is None:
         years = sorted(HISTORICAL_ARCHETYPE_ESTIMATES.keys())
 
-    matching = [
-        HISTORICAL_ARCHETYPE_ESTIMATES[y]
-        for y in years
-        if y in HISTORICAL_ARCHETYPE_ESTIMATES
-    ]
+    matching = [HISTORICAL_ARCHETYPE_ESTIMATES[y] for y in years if y in HISTORICAL_ARCHETYPE_ESTIMATES]
     if not matching:
         return get_archetype_mix(pool_type, overrides=overrides)
 
@@ -318,15 +343,12 @@ def get_calibrated_mix(
         invalid = set(overrides.keys()) - VALID_ARCHETYPE_NAMES
         if invalid:
             raise ValueError(
-                f"Invalid archetype names: {sorted(invalid)}. "
-                f"Valid names: {sorted(VALID_ARCHETYPE_NAMES)}"
+                f"Invalid archetype names: {sorted(invalid)}. Valid names: {sorted(VALID_ARCHETYPE_NAMES)}"
             )
         avg_mix.update(overrides)
         total = sum(avg_mix.values())
         if abs(total - 1.0) > 0.05:
-            raise ValueError(
-                f"Archetype overrides must sum to approximately 1.0, got {total:.3f}"
-            )
+            raise ValueError(f"Archetype overrides must sum to approximately 1.0, got {total:.3f}")
         if total > 0:
             avg_mix = {k: v / total for k, v in avg_mix.items()}
 
@@ -359,15 +381,12 @@ def get_archetype_mix(
         invalid = set(overrides.keys()) - VALID_ARCHETYPE_NAMES
         if invalid:
             raise ValueError(
-                f"Invalid archetype names: {sorted(invalid)}. "
-                f"Valid names: {sorted(VALID_ARCHETYPE_NAMES)}"
+                f"Invalid archetype names: {sorted(invalid)}. Valid names: {sorted(VALID_ARCHETYPE_NAMES)}"
             )
         mix.update(overrides)
         total = sum(mix.values())
         if abs(total - 1.0) > 0.05:
-            raise ValueError(
-                f"Archetype overrides must sum to approximately 1.0, got {total:.3f}"
-            )
+            raise ValueError(f"Archetype overrides must sum to approximately 1.0, got {total:.3f}")
         # Renormalize to exactly 1.0
         if total > 0:
             mix = {k: v / total for k, v in mix.items()}
@@ -408,6 +427,7 @@ def create_archetypes(
 # ---------------------------------------------------------------------------
 # Historical Calibration
 # ---------------------------------------------------------------------------
+
 
 def calibrate_archetypes_from_brackets(
     historical_brackets: List[Dict[str, str]],
@@ -468,7 +488,11 @@ def calibrate_archetypes_from_brackets(
             log_likelihoods = {}
             for name, archetype in archetype_instances.items():
                 ll = _bracket_log_likelihood(
-                    bracket, archetype, actual_seeds, model_probs, public_picks,
+                    bracket,
+                    archetype,
+                    actual_seeds,
+                    model_probs,
+                    public_picks,
                 )
                 log_likelihoods[name] = ll
 
@@ -477,9 +501,7 @@ def calibrate_archetypes_from_brackets(
             weighted = {}
             for name in archetype_names:
                 # Prevent overflow by subtracting max
-                weighted[name] = prevalence[name] * math.exp(
-                    log_likelihoods[name] - max_ll
-                )
+                weighted[name] = prevalence[name] * math.exp(log_likelihoods[name] - max_ll)
             total_w = sum(weighted.values())
             if total_w > 0:
                 resp = {name: w / total_w for name, w in weighted.items()}
@@ -497,10 +519,7 @@ def calibrate_archetypes_from_brackets(
             new_prevalence = {name: v / total for name, v in new_prevalence.items()}
 
         # Check convergence
-        max_change = max(
-            abs(new_prevalence[name] - prevalence[name])
-            for name in archetype_names
-        )
+        max_change = max(abs(new_prevalence[name] - prevalence[name]) for name in archetype_names)
         prevalence = new_prevalence
         if max_change < 0.001:
             break
@@ -541,7 +560,11 @@ def _bracket_log_likelihood(
         p_pct = public_picks.get(winner, {}).get(round_name, 0.5)
 
         pick_prob = archetype.predict_pick_probability(
-            winner, round_name, m_prob, p_pct, seed,
+            winner,
+            round_name,
+            m_prob,
+            p_pct,
+            seed,
         )
         pick_prob = max(0.01, min(0.99, pick_prob))
         log_ll += math.log(pick_prob)
@@ -552,6 +575,7 @@ def _bracket_log_likelihood(
 # ---------------------------------------------------------------------------
 # Archetype-blended opponent pick distribution
 # ---------------------------------------------------------------------------
+
 
 def blend_archetype_picks(
     archetypes: List[CompetitorArchetype],
@@ -607,7 +631,11 @@ def blend_archetype_picks(
             weighted_sum = 0.0
             for archetype, w in zip(archetypes, weights):
                 arch_prob = archetype.predict_pick_probability(
-                    team_id, round_name, m_prob, p_pct, seed,
+                    team_id,
+                    round_name,
+                    m_prob,
+                    p_pct,
+                    seed,
                 )
                 weighted_sum += w * arch_prob
 

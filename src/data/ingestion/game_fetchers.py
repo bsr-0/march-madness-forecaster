@@ -56,15 +56,13 @@ _MIN_GAMES_FOR_COMPLETE_SEASON = 500
 # Cache version — bump to force re-fetch when the fetch logic changes
 _CACHE_VERSION = "v2_espn_primary"
 
-_ESPN_SCOREBOARD_URL = (
-    "https://site.api.espn.com/apis/site/v2/sports/basketball/"
-    "mens-college-basketball/scoreboard"
-)
+_ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
 
 
 # ---------------------------------------------------------------------------
 # Season window helpers
 # ---------------------------------------------------------------------------
+
 
 def season_window(season: int):
     """Return (start_date, end_date) for an NCAA season."""
@@ -84,6 +82,7 @@ def is_in_season_window(date_str: str, season: int) -> bool:
 # ---------------------------------------------------------------------------
 # ESPN parsing helpers (shared by both fetchers)
 # ---------------------------------------------------------------------------
+
 
 def _parse_espn_stats(statistics: List[Dict]) -> Dict[str, float]:
     """Parse an ESPN competitor ``statistics`` array to a flat dict.
@@ -199,10 +198,7 @@ def parse_espn_event(event: Dict, season: int, fallback_date: str) -> Optional[I
 
     neutral = bool(comp.get("neutralSite", False))
     conference = comp.get("conferenceCompetition")
-    status_name = (
-        comp.get("status", {}).get("type", {}).get("name", "")
-        if isinstance(comp.get("status"), dict) else ""
-    )
+    status_name = comp.get("status", {}).get("type", {}).get("name", "") if isinstance(comp.get("status"), dict) else ""
     overtime = "ot" in status_name.lower() if status_name else False
 
     return IngestionGameRecord(
@@ -369,37 +365,39 @@ def _team_perspective_rows_to_records(
         # Detect whether real box-score data exists for this game.
         _has_box = bool(_f(t1, "fga") > 0 or _f(t2, "fga") > 0)
 
-        records.append(IngestionGameRecord(
-            game_id=gid,
-            date=raw_date,
-            season=season,
-            home_team_id=str(t1.get("team_id", "")),
-            home_team_name=str(t1.get("team_name", t1.get("team_id", ""))),
-            away_team_id=str(t2.get("team_id", "")),
-            away_team_name=str(t2.get("team_name", t2.get("team_id", ""))),
-            home_score=home_score,
-            away_score=away_score,
-            home_fgm=_f(t1, "fgm"),
-            home_fga=_f(t1, "fga"),
-            home_fg3m=_f(t1, "fg3m"),
-            home_fg3a=_f(t1, "fg3a"),
-            home_fta=_f(t1, "fta"),
-            home_tov=_f(t1, "turnovers") or _f(t1, "tov"),
-            home_orb=_f(t1, "orb"),
-            home_drb=_f(t1, "drb"),
-            away_fgm=_f(t2, "fgm"),
-            away_fga=_f(t2, "fga"),
-            away_fg3m=_f(t2, "fg3m"),
-            away_fg3a=_f(t2, "fg3a"),
-            away_fta=_f(t2, "fta"),
-            away_tov=_f(t2, "turnovers") or _f(t2, "tov"),
-            away_orb=_f(t2, "orb"),
-            away_drb=_f(t2, "drb"),
-            has_box_score=_has_box,
-            overtime=overtime,
-            neutral_site=True,
-            provider=provider,
-        ))
+        records.append(
+            IngestionGameRecord(
+                game_id=gid,
+                date=raw_date,
+                season=season,
+                home_team_id=str(t1.get("team_id", "")),
+                home_team_name=str(t1.get("team_name", t1.get("team_id", ""))),
+                away_team_id=str(t2.get("team_id", "")),
+                away_team_name=str(t2.get("team_name", t2.get("team_id", ""))),
+                home_score=home_score,
+                away_score=away_score,
+                home_fgm=_f(t1, "fgm"),
+                home_fga=_f(t1, "fga"),
+                home_fg3m=_f(t1, "fg3m"),
+                home_fg3a=_f(t1, "fg3a"),
+                home_fta=_f(t1, "fta"),
+                home_tov=_f(t1, "turnovers") or _f(t1, "tov"),
+                home_orb=_f(t1, "orb"),
+                home_drb=_f(t1, "drb"),
+                away_fgm=_f(t2, "fgm"),
+                away_fga=_f(t2, "fga"),
+                away_fg3m=_f(t2, "fg3m"),
+                away_fg3a=_f(t2, "fg3a"),
+                away_fta=_f(t2, "fta"),
+                away_tov=_f(t2, "turnovers") or _f(t2, "tov"),
+                away_orb=_f(t2, "orb"),
+                away_drb=_f(t2, "drb"),
+                has_box_score=_has_box,
+                overtime=overtime,
+                neutral_site=True,
+                provider=provider,
+            )
+        )
     return records
 
 
@@ -422,22 +420,26 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
             logger.warning(
                 "Date inconsistency for game_id=%s: provider '%s' says %s, "
                 "provider '%s' says %s — keeping the ESPN date",
-                rec.game_id, existing.provider, existing.date,
-                rec.provider, rec.date,
+                rec.game_id,
+                existing.provider,
+                existing.date,
+                rec.provider,
+                rec.date,
             )
 
         # Prefer the record with more box-score content (higher total FGA).
         # Also prefer has_box_score=True over has_box_score=False when FGA
         # totals are equal (e.g. both zero — one may have correctly flagged
         # the absence while the other hasn't).
-        new_is_richer = (
-            (rec.home_fga + rec.away_fga) > (existing.home_fga + existing.away_fga)
-            or (rec.has_box_score and not existing.has_box_score)
+        new_is_richer = (rec.home_fga + rec.away_fga) > (existing.home_fga + existing.away_fga) or (
+            rec.has_box_score and not existing.has_box_score
         )
         if new_is_richer:
             logger.debug(
                 "Dedup game_id=%s: replacing '%s' record with richer '%s' record",
-                rec.game_id, existing.provider, rec.provider,
+                rec.game_id,
+                existing.provider,
+                rec.provider,
             )
             # Preserve overtime=True if either provider detected it
             if existing.overtime and not rec.overtime:
@@ -455,7 +457,9 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
                 existing.has_box_score = True
             logger.debug(
                 "Dedup game_id=%s: discarding duplicate from '%s' (kept '%s')",
-                rec.game_id, rec.provider, existing.provider,
+                rec.game_id,
+                rec.provider,
+                existing.provider,
             )
 
     result = sorted(seen.values(), key=lambda r: (r.date, r.game_id))
@@ -465,6 +469,7 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
 # ---------------------------------------------------------------------------
 # HistoricalGameFetcher
 # ---------------------------------------------------------------------------
+
 
 class HistoricalGameFetcher:
     """Batch multi-season game fetcher.
@@ -508,7 +513,10 @@ class HistoricalGameFetcher:
     # ── Public API ─────────────────────────────────────────────────────────
 
     def fetch_season(
-        self, season: int, *, strict: bool = True,
+        self,
+        season: int,
+        *,
+        strict: bool = True,
     ) -> List[IngestionGameRecord]:
         """Fetch all games for a complete NCAA season.
 
@@ -541,10 +549,7 @@ class HistoricalGameFetcher:
             quality_errors = validate_season_quality(final)
             if quality_errors:
                 if strict:
-                    raise IngestionQualityError(
-                        f"Season {season} quality gate failed: "
-                        + "; ".join(quality_errors)
-                    )
+                    raise IngestionQualityError(f"Season {season} quality gate failed: " + "; ".join(quality_errors))
                 for err in quality_errors:
                     logger.warning("Season %d quality: %s", season, err)
             self._save_cache(cache_path, season, final)
@@ -552,9 +557,10 @@ class HistoricalGameFetcher:
 
         # ── Provider 2: sportsdataverse ─────────────────────────────────────
         logger.warning(
-            "Season %d: ESPN scoreboard returned only %d games (need %d); "
-            "trying sportsdataverse",
-            season, len(espn_records), _MIN_GAMES_FOR_COMPLETE_SEASON,
+            "Season %d: ESPN scoreboard returned only %d games (need %d); trying sportsdataverse",
+            season,
+            len(espn_records),
+            _MIN_GAMES_FOR_COMPLETE_SEASON,
         )
         sdv_records = self._fetch_via_sportsdataverse(season)
         logger.info("Season %d: sportsdataverse returned %d games", season, len(sdv_records))
@@ -565,10 +571,7 @@ class HistoricalGameFetcher:
             quality_errors = validate_season_quality(merged)
             if quality_errors:
                 if strict:
-                    raise IngestionQualityError(
-                        f"Season {season} quality gate failed: "
-                        + "; ".join(quality_errors)
-                    )
+                    raise IngestionQualityError(f"Season {season} quality gate failed: " + "; ".join(quality_errors))
                 for err in quality_errors:
                     logger.warning("Season %d quality: %s", season, err)
             self._save_cache(cache_path, season, merged)
@@ -577,7 +580,8 @@ class HistoricalGameFetcher:
         # ── Provider 3: cbbpy ───────────────────────────────────────────────
         logger.warning(
             "Season %d: ESPN + sportsdataverse gave only %d games; trying cbbpy fallback",
-            season, len(merged),
+            season,
+            len(merged),
         )
         cbbpy_records = self._fetch_via_cbbpy(season)
         logger.info("Season %d: cbbpy returned %d games", season, len(cbbpy_records))
@@ -590,8 +594,7 @@ class HistoricalGameFetcher:
         if quality_errors:
             if strict:
                 raise IngestionQualityError(
-                    f"Season {season} quality gate failed after all providers: "
-                    + "; ".join(quality_errors)
+                    f"Season {season} quality gate failed after all providers: " + "; ".join(quality_errors)
                 )
             for err in quality_errors:
                 logger.warning("Season %d quality: %s", season, err)
@@ -602,14 +605,17 @@ class HistoricalGameFetcher:
 
     @staticmethod
     def _log_provider_contributions(
-        season: int, records: List[IngestionGameRecord],
+        season: int,
+        records: List[IngestionGameRecord],
     ) -> None:
         provider_counts: Dict[str, int] = {}
         for r in records:
             provider_counts[r.provider] = provider_counts.get(r.provider, 0) + 1
         logger.info(
             "Season %d: %d total games — provider contributions: %s",
-            season, len(records), provider_counts,
+            season,
+            len(records),
+            provider_counts,
         )
 
     # ── Provider implementations ───────────────────────────────────────────
@@ -627,13 +633,15 @@ class HistoricalGameFetcher:
             current += timedelta(days=1)
 
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        })
+        session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            }
+        )
 
         all_records: List[IngestionGameRecord] = []
         errors = 0
@@ -655,7 +663,10 @@ class HistoricalGameFetcher:
                 if done % 50 == 0 or done == len(days):
                     logger.info(
                         "Season %d ESPN: %d/%d days processed, %d games so far",
-                        season, done, len(days), len(all_records),
+                        season,
+                        done,
+                        len(days),
+                        len(all_records),
                     )
 
         session.close()
@@ -690,7 +701,9 @@ class HistoricalGameFetcher:
             except (requests.RequestException, ValueError, KeyError) as exc:
                 logger.debug(
                     "ESPN scoreboard %s seasontype=%d failed: %s",
-                    fallback_iso, season_type, exc,
+                    fallback_iso,
+                    season_type,
+                    exc,
                 )
                 continue
 
@@ -701,7 +714,9 @@ class HistoricalGameFetcher:
                     if not is_in_season_window(rec.date, season):
                         logger.debug(
                             "Rejected game_id=%s: date %s outside season %d window",
-                            rec.game_id, rec.date, season,
+                            rec.game_id,
+                            rec.date,
+                            season,
                         )
                         continue
                     if season_type == 3:
@@ -740,7 +755,9 @@ class HistoricalGameFetcher:
                 if rows:
                     logger.info(
                         "Season %d: sportsdataverse %s returned %d rows",
-                        season, fn_name, len(rows),
+                        season,
+                        fn_name,
+                        len(rows),
                     )
                     self._normalize_date_field(rows)
                     _inject_overtime_from_periods(rows)
@@ -829,7 +846,9 @@ class HistoricalGameFetcher:
                 json.dump(data, f, indent=2)
             logger.info(
                 "Season %d: wrote %d records to ESPN cache %s",
-                season, len(records), path,
+                season,
+                len(records),
+                path,
             )
         except OSError as exc:
             logger.warning("Season %d: failed to write cache: %s", season, exc)
@@ -958,19 +977,32 @@ class HistoricalGameFetcher:
                 continue
             team_id = _normalize(team_name)
             game_bucket = by_game_team.setdefault(game_id, {})
-            stats = game_bucket.setdefault(team_id, {
-                "team_id": team_id, "team_name": team_name,
-                "team_score": 0.0, "fgm": 0.0, "fga": 0.0,
-                "fg3m": 0.0, "fg3a": 0.0, "fta": 0.0,
-                "turnovers": 0.0, "orb": 0.0, "drb": 0.0,
-                "player_rows": 0, "date": "",
-            })
+            stats = game_bucket.setdefault(
+                team_id,
+                {
+                    "team_id": team_id,
+                    "team_name": team_name,
+                    "team_score": 0.0,
+                    "fgm": 0.0,
+                    "fga": 0.0,
+                    "fg3m": 0.0,
+                    "fg3a": 0.0,
+                    "fta": 0.0,
+                    "turnovers": 0.0,
+                    "orb": 0.0,
+                    "drb": 0.0,
+                    "player_rows": 0,
+                    "date": "",
+                },
+            )
+
             def _f(key: str) -> float:
                 v = row.get(key)
                 try:
                     return float(v) if v is not None else 0.0
                 except (TypeError, ValueError):
                     return 0.0
+
             stats["team_score"] += _f("pts")
             stats["fgm"] += _f("fgm")
             stats["fga"] += _f("fga")
@@ -992,40 +1024,46 @@ class HistoricalGameFetcher:
             first, second = team_list[:2]
             for team, opp in ((first, second), (second, first)):
                 poss = team["fga"] - team["orb"] + team["turnovers"] + 0.475 * team["fta"]
-                out.append({
-                    "game_id": game_id,
-                    "team_id": team["team_id"],
-                    "team_name": team["team_name"],
-                    "opponent_id": opp["team_id"],
-                    "opponent_name": opp["team_name"],
-                    "team_score": int(round(team["team_score"])),
-                    "opponent_score": int(round(opp["team_score"])),
-                    "possessions": max(float(poss), 0.0),
-                    "fgm": team["fgm"], "fga": team["fga"],
-                    "fg3m": team["fg3m"], "fg3a": team["fg3a"],
-                    "fta": team["fta"], "turnovers": team["turnovers"],
-                    "orb": team["orb"], "drb": team["drb"],
-                    "date": team.get("date") or "",
-                })
+                out.append(
+                    {
+                        "game_id": game_id,
+                        "team_id": team["team_id"],
+                        "team_name": team["team_name"],
+                        "opponent_id": opp["team_id"],
+                        "opponent_name": opp["team_name"],
+                        "team_score": int(round(team["team_score"])),
+                        "opponent_score": int(round(opp["team_score"])),
+                        "possessions": max(float(poss), 0.0),
+                        "fgm": team["fgm"],
+                        "fga": team["fga"],
+                        "fg3m": team["fg3m"],
+                        "fg3a": team["fg3a"],
+                        "fta": team["fta"],
+                        "turnovers": team["turnovers"],
+                        "orb": team["orb"],
+                        "drb": team["drb"],
+                        "date": team.get("date") or "",
+                    }
+                )
         return out
 
     @staticmethod
     def _run_with_timeout(fn, args=(), kwargs=None, timeout=120):
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FT
+
         kwargs = kwargs or {}
         with ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(fn, *args, **kwargs)
             try:
                 return future.result(timeout=timeout)
             except FT:
-                raise TimeoutError(
-                    f"{getattr(fn, '__name__', fn)} timed out after {timeout}s"
-                )
+                raise TimeoutError(f"{getattr(fn, '__name__', fn)} timed out after {timeout}s")
 
 
 # ---------------------------------------------------------------------------
 # IncrementalGameFetcher
 # ---------------------------------------------------------------------------
+
 
 class IncrementalGameFetcher:
     """Fetches new games since a given date for live-season top-up pulls.
@@ -1075,13 +1113,15 @@ class IncrementalGameFetcher:
             return []
 
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        })
+        session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            }
+        )
 
         days: List[date] = []
         current = since_date
@@ -1107,6 +1147,8 @@ class IncrementalGameFetcher:
         result = dedup_records(all_records)
         logger.info(
             "IncrementalGameFetcher: year=%d since=%s → %d games",
-            year, since, len(result),
+            year,
+            since,
+            len(result),
         )
         return result

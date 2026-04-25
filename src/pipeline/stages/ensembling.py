@@ -93,7 +93,7 @@ class EnsembleResult:
     def effective_model_count(self) -> float:
         """1 / sum(w^2) — higher means more diverse weighting."""
         w = np.array(list(self.weights.values()))
-        sum_sq = float(np.sum(w ** 2))
+        sum_sq = float(np.sum(w**2))
         return 1.0 / sum_sq if sum_sq > 0 else 0.0
 
     def summary(self) -> str:
@@ -102,8 +102,7 @@ class EnsembleResult:
             f"  Method: {self.optimization_method}",
             f"  Weights: {self.weights}",
             f"  Ensemble EV={self.ensemble_ev:.2f}, Brier={self.ensemble_brier:.4f}",
-            f"  Best individual: {self.best_individual_model} "
-            f"(EV={self.best_individual_ev:.2f})",
+            f"  Best individual: {self.best_individual_model} (EV={self.best_individual_ev:.2f})",
             f"  EV improvement: +{self.ev_improvement_over_best:.2f}",
             f"  Effective model count: {self.effective_model_count:.2f}",
         ]
@@ -196,8 +195,7 @@ def optimize_weights_grid(
     if n_models > MAX_ENSEMBLE_SIZE:
         # Limit to top 3 by individual Brier
         individual_briers = {
-            name: float(BrierScoreOptimizer.calculate(preds, actuals))
-            for name, preds in predictions.items()
+            name: float(BrierScoreOptimizer.calculate(preds, actuals)) for name, preds in predictions.items()
         }
         top_names = sorted(individual_briers, key=individual_briers.get)[:MAX_ENSEMBLE_SIZE]
         model_names = top_names
@@ -241,6 +239,7 @@ def optimize_weights_stacking(
     """
     try:
         from src.ml.ensemble.stacking_weights import StackingWeightOptimizer
+
         optimizer = StackingWeightOptimizer(regularization=0.1)
         result = optimizer.fit(predictions, actuals)
         weights = result.weights
@@ -327,11 +326,11 @@ class EnsembleOptimizer:
             preds_clipped = np.clip(preds, PROB_CLIP_MIN, PROB_CLIP_MAX)
             model_predictions[name] = preds_clipped
             individual_evs[name] = compute_bracket_ev(
-                preds_clipped, round_labels, self.scoring_weights,
+                preds_clipped,
+                round_labels,
+                self.scoring_weights,
             )
-            individual_briers[name] = float(
-                BrierScoreOptimizer.calculate(preds_clipped, actuals)
-            )
+            individual_briers[name] = float(BrierScoreOptimizer.calculate(preds_clipped, actuals))
 
         best_model = max(individual_evs, key=individual_evs.get)
         best_ev = individual_evs[best_model]
@@ -356,7 +355,8 @@ class EnsembleOptimizer:
         # --- Optimize weights ---
         if self.method == "stacking":
             weights, blended, _ = optimize_weights_stacking(
-                model_predictions, actuals,
+                model_predictions,
+                actuals,
             )
         elif self.method == "equal":
             n = len(model_predictions)
@@ -366,7 +366,8 @@ class EnsembleOptimizer:
         else:
             # Grid search (default)
             weights, blended, _ = optimize_weights_grid(
-                model_predictions, actuals,
+                model_predictions,
+                actuals,
                 round_labels=round_labels,
                 scoring_weights=self.scoring_weights,
                 step=self.grid_step,
@@ -375,7 +376,9 @@ class EnsembleOptimizer:
 
         ensemble_brier = float(BrierScoreOptimizer.calculate(blended, actuals))
         ensemble_ev = compute_bracket_ev(
-            blended, round_labels, self.scoring_weights,
+            blended,
+            round_labels,
+            self.scoring_weights,
         )
 
         result.weights = weights
@@ -392,8 +395,8 @@ class EnsembleOptimizer:
                 f"({best_model}: {best_ev:.2f}). Falling back to best model."
             )
             logger.warning(
-                "Phase 9: Ensemble underperforms best individual. "
-                "Using %s alone.", best_model,
+                "Phase 9: Ensemble underperforms best individual. Using %s alone.",
+                best_model,
             )
             result.weights = {best_model: 1.0}
             result.ensemble_predictions = model_predictions[best_model]
@@ -414,8 +417,6 @@ class EnsembleOptimizer:
         logger.info(result.summary())
 
         if not result.passed and self.strict:
-            raise IntegrityError(
-                f"Phase 9 ensembling failed: {result.errors}"
-            )
+            raise IntegrityError(f"Phase 9 ensembling failed: {result.errors}")
 
         return result

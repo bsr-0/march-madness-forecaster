@@ -90,8 +90,7 @@ def load_public_picks(
         logger.warning("Failed to scrape public picks: %s", e)
 
     logger.warning(
-        "No public pick data available for %d. "
-        "ESPN optimizer will use model probabilities as fallback.",
+        "No public pick data available for %d. ESPN optimizer will use model probabilities as fallback.",
         year,
     )
     return {}
@@ -104,10 +103,6 @@ def _normalize_picks(data: Dict) -> Dict[str, Dict[str, float]]:
 
     for team_id, rounds in data.items():
         if isinstance(rounds, dict):
-            result[str(team_id)] = {
-                rn: float(rounds.get(rn, 0.0))
-                for rn in round_names
-                if rn in rounds
-            }
+            result[str(team_id)] = {rn: float(rounds.get(rn, 0.0)) for rn in round_names if rn in rounds}
 
     return result

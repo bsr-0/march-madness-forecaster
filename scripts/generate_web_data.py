@@ -33,6 +33,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
+
 def load(path, required=True):
     """Load JSON file with clear GitHub Actions error annotations."""
     if not Path(path).exists():
@@ -50,6 +51,7 @@ def load(path, required=True):
 
 class SafeEncoder(json.JSONEncoder):
     """Replace NaN/Infinity with None to produce valid JSON."""
+
     def default(self, o):
         return super().default(o)
 
@@ -113,6 +115,7 @@ seeds_2025 = load(HIST / "tournament_seeds_2025.json")
 metrics_2025 = load(HIST / "team_metrics_2025.json")
 metrics_2026_raw = load(DATA / "raw" / "team_metrics_2026.json", required=False)
 
+
 # Build rating lookups
 def build_rating_lookup(torvik_data):
     lookup = {}
@@ -134,6 +137,7 @@ def build_rating_lookup(torvik_data):
         if canonical != raw_tid:
             lookup[canonical] = entry
     return lookup
+
 
 ratings_2026 = build_rating_lookup(torvik_2026)
 ratings_2025 = build_rating_lookup(torvik_2025)
@@ -216,9 +220,7 @@ def simulate_bracket():
                 game["region"] = region
                 game["round"] = "Round of 64"
                 r64_games.append(game)
-                r64_winners[(region, min(s1, s2))] = next(
-                    t for t in [t1, t2] if t["team_id"] == game["winner_id"]
-                )
+                r64_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
     all_rounds.append({"round_name": "Round of 64", "games": r64_games})
 
     # Round of 32: winners of (1v16) vs (8v9), (5v12) vs (4v13), (6v11) vs (3v14), (7v10) vs (2v15)
@@ -234,9 +236,7 @@ def simulate_bracket():
                 game["region"] = region
                 game["round"] = "Round of 32"
                 r32_games.append(game)
-                r32_winners[(region, min(s1, s2))] = next(
-                    t for t in [t1, t2] if t["team_id"] == game["winner_id"]
-                )
+                r32_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
     all_rounds.append({"round_name": "Round of 32", "games": r32_games})
 
     # Sweet 16
@@ -252,9 +252,7 @@ def simulate_bracket():
                 game["region"] = region
                 game["round"] = "Sweet 16"
                 s16_games.append(game)
-                s16_winners[(region, min(s1, s2))] = next(
-                    t for t in [t1, t2] if t["team_id"] == game["winner_id"]
-                )
+                s16_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
     all_rounds.append({"round_name": "Sweet 16", "games": s16_games})
 
     # Elite 8
@@ -268,9 +266,7 @@ def simulate_bracket():
             game["region"] = region
             game["round"] = "Elite 8"
             e8_games.append(game)
-            e8_winners[region] = next(
-                t for t in [t1, t2] if t["team_id"] == game["winner_id"]
-            )
+            e8_winners[region] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
     all_rounds.append({"round_name": "Elite 8", "games": e8_games})
 
     # Final Four
@@ -285,9 +281,7 @@ def simulate_bracket():
             game["region"] = f"{r1} vs {r2}"
             game["round"] = "Final Four"
             f4_games.append(game)
-            f4_winners[f"{r1}/{r2}"] = next(
-                t for t in [t1, t2] if t["team_id"] == game["winner_id"]
-            )
+            f4_winners[f"{r1}/{r2}"] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
     all_rounds.append({"round_name": "Final Four", "games": f4_games})
 
     # Championship
@@ -387,18 +381,20 @@ champ_probs = []
 team_name_map = {t["team_id"]: t["team_name"] for t in bracket_teams}
 for tid, count in championship_counts.most_common():
     t_info = next((t for t in bracket_teams if t["team_id"] == tid), {})
-    champ_probs.append({
-        "team_id": tid,
-        "team_name": team_name_map.get(tid, tid),
-        "seed": t_info.get("seed", 0),
-        "region": t_info.get("region", ""),
-        "conference": t_info.get("conference", ""),
-        "championship_prob": round(count / N_SIMS, 4),
-        "final_four_prob": round(final_four_counts.get(tid, 0) / N_SIMS, 4),
-        "elite_eight_prob": round(elite_eight_counts.get(tid, 0) / N_SIMS, 4),
-        "rating": round(rating_lookup(ratings_2026, tid).get("barthag", 0), 4),
-        "t_rank": rating_lookup(ratings_2026, tid).get("t_rank", 999),
-    })
+    champ_probs.append(
+        {
+            "team_id": tid,
+            "team_name": team_name_map.get(tid, tid),
+            "seed": t_info.get("seed", 0),
+            "region": t_info.get("region", ""),
+            "conference": t_info.get("conference", ""),
+            "championship_prob": round(count / N_SIMS, 4),
+            "final_four_prob": round(final_four_counts.get(tid, 0) / N_SIMS, 4),
+            "elite_eight_prob": round(elite_eight_counts.get(tid, 0) / N_SIMS, 4),
+            "rating": round(rating_lookup(ratings_2026, tid).get("barthag", 0), 4),
+            "t_rank": rating_lookup(ratings_2026, tid).get("t_rank", 999),
+        }
+    )
 
 bracket_output = {
     "season": 2026,
@@ -407,14 +403,17 @@ bracket_output = {
     "n_simulations": N_SIMS,
     "rounds": bracket_predictions,
     "championship_probabilities": sorted(champ_probs, key=lambda x: -x["championship_prob"]),
-    "teams": [{
-        "team_id": t["team_id"],
-        "team_name": t["team_name"],
-        "seed": t["seed"],
-        "region": t["region"],
-        "conference": t["conference"],
-        "rating": round(t["rating"], 2),
-    } for t in bracket_teams],
+    "teams": [
+        {
+            "team_id": t["team_id"],
+            "team_name": t["team_name"],
+            "seed": t["seed"],
+            "region": t["region"],
+            "conference": t["conference"],
+            "rating": round(t["rating"], 2),
+        }
+        for t in bracket_teams
+    ],
 }
 
 save(bracket_output, "bracket_2026.json")
@@ -495,18 +494,20 @@ for year in range(2018, 2025):
         if is_actual_upset and pred_upset:
             year_upsets_correct += 1
 
-        year_preds.append({
-            "team1": t1_id,
-            "team2": t2_id,
-            "team1_seed": t1_seed,
-            "team2_seed": t2_seed,
-            "predicted_prob": round(prob_t1, 4),
-            "predicted_winner": t1_id if predicted_t1_wins else t2_id,
-            "actual_winner": t1_id if actual_t1_won else t2_id,
-            "correct": correct,
-            "brier": round(brier, 4),
-            "round": round_name,
-        })
+        year_preds.append(
+            {
+                "team1": t1_id,
+                "team2": t2_id,
+                "team1_seed": t1_seed,
+                "team2_seed": t2_seed,
+                "predicted_prob": round(prob_t1, 4),
+                "predicted_winner": t1_id if predicted_t1_wins else t2_id,
+                "actual_winner": t1_id if actual_t1_won else t2_id,
+                "correct": correct,
+                "brier": round(brier, 4),
+                "round": round_name,
+            }
+        )
 
         year_total += 1
         if correct:
@@ -542,19 +543,21 @@ for year in range(2018, 2025):
             "total": stats["total"],
         }
 
-    validation_years.append({
-        "year": year,
-        "n_games": year_total,
-        "accuracy": round(year_correct / max(year_total, 1), 4),
-        "brier_score": round(brier_score, 4),
-        "seed_baseline_brier": round(seed_brier, 4),
-        "skill_score": round(1 - brier_score / max(seed_brier, 0.001), 4),
-        "upsets_actual": year_upsets_actual,
-        "upsets_predicted": year_upsets_predicted,
-        "upsets_correctly_predicted": year_upsets_correct,
-        "round_breakdown": round_details,
-        "games": year_preds,
-    })
+    validation_years.append(
+        {
+            "year": year,
+            "n_games": year_total,
+            "accuracy": round(year_correct / max(year_total, 1), 4),
+            "brier_score": round(brier_score, 4),
+            "seed_baseline_brier": round(seed_brier, 4),
+            "skill_score": round(1 - brier_score / max(seed_brier, 0.001), 4),
+            "upsets_actual": year_upsets_actual,
+            "upsets_predicted": year_upsets_predicted,
+            "upsets_correctly_predicted": year_upsets_correct,
+            "round_breakdown": round_details,
+            "games": year_preds,
+        }
+    )
 
 # Calibration analysis
 all_predictions = np.array(all_predictions)
@@ -567,20 +570,24 @@ for i in range(n_bins):
     hi = (i + 1) / n_bins
     mask = (all_predictions >= lo) & (all_predictions < hi)
     if mask.sum() > 0:
-        calibration_data.append({
-            "bin_center": round((lo + hi) / 2, 2),
-            "predicted_avg": round(float(all_predictions[mask].mean()), 4),
-            "actual_avg": round(float(all_actuals[mask].mean()), 4),
-            "count": int(mask.sum()),
-        })
+        calibration_data.append(
+            {
+                "bin_center": round((lo + hi) / 2, 2),
+                "predicted_avg": round(float(all_predictions[mask].mean()), 4),
+                "actual_avg": round(float(all_actuals[mask].mean()), 4),
+                "count": int(mask.sum()),
+            }
+        )
 
 if len(all_predictions) > 0:
     overall_brier = float(np.mean((all_predictions - all_actuals) ** 2))
     overall_acc = float(np.mean((all_predictions >= 0.5) == all_actuals))
-    overall_logloss = float(-np.mean(
-        all_actuals * np.log(np.clip(all_predictions, 1e-6, 1)) +
-        (1 - all_actuals) * np.log(np.clip(1 - all_predictions, 1e-6, 1))
-    ))
+    overall_logloss = float(
+        -np.mean(
+            all_actuals * np.log(np.clip(all_predictions, 1e-6, 1))
+            + (1 - all_actuals) * np.log(np.clip(1 - all_predictions, 1e-6, 1))
+        )
+    )
 else:
     overall_brier = 0
     overall_acc = 0
@@ -649,7 +656,14 @@ for v in validation_years:
         round_agg[rn]["total"] += stats["total"]
 
 round_order = ["R64", "R32", "S16", "E8", "F4", "NCG"]
-round_display = {"R64": "Round of 64", "R32": "Round of 32", "S16": "Sweet 16", "E8": "Elite 8", "F4": "Final Four", "NCG": "Championship"}
+round_display = {
+    "R64": "Round of 64",
+    "R32": "Round of 32",
+    "S16": "Sweet 16",
+    "E8": "Elite 8",
+    "F4": "Final Four",
+    "NCG": "Championship",
+}
 for rn in round_order:
     if rn in round_agg:
         stats = round_agg[rn]
@@ -731,12 +745,14 @@ for year in range(2018, 2025):
 upset_data = []
 for matchup, stats in sorted(seed_matchup_stats.items()):
     if stats["games"] >= 3:
-        upset_data.append({
-            "matchup": matchup,
-            "games": stats["games"],
-            "upsets": stats["higher_seed_wins"],
-            "upset_rate": round(stats["higher_seed_wins"] / stats["games"], 4),
-        })
+        upset_data.append(
+            {
+                "matchup": matchup,
+                "games": stats["games"],
+                "upsets": stats["higher_seed_wins"],
+                "upset_rate": round(stats["higher_seed_wins"] / stats["games"], 4),
+            }
+        )
 
 save({"matchups": sorted(upset_data, key=lambda x: -x["upset_rate"])}, "historical_upsets.json")
 
@@ -744,23 +760,27 @@ save({"matchups": sorted(upset_data, key=lambda x: -x["upset_rate"])}, "historic
 
 print("\n6. Generating conference strength data...")
 
-conf_data = defaultdict(lambda: {
-    "teams": [],
-    "total_teams": 0,
-    "avg_rating": 0,
-    "avg_seed": 0,
-    "best_seed": 16,
-})
+conf_data = defaultdict(
+    lambda: {
+        "teams": [],
+        "total_teams": 0,
+        "avg_rating": 0,
+        "avg_seed": 0,
+        "best_seed": 16,
+    }
+)
 
 for t in bracket_teams:
     conf = t["conference"]
     r = rating_lookup(ratings_2026, t["team_id"])
-    conf_data[conf]["teams"].append({
-        "team_name": t["team_name"],
-        "seed": t["seed"],
-        "region": t["region"],
-        "barthag": round(r.get("barthag", 0.5), 4),
-    })
+    conf_data[conf]["teams"].append(
+        {
+            "team_name": t["team_name"],
+            "seed": t["seed"],
+            "region": t["region"],
+            "barthag": round(r.get("barthag", 0.5), 4),
+        }
+    )
     conf_data[conf]["total_teams"] += 1
     conf_data[conf]["best_seed"] = min(conf_data[conf]["best_seed"], t["seed"])
 
@@ -768,14 +788,16 @@ conferences = []
 for conf, data in conf_data.items():
     seeds = [t["seed"] for t in data["teams"]]
     ratings = [t["barthag"] for t in data["teams"]]
-    conferences.append({
-        "conference": conf,
-        "total_teams": data["total_teams"],
-        "avg_seed": round(sum(seeds) / len(seeds), 1),
-        "best_seed": data["best_seed"],
-        "avg_rating": round(sum(ratings) / len(ratings), 4),
-        "teams": sorted(data["teams"], key=lambda x: x["seed"]),
-    })
+    conferences.append(
+        {
+            "conference": conf,
+            "total_teams": data["total_teams"],
+            "avg_seed": round(sum(seeds) / len(seeds), 1),
+            "best_seed": data["best_seed"],
+            "avg_rating": round(sum(ratings) / len(ratings), 4),
+            "teams": sorted(data["teams"], key=lambda x: x["seed"]),
+        }
+    )
 
 save({"conferences": sorted(conferences, key=lambda x: -x["total_teams"])}, "conference_strength.json")
 

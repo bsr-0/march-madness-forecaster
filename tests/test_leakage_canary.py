@@ -24,17 +24,19 @@ class TestLeakageCanaryDetection:
                 for g in range(games_per_team):
                     game_id += 1
                     won = np.random.random() > 0.4
-                    rows.append({
-                        "season": season,
-                        "team_id": team_id,
-                        "game_id": f"g{game_id}",
-                        "date": f"{season}-{1 + g // 4:02d}-{1 + g % 28:02d}",
-                        "off_rtg": np.random.normal(100, 10),
-                        "def_rtg": np.random.normal(100, 10),
-                        "won": int(won),
-                        "team_score": int(np.random.normal(75, 10)),
-                        "opp_score": int(np.random.normal(70, 10)),
-                    })
+                    rows.append(
+                        {
+                            "season": season,
+                            "team_id": team_id,
+                            "game_id": f"g{game_id}",
+                            "date": f"{season}-{1 + g // 4:02d}-{1 + g % 28:02d}",
+                            "off_rtg": np.random.normal(100, 10),
+                            "def_rtg": np.random.normal(100, 10),
+                            "won": int(won),
+                            "team_score": int(np.random.normal(75, 10)),
+                            "opp_score": int(np.random.normal(70, 10)),
+                        }
+                    )
         return pd.DataFrame(rows)
 
     def test_future_winner_canary_is_detectable(self):
@@ -70,9 +72,7 @@ class TestLeakageCanaryDetection:
             shifted = team_df["canary_current_margin"].shift(1)
 
             # First game should be NaN (no prior data)
-            assert pd.isna(shifted.iloc[0]), (
-                "shift(1) of current-game feature should be NaN for first game"
-            )
+            assert pd.isna(shifted.iloc[0]), "shift(1) of current-game feature should be NaN for first game"
 
             # If someone forgot shift(1), the values would match the current game
             # This detects the absence of the shift(1) safeguard

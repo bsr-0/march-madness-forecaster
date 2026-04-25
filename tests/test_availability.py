@@ -21,6 +21,7 @@ from src.data.availability import (
 # offset_from_event_available
 # ---------------------------------------------------------------------------
 
+
 class TestOffsetFromEventAvailable:
     """Tests for offset_from_event_available."""
 
@@ -119,6 +120,7 @@ class TestOffsetFromEventAvailable:
 # coach_data_available_at
 # ---------------------------------------------------------------------------
 
+
 class TestCoachDataAvailableAt:
     """Tests for coach_data_available_at."""
 
@@ -157,10 +159,7 @@ class TestCoachDataAvailableAt:
     def test_coach_data(self, prediction_year, cutoff_year, expected):
         # prediction_time is not used by the function logic but is required
         prediction_time = datetime(prediction_year, 3, 1)
-        assert (
-            coach_data_available_at(prediction_time, prediction_year, cutoff_year)
-            is expected
-        )
+        assert coach_data_available_at(prediction_time, prediction_year, cutoff_year) is expected
 
     def test_prediction_time_does_not_affect_result(self):
         """The function ignores prediction_time; only prediction_year matters."""
@@ -175,6 +174,7 @@ class TestCoachDataAvailableAt:
 # ---------------------------------------------------------------------------
 # conf_tourney_available_at
 # ---------------------------------------------------------------------------
+
 
 class TestConfTourneyAvailableAt:
     """Tests for conf_tourney_available_at."""
@@ -226,6 +226,7 @@ class TestConfTourneyAvailableAt:
 # external_rating_available_at
 # ---------------------------------------------------------------------------
 
+
 class TestExternalRatingAvailableAt:
     """Tests for external_rating_available_at."""
 
@@ -275,6 +276,7 @@ class TestExternalRatingAvailableAt:
 # ---------------------------------------------------------------------------
 # seed_available_at
 # ---------------------------------------------------------------------------
+
 
 class TestSeedAvailableAt:
     """Tests for seed_available_at."""

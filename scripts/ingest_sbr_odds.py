@@ -62,8 +62,7 @@ def _run_season(scraper: SportsBookReviewScraper, season: int, force: bool = Fal
     spreads_available = sum(1 for g in games if g.spread != 0.0)
     mls_available = sum(1 for g in games if g.moneyline_home != 0.0)
 
-    print(f" {len(games)} games, {len(unique_teams)} teams, "
-          f"{spreads_available} spreads, {mls_available} moneylines")
+    print(f" {len(games)} games, {len(unique_teams)} teams, {spreads_available} spreads, {mls_available} moneylines")
 
 
 def main():

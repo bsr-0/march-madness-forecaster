@@ -6,6 +6,7 @@ Ensures that:
 3. normalize_team_id is idempotent (stable under re-application)
 4. The generic _st suffix rule works for all known State schools
 """
+
 from __future__ import annotations
 
 import json
@@ -65,6 +66,7 @@ def _extract_result_ids(year: int) -> set[str]:
 # Test 1: Cached data cross-source consistency (data_contract)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("year", ALL_YEARS)
 def test_seed_teams_exist_in_torvik(year: int):
     """All tournament seed teams must have matching Torvik entries."""
@@ -91,6 +93,7 @@ def test_result_teams_exist_in_seeds(year: int):
 # ---------------------------------------------------------------------------
 # Test 2: normalize_team_id idempotency (unit)
 # ---------------------------------------------------------------------------
+
 
 def test_normalize_team_id_idempotent():
     """normalize_team_id(normalize_team_id(x)) == normalize_team_id(x) for all cached IDs."""
@@ -125,11 +128,18 @@ def test_normalize_team_id_idempotent():
 # Test 3: Generic _st suffix rule (unit)
 # ---------------------------------------------------------------------------
 
+
 def test_st_suffix_generic_rule():
     """Any team ID ending in _st should normalize to _state (unless aliased otherwise)."""
     st_teams = [
-        "iowa_st", "michigan_st", "ohio_st", "tarleton_st", "chicago_st",
-        "mississippi_valley_st", "southeast_missouri_st", "nicholls_st",
+        "iowa_st",
+        "michigan_st",
+        "ohio_st",
+        "tarleton_st",
+        "chicago_st",
+        "mississippi_valley_st",
+        "southeast_missouri_st",
+        "nicholls_st",
         "winston_salem_st",
     ]
     for tid in st_teams:
@@ -143,6 +153,7 @@ def test_st_suffix_generic_rule():
 # ---------------------------------------------------------------------------
 # Test 4: Tournament results completeness (data_contract)
 # ---------------------------------------------------------------------------
+
 
 def _expected_rounds(year: int):
     """Return expected round distribution based on tournament era."""

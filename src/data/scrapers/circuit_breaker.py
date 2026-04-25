@@ -77,10 +77,7 @@ class CircuitBreakerOpen(RuntimeError):
     def __init__(self, name: str, retry_after: float = 0.0):
         self.breaker_name = name
         self.retry_after = retry_after
-        super().__init__(
-            f"Circuit breaker '{name}' is OPEN. "
-            f"Retry after {retry_after:.0f}s."
-        )
+        super().__init__(f"Circuit breaker '{name}' is OPEN. Retry after {retry_after:.0f}s.")
 
 
 class CircuitBreaker:
@@ -307,9 +304,7 @@ class CircuitBreakerRegistry:
     ) -> CircuitBreaker:
         """Get existing or create new circuit breaker by name."""
         if name not in self._breakers:
-            self._breakers[name] = CircuitBreaker(
-                name, config=config, state_file=self._state_file
-            )
+            self._breakers[name] = CircuitBreaker(name, config=config, state_file=self._state_file)
         return self._breakers[name]
 
     def all_closed(self) -> bool:
@@ -334,9 +329,7 @@ class CircuitBreakerRegistry:
                 all_states = json.load(f)
             for name in all_states:
                 if name not in self._breakers:
-                    self._breakers[name] = CircuitBreaker(
-                        name, state_file=self._state_file
-                    )
+                    self._breakers[name] = CircuitBreaker(name, state_file=self._state_file)
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -357,21 +350,16 @@ def get_circuit_breaker_report(state_file: Optional[str] = None) -> Dict[str, An
     registry.load_all_from_file()
 
     statuses = registry.status_report()
-    open_names = [
-        name for name, s in statuses.items()
-        if s.get("state") == CircuitState.OPEN.value
-    ]
+    open_names = [name for name, s in statuses.items() if s.get("state") == CircuitState.OPEN.value]
 
     for name in open_names:
         s = statuses[name]
         last_fail_ts = s.get("last_failure_time", 0)
         last_fail_str = (
-            datetime.utcfromtimestamp(last_fail_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
-            if last_fail_ts else "unknown"
+            datetime.utcfromtimestamp(last_fail_ts).strftime("%Y-%m-%dT%H:%M:%SZ") if last_fail_ts else "unknown"
         )
         logger.warning(
-            "Circuit breaker OPEN: '%s' — %d consecutive failures, "
-            "last failure at %s, total failures=%d",
+            "Circuit breaker OPEN: '%s' — %d consecutive failures, last failure at %s, total failures=%d",
             name,
             s.get("failure_count", 0),
             last_fail_str,
@@ -389,7 +377,9 @@ def get_circuit_breaker_report(state_file: Optional[str] = None) -> Dict[str, An
     if open_names:
         logger.warning(
             "Circuit breaker health: %s (%d OPEN: %s)",
-            summary.upper(), len(open_names), ", ".join(open_names),
+            summary.upper(),
+            len(open_names),
+            ", ".join(open_names),
         )
     else:
         logger.info(

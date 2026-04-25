@@ -28,38 +28,134 @@ from src.data.scrapers.espn_picks import ConsensusData, ESPNPicksScraper
 # The values are calibrated so that a full 64-team bracket sums to
 # approximately the expected totals (CHAMP ~100%, F4 ~200%, etc.).
 _SEED_TEMPLATES = {
-    1:  {"round_of_64_pct": 97.0, "round_of_32_pct": 90.0, "sweet_16_pct": 75.0,
-         "elite_8_pct": 55.0, "final_four_pct": 35.0, "champion_pct": 18.0},
-    2:  {"round_of_64_pct": 94.0, "round_of_32_pct": 82.0, "sweet_16_pct": 58.0,
-         "elite_8_pct": 35.0, "final_four_pct": 18.0, "champion_pct": 8.0},
-    3:  {"round_of_64_pct": 85.0, "round_of_32_pct": 65.0, "sweet_16_pct": 38.0,
-         "elite_8_pct": 18.0, "final_four_pct": 8.0, "champion_pct": 3.0},
-    4:  {"round_of_64_pct": 80.0, "round_of_32_pct": 55.0, "sweet_16_pct": 28.0,
-         "elite_8_pct": 12.0, "final_four_pct": 5.0, "champion_pct": 2.0},
-    5:  {"round_of_64_pct": 65.0, "round_of_32_pct": 38.0, "sweet_16_pct": 18.0,
-         "elite_8_pct": 7.0, "final_four_pct": 3.0, "champion_pct": 1.0},
-    6:  {"round_of_64_pct": 63.0, "round_of_32_pct": 35.0, "sweet_16_pct": 15.0,
-         "elite_8_pct": 6.0, "final_four_pct": 2.0, "champion_pct": 0.8},
-    7:  {"round_of_64_pct": 60.0, "round_of_32_pct": 30.0, "sweet_16_pct": 12.0,
-         "elite_8_pct": 5.0, "final_four_pct": 2.0, "champion_pct": 0.6},
-    8:  {"round_of_64_pct": 50.0, "round_of_32_pct": 22.0, "sweet_16_pct": 8.0,
-         "elite_8_pct": 3.0, "final_four_pct": 1.0, "champion_pct": 0.3},
-    9:  {"round_of_64_pct": 50.0, "round_of_32_pct": 20.0, "sweet_16_pct": 7.0,
-         "elite_8_pct": 2.0, "final_four_pct": 0.8, "champion_pct": 0.2},
-    10: {"round_of_64_pct": 40.0, "round_of_32_pct": 15.0, "sweet_16_pct": 5.0,
-         "elite_8_pct": 2.0, "final_four_pct": 0.6, "champion_pct": 0.1},
-    11: {"round_of_64_pct": 37.0, "round_of_32_pct": 15.0, "sweet_16_pct": 6.0,
-         "elite_8_pct": 2.0, "final_four_pct": 0.7, "champion_pct": 0.1},
-    12: {"round_of_64_pct": 35.0, "round_of_32_pct": 15.0, "sweet_16_pct": 5.0,
-         "elite_8_pct": 2.0, "final_four_pct": 0.5, "champion_pct": 0.1},
-    13: {"round_of_64_pct": 20.0, "round_of_32_pct": 6.0, "sweet_16_pct": 2.0,
-         "elite_8_pct": 0.5, "final_four_pct": 0.1, "champion_pct": 0.03},
-    14: {"round_of_64_pct": 15.0, "round_of_32_pct": 4.0, "sweet_16_pct": 1.0,
-         "elite_8_pct": 0.3, "final_four_pct": 0.05, "champion_pct": 0.01},
-    15: {"round_of_64_pct": 6.0, "round_of_32_pct": 2.0, "sweet_16_pct": 0.5,
-         "elite_8_pct": 0.1, "final_four_pct": 0.02, "champion_pct": 0.005},
-    16: {"round_of_64_pct": 3.0, "round_of_32_pct": 0.5, "sweet_16_pct": 0.1,
-         "elite_8_pct": 0.02, "final_four_pct": 0.003, "champion_pct": 0.001},
+    1: {
+        "round_of_64_pct": 97.0,
+        "round_of_32_pct": 90.0,
+        "sweet_16_pct": 75.0,
+        "elite_8_pct": 55.0,
+        "final_four_pct": 35.0,
+        "champion_pct": 18.0,
+    },
+    2: {
+        "round_of_64_pct": 94.0,
+        "round_of_32_pct": 82.0,
+        "sweet_16_pct": 58.0,
+        "elite_8_pct": 35.0,
+        "final_four_pct": 18.0,
+        "champion_pct": 8.0,
+    },
+    3: {
+        "round_of_64_pct": 85.0,
+        "round_of_32_pct": 65.0,
+        "sweet_16_pct": 38.0,
+        "elite_8_pct": 18.0,
+        "final_four_pct": 8.0,
+        "champion_pct": 3.0,
+    },
+    4: {
+        "round_of_64_pct": 80.0,
+        "round_of_32_pct": 55.0,
+        "sweet_16_pct": 28.0,
+        "elite_8_pct": 12.0,
+        "final_four_pct": 5.0,
+        "champion_pct": 2.0,
+    },
+    5: {
+        "round_of_64_pct": 65.0,
+        "round_of_32_pct": 38.0,
+        "sweet_16_pct": 18.0,
+        "elite_8_pct": 7.0,
+        "final_four_pct": 3.0,
+        "champion_pct": 1.0,
+    },
+    6: {
+        "round_of_64_pct": 63.0,
+        "round_of_32_pct": 35.0,
+        "sweet_16_pct": 15.0,
+        "elite_8_pct": 6.0,
+        "final_four_pct": 2.0,
+        "champion_pct": 0.8,
+    },
+    7: {
+        "round_of_64_pct": 60.0,
+        "round_of_32_pct": 30.0,
+        "sweet_16_pct": 12.0,
+        "elite_8_pct": 5.0,
+        "final_four_pct": 2.0,
+        "champion_pct": 0.6,
+    },
+    8: {
+        "round_of_64_pct": 50.0,
+        "round_of_32_pct": 22.0,
+        "sweet_16_pct": 8.0,
+        "elite_8_pct": 3.0,
+        "final_four_pct": 1.0,
+        "champion_pct": 0.3,
+    },
+    9: {
+        "round_of_64_pct": 50.0,
+        "round_of_32_pct": 20.0,
+        "sweet_16_pct": 7.0,
+        "elite_8_pct": 2.0,
+        "final_four_pct": 0.8,
+        "champion_pct": 0.2,
+    },
+    10: {
+        "round_of_64_pct": 40.0,
+        "round_of_32_pct": 15.0,
+        "sweet_16_pct": 5.0,
+        "elite_8_pct": 2.0,
+        "final_four_pct": 0.6,
+        "champion_pct": 0.1,
+    },
+    11: {
+        "round_of_64_pct": 37.0,
+        "round_of_32_pct": 15.0,
+        "sweet_16_pct": 6.0,
+        "elite_8_pct": 2.0,
+        "final_four_pct": 0.7,
+        "champion_pct": 0.1,
+    },
+    12: {
+        "round_of_64_pct": 35.0,
+        "round_of_32_pct": 15.0,
+        "sweet_16_pct": 5.0,
+        "elite_8_pct": 2.0,
+        "final_four_pct": 0.5,
+        "champion_pct": 0.1,
+    },
+    13: {
+        "round_of_64_pct": 20.0,
+        "round_of_32_pct": 6.0,
+        "sweet_16_pct": 2.0,
+        "elite_8_pct": 0.5,
+        "final_four_pct": 0.1,
+        "champion_pct": 0.03,
+    },
+    14: {
+        "round_of_64_pct": 15.0,
+        "round_of_32_pct": 4.0,
+        "sweet_16_pct": 1.0,
+        "elite_8_pct": 0.3,
+        "final_four_pct": 0.05,
+        "champion_pct": 0.01,
+    },
+    15: {
+        "round_of_64_pct": 6.0,
+        "round_of_32_pct": 2.0,
+        "sweet_16_pct": 0.5,
+        "elite_8_pct": 0.1,
+        "final_four_pct": 0.02,
+        "champion_pct": 0.005,
+    },
+    16: {
+        "round_of_64_pct": 3.0,
+        "round_of_32_pct": 0.5,
+        "sweet_16_pct": 0.1,
+        "elite_8_pct": 0.02,
+        "final_four_pct": 0.003,
+        "champion_pct": 0.001,
+    },
 }
 
 _REGIONS = ["East", "West", "South", "Midwest"]
@@ -100,7 +196,6 @@ def _build_64_team_matchups() -> dict:
 
 
 class TestValidBracketStructure:
-
     def test_realistic_64_team_bracket_passes(self):
         teams = _build_64_team_bracket()
         warnings = validate_bracket_structure(teams)
@@ -118,8 +213,10 @@ class TestValidBracketStructure:
         for i, seed in enumerate([1, 2, 15, 16]):
             tid = f"team_{seed}"
             teams[tid] = {
-                "team_id": tid, "team_name": f"Team {seed}",
-                "seed": seed, "region": "East",
+                "team_id": tid,
+                "team_name": f"Team {seed}",
+                "seed": seed,
+                "region": "East",
                 **_SEED_TEMPLATES[seed],
             }
         # Should not raise — expectations are scaled by n_teams/64
@@ -133,7 +230,6 @@ class TestValidBracketStructure:
 
 
 class TestBracketStructureHardFailures:
-
     def test_champ_sum_way_too_high_raises(self):
         """All 64 teams have 100% championship pick → sum=6400% vs expected ~100%."""
         teams = _build_64_team_bracket()
@@ -173,7 +269,6 @@ class TestBracketStructureHardFailures:
 
 
 class TestBracketStructureSoftWarnings:
-
     def test_slight_champ_deviation_warns_not_raises(self):
         """Nudge all CHAMP picks up slightly — should warn, not raise."""
         teams = _build_64_team_bracket()
@@ -211,13 +306,17 @@ class TestBracketStructureSoftWarnings:
 
 
 class TestMonotonicValidation:
-
     def test_valid_monotonic_team_passes(self):
         team = PublicPicksSchema(
-            team_id="duke", seed=1, region="East",
-            round_of_64_pct=98.0, round_of_32_pct=92.0,
-            sweet_16_pct=75.0, elite_8_pct=55.0,
-            final_four_pct=35.0, champion_pct=22.0,
+            team_id="duke",
+            seed=1,
+            region="East",
+            round_of_64_pct=98.0,
+            round_of_32_pct=92.0,
+            sweet_16_pct=75.0,
+            elite_8_pct=55.0,
+            final_four_pct=35.0,
+            champion_pct=22.0,
         )
         assert team.champion_pct == 22.0
 
@@ -225,10 +324,15 @@ class TestMonotonicValidation:
         """0.8pp violation (between 0.5 and 2.0) should warn but pass."""
         # sweet_16_pct slightly above round_of_32_pct (within 2pp tolerance)
         team = PublicPicksSchema(
-            team_id="test", seed=5, region="East",
-            round_of_64_pct=65.0, round_of_32_pct=38.0,
-            sweet_16_pct=38.8, elite_8_pct=7.0,
-            final_four_pct=3.0, champion_pct=1.0,
+            team_id="test",
+            seed=5,
+            region="East",
+            round_of_64_pct=65.0,
+            round_of_32_pct=38.0,
+            sweet_16_pct=38.8,
+            elite_8_pct=7.0,
+            final_four_pct=3.0,
+            champion_pct=1.0,
         )
         assert team.sweet_16_pct == 38.8
 
@@ -236,30 +340,44 @@ class TestMonotonicValidation:
         """S16 > R32 by 5pp should hard-fail."""
         with pytest.raises(Exception, match="Non-monotonic"):
             PublicPicksSchema(
-                team_id="corrupt", seed=3, region="West",
-                round_of_64_pct=85.0, round_of_32_pct=30.0,
+                team_id="corrupt",
+                seed=3,
+                region="West",
+                round_of_64_pct=85.0,
+                round_of_32_pct=30.0,
                 sweet_16_pct=35.0,  # 5pp above R32 → hard fail
                 elite_8_pct=18.0,
-                final_four_pct=8.0, champion_pct=3.0,
+                final_four_pct=8.0,
+                champion_pct=3.0,
             )
 
     def test_champ_above_f4_by_3pp_raises(self):
         """CHAMP 6pp above F4 → hard fail."""
         with pytest.raises(Exception, match="Non-monotonic"):
             PublicPicksSchema(
-                team_id="broken", seed=2, region="South",
-                round_of_64_pct=94.0, round_of_32_pct=82.0,
-                sweet_16_pct=58.0, elite_8_pct=35.0,
-                final_four_pct=10.0, champion_pct=16.0,  # 6pp above F4
+                team_id="broken",
+                seed=2,
+                region="South",
+                round_of_64_pct=94.0,
+                round_of_32_pct=82.0,
+                sweet_16_pct=58.0,
+                elite_8_pct=35.0,
+                final_four_pct=10.0,
+                champion_pct=16.0,  # 6pp above F4
             )
 
     def test_equal_consecutive_rounds_passes(self):
         """Equal values in consecutive rounds are fine (delta=0)."""
         team = PublicPicksSchema(
-            team_id="flat", seed=8, region="Midwest",
-            round_of_64_pct=50.0, round_of_32_pct=50.0,
-            sweet_16_pct=50.0, elite_8_pct=50.0,
-            final_four_pct=50.0, champion_pct=50.0,
+            team_id="flat",
+            seed=8,
+            region="Midwest",
+            round_of_64_pct=50.0,
+            round_of_32_pct=50.0,
+            sweet_16_pct=50.0,
+            elite_8_pct=50.0,
+            final_four_pct=50.0,
+            champion_pct=50.0,
         )
         assert team.round_of_64_pct == 50.0
 
@@ -270,17 +388,21 @@ class TestMonotonicValidation:
 
 
 class TestFailClosedConsensus:
-
     def test_valid_payload_returns_populated_consensus(self):
         payload = {
             "sources": ["espn"],
             "timestamp": "2026-03-17T12:00:00Z",
             "teams": {
                 "duke": {
-                    "team_name": "Duke", "seed": 1, "region": "East",
-                    "round_of_64_pct": 98.0, "round_of_32_pct": 92.0,
-                    "sweet_16_pct": 75.0, "elite_8_pct": 55.0,
-                    "final_four_pct": 35.0, "champion_pct": 22.0,
+                    "team_name": "Duke",
+                    "seed": 1,
+                    "region": "East",
+                    "round_of_64_pct": 98.0,
+                    "round_of_32_pct": 92.0,
+                    "sweet_16_pct": 75.0,
+                    "elite_8_pct": 55.0,
+                    "final_four_pct": 35.0,
+                    "champion_pct": 22.0,
                 },
             },
         }
@@ -296,11 +418,15 @@ class TestFailClosedConsensus:
             "sources": ["espn"],
             "teams": {
                 "corrupt": {
-                    "team_name": "Corrupt", "seed": 99,  # seed > 16 → schema fail
+                    "team_name": "Corrupt",
+                    "seed": 99,  # seed > 16 → schema fail
                     "region": "East",
-                    "round_of_64_pct": 50.0, "round_of_32_pct": 40.0,
-                    "sweet_16_pct": 30.0, "elite_8_pct": 20.0,
-                    "final_four_pct": 10.0, "champion_pct": 5.0,
+                    "round_of_64_pct": 50.0,
+                    "round_of_32_pct": 40.0,
+                    "sweet_16_pct": 30.0,
+                    "elite_8_pct": 20.0,
+                    "final_four_pct": 10.0,
+                    "champion_pct": 5.0,
                 },
             },
         }
@@ -318,17 +444,26 @@ class TestFailClosedConsensus:
             "sources": ["espn"],
             "teams": {
                 "good": {
-                    "team_name": "Good", "seed": 1, "region": "East",
-                    "round_of_64_pct": 97.0, "round_of_32_pct": 90.0,
-                    "sweet_16_pct": 75.0, "elite_8_pct": 55.0,
-                    "final_four_pct": 35.0, "champion_pct": 18.0,
+                    "team_name": "Good",
+                    "seed": 1,
+                    "region": "East",
+                    "round_of_64_pct": 97.0,
+                    "round_of_32_pct": 90.0,
+                    "sweet_16_pct": 75.0,
+                    "elite_8_pct": 55.0,
+                    "final_four_pct": 35.0,
+                    "champion_pct": 18.0,
                 },
                 "bad": {
-                    "team_name": "Bad", "seed": 5, "region": "West",
-                    "round_of_64_pct": 65.0, "round_of_32_pct": 20.0,
+                    "team_name": "Bad",
+                    "seed": 5,
+                    "region": "West",
+                    "round_of_64_pct": 65.0,
+                    "round_of_32_pct": 20.0,
                     "sweet_16_pct": 30.0,  # 10pp above R32 → rejected
                     "elite_8_pct": 7.0,
-                    "final_four_pct": 3.0, "champion_pct": 1.0,
+                    "final_four_pct": 3.0,
+                    "champion_pct": 1.0,
                 },
             },
         }
@@ -347,11 +482,15 @@ class TestFailClosedConsensus:
             seed = (i % 16) + 1
             tid = f"team_{i}"
             teams[tid] = {
-                "team_name": f"Team {i}", "seed": min(seed, 16),
+                "team_name": f"Team {i}",
+                "seed": min(seed, 16),
                 "region": _REGIONS[i // 16],
-                "round_of_64_pct": 100.0, "round_of_32_pct": 100.0,
-                "sweet_16_pct": 100.0, "elite_8_pct": 100.0,
-                "final_four_pct": 100.0, "champion_pct": 100.0,
+                "round_of_64_pct": 100.0,
+                "round_of_32_pct": 100.0,
+                "sweet_16_pct": 100.0,
+                "elite_8_pct": 100.0,
+                "final_four_pct": 100.0,
+                "champion_pct": 100.0,
             }
         payload = {"sources": ["espn"], "teams": teams}
         scraper = ESPNPicksScraper()

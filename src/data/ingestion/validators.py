@@ -69,9 +69,7 @@ def validate_ratings_payload(
                 field_values[field].append(val)
 
     if len(team_ids) < min_unique_team_ids:
-        errors.append(
-            f"ratings payload must include at least {min_unique_team_ids} unique teams; got {len(team_ids)}"
-        )
+        errors.append(f"ratings payload must include at least {min_unique_team_ids} unique teams; got {len(team_ids)}")
 
     for field, values in field_values.items():
         uniques = {round(v, 6) for v in values}
@@ -86,7 +84,7 @@ def validate_ratings_payload(
             if len(values) >= 10:
                 mean = sum(values) / len(values)
                 variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
-                std = variance ** 0.5
+                std = variance**0.5
                 if std < min_std:
                     errors.append(
                         f"ratings field '{field}' std dev too low: "
@@ -104,8 +102,7 @@ def validate_ratings_payload(
             nonzero = [v for v in vals if v is not None and abs(v) > 1e-6]
             if vals and not nonzero:
                 errors.append(
-                    f"ratings field '{field}' is zero/missing for ALL {len(vals)} teams "
-                    f"— likely a data source failure"
+                    f"ratings field '{field}' is zero/missing for ALL {len(vals)} teams — likely a data source failure"
                 )
 
     return errors
@@ -257,9 +254,7 @@ def validate_rosters_payload(payload: Dict) -> List[str]:
                 rapm_like_count += 1
 
         if rapm_like_count == 0:
-            errors.append(
-                f"teams[{idx}] has no RAPM-like player fields for RAPM derivation"
-            )
+            errors.append(f"teams[{idx}] has no RAPM-like player fields for RAPM derivation")
         if rapm_like_count > 0 and nonzero_rapm_count == 0:
             errors.append(f"teams[{idx}] has RAPM fields but all RAPM values are zero")
 
@@ -337,10 +332,7 @@ def validate_season_quality(
     n = len(records)
 
     if n < min_games:
-        errors.append(
-            f"insufficient games: {n} < {min_games} minimum for stable "
-            f"Elo/SOS computation"
-        )
+        errors.append(f"insufficient games: {n} < {min_games} minimum for stable Elo/SOS computation")
         # Further checks are unreliable with very few records.
         if n == 0:
             return errors
@@ -368,7 +360,7 @@ def validate_season_quality(
     # Box-score coverage — use the explicit has_box_score flag when
     # available (set by the ingestion layer), falling back to FGA > 0.
     if n > 0:
-        has_box = sum(1 for r in records if getattr(r, 'has_box_score', False) or r.home_fga > 0 or r.away_fga > 0)
+        has_box = sum(1 for r in records if getattr(r, "has_box_score", False) or r.home_fga > 0 or r.away_fga > 0)
         pct = has_box / n
         if pct < min_box_score_pct:
             errors.append(
@@ -435,14 +427,10 @@ def validate_four_factors(
 
     # Check defensive FF zeros
     def_ff_fields = ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate")
-    def_zero_count = sum(
-        1 for t in teams
-        if all(abs(_to_float(t.get(f, 0)) or 0) < 1e-6 for f in def_ff_fields)
-    )
+    def_zero_count = sum(1 for t in teams if all(abs(_to_float(t.get(f, 0)) or 0) < 1e-6 for f in def_ff_fields))
     if def_zero_count > max_def_ff_zeros:
         errors.append(
-            f"{def_zero_count}/{len(teams)} teams have ALL defensive FF = 0.0 "
-            f"(max allowed: {max_def_ff_zeros})"
+            f"{def_zero_count}/{len(teams)} teams have ALL defensive FF = 0.0 (max allowed: {max_def_ff_zeros})"
         )
 
     # Check offensive ORB% for player-level bias
@@ -456,13 +444,10 @@ def validate_four_factors(
         lo, hi = orb_median_range
         if median_orb < lo:
             errors.append(
-                f"ORB% median = {median_orb:.4f} is below {lo} — "
-                f"likely CSV player-level bias (not team-level)"
+                f"ORB% median = {median_orb:.4f} is below {lo} — likely CSV player-level bias (not team-level)"
             )
         elif median_orb > hi:
-            errors.append(
-                f"ORB% median = {median_orb:.4f} is above {hi} — suspiciously high"
-            )
+            errors.append(f"ORB% median = {median_orb:.4f} is above {hi} — suspiciously high")
 
     return errors
 
@@ -491,24 +476,21 @@ def validate_team_id_consistency(
     # Extract and normalize seed team IDs
     seed_teams_raw = seeds_payload.get("teams", []) if isinstance(seeds_payload, dict) else seeds_payload
     if isinstance(seed_teams_raw, list):
-        seed_ids = {normalize_team_id(t["team_id"]) for t in seed_teams_raw
-                    if isinstance(t, dict) and t.get("team_id")}
+        seed_ids = {normalize_team_id(t["team_id"]) for t in seed_teams_raw if isinstance(t, dict) and t.get("team_id")}
     else:
         seed_ids = set()
 
     # Extract and normalize Torvik team IDs
     torvik_teams = torvik_payload.get("teams", []) if isinstance(torvik_payload, dict) else torvik_payload
     if isinstance(torvik_teams, list):
-        torvik_ids = {normalize_team_id(t["team_id"]) for t in torvik_teams
-                      if isinstance(t, dict) and t.get("team_id")}
+        torvik_ids = {normalize_team_id(t["team_id"]) for t in torvik_teams if isinstance(t, dict) and t.get("team_id")}
     else:
         torvik_ids = set()
 
     # Check seeds vs Torvik
     missing_in_torvik = seed_ids - torvik_ids
     if missing_in_torvik:
-        msg = (f"{prefix}{len(missing_in_torvik)} seed team(s) not found in Torvik: "
-               f"{sorted(missing_in_torvik)}")
+        msg = f"{prefix}{len(missing_in_torvik)} seed team(s) not found in Torvik: {sorted(missing_in_torvik)}"
         if len(missing_in_torvik) >= max_missing_before_error:
             errors.append(msg)
         else:
@@ -530,8 +512,7 @@ def validate_team_id_consistency(
             # Allow up to 4 missing (First Four losers)
             if len(missing_in_seeds) > 4:
                 errors.append(
-                    f"{prefix}{len(missing_in_seeds)} result team(s) not in seeds: "
-                    f"{sorted(missing_in_seeds)}"
+                    f"{prefix}{len(missing_in_seeds)} result team(s) not in seeds: {sorted(missing_in_seeds)}"
                 )
 
     return errors
@@ -575,8 +556,18 @@ def validate_tournament_results_completeness(
             errors.append(f"{year}: {rnd} has {actual} games, expected {expected}")
 
     # Check required fields
-    required_fields = {"year", "round_name", "region", "team1_id", "team1_seed",
-                       "team1_score", "team2_id", "team2_seed", "team2_score", "team1_won"}
+    required_fields = {
+        "year",
+        "round_name",
+        "region",
+        "team1_id",
+        "team1_seed",
+        "team1_score",
+        "team2_id",
+        "team2_seed",
+        "team2_score",
+        "team1_won",
+    }
     for idx, g in enumerate(games):
         if not isinstance(g, dict):
             errors.append(f"{year}: games[{idx}] is not a dict")

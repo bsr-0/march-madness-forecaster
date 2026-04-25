@@ -18,52 +18,115 @@ ROOT = Path(__file__).resolve().parent.parent
 # Falls through to lowercase match for simple cases (DUKE → duke).
 ABBREV_MAP = {
     # Universal mappings (work across years)
-    "ALA": "alabama", "ARIZ": "arizona", "ARK": "arkansas", "AUB": "auburn",
-    "BAY": "baylor", "BYU": "brigham_young", "CLEM": "clemson",
-    "CONN": "connecticut", "DUKE": "duke", "FLA": "florida",
-    "GONZ": "gonzaga", "HOU": "houston", "ILL": "illinois",
-    "IOWA": "iowa", "ISU": "iowa_state", "IU": "indiana",
-    "KU": "kansas", "KSU": "kansas_state", "LOU": "louisville",
-    "MARQ": "marquette", "MD": "maryland", "MEM": "memphis",
-    "MIA": "miami__fl", "MICH": "michigan", "MIZ": "missouri",
-    "MSU": "michigan_state", "NEB": "nebraska",
-    "NCST": "nc_state", "NU": "northwestern", "OSU": "ohio_state",
-    "PITT": "pittsburgh", "PROV": "providence", "PSU": "penn_state",
-    "PUR": "purdue", "SDSU": "san_diego_state", "SJU": "st__john_s__ny",
-    "SMC": "saint_mary_s__ca", "TCU": "tcu", "TENN": "tennessee",
-    "TEX": "texas", "TTU": "texas_tech", "UCLA": "ucla",
-    "UK": "kentucky", "UNC": "north_carolina",
-    "USC": "southern_california", "USU": "utah_state",
-    "UVA": "virginia", "VCU": "virginia_commonwealth",
-    "VAN": "vanderbilt", "VILL": "villanova", "WVU": "west_virginia",
-    "XAV": "xavier", "TA&M": "texas_a_m",
+    "ALA": "alabama",
+    "ARIZ": "arizona",
+    "ARK": "arkansas",
+    "AUB": "auburn",
+    "BAY": "baylor",
+    "BYU": "brigham_young",
+    "CLEM": "clemson",
+    "CONN": "connecticut",
+    "DUKE": "duke",
+    "FLA": "florida",
+    "GONZ": "gonzaga",
+    "HOU": "houston",
+    "ILL": "illinois",
+    "IOWA": "iowa",
+    "ISU": "iowa_state",
+    "IU": "indiana",
+    "KU": "kansas",
+    "KSU": "kansas_state",
+    "LOU": "louisville",
+    "MARQ": "marquette",
+    "MD": "maryland",
+    "MEM": "memphis",
+    "MIA": "miami__fl",
+    "MICH": "michigan",
+    "MIZ": "missouri",
+    "MSU": "michigan_state",
+    "NEB": "nebraska",
+    "NCST": "nc_state",
+    "NU": "northwestern",
+    "OSU": "ohio_state",
+    "PITT": "pittsburgh",
+    "PROV": "providence",
+    "PSU": "penn_state",
+    "PUR": "purdue",
+    "SDSU": "san_diego_state",
+    "SJU": "st__john_s__ny",
+    "SMC": "saint_mary_s__ca",
+    "TCU": "tcu",
+    "TENN": "tennessee",
+    "TEX": "texas",
+    "TTU": "texas_tech",
+    "UCLA": "ucla",
+    "UK": "kentucky",
+    "UNC": "north_carolina",
+    "USC": "southern_california",
+    "USU": "utah_state",
+    "UVA": "virginia",
+    "VCU": "virginia_commonwealth",
+    "VAN": "vanderbilt",
+    "VILL": "villanova",
+    "WVU": "west_virginia",
+    "XAV": "xavier",
+    "TA&M": "texas_a_m",
     # 2023
-    "ASU": "arizona_state", "BOIS": "boise_state",
-    "COFC": "college_of_charleston", "CREI": "creighton",
-    "DRKE": "drake", "FAU": "florida_atlantic", "FUR": "furman",
-    "GCU": "grand_canyon", "IONA": "iona",
-    "KENT": "kent_state", "MTST": "montana_state",
-    "ORU": "oral_roberts", "SDSD": "southeast_missouri_state",
-    "UL": "louisiana", "UVM": "vermont",
+    "ASU": "arizona_state",
+    "BOIS": "boise_state",
+    "COFC": "college_of_charleston",
+    "CREI": "creighton",
+    "DRKE": "drake",
+    "FAU": "florida_atlantic",
+    "FUR": "furman",
+    "GCU": "grand_canyon",
+    "IONA": "iona",
+    "KENT": "kent_state",
+    "MTST": "montana_state",
+    "ORU": "oral_roberts",
+    "SDSD": "southeast_missouri_state",
+    "UL": "louisiana",
+    "UVM": "vermont",
     # 2024
-    "COLO": "colorado", "COLST": "colorado_state",
-    "CRTN": "creighton", "DAY": "dayton", "GRBY": "grambling",
-    "JAX": "jacksonville_state", "JMU": "james_madison",
-    "LONG": "longwood", "MCNS": "mcneese_state",
-    "NEVA": "nevada", "NM": "new_mexico", "OAK": "oakland",
-    "ORE": "oregon", "SAM": "samford", "SDS": "south_dakota_state",
-    "STPX": "st__peter_s", "TN-S": "tennessee_state",
-    "UAB": "uab", "UNCW": "unc_wilmington",
-    "WASH": "washington_state", "WKU": "western_kentucky",
-    "WTEX": "western_texas", "YAL": "yale",
+    "COLO": "colorado",
+    "COLST": "colorado_state",
+    "CRTN": "creighton",
+    "DAY": "dayton",
+    "GRBY": "grambling",
+    "JAX": "jacksonville_state",
+    "JMU": "james_madison",
+    "LONG": "longwood",
+    "MCNS": "mcneese_state",
+    "NEVA": "nevada",
+    "NM": "new_mexico",
+    "OAK": "oakland",
+    "ORE": "oregon",
+    "SAM": "samford",
+    "SDS": "south_dakota_state",
+    "STPX": "st__peter_s",
+    "TN-S": "tennessee_state",
+    "UAB": "uab",
+    "UNCW": "unc_wilmington",
+    "WASH": "washington_state",
+    "WKU": "western_kentucky",
+    "WTEX": "western_texas",
+    "YAL": "yale",
     # 2025
-    "WAKE": "wake_forest", "MIZZ": "missouri",
-    "MCNE": "mcneese_state", "UCF": "ucf",
-    "UGA": "georgia", "SLU": "saint_louis",
-    "SCU": "santa_clara", "AKR": "akron", "HOF": "hofstra",
-    "HPU": "high_point", "HAW": "hawaii",
-    "USF": "south_florida", "TROY": "troy",
-    "MCN": "mcneese_state", "M-OH": "miami__oh",
+    "WAKE": "wake_forest",
+    "MIZZ": "missouri",
+    "MCNE": "mcneese_state",
+    "UCF": "ucf",
+    "UGA": "georgia",
+    "SLU": "saint_louis",
+    "SCU": "santa_clara",
+    "AKR": "akron",
+    "HOF": "hofstra",
+    "HPU": "high_point",
+    "HAW": "hawaii",
+    "USF": "south_florida",
+    "TROY": "troy",
+    "MCN": "mcneese_state",
+    "M-OH": "miami__oh",
     "WIS": "wisconsin",
 }
 
@@ -77,32 +140,53 @@ def abbrev_to_id(abbrev):
 
 # 2026 results use long-form IDs; normalize to match bracket_2026.json / ABBREV_MAP
 RESULTS_NORMALIZE = {
-    "michigan_wolverines": "michigan", "illinois_fighting_illini": "illinois",
-    "iowa_hawkeyes": "iowa", "uconn_huskies": "connecticut",
-    "arkansas_razorbacks": "arkansas", "byu_cougars": "brigham_young",
-    "texas_tech_red_raiders": "texas_tech", "texas_a_m_aggies": "texas_a_m",
-    "wisconsin_badgers": "wisconsin", "miami_hurricanes": "miami__fl",
-    "st_john_s_red_storm": "st__john_s__ny", "louisville_cardinals": "louisville",
-    "ucla_bruins": "ucla", "ohio_state_buckeyes": "ohio_state", "ucf_knights": "ucf",
-    "south_florida_bulls": "south_florida", "nebraska_cornhuskers": "nebraska",
-    "vanderbilt_commodores": "vanderbilt", "missouri_tigers": "missouri",
-    "nc_state_wolfpack": "nc_state", "saint_mary_s_gaels": "saint_mary_s__ca",
-    "tcu_horned_frogs": "tcu", "georgia_bulldogs": "georgia",
-    "saint_louis_billikens": "saint_louis", "santa_clara_broncos": "santa_clara",
-    "high_point_panthers": "high_point", "troy_trojans": "troy",
-    "vcu_rams": "virginia_commonwealth", "mcneese_cowboys": "mcneese_state",
-    "akron_zips": "akron", "hofstra_pride": "hofstra",
-    "utah_state_aggies": "utah_state", "miami_oh_redhawks": "miami__oh",
-    "howard_bison": "howard", "northern_iowa_panthers": "northern_iowa",
-    "idaho_vandals": "idaho", "north_dakota_state_bison": "north_dakota_state",
-    "furman_paladins": "furman", "siena_saints": "siena",
+    "michigan_wolverines": "michigan",
+    "illinois_fighting_illini": "illinois",
+    "iowa_hawkeyes": "iowa",
+    "uconn_huskies": "connecticut",
+    "arkansas_razorbacks": "arkansas",
+    "byu_cougars": "brigham_young",
+    "texas_tech_red_raiders": "texas_tech",
+    "texas_a_m_aggies": "texas_a_m",
+    "wisconsin_badgers": "wisconsin",
+    "miami_hurricanes": "miami__fl",
+    "st_john_s_red_storm": "st__john_s__ny",
+    "louisville_cardinals": "louisville",
+    "ucla_bruins": "ucla",
+    "ohio_state_buckeyes": "ohio_state",
+    "ucf_knights": "ucf",
+    "south_florida_bulls": "south_florida",
+    "nebraska_cornhuskers": "nebraska",
+    "vanderbilt_commodores": "vanderbilt",
+    "missouri_tigers": "missouri",
+    "nc_state_wolfpack": "nc_state",
+    "saint_mary_s_gaels": "saint_mary_s__ca",
+    "tcu_horned_frogs": "tcu",
+    "georgia_bulldogs": "georgia",
+    "saint_louis_billikens": "saint_louis",
+    "santa_clara_broncos": "santa_clara",
+    "high_point_panthers": "high_point",
+    "troy_trojans": "troy",
+    "vcu_rams": "virginia_commonwealth",
+    "mcneese_cowboys": "mcneese_state",
+    "akron_zips": "akron",
+    "hofstra_pride": "hofstra",
+    "utah_state_aggies": "utah_state",
+    "miami_oh_redhawks": "miami__oh",
+    "howard_bison": "howard",
+    "northern_iowa_panthers": "northern_iowa",
+    "idaho_vandals": "idaho",
+    "north_dakota_state_bison": "north_dakota_state",
+    "furman_paladins": "furman",
+    "siena_saints": "siena",
     "kennesaw_state_owls": "kennesaw_state",
     "long_island_university_sharks": "long_island_university",
     "prairie_view_a_m_panthers": "prairie_view",
     "pennsylvania_quakers": "pennsylvania",
     "tennessee_state_tigers": "tennessee_state",
     "california_baptist_lancers": "california_baptist",
-    "wright_state_raiders": "wright_state", "smu_mustangs": "southern_methodist",
+    "wright_state_raiders": "wright_state",
+    "smu_mustangs": "southern_methodist",
     "queens_university_royals": "queens__nc",
     "lehigh_mountain_hawks": "lehigh",
     "umbc_retrievers": "maryland_baltimore_county",
@@ -133,9 +217,7 @@ def load_actual_results(year):
         # 2026 uses NCG label for R64+R32+Championship combined
         for g in data["games"]:
             rn = g["round_name"]
-            winner = normalize_result_id(
-                g["team1_id"] if g["team1_won"] else g["team2_id"], year
-            )
+            winner = normalize_result_id(g["team1_id"] if g["team1_won"] else g["team2_id"], year)
 
             if rn == "NCG":
                 s1, s2 = g["team1_seed"], g["team2_seed"]
@@ -155,15 +237,17 @@ def load_actual_results(year):
     else:
         # 2023-2025 use standard round labels
         round_map = {
-            "R64": "r64", "R32": "r32", "S16": "s16",
-            "E8": "e8", "F4": "f4", "NCG": "champ",
+            "R64": "r64",
+            "R32": "r32",
+            "S16": "s16",
+            "E8": "e8",
+            "F4": "f4",
+            "NCG": "champ",
         }
         for g in data["games"]:
             rn = g["round_name"]
             if rn in round_map:
-                winner = normalize_result_id(
-                    g["team1_id"] if g["team1_won"] else g["team2_id"], year
-                )
+                winner = normalize_result_id(g["team1_id"] if g["team1_won"] else g["team2_id"], year)
                 actual[round_map[rn]].add(winner)
 
     return actual
@@ -401,15 +485,19 @@ def main():
     print("SECTION 1: YEAR-OVER-YEAR SUMMARY")
     print("=" * 75)
 
-    print(f"\n{'Year':>6} {'Size':>5} {'Brkt':>5} {'Champ':>8} {'Picked%':>8} "
-          f"{'Top Pick':>9} {'Top%':>6} {'HHI':>6} {'Equiv':>6}")
+    print(
+        f"\n{'Year':>6} {'Size':>5} {'Brkt':>5} {'Champ':>8} {'Picked%':>8} "
+        f"{'Top Pick':>9} {'Top%':>6} {'HHI':>6} {'Equiv':>6}"
+    )
     print("-" * 75)
     for s in summaries:
         top_pick, top_cnt = s["champ_concentration"][0]
         top_pct = top_cnt / s["n_brackets"] * 100
-        print(f"{s['year']:>6} {s['group_size']:>5} {s['n_brackets']:>5} "
-              f"{s['actual_champ_abbrev'] or '?':>8} {s['champ_pickers_pct']:>7.1f}% "
-              f"{top_pick:>9} {top_pct:>5.1f}% {s['hhi']:>.3f} {s['equiv_teams']:>5.1f}")
+        print(
+            f"{s['year']:>6} {s['group_size']:>5} {s['n_brackets']:>5} "
+            f"{s['actual_champ_abbrev'] or '?':>8} {s['champ_pickers_pct']:>7.1f}% "
+            f"{top_pick:>9} {top_pct:>5.1f}% {s['hhi']:>.3f} {s['equiv_teams']:>5.1f}"
+        )
 
     # --- Correlation analysis ---
     print("\n" + "=" * 75)
@@ -428,8 +516,10 @@ def main():
             verdict = "LESS corr than indep"
         else:
             verdict = "Independence holds"
-        print(f"{s['year']:>6} {ind['observed_mean']:>10.4f} {ind['simulated_mean']:>10.4f} "
-              f"{ind['excess']:>+8.4f} {ind['z_score']:>+8.1f} {verdict:>20}")
+        print(
+            f"{s['year']:>6} {ind['observed_mean']:>10.4f} {ind['simulated_mean']:>10.4f} "
+            f"{ind['excess']:>+8.4f} {ind['z_score']:>+8.1f} {verdict:>20}"
+        )
 
     # Pooled z-score
     excesses = [s["independence"]["excess"] for s in summaries]
@@ -438,8 +528,7 @@ def main():
         pooled_z = sum(e / max(sd, 1e-10) for e, sd in zip(excesses, stds)) / len(stds) ** 0.5
         print(f"\n  Pooled Z-score (meta-analysis): {pooled_z:+.2f}")
         if abs(pooled_z) > 2:
-            print(f"  >>> {'EXCESS' if pooled_z > 0 else 'DEFICIT of'} correlation "
-                  f"is consistent across years")
+            print(f"  >>> {'EXCESS' if pooled_z > 0 else 'DEFICIT of'} correlation is consistent across years")
         else:
             print(f"  >>> No consistent departure from independence across years")
 
@@ -451,8 +540,7 @@ def main():
     for s in summaries:
         print(f"\n  {s['year']}:")
         for rd, info in s["late_round_corr"].items():
-            print(f"    {rd.upper()}: {info['n_teams']} teams picked, "
-                  f"mean |corr| = {info['mean_abs_corr']:.3f}")
+            print(f"    {rd.upper()}: {info['n_teams']} teams picked, mean |corr| = {info['mean_abs_corr']:.3f}")
             for t1, t2, r in info["top_pairs"][:3]:
                 print(f"      {t1:>5} & {t2:<5}: r={r:+.3f}")
 
@@ -504,12 +592,10 @@ def main():
     print("=" * 75)
 
     for s in summaries:
-        print(f"\n  {s['year']} — Winner: {s['top_score']} pts, "
-              f"champion pick: {s['winner_champ_pick']}")
+        print(f"\n  {s['year']} — Winner: {s['top_score']} pts, champion pick: {s['winner_champ_pick']}")
         # Show top 5 and identify who picked actual champion
         scored = s["scored_brackets"]
-        champ_brackets = [i for i, (_, _, b) in enumerate(scored)
-                          if b["champ"] == s["actual_champ_abbrev"]]
+        champ_brackets = [i for i, (_, _, b) in enumerate(scored) if b["champ"] == s["actual_champ_abbrev"]]
         print(f"  Brackets that picked actual champ: {len(champ_brackets)}/{s['n_brackets']}")
         if champ_brackets:
             ranks = [i + 1 for i in champ_brackets]
@@ -519,7 +605,7 @@ def main():
         print(f"  " + "-" * 35)
         for i, (sc, _, b) in enumerate(scored[:10]):
             is_actual = "YES" if b["champ"] == s["actual_champ_abbrev"] else ""
-            print(f"  {i+1:>4} {sc:>6} {b['champ']:>11} {is_actual:>8}")
+            print(f"  {i + 1:>4} {sc:>6} {b['champ']:>11} {is_actual:>8}")
 
     # --- Summary & recommendations ---
     print("\n" + "=" * 75)
@@ -556,8 +642,8 @@ def main():
         biases_arr = np.array([b[4] for b in pool_biases])
         abs_biases = np.abs(biases_arr)
         print(f"\n  Pool vs ESPN champion pick divergence:")
-        print(f"    Mean absolute divergence: {abs_biases.mean()*100:.1f} pp")
-        print(f"    Max divergence: {abs_biases.max()*100:.1f} pp")
+        print(f"    Mean absolute divergence: {abs_biases.mean() * 100:.1f} pp")
+        print(f"    Max divergence: {abs_biases.max() * 100:.1f} pp")
 
         # Which direction does pool skew?
         positive = sum(1 for b in pool_biases if b[4] > 0.02)

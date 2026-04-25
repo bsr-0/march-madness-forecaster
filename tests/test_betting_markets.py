@@ -198,5 +198,3 @@ class TestBlendWithModel:
         result = blend_with_model(model, market, market_weight=0.5)
         # unc: 0.5 * 0.0 + 0.5 * 0.15 = 0.075
         assert abs(result["unc"] - 0.075) < 0.001
-
-

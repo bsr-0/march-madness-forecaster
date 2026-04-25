@@ -35,46 +35,88 @@ OFFICIAL_2_SEEDS = {
 
 # First Four matchups (pairs of team_ids)
 OFFICIAL_FIRST_FOUR = {
-    ("nc_state", "texas"),           # 11 seed, West
+    ("nc_state", "texas"),  # 11 seed, West
     ("maryland_baltimore_county", "howard"),  # 16 seed, Midwest
-    ("southern_methodist", "miami__oh"),       # 11 seed, Midwest
-    ("prairie_view", "lehigh"),       # 16 seed, South
+    ("southern_methodist", "miami__oh"),  # 11 seed, Midwest
+    ("prairie_view", "lehigh"),  # 16 seed, South
 }
 
 # Complete official East Region
 OFFICIAL_EAST = {
-    1: "duke", 2: "connecticut", 3: "michigan_state", 4: "kansas",
-    5: "st__john_s__ny", 6: "louisville", 7: "ucla", 8: "ohio_state",
-    9: "tcu", 10: "ucf", 11: "south_florida", 12: "northern_iowa",
-    13: "california_baptist", 14: "north_dakota_state", 15: "furman", 16: "siena",
+    1: "duke",
+    2: "connecticut",
+    3: "michigan_state",
+    4: "kansas",
+    5: "st__john_s__ny",
+    6: "louisville",
+    7: "ucla",
+    8: "ohio_state",
+    9: "tcu",
+    10: "ucf",
+    11: "south_florida",
+    12: "northern_iowa",
+    13: "california_baptist",
+    14: "north_dakota_state",
+    15: "furman",
+    16: "siena",
 }
 
 # Complete official West Region
 OFFICIAL_WEST = {
-    1: "arizona", 2: "purdue", 3: "gonzaga", 4: "arkansas",
-    5: "wisconsin", 6: "brigham_young", 7: "miami__fl", 8: "villanova",
-    9: "utah_state", 10: "missouri", 11: "nc_state/texas",  # First Four
-    12: "high_point", 13: "hawaii", 14: "kennesaw_state",
-    15: "queens__nc", 16: "long_island_university",
+    1: "arizona",
+    2: "purdue",
+    3: "gonzaga",
+    4: "arkansas",
+    5: "wisconsin",
+    6: "brigham_young",
+    7: "miami__fl",
+    8: "villanova",
+    9: "utah_state",
+    10: "missouri",
+    11: "nc_state/texas",  # First Four
+    12: "high_point",
+    13: "hawaii",
+    14: "kennesaw_state",
+    15: "queens__nc",
+    16: "long_island_university",
 }
 
 # Complete official South Region
 OFFICIAL_SOUTH = {
-    1: "florida", 2: "houston", 3: "illinois", 4: "nebraska",
-    5: "vanderbilt", 6: "north_carolina", 7: "saint_mary_s__ca",
-    8: "clemson", 9: "iowa", 10: "texas_a_m",
-    11: "virginia_commonwealth", 12: "mcneese_state", 13: "troy",
-    14: "pennsylvania", 15: "idaho",
+    1: "florida",
+    2: "houston",
+    3: "illinois",
+    4: "nebraska",
+    5: "vanderbilt",
+    6: "north_carolina",
+    7: "saint_mary_s__ca",
+    8: "clemson",
+    9: "iowa",
+    10: "texas_a_m",
+    11: "virginia_commonwealth",
+    12: "mcneese_state",
+    13: "troy",
+    14: "pennsylvania",
+    15: "idaho",
     16: "prairie_view/lehigh",  # First Four
 }
 
 # Complete official Midwest Region
 OFFICIAL_MIDWEST = {
-    1: "michigan", 2: "iowa_state", 3: "virginia", 4: "alabama",
-    5: "texas_tech", 6: "tennessee", 7: "kentucky", 8: "georgia",
-    9: "saint_louis", 10: "santa_clara",
+    1: "michigan",
+    2: "iowa_state",
+    3: "virginia",
+    4: "alabama",
+    5: "texas_tech",
+    6: "tennessee",
+    7: "kentucky",
+    8: "georgia",
+    9: "saint_louis",
+    10: "santa_clara",
     11: "southern_methodist/miami__oh",  # First Four
-    12: "akron", 13: "hofstra", 14: "wright_state",
+    12: "akron",
+    13: "hofstra",
+    14: "wright_state",
     15: "tennessee_state",
     16: "maryland_baltimore_county/howard",  # First Four
 }
@@ -111,10 +153,7 @@ def validate_1_seeds(data):
         if not one_seeds:
             errors.append(f"No 1-seed found in {region} region")
         elif one_seeds[0]["team_id"] != expected_id:
-            errors.append(
-                f"{region} 1-seed: expected {expected_id}, "
-                f"got {one_seeds[0]['team_id']}"
-            )
+            errors.append(f"{region} 1-seed: expected {expected_id}, got {one_seeds[0]['team_id']}")
         else:
             print(f"  [OK] {region} 1-seed: {one_seeds[0]['team_name']}")
 
@@ -131,10 +170,7 @@ def validate_2_seeds(data):
         if not two_seeds:
             errors.append(f"No 2-seed found in {region} region")
         elif two_seeds[0]["team_id"] != expected_id:
-            errors.append(
-                f"{region} 2-seed: expected {expected_id}, "
-                f"got {two_seeds[0]['team_id']}"
-            )
+            errors.append(f"{region} 2-seed: expected {expected_id}, got {two_seeds[0]['team_id']}")
         else:
             print(f"  [OK] {region} 2-seed: {two_seeds[0]['team_name']}")
 
@@ -190,8 +226,7 @@ def validate_region(data, region_name, official_seeds):
             if not matching:
                 actual = [t for t in region_teams if t["seed"] == seed]
                 errors.append(
-                    f"{region_name} {seed}-seed: expected {expected_id}, "
-                    f"got {[t['team_id'] for t in actual]}"
+                    f"{region_name} {seed}-seed: expected {expected_id}, got {[t['team_id'] for t in actual]}"
                 )
             else:
                 print(f"  [OK] {region_name} {seed}-seed: {matching[0]['team_name']}")

@@ -11,9 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 # Suffixes to strip from player names for matching
-_SUFFIX_PATTERN = re.compile(
-    r"\s+(jr\.?|sr\.?|ii|iii|iv|v|vi|vii|viii)$", re.IGNORECASE
-)
+_SUFFIX_PATTERN = re.compile(r"\s+(jr\.?|sr\.?|ii|iii|iv|v|vi|vii|viii)$", re.IGNORECASE)
 # Non-alphanumeric to underscore
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
@@ -67,9 +65,7 @@ class RosterEnrichment:
                 continue
         return result
 
-    def build_player_history(
-        self, all_rosters: Dict[int, Dict]
-    ) -> Dict[str, List[Tuple[int, str, float]]]:
+    def build_player_history(self, all_rosters: Dict[int, Dict]) -> Dict[str, List[Tuple[int, str, float]]]:
         """Build global player history: {player_key: [(year, team_id, minutes_per_game), ...]}.
 
         Sorted chronologically per player.
@@ -127,9 +123,7 @@ class RosterEnrichment:
         teams_in_most_recent = set(tid for (y, tid) in prior_entries if y == most_recent_year)
         return target_team not in teams_in_most_recent
 
-    def enrich_all(
-        self, start_year: int = 2005, end_year: int = 2026
-    ) -> Dict[str, Any]:
+    def enrich_all(self, start_year: int = 2005, end_year: int = 2026) -> Dict[str, Any]:
         """Main entry point. Loads, cross-references, writes enriched files.
 
         Returns summary statistics for verification.
@@ -182,9 +176,7 @@ class RosterEnrichment:
             payload["enrichment_metadata"] = {
                 "enriched_at": datetime.now(timezone.utc).isoformat(),
                 "total_players": year_players,
-                "players_with_prior_history": sum(
-                    v for k, v in year_elig.items() if k > 1
-                ),
+                "players_with_prior_history": sum(v for k, v in year_elig.items() if k > 1),
                 "transfers_detected": year_transfers,
                 "eligibility_distribution": dict(sorted(year_elig.items())),
                 "years_cross_referenced": sorted(all_rosters.keys()),
@@ -202,9 +194,7 @@ class RosterEnrichment:
             years_processed += 1
 
             print(
-                f"[{year}] {year_players} players, "
-                f"{year_transfers} transfers, "
-                f"elig: {dict(sorted(year_elig.items()))}"
+                f"[{year}] {year_players} players, {year_transfers} transfers, elig: {dict(sorted(year_elig.items()))}"
             )
 
         return {

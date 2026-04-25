@@ -86,6 +86,8 @@ def seed_available_at(
         selection_sunday.year,
         selection_sunday.month,
         selection_sunday.day,
-        23, 0, 0,  # conservative: end of day UTC
+        23,
+        0,
+        0,  # conservative: end of day UTC
     )
     return prediction_time >= selection_datetime

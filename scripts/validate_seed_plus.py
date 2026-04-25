@@ -34,8 +34,7 @@ from src.data.features.feature_engineering import (
 
 HIST_DIR = "data/raw/historical"
 # Training years (no 2020)
-ALL_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015,
-             2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+ALL_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
 
 def build_feature_names():
@@ -43,9 +42,13 @@ def build_feature_names():
     diff = [f"diff_{n}" for n in base]
     absolute = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
     interactions = [
-        "tempo_interaction", "style_mismatch", "seed_em_residual",
-        "sos_seed_interaction", "three_pt_var_seed_interaction",
-        "seed_interaction", "seed_diff",
+        "tempo_interaction",
+        "style_mismatch",
+        "seed_em_residual",
+        "sos_seed_interaction",
+        "three_pt_var_seed_interaction",
+        "seed_interaction",
+        "seed_diff",
     ]
     return diff + absolute + interactions
 
@@ -63,8 +66,13 @@ def load_regular_season(years, feature_dim):
             continue
         try:
             result = load_year_samples_incremental(
-                config, gp, mp, feature_dim, year,
-                include_tournament=False, prior_elo=prior_elo,
+                config,
+                gp,
+                mp,
+                feature_dim,
+                year,
+                include_tournament=False,
+                prior_elo=prior_elo,
             )
             X, y = result[0], result[1]
             end_elo = result[3] if len(result) > 3 else None
@@ -92,7 +100,12 @@ def load_tournament(year, feature_dim, prior_elo=None):
 
     try:
         result = load_year_tournament_samples_incremental(
-            config, gp, mp, feature_dim, year, prior_elo,
+            config,
+            gp,
+            mp,
+            feature_dim,
+            year,
+            prior_elo,
         )
         X, y = result[0], result[1]
         rw = result[4] if len(result) > 4 else np.ones(len(y))
@@ -253,10 +266,7 @@ def main():
             if label == "seed_plus":
                 betas = [r[label]["beta"] for r in results_all.values()]
                 extra = f"  mean_β={np.mean(betas):.4f}"
-            print(
-                f"  {label:<20} Brier={mean_b:.4f}  RW={mean_rw:.4f}  "
-                f"Acc={mean_acc:.1%}  BSS={bss:+.3f}{extra}"
-            )
+            print(f"  {label:<20} Brier={mean_b:.4f}  RW={mean_rw:.4f}  Acc={mean_acc:.1%}  BSS={bss:+.3f}{extra}")
 
     # Save
     out_path = "artifacts/seed_plus_validation.json"
@@ -267,8 +277,7 @@ def main():
         for k, v in data.items():
             if isinstance(v, dict):
                 serializable[str(year)][k] = {
-                    kk: round(float(vv), 4) if isinstance(vv, (float, np.floating)) else vv
-                    for kk, vv in v.items()
+                    kk: round(float(vv), 4) if isinstance(vv, (float, np.floating)) else vv for kk, vv in v.items()
                 }
             else:
                 serializable[str(year)][k] = v

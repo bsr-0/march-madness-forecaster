@@ -16,7 +16,12 @@ from src.optimization.leverage import compute_ev_edge, LeveragePick
 TEAMS = ["duke", "unc", "kansas", "gonzaga"]
 
 SCORING_RULES = {
-    "R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320,
+    "R64": 10,
+    "R32": 20,
+    "S16": 40,
+    "E8": 80,
+    "F4": 160,
+    "CHAMP": 320,
 }
 
 
@@ -36,9 +41,9 @@ def _make_pairwise_probs(teams):
 def _make_mc_round_probs(teams):
     """Simulate realistic MC-derived round advancement probabilities."""
     return {
-        "duke":    {"R64": 1.0, "R32": 0.82, "S16": 0.54, "E8": 0.28, "F4": 0.11, "CHAMP": 0.04},
-        "unc":     {"R64": 1.0, "R32": 0.88, "S16": 0.61, "E8": 0.35, "F4": 0.16, "CHAMP": 0.07},
-        "kansas":  {"R64": 1.0, "R32": 0.91, "S16": 0.68, "E8": 0.42, "F4": 0.22, "CHAMP": 0.11},
+        "duke": {"R64": 1.0, "R32": 0.82, "S16": 0.54, "E8": 0.28, "F4": 0.11, "CHAMP": 0.04},
+        "unc": {"R64": 1.0, "R32": 0.88, "S16": 0.61, "E8": 0.35, "F4": 0.16, "CHAMP": 0.07},
+        "kansas": {"R64": 1.0, "R32": 0.91, "S16": 0.68, "E8": 0.42, "F4": 0.22, "CHAMP": 0.11},
         "gonzaga": {"R64": 1.0, "R32": 0.94, "S16": 0.74, "E8": 0.50, "F4": 0.29, "CHAMP": 0.15},
     }
 
@@ -46,9 +51,9 @@ def _make_mc_round_probs(teams):
 def _make_public_picks(teams):
     """Synthetic public pick distribution."""
     return {
-        "duke":    {"R64": 0.95, "R32": 0.70, "S16": 0.40, "E8": 0.20, "F4": 0.08, "CHAMP": 0.03},
-        "unc":     {"R64": 0.96, "R32": 0.80, "S16": 0.55, "E8": 0.30, "F4": 0.12, "CHAMP": 0.05},
-        "kansas":  {"R64": 0.97, "R32": 0.85, "S16": 0.60, "E8": 0.35, "F4": 0.18, "CHAMP": 0.09},
+        "duke": {"R64": 0.95, "R32": 0.70, "S16": 0.40, "E8": 0.20, "F4": 0.08, "CHAMP": 0.03},
+        "unc": {"R64": 0.96, "R32": 0.80, "S16": 0.55, "E8": 0.30, "F4": 0.12, "CHAMP": 0.05},
+        "kansas": {"R64": 0.97, "R32": 0.85, "S16": 0.60, "E8": 0.35, "F4": 0.18, "CHAMP": 0.09},
         "gonzaga": {"R64": 0.98, "R32": 0.90, "S16": 0.70, "E8": 0.45, "F4": 0.25, "CHAMP": 0.13},
     }
 

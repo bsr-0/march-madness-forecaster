@@ -60,7 +60,7 @@ def build_contrarian_round_probs(
 
             # Ownership ratio: >1 means undervalued by public
             ratio = model_p / public_p
-            adjusted = model_p * (ratio ** strength)
+            adjusted = model_p * (ratio**strength)
             result[tid][rnd] = max(adjusted, 0.001)
 
     # Re-normalize: within each round, the sum of advancement probs
@@ -122,9 +122,7 @@ def _compute_pool_bias_signature(
     from src.data.historical_picks import load_historical_public_picks
 
     # Collect bias ratios across all years with both pool and ESPN data
-    bias_accum: Dict[str, Dict[int, list]] = {
-        rnd: {} for rnd in ROUND_NAMES
-    }
+    bias_accum: Dict[str, Dict[int, list]] = {rnd: {} for rnd in ROUND_NAMES}
 
     for year, seeds in seeds_by_year.items():
         # Load pool picks for this year

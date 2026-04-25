@@ -20,6 +20,7 @@ def run_forecast(args):
     if getattr(args, "multi_agent", False):
         print("Running forecast pipeline (multi-agent mode)...")
         from ..pipeline.tournament_pipeline import TournamentPipeline
+
         pipeline = TournamentPipeline(config)
         result = pipeline.run_multi_agent()
         print(f"Multi-agent pipeline complete: {len(result)} keys in result")
@@ -96,9 +97,7 @@ def run_production_2026_cmd(args):
     actual = Path(args.config).resolve()
     if actual != blessed:
         print(
-            f"PRODUCTION ERROR: --config must point to the blessed config.\n"
-            f"  Expected: {blessed}\n"
-            f"  Got:      {actual}"
+            f"PRODUCTION ERROR: --config must point to the blessed config.\n  Expected: {blessed}\n  Got:      {actual}"
         )
         return 1
     try:
@@ -133,13 +132,19 @@ def register(subparsers):
     forecast_parser.add_argument("--input", "-i", default=None, help="Teams JSON (optional)")
     forecast_parser.add_argument("--output", "-o", default="forecast_report.json", help="Output report JSON")
     forecast_parser.add_argument("--torvik", default=None, help="Optional Torvik JSON")
-    forecast_parser.add_argument("--historical-games", default=None, help="Historical NCAA game JSON fallback for game flows")
+    forecast_parser.add_argument(
+        "--historical-games", default=None, help="Historical NCAA game JSON fallback for game flows"
+    )
     forecast_parser.add_argument("--sports-reference", default=None, help="Sports Reference team stats JSON (backfill)")
     forecast_parser.add_argument("--public-picks", default=None, help="Optional public pick percentages JSON")
     forecast_parser.add_argument("--rosters", default=None, help="Roster/player metrics JSON (required)")
     forecast_parser.add_argument("--transfer-portal", default=None, help="Transfer portal JSON")
-    forecast_parser.add_argument("--scoring-rules", default=None, help="Optional scoring rules JSON (R64/R32/S16/E8/F4/CHAMP)")
-    forecast_parser.add_argument("--multi-agent", action="store_true", help="Run via multi-agent coordination (Directive V7 S2)")
+    forecast_parser.add_argument(
+        "--scoring-rules", default=None, help="Optional scoring rules JSON (R64/R32/S16/E8/F4/CHAMP)"
+    )
+    forecast_parser.add_argument(
+        "--multi-agent", action="store_true", help="Run via multi-agent coordination (Directive V7 S2)"
+    )
     forecast_parser.add_argument(
         "--model-complexity",
         choices=["simple", "standard", "full"],

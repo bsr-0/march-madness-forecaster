@@ -25,8 +25,10 @@ from src.data.features.massey_systems import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 class _MockEntry:
     """Minimal mock for MasseyOrdinalEntry."""
+
     def __init__(self, ordinal_rank):
         self.ordinal_rank = ordinal_rank
 
@@ -35,10 +37,7 @@ def _build_ordinals(systems_data):
     """Build a mock ordinals dict from {system: {team: rank}} mapping."""
     result = {}
     for system, team_ranks in systems_data.items():
-        result[system] = {
-            team_id: _MockEntry(rank)
-            for team_id, rank in team_ranks.items()
-        }
+        result[system] = {team_id: _MockEntry(rank) for team_id, rank in team_ranks.items()}
     return result
 
 
@@ -46,16 +45,19 @@ def _build_ordinals(systems_data):
 # Unit tests: extract_multi_system_features
 # ---------------------------------------------------------------------------
 
+
 class TestExtractMultiSystemFeatures:
     """Test individual team feature extraction from ordinals."""
 
     def test_basic_extraction(self):
         """Features extracted correctly for a team present in multiple systems."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1, "unc": 5, "kansas": 10},
-            "SAG": {"duke": 2, "unc": 3, "kansas": 8},
-            "MOR": {"duke": 1, "unc": 6, "kansas": 12},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1, "unc": 5, "kansas": 10},
+                "SAG": {"duke": 2, "unc": 3, "kansas": 8},
+                "MOR": {"duke": 1, "unc": 6, "kansas": 12},
+            }
+        )
         features = extract_multi_system_features(ordinals, "duke", n_teams_approx=3, min_system_coverage=0)
         assert features.n_systems == 3
         assert "POM" in features.system_ratings
@@ -68,9 +70,11 @@ class TestExtractMultiSystemFeatures:
 
     def test_missing_team(self):
         """Team not in any system returns empty features with NaN."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1},
+            }
+        )
         features = extract_multi_system_features(ordinals, "unknown_team", min_system_coverage=0)
         assert features.n_systems == 0
         assert len(features.system_ratings) == 0
@@ -79,10 +83,12 @@ class TestExtractMultiSystemFeatures:
 
     def test_missing_system(self):
         """Systems not in ordinals are skipped gracefully."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1},
-            # SAG, MOR, etc. not present
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1},
+                # SAG, MOR, etc. not present
+            }
+        )
         features = extract_multi_system_features(ordinals, "duke", min_system_coverage=0)
         assert features.n_systems == 1
         assert "POM" in features.system_ratings
@@ -90,37 +96,45 @@ class TestExtractMultiSystemFeatures:
 
     def test_normalization_rank_1(self):
         """Rank 1 out of N teams normalizes to ~1.0."""
-        ordinals = _build_ordinals({
-            "POM": {f"team_{i}": i + 1 for i in range(100)},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {f"team_{i}": i + 1 for i in range(100)},
+            }
+        )
         features = extract_multi_system_features(ordinals, "team_0", n_teams_approx=100)
         # team_0 has rank 1 → normalized = 1.0
         assert abs(features.system_ratings["POM"] - 1.0) < 1e-6
 
     def test_normalization_last_rank(self):
         """Last-ranked team normalizes to ~0.0."""
-        ordinals = _build_ordinals({
-            "POM": {f"team_{i}": i + 1 for i in range(100)},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {f"team_{i}": i + 1 for i in range(100)},
+            }
+        )
         features = extract_multi_system_features(ordinals, "team_99", n_teams_approx=100)
         assert abs(features.system_ratings["POM"] - 0.0) < 0.02
 
     def test_rank_std_agreement(self):
         """When all systems agree, rank_std is 0."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1, "unc": 2},
-            "SAG": {"duke": 1, "unc": 2},
-            "MOR": {"duke": 1, "unc": 2},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1, "unc": 2},
+                "SAG": {"duke": 1, "unc": 2},
+                "MOR": {"duke": 1, "unc": 2},
+            }
+        )
         features = extract_multi_system_features(ordinals, "duke", n_teams_approx=2, min_system_coverage=0)
         assert features.rank_std == 0.0
 
     def test_rank_std_disagreement(self):
         """When systems disagree, rank_std > 0."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1, "unc": 100},
-            "SAG": {"duke": 50, "unc": 100},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1, "unc": 100},
+                "SAG": {"duke": 50, "unc": 100},
+            }
+        )
         features = extract_multi_system_features(ordinals, "duke", n_teams_approx=100, min_system_coverage=0)
         assert features.rank_std > 0.0
 
@@ -139,15 +153,18 @@ class TestExtractMultiSystemFeatures:
 # Unit tests: extract_all_teams
 # ---------------------------------------------------------------------------
 
+
 class TestExtractAllTeams:
     """Test bulk extraction across all teams."""
 
     def test_basic_all_teams(self):
         """All teams across all systems are extracted."""
-        ordinals = _build_ordinals({
-            "POM": {"duke": 1, "unc": 2, "kansas": 3},
-            "SAG": {"duke": 1, "unc": 3, "kentucky": 5},
-        })
+        ordinals = _build_ordinals(
+            {
+                "POM": {"duke": 1, "unc": 2, "kansas": 3},
+                "SAG": {"duke": 1, "unc": 3, "kentucky": 5},
+            }
+        )
         result = extract_all_teams(ordinals, min_system_coverage=0)
         # duke, unc, kansas, kentucky — 4 unique teams
         assert len(result) == 4
@@ -163,6 +180,7 @@ class TestExtractAllTeams:
 # ---------------------------------------------------------------------------
 # Unit tests: features_to_vector
 # ---------------------------------------------------------------------------
+
 
 class TestFeaturesToVector:
     """Test conversion from MasseyMultiSystemFeatures to flat vector."""
@@ -215,17 +233,20 @@ class TestFeaturesToVector:
 # Integration: TeamFeatures dimension
 # ---------------------------------------------------------------------------
 
+
 class TestTeamFeaturesDimension:
     """Verify TEAM_FEATURE_DIM reflects the pruned production vector."""
 
     def test_dimension_matches_pruned_vector(self):
         """TEAM_FEATURE_DIM should match the post-pruning vector width."""
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
         assert TEAM_FEATURE_DIM == 56
 
     def test_feature_names_exclude_massey(self):
         """Massey feature names were pruned from the model-facing vector."""
         from src.data.features.feature_engineering import TeamFeatures
+
         names = TeamFeatures.get_feature_names(include_embeddings=False)
         for massey_name in ALL_MASSEY_FEATURE_NAMES:
             assert massey_name not in names, f"Unexpected retained feature name: {massey_name}"
@@ -233,6 +254,7 @@ class TestTeamFeaturesDimension:
     def test_to_vector_matches_dim(self):
         """Default TeamFeatures.to_vector() matches TEAM_FEATURE_DIM."""
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
+
         tf = TeamFeatures(team_id="test", team_name="Test", seed=1, region="W")
         vec = tf.to_vector(include_embeddings=False)
         assert len(vec) == TEAM_FEATURE_DIM
@@ -240,6 +262,7 @@ class TestTeamFeaturesDimension:
     def test_feature_names_length_matches_dim(self):
         """get_feature_names() length matches TEAM_FEATURE_DIM."""
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
+
         names = TeamFeatures.get_feature_names(include_embeddings=False)
         assert len(names) == TEAM_FEATURE_DIM
 
@@ -248,12 +271,14 @@ class TestTeamFeaturesDimension:
 # Era availability
 # ---------------------------------------------------------------------------
 
+
 class TestEraAvailability:
     """Verify pruned massey features no longer participate in availability checks."""
 
     def test_massey_not_in_available_features_2003_onwards(self):
         """Pruned massey features should not appear even in supported eras."""
         from src.data.features.feature_engineering import era_available_features
+
         features_2005 = era_available_features(2005)
         assert "massey_pom" not in features_2005
         assert "massey_rank_std" not in features_2005
@@ -261,6 +286,7 @@ class TestEraAvailability:
     def test_massey_unavailable_before_2003(self):
         """Pruned massey features remain absent before 2003 as well."""
         from src.data.features.feature_engineering import era_available_features
+
         features_2002 = era_available_features(2002)
         assert "massey_pom" not in features_2002
         assert "massey_rank_std" not in features_2002
@@ -269,6 +295,7 @@ class TestEraAvailability:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
+
 
 class TestConstants:
     """Verify module constants are consistent."""

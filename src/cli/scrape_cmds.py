@@ -49,6 +49,7 @@ def scrape_rosters(args):
 def enrich_rosters(args):
     """Cross-reference cbbpy rosters across years to populate eligibility_year and is_transfer."""
     from ..data.scrapers.roster_enrichment import RosterEnrichment
+
     enricher = RosterEnrichment(roster_dir=args.roster_dir, output_dir=args.output_dir)
     summary = enricher.enrich_all(start_year=args.start_year, end_year=args.end_year)
     print(f"\nEnriched {summary['total_players_enriched']} players across {summary['years_processed']} years")
@@ -151,9 +152,7 @@ def register(subparsers):
     roster_parser.add_argument(
         "--delay", type=float, default=2.0, help="Seconds to wait between seasons (default: 2.0)"
     )
-    roster_parser.add_argument(
-        "--force", action="store_true", help="Re-scrape even if cached file exists"
-    )
+    roster_parser.add_argument("--force", action="store_true", help="Re-scrape even if cached file exists")
     roster_parser.set_defaults(func=scrape_rosters)
 
     # --- enrich-rosters ---
@@ -172,11 +171,15 @@ def register(subparsers):
         help="Output directory for enriched files (default: same as roster-dir, in-place update)",
     )
     enrich_parser.add_argument(
-        "--start-year", type=int, default=2005,
+        "--start-year",
+        type=int,
+        default=2005,
         help="First season to process (inclusive, default: 2005)",
     )
     enrich_parser.add_argument(
-        "--end-year", type=int, default=_default_year(),
+        "--end-year",
+        type=int,
+        default=_default_year(),
         help="Last season to process (inclusive, default: current year)",
     )
     enrich_parser.set_defaults(func=enrich_rosters)
@@ -189,7 +192,9 @@ def register(subparsers):
     str_parser.add_argument("--year", type=int, default=None, help="Single year to scrape")
     str_parser.add_argument("--years", default=None, help="Comma-separated years (default: 2018-2019,2021-2025)")
     str_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for HTTP responses")
-    str_parser.add_argument("--output-dir", default="data/raw/historical", help="Output directory for tournament_results_YYYY.json")
+    str_parser.add_argument(
+        "--output-dir", default="data/raw/historical", help="Output directory for tournament_results_YYYY.json"
+    )
     str_parser.add_argument("--delay", type=float, default=3.0, help="Seconds between requests")
     str_parser.set_defaults(func=scrape_tournament_results)
 
@@ -199,19 +204,26 @@ def register(subparsers):
         help="Scrape conference tournament seeds from ESPN API",
     )
     seed_scrape_parser.add_argument(
-        "--year", type=int, default=_default_year(),
+        "--year",
+        type=int,
+        default=_default_year(),
         help="Season year (default: current year)",
     )
     seed_scrape_parser.add_argument(
-        "--output", "-o", default=None,
+        "--output",
+        "-o",
+        default=None,
         help="Output JSON file path (default: data/raw/seed_overrides_{year}.json)",
     )
     seed_scrape_parser.add_argument(
-        "--conferences", nargs="+", default=None,
+        "--conferences",
+        nargs="+",
+        default=None,
         help="Specific conferences to scrape (e.g., ACC SEC B10). Default: all",
     )
     seed_scrape_parser.add_argument(
-        "--cache-dir", default="data/cache",
+        "--cache-dir",
+        default="data/cache",
         help="Cache directory for scraped data (default: data/cache)",
     )
     seed_scrape_parser.set_defaults(func=run_scrape_conference_seeds)

@@ -49,10 +49,10 @@ WOMENS_FEATURE_NAMES = [
     "diff_ft_rate",
     "diff_opp_efg_pct",
     "diff_opp_to_rate",
-    "diff_drb_rate",          # NEW: defensive rebound rate (men's has this)
-    "diff_opp_ft_rate",       # NEW: opponent free throw rate (men's has this)
-    "diff_rebounding_margin", # NEW: women's-specific high-signal feature
-    "diff_assist_to_turnover", # NEW: more predictive of WNCAA upsets
+    "diff_drb_rate",  # NEW: defensive rebound rate (men's has this)
+    "diff_opp_ft_rate",  # NEW: opponent free throw rate (men's has this)
+    "diff_rebounding_margin",  # NEW: women's-specific high-signal feature
+    "diff_assist_to_turnover",  # NEW: more predictive of WNCAA upsets
     "diff_sos_adj_em",
     "diff_elo_rating",
     "diff_free_throw_pct",
@@ -65,9 +65,9 @@ WOMENS_FEATURE_NAMES = [
     "abs_sos_adj_em",
     # Interaction features — 4 features (aligned with men's MatchupFeatures)
     "seed_interaction",
-    "seed_diff",              # NEW: strongest single predictor (men's Gap #3)
-    "tempo_interaction",      # NEW: pace matchup dynamics (men's has this)
-    "style_mismatch",         # NEW: pace-efficiency interaction (men's has this)
+    "seed_diff",  # NEW: strongest single predictor (men's Gap #3)
+    "tempo_interaction",  # NEW: pace matchup dynamics (men's has this)
+    "style_mismatch",  # NEW: pace-efficiency interaction (men's has this)
 ]
 
 WOMENS_FEATURE_DIM = len(WOMENS_FEATURE_NAMES)
@@ -76,26 +76,26 @@ WOMENS_FEATURE_DIM = len(WOMENS_FEATURE_NAMES)
 # Used for validation warnings only (not normalization).
 # Mirrors men's FIX #9: _POPULATION_STATS.
 WOMENS_POPULATION_STATS = {
-    "adj_off_eff":     (78.0,   8.0),
-    "adj_def_eff":     (78.0,   8.0),
-    "adj_tempo":       (67.0,   3.5),
-    "efg_pct":         (0.440,  0.035),
-    "to_rate":         (0.210,  0.030),
-    "orb_rate":        (0.320,  0.040),
-    "ft_rate":         (0.290,  0.055),
-    "opp_efg_pct":     (0.440,  0.035),
-    "opp_to_rate":     (0.210,  0.030),
-    "drb_rate":        (0.680,  0.040),
-    "opp_ft_rate":     (0.290,  0.055),
-    "rebounding_margin": (0.0,  5.0),
-    "ato_ratio":       (1.0,    0.25),
-    "sos_adj_em":      (0.0,    6.0),
-    "elo":             (1500.0, 110.0),
-    "ft_pct":          (0.700,  0.050),
-    "win_pct":         (0.500,  0.170),
-    "three_pt_pct":    (0.300,  0.040),
-    "three_pt_var":    (0.080,  0.030),
-    "net_rating":      (50.0,   25.0),
+    "adj_off_eff": (78.0, 8.0),
+    "adj_def_eff": (78.0, 8.0),
+    "adj_tempo": (67.0, 3.5),
+    "efg_pct": (0.440, 0.035),
+    "to_rate": (0.210, 0.030),
+    "orb_rate": (0.320, 0.040),
+    "ft_rate": (0.290, 0.055),
+    "opp_efg_pct": (0.440, 0.035),
+    "opp_to_rate": (0.210, 0.030),
+    "drb_rate": (0.680, 0.040),
+    "opp_ft_rate": (0.290, 0.055),
+    "rebounding_margin": (0.0, 5.0),
+    "ato_ratio": (1.0, 0.25),
+    "sos_adj_em": (0.0, 6.0),
+    "elo": (1500.0, 110.0),
+    "ft_pct": (0.700, 0.050),
+    "win_pct": (0.500, 0.170),
+    "three_pt_pct": (0.300, 0.040),
+    "three_pt_var": (0.080, 0.030),
+    "net_rating": (50.0, 25.0),
 }
 
 
@@ -200,14 +200,12 @@ class WomensTeamFeatures:
         if nan_mask.any() or inf_mask.any():
             n_bad = int(nan_mask.sum() + inf_mask.sum())
             feature_names = get_team_feature_names()
-            bad_names = [
-                feature_names[i] for i in range(len(result))
-                if nan_mask[i] or inf_mask[i]
-            ]
+            bad_names = [feature_names[i] for i in range(len(result)) if nan_mask[i] or inf_mask[i]]
             logger.warning(
-                "Women's team '%s' has %d NaN/inf features: %s. "
-                "Replacing with 0.0.",
-                self.team_id, n_bad, bad_names,
+                "Women's team '%s' has %d NaN/inf features: %s. Replacing with 0.0.",
+                self.team_id,
+                n_bad,
+                bad_names,
             )
             result = np.where(nan_mask | inf_mask, 0.0, result)
 
@@ -233,10 +231,10 @@ class WomensTeamFeatures:
             free_throw_rate=stats.free_throw_rate,
             opp_effective_fg_pct=stats.opp_effective_fg_pct,
             opp_turnover_rate=stats.opp_turnover_rate,
-            defensive_reb_rate=getattr(stats, 'defensive_reb_rate', 0.70),
-            opp_free_throw_rate=getattr(stats, 'opp_free_throw_rate', 0.30),
-            rebounding_margin=getattr(stats, 'rebounding_margin', 0.0),
-            assist_to_turnover_ratio=getattr(stats, 'assist_to_turnover_ratio', 1.0),
+            defensive_reb_rate=getattr(stats, "defensive_reb_rate", 0.70),
+            opp_free_throw_rate=getattr(stats, "opp_free_throw_rate", 0.30),
+            rebounding_margin=getattr(stats, "rebounding_margin", 0.0),
+            assist_to_turnover_ratio=getattr(stats, "assist_to_turnover_ratio", 1.0),
             sos_adj_em=stats.sos_adj_em,
             win_pct=stats.win_pct,
             elo_rating=stats.elo_rating,
@@ -252,16 +250,29 @@ def get_team_feature_names() -> List[str]:
     Mirrors men's TeamFeatures.get_feature_names().
     """
     names = [
-        'adj_off_eff', 'adj_def_eff', 'adj_tempo',
-        'efg_pct', 'to_rate', 'orb_rate', 'ft_rate',
-        'opp_efg_pct', 'opp_to_rate', 'drb_rate', 'opp_ft_rate',
-        'rebounding_margin', 'assist_to_turnover_ratio',
-        'sos_adj_em', 'elo_rating', 'free_throw_pct',
-        'win_pct', 'three_pt_pct', 'three_pt_variance', 'net_rating',
+        "adj_off_eff",
+        "adj_def_eff",
+        "adj_tempo",
+        "efg_pct",
+        "to_rate",
+        "orb_rate",
+        "ft_rate",
+        "opp_efg_pct",
+        "opp_to_rate",
+        "drb_rate",
+        "opp_ft_rate",
+        "rebounding_margin",
+        "assist_to_turnover_ratio",
+        "sos_adj_em",
+        "elo_rating",
+        "free_throw_pct",
+        "win_pct",
+        "three_pt_pct",
+        "three_pt_variance",
+        "net_rating",
     ]
     assert len(names) == WOMENS_TEAM_FEATURE_DIM, (
-        f"get_team_feature_names() has {len(names)} names, expected "
-        f"{WOMENS_TEAM_FEATURE_DIM}."
+        f"get_team_feature_names() has {len(names)} names, expected {WOMENS_TEAM_FEATURE_DIM}."
     )
     return names
 
@@ -302,13 +313,9 @@ class WomensFeatureEngineer:
         # FIX #9 equivalent: Validate population stats
         warnings = validate_womens_population_stats(self.team_features)
         if warnings:
-            logger.warning(
-                "Women's population stats: %d features diverged", len(warnings)
-            )
+            logger.warning("Women's population stats: %d features diverged", len(warnings))
 
-    def get_matchup_features(
-        self, team1_id: str, team2_id: str
-    ) -> Optional[np.ndarray]:
+    def get_matchup_features(self, team1_id: str, team2_id: str) -> Optional[np.ndarray]:
         """Compute differential feature vector for a matchup.
 
         Returns the WOMENS_FEATURE_NAMES-ordered vector:
@@ -361,24 +368,30 @@ class WomensFeatureEngineer:
 
         # Style mismatch — pace-efficiency interaction (from men's)
         tempo_diff = f1.adj_tempo - f2.adj_tempo
-        efficiency_diff = (
-            (f1.adj_offensive_efficiency - f1.adj_defensive_efficiency)
-            - (f2.adj_offensive_efficiency - f2.adj_defensive_efficiency)
+        efficiency_diff = (f1.adj_offensive_efficiency - f1.adj_defensive_efficiency) - (
+            f2.adj_offensive_efficiency - f2.adj_defensive_efficiency
         )
         style_mismatch = (tempo_diff * efficiency_diff) / 600.0
 
-        features = np.concatenate([
-            diff,
-            np.array([
-                abs_adj_off, abs_adj_def, abs_sos,
-                seed_interaction, seed_diff,
-                tempo_interaction, style_mismatch,
-            ]),
-        ])
+        features = np.concatenate(
+            [
+                diff,
+                np.array(
+                    [
+                        abs_adj_off,
+                        abs_adj_def,
+                        abs_sos,
+                        seed_interaction,
+                        seed_diff,
+                        tempo_interaction,
+                        style_mismatch,
+                    ]
+                ),
+            ]
+        )
 
         assert len(features) == WOMENS_FEATURE_DIM, (
-            f"get_matchup_features() produced {len(features)} features, "
-            f"expected {WOMENS_FEATURE_DIM}."
+            f"get_matchup_features() produced {len(features)} features, expected {WOMENS_FEATURE_DIM}."
         )
 
         return features

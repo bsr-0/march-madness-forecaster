@@ -12,13 +12,16 @@ def test_compute_leverage_positive():
     lev = compute_leverage(model_prob=0.8, public_pick_rate=0.4)
     assert lev > 0
 
+
 def test_compute_leverage_negative():
     # Model less confident than public
     lev = compute_leverage(model_prob=0.2, public_pick_rate=0.6)
     assert lev < 0
 
+
 def test_compute_leverage_zero_public():
     assert compute_leverage(0.5, 0.0) == 0.0
+
 
 def test_compute_leverage_weighted():
     lev1 = compute_leverage(0.8, 0.4, scoring_weight=1.0)
@@ -29,11 +32,14 @@ def test_compute_leverage_weighted():
 def test_classify_neutral():
     assert classify_pick_strategy(0.05, 0.5, 0.48) == "neutral"
 
+
 def test_classify_contrarian():
     assert classify_pick_strategy(0.5, 0.6, 0.2) == "contrarian"
 
+
 def test_classify_chalk():
     assert classify_pick_strategy(0.3, 0.7, 0.5) == "chalk"
+
 
 def test_classify_fade():
     assert classify_pick_strategy(-0.3, 0.3, 0.7) == "fade"

@@ -80,14 +80,13 @@ def load_market_ratings(
 
     # Check if we have enough tournament-team games
     tourney_teams = set(seeds.keys())
-    tourney_games = [
-        g for g in valid_games
-        if g.home_team_id in tourney_teams or g.away_team_id in tourney_teams
-    ]
+    tourney_games = [g for g in valid_games if g.home_team_id in tourney_teams or g.away_team_id in tourney_teams]
     if len(tourney_games) < MIN_GAMES_THRESHOLD:
         logger.warning(
             "Only %d games involving tournament teams for %d (need %d), returning None",
-            len(tourney_games), year, MIN_GAMES_THRESHOLD,
+            len(tourney_games),
+            year,
+            MIN_GAMES_THRESHOLD,
         )
         return None
 
@@ -173,7 +172,8 @@ def load_market_ratings(
     if n_fallback > 0:
         logger.info(
             "%d/%d tournament teams missing from odds, using seed fallback",
-            n_fallback, len(tourney_teams),
+            n_fallback,
+            len(tourney_teams),
         )
 
     return barthag

@@ -14,7 +14,6 @@ from src.data.scrapers.external_ratings import (
 
 
 class TestExternalRating:
-
     def test_dataclass_fields(self):
         r = ExternalRating(
             system_name="kenpom",
@@ -30,7 +29,6 @@ class TestExternalRating:
 
 
 class TestCompositeRating:
-
     def test_defaults(self):
         cr = CompositeRating(team_id="duke", team_name="Duke")
         assert cr.composite_rating == 0.0
@@ -39,7 +37,6 @@ class TestCompositeRating:
 
 
 class TestExternalRatingsLoader:
-
     def test_load_system_missing_file(self):
         loader = ExternalRatingsLoader(cache_dir="/nonexistent")
         result = loader._load_system("kenpom", 2025)
@@ -48,10 +45,8 @@ class TestExternalRatingsLoader:
     def test_load_system_from_cache(self, tmp_path):
         """Load ratings from a cached JSON file."""
         data = [
-            {"team_name": "Duke", "team_id": "duke", "rating": 25.0,
-             "ranking": 1, "normalized": 0.98},
-            {"team_name": "UNC", "team_id": "unc", "rating": 22.0,
-             "ranking": 5, "normalized": 0.85},
+            {"team_name": "Duke", "team_id": "duke", "rating": 25.0, "ranking": 1, "normalized": 0.98},
+            {"team_name": "UNC", "team_id": "unc", "rating": 22.0, "ranking": 5, "normalized": 0.85},
         ]
         cache_file = tmp_path / "external_kenpom_2025.json"
         cache_file.write_text(json.dumps(data))
@@ -144,16 +139,14 @@ class TestExternalRatingsLoader:
 
         # Under naive min-max, team_9 (rating=19) would get (19-10)/(1000-10)=0.009
         # Percentile-rank normalization preserves full ordering regardless of outlier
-        normal_ratings = [
-            composites[f"team_{i}"].composite_rating for i in range(10)
-        ]
+        normal_ratings = [composites[f"team_{i}"].composite_rating for i in range(10)]
         spread = max(normal_ratings) - min(normal_ratings)
         assert spread > 0.3, f"Normal team spread too compressed: {spread}"
         # Outlier gets highest rank, all normal teams retain distinct ranks
         assert composites["outlier"].composite_rating == 1.0
         # Every adjacent pair is distinguishable
         for i in range(9):
-            assert composites[f"team_{i}"].composite_rating < composites[f"team_{i+1}"].composite_rating
+            assert composites[f"team_{i}"].composite_rating < composites[f"team_{i + 1}"].composite_rating
 
     def test_compute_composite_no_outlier_still_works(self, tmp_path):
         """Normal distributions without outliers should preserve full ordering."""

@@ -47,9 +47,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+
 class HoldoutContaminationError(Exception):
     """Raised when holdout data leaks into training set."""
+
     pass
+
 
 logger = logging.getLogger(__name__)
 

@@ -23,6 +23,7 @@ import numpy as np
 
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
@@ -97,7 +98,8 @@ class SpreadRegressor:
 
         self.feature_names = feature_names
         train_data = lgb.Dataset(
-            X, label=margins,
+            X,
+            label=margins,
             feature_name=feature_names,
             weight=sample_weight,
         )
@@ -140,7 +142,9 @@ class SpreadRegressor:
 
         logger.info(
             "SpreadRegressor: trained on %d samples, train_rmse=%.2f, sigma=%.2f",
-            len(margins), train_rmse, self.sigma,
+            len(margins),
+            train_rmse,
+            self.sigma,
         )
         return stats
 
@@ -225,9 +229,7 @@ class SpreadRegressor:
                     best_sigma = sigma_candidate
             else:
                 # Maximize log-likelihood (legacy)
-                ll = float(np.sum(
-                    outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-                ))
+                ll = float(np.sum(outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)))
                 if ll > best_score:
                     best_score = ll
                     best_sigma = sigma_candidate
@@ -235,7 +237,9 @@ class SpreadRegressor:
         self.sigma = float(best_sigma)
         logger.info(
             "SpreadRegressor: calibrated sigma=%.2f (%s=%.4f)",
-            self.sigma, metric, best_score,
+            self.sigma,
+            metric,
+            best_score,
         )
         return self.sigma
 

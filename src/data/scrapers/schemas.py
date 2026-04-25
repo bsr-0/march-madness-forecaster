@@ -35,6 +35,7 @@ class SchemaValidationError(Exception):
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class RoundName(str, Enum):
     R64 = "R64"
     R32 = "R32"
@@ -64,6 +65,7 @@ class InjuryStatusCode(str, Enum):
 # ---------------------------------------------------------------------------
 # ESPN Picks / Consensus
 # ---------------------------------------------------------------------------
+
 
 class PublicPicksSchema(BaseModel):
     """Validated public pick percentages for a single team."""
@@ -106,8 +108,11 @@ class PublicPicksSchema(BaseModel):
             elif pcts[i + 1] > pcts[i] + 0.5:
                 logger.warning(
                     "Non-monotonic pick pcts for %s: %s=%.1f > %s=%.1f",
-                    self.team_id, round_labels[i + 1], pcts[i + 1],
-                    round_labels[i], pcts[i],
+                    self.team_id,
+                    round_labels[i + 1],
+                    pcts[i + 1],
+                    round_labels[i],
+                    pcts[i],
                 )
         return self
 
@@ -242,8 +247,7 @@ def validate_bracket_structure(
             )
         elif deviation > soft_threshold:
             warnings.append(
-                f"{round_name} picks sum to {total:.1f}% "
-                f"(expected ~{expected:.0f}%, deviation {deviation:.1f}pp)"
+                f"{round_name} picks sum to {total:.1f}% (expected ~{expected:.0f}%, deviation {deviation:.1f}pp)"
             )
 
     # -- First-round matchup complementarity ------------------------------
@@ -269,10 +273,7 @@ def validate_bracket_structure(
 
             pair_sum = pct_a + pct_b
             if abs(pair_sum - 100.0) > 10.0:
-                warnings.append(
-                    f"R64 matchup {team_a} vs {team_b}: "
-                    f"pick sum {pair_sum:.1f}% (expected ~100%)"
-                )
+                warnings.append(f"R64 matchup {team_a} vs {team_b}: pick sum {pair_sum:.1f}% (expected ~100%)")
 
     return warnings
 
@@ -280,6 +281,7 @@ def validate_bracket_structure(
 # ---------------------------------------------------------------------------
 # Betting Markets
 # ---------------------------------------------------------------------------
+
 
 class BettingOddsSchema(BaseModel):
     """Validated odds for a single team from a sportsbook."""
@@ -307,15 +309,14 @@ class MarketConsensusSchema(BaseModel):
     def probabilities_in_range(cls, v: Dict[str, float]) -> Dict[str, float]:
         for team_id, prob in v.items():
             if not (0.0 <= prob <= 1.0):
-                raise ValueError(
-                    f"Probability for {team_id} out of range: {prob}"
-                )
+                raise ValueError(f"Probability for {team_id} out of range: {prob}")
         return v
 
 
 # ---------------------------------------------------------------------------
 # Roster / Player Metrics (cbbpy_rosters, player_metrics)
 # ---------------------------------------------------------------------------
+
 
 class PlayerStatsSchema(BaseModel):
     """Validated player statistics from roster scraper."""
@@ -366,6 +367,7 @@ class RosterPayloadSchema(BaseModel):
 # Conference Seeds
 # ---------------------------------------------------------------------------
 
+
 class ConferenceSeedsSchema(BaseModel):
     """Validated conference tournament seeds."""
 
@@ -377,15 +379,14 @@ class ConferenceSeedsSchema(BaseModel):
         for conf, teams in v.items():
             for team_id, seed in teams.items():
                 if seed < 1:
-                    raise ValueError(
-                        f"Invalid seed {seed} for {team_id} in {conf}"
-                    )
+                    raise ValueError(f"Invalid seed {seed} for {team_id} in {conf}")
         return v
 
 
 # ---------------------------------------------------------------------------
 # Tournament Results
 # ---------------------------------------------------------------------------
+
 
 class TournamentGameSchema(BaseModel):
     """Validated single tournament game result."""
@@ -407,14 +408,18 @@ class TournamentGameSchema(BaseModel):
             if self.team1_score > self.team2_score and not self.team1_won:
                 logger.warning(
                     "Score mismatch: %s (%d) > %s (%d) but team1_won=False",
-                    self.team1_id, self.team1_score,
-                    self.team2_id, self.team2_score,
+                    self.team1_id,
+                    self.team1_score,
+                    self.team2_id,
+                    self.team2_score,
                 )
             elif self.team2_score > self.team1_score and self.team1_won:
                 logger.warning(
                     "Score mismatch: %s (%d) < %s (%d) but team1_won=True",
-                    self.team1_id, self.team1_score,
-                    self.team2_id, self.team2_score,
+                    self.team1_id,
+                    self.team1_score,
+                    self.team2_id,
+                    self.team2_score,
                 )
         return self
 
@@ -422,6 +427,7 @@ class TournamentGameSchema(BaseModel):
 # ---------------------------------------------------------------------------
 # Tournament Context
 # ---------------------------------------------------------------------------
+
 
 class PreseasonAPSchema(BaseModel):
     """Validated preseason AP rankings."""
@@ -433,9 +439,7 @@ class PreseasonAPSchema(BaseModel):
     def ranks_in_range(cls, v: Dict[str, int]) -> Dict[str, int]:
         for team_id, rank in v.items():
             if not (1 <= rank <= 25):
-                raise ValueError(
-                    f"AP rank for {team_id} out of range: {rank}"
-                )
+                raise ValueError(f"AP rank for {team_id} out of range: {rank}")
         return v
 
 
@@ -453,7 +457,9 @@ class CoachTournamentSchema(BaseModel):
         if self.wins + self.losses > 0 and self.appearances == 0:
             logger.warning(
                 "Coach %s has wins=%d losses=%d but appearances=0",
-                self.name, self.wins, self.losses,
+                self.name,
+                self.wins,
+                self.losses,
             )
         return self
 
@@ -461,6 +467,7 @@ class CoachTournamentSchema(BaseModel):
 # ---------------------------------------------------------------------------
 # Injury Report
 # ---------------------------------------------------------------------------
+
 
 class InjuryEntrySchema(BaseModel):
     """Validated single injury report entry."""
@@ -486,6 +493,7 @@ class TeamInjuryReportSchema(BaseModel):
 # External Ratings
 # ---------------------------------------------------------------------------
 
+
 class ExternalRatingSchema(BaseModel):
     """Validated external rating entry."""
 
@@ -501,6 +509,7 @@ class ExternalRatingSchema(BaseModel):
 # Transfer Portal
 # ---------------------------------------------------------------------------
 
+
 class TransferEntrySchema(BaseModel):
     """Validated transfer portal entry."""
 
@@ -514,6 +523,7 @@ class TransferEntrySchema(BaseModel):
 # ---------------------------------------------------------------------------
 # Validation helper functions
 # ---------------------------------------------------------------------------
+
 
 def validate_consensus_data(data: dict) -> dict:
     """Validate ESPN picks / consensus data dict.
@@ -538,7 +548,8 @@ def validate_consensus_data(data: dict) -> dict:
         if skipped:
             logger.warning(
                 "Consensus validation: skipped %d/%d teams",
-                skipped, len(teams),
+                skipped,
+                len(teams),
             )
 
         return {
@@ -550,9 +561,7 @@ def validate_consensus_data(data: dict) -> dict:
         raise SchemaValidationError(f"Consensus data validation failed: {e}") from e
 
 
-def validate_betting_odds(
-    odds_map: dict, season: int, source: str
-) -> dict:
+def validate_betting_odds(odds_map: dict, season: int, source: str) -> dict:
     """Validate betting odds dict (team_id -> odds info).
 
     Returns validated dict. Drops invalid entries with warnings.
@@ -566,8 +575,7 @@ def validate_betting_odds(
                     team_id=team_id,
                     season=season,
                     source=source,
-                    **{k: v for k, v in odds_data.items()
-                       if k not in ("team_id", "season", "source")},
+                    **{k: v for k, v in odds_data.items() if k not in ("team_id", "season", "source")},
                 )
             else:
                 # Already a BettingMarketOdds dataclass
@@ -587,9 +595,7 @@ def validate_betting_odds(
             skipped += 1
 
     if skipped:
-        logger.warning(
-            "Betting odds validation: skipped %d/%d teams", skipped, len(odds_map)
-        )
+        logger.warning("Betting odds validation: skipped %d/%d teams", skipped, len(odds_map))
     return validated
 
 
@@ -621,29 +627,35 @@ def validate_roster_payload(payload: dict) -> dict:
                 except Exception as e:
                     logger.warning(
                         "Skipping invalid player %s on %s: %s",
-                        p.get("name", "?"), team_data.get("team_id", "?"), e,
+                        p.get("name", "?"),
+                        team_data.get("team_id", "?"),
+                        e,
                     )
                     skipped_players += 1
 
             if valid_players:
-                validated_teams.append({
-                    "team_id": team_data["team_id"],
-                    "team_name": team_data["team_name"],
-                    "players": valid_players,
-                })
+                validated_teams.append(
+                    {
+                        "team_id": team_data["team_id"],
+                        "team_name": team_data["team_name"],
+                        "players": valid_players,
+                    }
+                )
             else:
                 skipped_teams += 1
         except Exception as e:
             logger.warning(
                 "Skipping invalid team %s: %s",
-                team_data.get("team_id", "?"), e,
+                team_data.get("team_id", "?"),
+                e,
             )
             skipped_teams += 1
 
     if skipped_teams or skipped_players:
         logger.warning(
             "Roster validation: skipped %d teams, %d players",
-            skipped_teams, skipped_players,
+            skipped_teams,
+            skipped_players,
         )
 
     result = {**payload, "teams": validated_teams}
@@ -680,7 +692,8 @@ def validate_tournament_games(games: list) -> list:
     if skipped:
         logger.warning(
             "Tournament games validation: skipped %d/%d games",
-            skipped, len(games),
+            skipped,
+            len(games),
         )
     return validated
 
@@ -712,7 +725,8 @@ def validate_coach_tournament_data(coaches: dict) -> dict:
     if skipped:
         logger.warning(
             "Coach data validation: skipped %d/%d entries",
-            skipped, len(coaches),
+            skipped,
+            len(coaches),
         )
     return validated
 
@@ -735,7 +749,8 @@ def validate_transfer_entries(entries: list) -> list:
     if skipped:
         logger.warning(
             "Transfer portal validation: skipped %d/%d entries",
-            skipped, len(entries),
+            skipped,
+            len(entries),
         )
     return validated
 
@@ -787,7 +802,8 @@ def validate_injury_reports(reports: dict) -> dict:
                 except Exception as e_err:
                     logger.warning(
                         "Skipping invalid injury entry for %s: %s",
-                        team_id, e_err,
+                        team_id,
+                        e_err,
                     )
                     skipped += 1
 
@@ -802,6 +818,7 @@ def validate_injury_reports(reports: dict) -> dict:
 
     if skipped:
         logger.warning(
-            "Injury report validation: skipped %d entries", skipped,
+            "Injury report validation: skipped %d entries",
+            skipped,
         )
     return validated

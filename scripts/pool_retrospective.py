@@ -63,8 +63,7 @@ def build_pool_pick_distribution(pool_brackets):
     return dict(dist)
 
 
-def simulate_pool_competition(model_brackets, opponent_distribution, n_sims=5000,
-                              n_opponents=30, rng=None, label=""):
+def simulate_pool_competition(model_brackets, opponent_distribution, n_sims=5000, n_opponents=30, rng=None, label=""):
     """
     Monte Carlo simulation of pool competition.
 
@@ -121,7 +120,8 @@ def score_pool_bracket(bracket, actual_results, abbrev_to_id):
 
 def main():
     from scripts.pool_correlation_analysis import (
-        load_actual_results, abbrev_to_bracket_id,
+        load_actual_results,
+        abbrev_to_bracket_id,
     )
 
     actual = load_actual_results()
@@ -158,13 +158,16 @@ def main():
     for score, orig_idx, b in model_scores:
         pool_rank = sum(1 for ps, _ in pool_scores if ps > score) + 1
         f4_str = "/".join(t[:4].upper() for t in b["final_four"])
-        print(f"{orig_idx+1:>4} {score:>6} {pool_rank:>7} {b['strategy']:>12} "
-              f"{f4_str:>45} {b['expected_points']:>8.1f}")
+        print(
+            f"{orig_idx + 1:>4} {score:>6} {pool_rank:>7} {b['strategy']:>12} {f4_str:>45} {b['expected_points']:>8.1f}"
+        )
 
     best_actual = model_scores[0]
-    print(f"\nBest model bracket: #{best_actual[1]+1} ({best_actual[2]['strategy']}) "
-          f"scored {best_actual[0]} pts → pool rank {sum(1 for ps, _ in pool_scores if ps > best_actual[0]) + 1}")
-    print(f"  Optimizer had ranked it #{best_actual[1]+1} (EP={best_actual[2]['expected_points']:.1f})")
+    print(
+        f"\nBest model bracket: #{best_actual[1] + 1} ({best_actual[2]['strategy']}) "
+        f"scored {best_actual[0]} pts → pool rank {sum(1 for ps, _ in pool_scores if ps > best_actual[0]) + 1}"
+    )
+    print(f"  Optimizer had ranked it #{best_actual[1] + 1} (EP={best_actual[2]['expected_points']:.1f})")
 
     # --- Section 2: Bootstrap P(1st) simulation ---
     print("\n" + "=" * 80)
@@ -221,16 +224,20 @@ def main():
 
     espn_p1 = espn_wins / n_sims
 
-    print(f"\n{'Opt#':>4} {'Score':>6} {'Strategy':>12} "
-          f"{'Pool P(1st)':>12} {'Pool MnRk':>10} "
-          f"{'ESPN P(1st)':>12} {'ESPN MnRk':>10}")
+    print(
+        f"\n{'Opt#':>4} {'Score':>6} {'Strategy':>12} "
+        f"{'Pool P(1st)':>12} {'Pool MnRk':>10} "
+        f"{'ESPN P(1st)':>12} {'ESPN MnRk':>10}"
+    )
     print("-" * 85)
 
     for score, orig_idx, b in model_scores:
         i = orig_idx
-        print(f"{i+1:>4} {score:>6} {b['strategy']:>12} "
-              f"{pool_p1[i]:>11.1%} {pool_ranks[i].mean():>10.1f} "
-              f"{espn_p1[i]:>11.1%} {espn_ranks[i].mean():>10.1f}")
+        print(
+            f"{i + 1:>4} {score:>6} {b['strategy']:>12} "
+            f"{pool_p1[i]:>11.1%} {pool_ranks[i].mean():>10.1f} "
+            f"{espn_p1[i]:>11.1%} {espn_ranks[i].mean():>10.1f}"
+        )
 
     # --- Section 3: Pool pick distribution vs ESPN ---
     print("\n" + "=" * 80)
@@ -254,9 +261,9 @@ def main():
         if espn_pct is not None:
             diff = pool_pct - espn_pct
             direction = "OVER" if diff > 0.02 else ("UNDER" if diff < -0.02 else "~match")
-            print(f"{team:>6} {pool_pct*100:>6.1f}% {espn_pct*100:>6.1f}% {diff*100:>+6.1f}pp {direction:>12}")
+            print(f"{team:>6} {pool_pct * 100:>6.1f}% {espn_pct * 100:>6.1f}% {diff * 100:>+6.1f}pp {direction:>12}")
         else:
-            print(f"{team:>6} {pool_pct*100:>6.1f}% {'?':>6s} {'?':>7s}")
+            print(f"{team:>6} {pool_pct * 100:>6.1f}% {'?':>6s} {'?':>7s}")
 
     # --- Section 4: What-if analysis ---
     print("\n" + "=" * 80)
@@ -266,18 +273,24 @@ def main():
     print("\nIf you could only submit 1 bracket, which should it be?")
     print(f"\n  By pool-calibrated P(1st):")
     best_pool = max(range(len(model_brackets)), key=lambda i: pool_p1[i])
-    print(f"    Bracket #{best_pool+1} ({model_brackets[best_pool]['strategy']}): "
-          f"P(1st)={pool_p1[best_pool]:.1%}, actual score={model_actual_scores[best_pool]}")
+    print(
+        f"    Bracket #{best_pool + 1} ({model_brackets[best_pool]['strategy']}): "
+        f"P(1st)={pool_p1[best_pool]:.1%}, actual score={model_actual_scores[best_pool]}"
+    )
 
     print(f"\n  By optimizer EP (what was actually used):")
     best_ep = max(range(len(model_brackets)), key=lambda i: model_brackets[i]["expected_points"])
-    print(f"    Bracket #{best_ep+1} ({model_brackets[best_ep]['strategy']}): "
-          f"EP={model_brackets[best_ep]['expected_points']:.1f}, actual score={model_actual_scores[best_ep]}")
+    print(
+        f"    Bracket #{best_ep + 1} ({model_brackets[best_ep]['strategy']}): "
+        f"EP={model_brackets[best_ep]['expected_points']:.1f}, actual score={model_actual_scores[best_ep]}"
+    )
 
     print(f"\n  By actual results (hindsight):")
     best_hindsight = max(range(len(model_brackets)), key=lambda i: model_actual_scores[i])
-    print(f"    Bracket #{best_hindsight+1} ({model_brackets[best_hindsight]['strategy']}): "
-          f"actual score={model_actual_scores[best_hindsight]}")
+    print(
+        f"    Bracket #{best_hindsight + 1} ({model_brackets[best_hindsight]['strategy']}): "
+        f"actual score={model_actual_scores[best_hindsight]}"
+    )
 
     # --- Section 5: Summary ---
     print("\n" + "=" * 80)
@@ -291,8 +304,8 @@ def main():
      7 of 8 brackets would have placed top-2. The model's predictions were excellent.
 
   2. OPTIMIZER RANKING INVERSION:
-     The best-performing bracket (#{best_actual[1]+1}, {best_actual[0]} pts) was ranked #{best_actual[1]+1} of 8
-     by the optimizer (EP={best_actual[2]['expected_points']:.1f}).
+     The best-performing bracket (#{best_actual[1] + 1}, {best_actual[0]} pts) was ranked #{best_actual[1] + 1} of 8
+     by the optimizer (EP={best_actual[2]["expected_points"]:.1f}).
      It differed from #1 by picking Illinois over Florida in S16/E8 (+90 pts actual).
      The optimizer penalized this because ESPN picks showed Florida as more popular →
      the "contrarian value" calculation was based on ESPN, not the actual pool.
