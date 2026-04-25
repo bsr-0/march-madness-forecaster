@@ -822,7 +822,9 @@ The body splits into three explicit passes:
 - **B** — single per-repeat loop generates `opp` + `sim_winners` once and accumulates per-mode ranks against them
 - **C** — per-mode aggregation, reporting, `--save-brackets` serialization
 
-**Q3 architecture decision (settled 2026-04-25):** option B (shared per-repeat opponents) chosen over option A (`SeedSequence.spawn(n_modes)` per-mode opponent streams). The paired-comparison variance reduction outweighs the loss of bit-exact reproduction against the pre-Phase-2 baseline — and no test or strategy artifact pinned those numerical values. Rollback to option A is local to the per-repeat block (spawn one rng per mode, move opp/sim draws back inside the inner mode loop) if mode-vs-mode independence is ever needed for some downstream analysis.
+**Q3 architecture decision (settled 2026-04-25):** option B (shared per-repeat opponents) chosen as the **default**; option A (`SeedSequence.spawn(n_modes)` per-mode opponent streams) shipped as an **opt-in** path via `opponent_strategy="per_mode"` (run_backtest kwarg) / `--opponent-strategy per_mode` (CLI). Option B's paired-comparison variance reduction is the right choice for ranking modes by P(1st), but option A is available when an analysis needs statistical independence across modes (e.g., a head-to-head Bonferroni comparison where shared opponents would underestimate variance). Switching strategies is one parameter — no code change needed.
+
+Lock test for the option A path: `tests/test_parallel_run_backtest.py::test_per_mode_opponent_strategy_workers_equivalence` — confirms (1) workers=1 vs workers=N bit-equal under `per_mode` (each year's `SeedSequence(42 + year)` and the spawn order from `enabled_modes` are deterministic), and (2) `per_mode` results actually differ from `shared` on a multi-mode run (no-op guard).
 
 **Equivalence properties preserved:**
 - `workers=1` vs `workers=N` still bit-equal (year_rng consumption order is determined by year alone, not by mode iteration order).
