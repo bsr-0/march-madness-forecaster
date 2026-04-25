@@ -42,6 +42,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Project imports
 # ---------------------------------------------------------------------------
 from src.data.seed_pick_model import SEED_PICK_RATES
+from src.data.strategy_cache import make_mode_rng
 from src.prediction.noseed_model import (
     TRAIN_YEARS,
     train_noseed_model,
@@ -2151,11 +2152,20 @@ def run_backtest(
             except (ValueError, KeyError) as exc:
                 print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
 
-        rng = np.random.default_rng(42 + year)
+        # year_rng is shared across opponent generation + tournament
+        # simulation per repeat. Bracket sampling uses a per-(mode, year)
+        # child rng (make_mode_rng) so caching one mode's brackets never
+        # perturbs another mode's draws and the live loop matches the
+        # offline cache builder. See src/data/strategy_cache.make_mode_rng.
+        year_rng = np.random.default_rng(42 + year)
 
         for mode_name, rp, sampler in mode_sampler_specs:
-            # Sample stochastic model brackets using the mode's sampler
-            model_brackets = sampler(first_round, rp, n_model, rng)
+            # Per-(mode, year) bracket-sampling rng. Order-independent and
+            # fully isolated from year_rng, so the inner repeat-loop's
+            # opponent / simulation rng consumption is unchanged whether
+            # this mode hits or misses a future bracket cache.
+            bracket_rng = make_mode_rng(mode_name, year)
+            model_brackets = sampler(first_round, rp, n_model, bracket_rng)
 
             # Score all model brackets against actual outcome (for reporting
             # BestScr / MeanScr and for --save-brackets).
@@ -2186,7 +2196,7 @@ def run_backtest(
                     seed_pw,
                     pick_dist,
                     seeds,
-                    rng,
+                    year_rng,
                 )
                 if team_identity:
                     # Simulate one tournament outcome for this repeat.
@@ -2196,7 +2206,7 @@ def run_backtest(
                         matchup_probs=seed_pw,
                         seeds=seeds,
                         noise_std=0.16,
-                        rng=rng,
+                        rng=year_rng,
                     )
                     sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
                     model_scores_sim = score_brackets_team_identity(
