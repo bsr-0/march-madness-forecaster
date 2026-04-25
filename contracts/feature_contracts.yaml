@@ -445,6 +445,7 @@ features:
 
   - feature_name: transfer_impact
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: roster
@@ -528,6 +529,7 @@ features:
 
   - feature_name: injury_risk
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: roster
@@ -559,6 +561,7 @@ features:
   # ==========================================================================
   - feature_name: lead_volatility
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: game_flows
@@ -587,6 +590,7 @@ features:
 
   - feature_name: entropy
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: game_flows
@@ -615,6 +619,7 @@ features:
 
   - feature_name: lead_sustainability
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: game_flows
@@ -643,6 +648,7 @@ features:
 
   - feature_name: comeback_factor
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: game_flows
@@ -873,6 +879,7 @@ features:
 
   - feature_name: sor
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1039,6 +1046,7 @@ features:
 
   - feature_name: free_throw_pct
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1067,6 +1075,7 @@ features:
 
   - feature_name: assist_to_turnover
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1095,6 +1104,7 @@ features:
 
   - feature_name: assist_rate
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1123,6 +1133,7 @@ features:
 
   - feature_name: steal_rate
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1151,6 +1162,7 @@ features:
 
   - feature_name: block_rate
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1371,6 +1383,7 @@ features:
 
   - feature_name: elite_sos
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1399,6 +1412,7 @@ features:
 
   - feature_name: q1_win_pct
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1427,6 +1441,7 @@ features:
 
   - feature_name: foul_rate
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1538,6 +1553,7 @@ features:
 
   - feature_name: preseason_ap_rank
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: torvik
@@ -1568,6 +1584,7 @@ features:
   # ==========================================================================
   - feature_name: coach_tournament_exp
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: coach_tournament
@@ -1595,6 +1612,7 @@ features:
 
   - feature_name: coach_tournament_win_rate
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: coach_tournament
@@ -1625,6 +1643,7 @@ features:
   # coach_postseason_score (weighted composite).
   - feature_name: coach_postseason_score
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: coach_tournament
@@ -1655,6 +1674,7 @@ features:
   # ==========================================================================
   - feature_name: pagerank_sos
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: schedule_graph
@@ -1683,6 +1703,7 @@ features:
 
   - feature_name: multi_hop_sos
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: schedule_graph
@@ -1714,6 +1735,7 @@ features:
   # ==========================================================================
   - feature_name: best_win_percentile
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: schedule_graph
@@ -1742,6 +1764,7 @@ features:
 
   - feature_name: paper_tiger_score
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: schedule_graph
@@ -1770,6 +1793,7 @@ features:
 
   - feature_name: dominance_ratio
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: schedule_graph
@@ -1828,6 +1852,7 @@ features:
 
   - feature_name: conf_tourney_champ
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: torvik
@@ -1885,6 +1910,7 @@ features:
 
   - feature_name: home_court_dependence
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: proprietary_metrics
@@ -1999,6 +2025,7 @@ features:
   # ==========================================================================
   - feature_name: external_rating_composite
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: external_ratings
@@ -2026,6 +2053,7 @@ features:
 
   - feature_name: external_rating_spread
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: external_ratings
@@ -2087,6 +2115,7 @@ features:
   # ==========================================================================
   - feature_name: massey_pom
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
@@ -2114,6 +2143,7 @@ features:
 
   - feature_name: massey_sag
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: SAG_normalized}
     event_timestamp_field: ranking_day
@@ -2134,6 +2164,7 @@ features:
 
   - feature_name: massey_mor
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: MOR_normalized}
     event_timestamp_field: ranking_day
@@ -2154,6 +2185,7 @@ features:
 
   - feature_name: massey_dol
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: DOL_normalized}
     event_timestamp_field: ranking_day
@@ -2174,6 +2206,7 @@ features:
 
   - feature_name: massey_col
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); kept for contract-history audit only.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: COL_normalized}
     event_timestamp_field: ranking_day
@@ -2194,6 +2227,7 @@ features:
 
   - feature_name: massey_wol
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: WOL_normalized}
     event_timestamp_field: ranking_day
@@ -2214,6 +2248,7 @@ features:
 
   - feature_name: massey_rth
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RTH_normalized}
     event_timestamp_field: ranking_day
@@ -2234,6 +2269,7 @@ features:
 
   - feature_name: massey_ap
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: AP_normalized}
     event_timestamp_field: ranking_day
@@ -2254,6 +2290,7 @@ features:
 
   - feature_name: massey_usa
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: USA_normalized}
     event_timestamp_field: ranking_day
@@ -2274,6 +2311,7 @@ features:
 
   - feature_name: massey_rpi
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RPI_normalized}
     event_timestamp_field: ranking_day
@@ -2294,6 +2332,7 @@ features:
 
   - feature_name: massey_rank_mean
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
@@ -2535,6 +2574,7 @@ features:
 
   - feature_name: massey_rank_std
     deprecated: true
+    sunset_date: "2026-04-22"  # Deprecated at declaration (71eb51c rename); superseded by aggregated massey_avg / massey_best contracts.
     owner: data-platform
     source:
       system: kaggle_massey_ordinals
