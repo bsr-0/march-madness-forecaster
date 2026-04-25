@@ -182,6 +182,60 @@ def load_brackets(cache_key: str, manifest: Optional[Manifest] = None) -> np.nda
         return z["brackets"]
 
 
+def save_outcomes(
+    year: int,
+    outcomes: np.ndarray,
+    *,
+    code_version: str,
+    data_version: str,
+    provenance: Optional[dict] = None,
+) -> CacheEntry:
+    """Cache the (63,) uint16 ground-truth winners array for a single year.
+
+    Outcomes are not strategy-dependent, so the cache_key is just the year-
+    scoped path; the manifest entry still carries content_hash for tamper
+    detection. Picks per round are stored alphabetically (matches the
+    bracket-cache convention) so validation = (brackets == outcomes[None, :]).
+    """
+    if outcomes.dtype != np.uint16:
+        raise ValueError(f"outcomes must be uint16, got {outcomes.dtype}")
+    if outcomes.shape != (N_GAMES,):
+        raise ValueError(f"outcomes must be ({N_GAMES},), got {outcomes.shape}")
+    rel_path = f"outcomes/{year}.npz"
+    abs_path = CACHE_ROOT / rel_path
+    abs_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(abs_path, winners=outcomes)
+    return CacheEntry(
+        strategy_id="GROUND_TRUTH",
+        year=year,
+        cache_key=f"outcomes-{year}",
+        rng_seed="N/A",
+        code_version=code_version,
+        data_version=data_version,
+        model_version="N/A",
+        artifact_kind="outcomes",
+        artifact_path=rel_path,
+        content_hash=content_hash(abs_path),
+        shape=tuple(outcomes.shape),
+        dtype="uint16",
+        generated_at=datetime.now().isoformat(timespec="seconds"),
+        provenance=provenance or {},
+    )
+
+
+def load_outcomes(year: int, manifest: Optional[Manifest] = None) -> np.ndarray:
+    manifest = manifest or Manifest.load()
+    matches = [e for e in manifest.entries if e.artifact_kind == "outcomes" and e.year == year]
+    if not matches:
+        raise KeyError(f"No outcomes cache entry for year {year}")
+    entry = matches[0]
+    abs_path = CACHE_ROOT / entry.artifact_path
+    if content_hash(abs_path) != entry.content_hash:
+        raise ValueError(f"Content hash mismatch for {abs_path} — cache tampered or stale")
+    with np.load(abs_path) as z:
+        return z["winners"]
+
+
 def verify_manifest(manifest: Optional[Manifest] = None) -> list[str]:
     """Return list of integrity issues. Empty list = healthy. Used by lock test."""
     manifest = manifest or Manifest.load()
