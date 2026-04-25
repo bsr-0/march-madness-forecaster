@@ -283,6 +283,44 @@ def test_torvik_round_probabilities_are_bit_exact() -> None:
             assert a[tid][rnd] == b[tid][rnd], f"non-deterministic at {tid}/{rnd}: {a[tid][rnd]} != {b[tid][rnd]}"
 
 
+def test_seed42_bracket_sampling_is_bit_exact() -> None:
+    """Phase 3 contract: sampler called twice with seed=42 + same inputs
+    produces identical brackets. This is what makes the bracket cache
+    reproducible without storing the RNG state."""
+    pytest.importorskip("numpy")
+    try:
+        from scripts.mc_pool_backtest import (
+            _load_torvik_barthag,
+            build_first_round_matchups,
+            build_torvik_round_probabilities,
+            derive_f4_region_pairing,
+            load_seeds_and_regions,
+            load_tournament_results,
+            resolve_first_four,
+            sample_f4_first_brackets,
+        )
+    except ImportError:
+        pytest.skip("project deps not available")
+    try:
+        seeds, regions = load_seeds_and_regions(2026)
+        seeds = resolve_first_four(2026, seeds)
+        barthag = _load_torvik_barthag(2026, seeds)
+        games = load_tournament_results(2026)
+    except Exception:
+        pytest.skip("2026 data unavailable")
+    if barthag is None:
+        pytest.skip("torvik barthag for 2026 unavailable")
+    region_order = derive_f4_region_pairing(games, regions)
+    first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
+    round_probs = build_torvik_round_probabilities(seeds, regions, barthag)
+
+    rng_a = np.random.default_rng(42)
+    rng_b = np.random.default_rng(42)
+    a = sample_f4_first_brackets(first_round, round_probs, 50, rng_a, seeds, regions)
+    b = sample_f4_first_brackets(first_round, round_probs, 50, rng_b, seeds, regions)
+    np.testing.assert_array_equal(a, b)
+
+
 def test_repo_manifest_is_consistent_if_present() -> None:
     """If the repo's strategy_cache/manifest.json exists, every entry must verify."""
     if not (CACHE_ROOT / "manifest.json").exists():
