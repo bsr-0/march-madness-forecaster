@@ -58,7 +58,7 @@ CONSTRUCTIONS = (
 
 # Which sources and adjustments are actually implemented and available
 IMPLEMENTED_SOURCES = {"seed", "torvik", "odds", "spread_power", "pool_wisdom", "elo", "massey_avg"}
-IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile", "roster_adj", "coach_adj"}
+IMPLEMENTED_ADJUSTMENTS = {"contrarian", "upset_tuned", "volatile", "roster_adj", "coach_adj", "momentum"}
 IMPLEMENTED_CONSTRUCTIONS = {
     "forward",
     "champ_first",
@@ -225,6 +225,7 @@ def resolve_pipeline_round_probs(
     team_volatility: Optional[Dict[str, float]] = None,
     team_talent: Optional[Dict[str, float]] = None,
     coach_experience: Optional[Dict[str, int]] = None,
+    team_momentum: Optional[Dict[str, float]] = None,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Resolve a pipeline specification into round_probs.
 
@@ -244,6 +245,9 @@ def resolve_pipeline_round_probs(
             for the head coach (required for coach_adj adjustment;
             produced by
             ``src.prediction.coach_adj_probabilities.load_coach_experience``).
+        team_momentum: Per-team Jan→Mar four-factor-margin delta
+            (required for momentum adjustment; produced by
+            ``src.prediction.momentum_probabilities.load_team_momentum``).
         historical_seed_reach_rates: Walk-forward seed-by-round empirical
             rates (required for upset_tuned; produced by
             ``src.prediction.upset_tuned_probabilities.load_upset_tuned_context``)
@@ -306,9 +310,12 @@ def resolve_pipeline_round_probs(
             from src.prediction.coach_adj_probabilities import build_coach_adj_round_probs
 
             result = build_coach_adj_round_probs(result, coach_experience)
-        # Future adjustments:
-        # elif adj == "momentum":
-        #     result = apply_momentum_adjustment(result, ...)
+        elif adj == "momentum":
+            if team_momentum is None:
+                return None  # Required context not supplied
+            from src.prediction.momentum_probabilities import build_momentum_round_probs
+
+            result = build_momentum_round_probs(result, team_momentum)
         else:
             return None  # Adjustment not implemented
 

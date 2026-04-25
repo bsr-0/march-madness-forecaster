@@ -1944,6 +1944,16 @@ def run_backtest(
 
         coach_experience = load_coach_experience(year, seeds.keys(), Path("data"))
 
+        # Momentum context: per-team Jan→Mar four-factor-margin delta from
+        # torvik_four_factors_{year}_*.json monthly snapshots. Consumed by
+        # the momentum adjustment (two-sided tanh-saturated ±3% boost/penalty
+        # based on late-season efficiency trajectory). Walk-forward-safe:
+        # only reads the year's snapshot files. Missing snapshots → empty
+        # dict; downstream resolver treats absent teams as delta=0 (neutral).
+        from src.prediction.momentum_probabilities import load_team_momentum
+
+        team_momentum = load_team_momentum(year, seeds.keys(), Path("data"))
+
         # Construction mode registry: mode_name → sampler_fn(first_round, round_probs, n, rng)
         def _make_sampler(mode_name):
             """Return a sampler function for the given construction mode."""
@@ -2092,6 +2102,7 @@ def run_backtest(
                     team_volatility=team_volatility,
                     team_talent=team_talent,
                     coach_experience=coach_experience,
+                    team_momentum=team_momentum,
                 )
                 if pipeline_rp is not None:
                     sampler = _make_sampler(construction)
