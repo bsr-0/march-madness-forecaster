@@ -789,6 +789,29 @@ After the first bracket build, subsequent budgeted runs hit the cache for `torvi
 
 **Stale entries from PR #478:** the manifest carries 12 bracket entries hashed with a one-time git SHA (`code_version=12-char-sha` rather than `code_version="1"`). They sit unused — their cache_key shape doesn't match the live-loop lookup. Cause no errors. Operator can prune them by deleting `artifacts/strategy_cache/manifest.json` and re-running the build scripts; alternatively leave them and let the next `STRATEGY_CACHE_VERSION` bump cycle them out.
 
+### Parallel execution (`--workers N`) — DONE 2026-04-25
+
+`run_backtest` parallelizes the per-year loop across `N` worker processes via `ProcessPoolExecutor`. The flag is opt-in (`--workers 1` is the default and reproduces the pre-parallelism sequential path bit-exactly) and is threaded through every `run_experiment` dispatch — `--tier budget`, `--tier 1/2/3`, `--strategies`, `--bases/--modes`, `--permutations`, custom sweeps. One flag covers every command path because they all funnel through `run_backtest`.
+
+**Wall-time win:** roughly linear in `min(N, len(years))`. The 88.8-min Apr-24 budget run drops to roughly 11–13 min at `--workers 8`. Saturating year-level parallelism caps at `len(BACKTEST_YEARS) ≈ 14` workers. Phase 2 (modes-within-year) is not yet shipped — it would buy another ~3× on machines with more cores than years.
+
+**Bit-exactness contract:**
+- `year_rng = np.random.default_rng(42 + year)` is constructed inside `_run_one_year`, so each worker gets a deterministic stream derived purely from its year.
+- `bracket_rng = make_mode_rng(mode_name, year)` is per-(mode, year) and order-independent (Phase 4.2 RNG isolation).
+- Workers don't share state. Cache manifest writes are serialized in the parent — workers return entries in their result dict; parent does one `Manifest.load → for entry: append → save` after all years complete (matches the existing `scripts/build_bracket_cache.py` pattern).
+
+Lock test: `tests/test_parallel_run_backtest.py::test_parallel_matches_sequential_on_torvik_2025_2026` — asserts `workers=1` and `workers=2` produce bit-equal `best_rank / mean_rank / p_first / p_top5 / p_top25 / best_score / mean_score / n_trials` per (year, mode).
+
+**Operator workflow:**
+```bash
+python -m scripts.run_experiment --tier budget --workers $(nproc)   # cap effectively at ~14
+python -m scripts.run_experiment --tier 3 --workers 8 --use-cache   # parallel + cache stack multiplicatively
+```
+
+**Memory caveat:** each worker is a full Python process. Memory scales linearly with `--workers`. On a 16 GB box, `--workers 8` is comfortable for the 12k-strategy catalog; `--workers 14` may swap. Operator-controlled.
+
+**Architecture decision baked in:** `StrategiesFitter` (top-level callable class in `scripts/mc_pool_backtest.py`) replaces the local closures previously used in `scripts/run_experiment.py` for the `hparam_fitter` argument. Local closures aren't picklable for `ProcessPoolExecutor`; top-level class instances are. Three call sites refactored (`_run_tier`, `_run_pipeline_sweep`, `_run_sweep`); behavior identical to the pre-refactor closure form.
+
 ### Validation & guardrails
 
 | Item | Phase | Why | Scope |
