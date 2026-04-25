@@ -17,7 +17,9 @@ from src.data.strategy_cache import (
     Manifest,
     compute_cache_key,
     load_brackets,
+    load_outcomes,
     save_brackets,
+    save_outcomes,
     verify_manifest,
 )
 
@@ -135,6 +137,40 @@ def test_content_hash_mismatch_raises(tmp_path, monkeypatch) -> None:
     np.savez_compressed(tmp_path / entry.artifact_path, brackets=tampered)
     with pytest.raises(ValueError, match="Content hash mismatch"):
         load_brackets(cache_key, manifest)
+
+
+def test_outcomes_save_load_roundtrip(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("src.data.strategy_cache.CACHE_ROOT", tmp_path)
+    monkeypatch.setattr("src.data.strategy_cache.MANIFEST_PATH", tmp_path / "manifest.json")
+    rng = np.random.default_rng(1)
+    winners = rng.integers(0, 68, size=63, dtype=np.uint16)
+    entry = save_outcomes(2026, winners, code_version="c", data_version="d")
+    manifest = Manifest(schema_version=1, entries=[entry])
+    loaded = load_outcomes(2026, manifest)
+    assert loaded.dtype == np.uint16
+    assert loaded.shape == (63,)
+    np.testing.assert_array_equal(loaded, winners)
+
+
+def test_outcomes_reject_bad_shape(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("src.data.strategy_cache.CACHE_ROOT", tmp_path)
+    bad = np.zeros(64, dtype=np.uint16)
+    with pytest.raises(ValueError, match="63"):
+        save_outcomes(2026, bad, code_version="c", data_version="d")
+
+
+def test_brackets_match_outcomes_per_round(tmp_path, monkeypatch) -> None:
+    """Demonstrates the validation primitive the cache enables."""
+    monkeypatch.setattr("src.data.strategy_cache.CACHE_ROOT", tmp_path)
+    rng = np.random.default_rng(2)
+    outcomes = rng.integers(0, 68, size=63, dtype=np.uint16)
+    brackets = np.tile(outcomes, (50, 1)).astype(np.uint16)
+    brackets[0, 0] = (outcomes[0] + 1) % 68  # one wrong pick on bracket 0
+    correct = brackets == outcomes[None, :]
+    assert correct.shape == (50, 63)
+    assert correct[0, 0] == False  # noqa: E712
+    assert correct[0, 1:].all()
+    assert correct[1:, :].all()
 
 
 def test_repo_manifest_is_consistent_if_present() -> None:
