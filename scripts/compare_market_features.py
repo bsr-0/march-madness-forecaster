@@ -6,6 +6,7 @@ baseline (backtest_result.json) which had these features as zeros.
 
 Also runs a with-market vs without-market A/B within the new code.
 """
+
 import json
 import logging
 import sys
@@ -24,9 +25,9 @@ DEV_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2
 
 
 def run_holdout(label: str, use_market: bool):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {label}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     config = ForecastConfig(use_market_features=use_market)
     evaluator = HoldoutEvaluator(
@@ -83,9 +84,9 @@ if __name__ == "__main__":
     # Load saved baseline (pre-Vegas, features 46-55 all zeros)
     old_results, old_avg = load_old_baseline()
     if old_results:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  OLD BASELINE (saved April 10, features 46-55 = zeros)")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"  Mean Brier: {old_avg:.5f}  ({len(old_results)} years)")
 
     # Run with conf+coach but NO market features
@@ -95,17 +96,21 @@ if __name__ == "__main__":
     full_results, full_avg = run_holdout("NEW: conf + coach + market", use_market=True)
 
     # Comparison table
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  COMPARISON")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     if old_avg:
         print(f"  Old baseline (zeros):      {old_avg:.5f}")
     print(f"  New (conf+coach):          {no_mkt_avg:.5f}")
     print(f"  New (conf+coach+market):   {full_avg:.5f}")
     if old_avg:
-        print(f"  Improvement (new vs old):  {no_mkt_avg - old_avg:+.5f} ({'BETTER' if no_mkt_avg < old_avg else 'WORSE'})")
+        print(
+            f"  Improvement (new vs old):  {no_mkt_avg - old_avg:+.5f} ({'BETTER' if no_mkt_avg < old_avg else 'WORSE'})"
+        )
         print(f"  Improvement (full vs old): {full_avg - old_avg:+.5f} ({'BETTER' if full_avg < old_avg else 'WORSE'})")
-    print(f"  Market delta:              {full_avg - no_mkt_avg:+.5f} ({'BETTER' if full_avg < no_mkt_avg else 'WORSE'})")
+    print(
+        f"  Market delta:              {full_avg - no_mkt_avg:+.5f} ({'BETTER' if full_avg < no_mkt_avg else 'WORSE'})"
+    )
 
     # Per-year breakdown
     common_years = sorted(set(no_mkt_results) & set(full_results))

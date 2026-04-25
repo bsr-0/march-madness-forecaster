@@ -34,19 +34,40 @@ CACHE_DIR = "data/raw/betting_odds"
 
 # Map season label (e.g., "2018-19") to the tournament year (2019)
 SEASON_MAP = {
-    "2007-08": 2008, "2008-09": 2009, "2009-10": 2010,
-    "2010-11": 2011, "2011-12": 2012, "2012-13": 2013,
-    "2013-14": 2014, "2014-15": 2015, "2015-16": 2016,
-    "2016-17": 2017, "2017-18": 2018, "2018-19": 2019,
-    "2019-20": 2020, "2020-21": 2021, "2021-22": 2022,
+    "2007-08": 2008,
+    "2008-09": 2009,
+    "2009-10": 2010,
+    "2010-11": 2011,
+    "2011-12": 2012,
+    "2012-13": 2013,
+    "2013-14": 2014,
+    "2014-15": 2015,
+    "2015-16": 2016,
+    "2016-17": 2017,
+    "2017-18": 2018,
+    "2018-19": 2019,
+    "2019-20": 2020,
+    "2020-21": 2021,
+    "2021-22": 2022,
 }
 
 # Tournament start dates (MMDD) for filtering tournament games
 TOURNAMENT_START_MMDD = {
-    2008: 318, 2009: 317, 2010: 316, 2011: 315, 2012: 313,
-    2013: 319, 2014: 318, 2015: 317, 2016: 315, 2017: 314,
-    2018: 313, 2019: 319, 2020: 0,  # cancelled
-    2021: 318, 2022: 315,
+    2008: 318,
+    2009: 317,
+    2010: 316,
+    2011: 315,
+    2012: 313,
+    2013: 319,
+    2014: 318,
+    2015: 317,
+    2016: 315,
+    2017: 314,
+    2018: 313,
+    2019: 319,
+    2020: 0,  # cancelled
+    2021: 318,
+    2022: 315,
 }
 
 
@@ -68,6 +89,7 @@ def _mmdd_to_iso(mmdd: int, year: int) -> str:
 def _load_rows(filepath: str) -> list[tuple]:
     """Load rows from Excel or HTML table."""
     import zipfile
+
     try:
         # Try xlsx first
         _wb = openpyxl.load_workbook(filepath, read_only=True)
@@ -80,6 +102,7 @@ def _load_rows(filepath: str) -> list[tuple]:
 
     # Fall back to HTML table parsing
     from bs4 import BeautifulSoup
+
     with open(filepath) as f:
         soup = BeautifulSoup(f.read(), "html.parser")
     table = soup.find("table")
@@ -97,6 +120,7 @@ def _load_rows(filepath: str) -> list[tuple]:
                     return int(v)
                 except (ValueError, TypeError):
                     return v
+
             result.append(tuple(_try_num(c) for c in cells))
     return result
 
@@ -199,28 +223,30 @@ def _parse_excel(filepath: str, season_year: int, tournament_only: bool = False)
         # Neutral site flag
         is_neutral = vh_a == "N" or vh_b == "N"
 
-        games.append({
-            "season": season_year,
-            "game_date": game_date,
-            "round_name": "",
-            "home_team_id": home_id,
-            "away_team_id": away_id,
-            "home_team_name": home_name,
-            "away_team_name": away_name,
-            "home_score": home_score,
-            "away_score": away_score,
-            "spread_open": spread_open,
-            "spread": spread_close,
-            "total_open": total_open,
-            "total": total_close,
-            "moneyline_home": ml_home,
-            "moneyline_away": ml_away,
-            "implied_prob_home": round(imp_home, 4),
-            "implied_prob_away": round(imp_away, 4),
-            "is_neutral": is_neutral,
-            "source": "sportsbookreviewsonline",
-            "book": "closing",
-        })
+        games.append(
+            {
+                "season": season_year,
+                "game_date": game_date,
+                "round_name": "",
+                "home_team_id": home_id,
+                "away_team_id": away_id,
+                "home_team_name": home_name,
+                "away_team_name": away_name,
+                "home_score": home_score,
+                "away_score": away_score,
+                "spread_open": spread_open,
+                "spread": spread_close,
+                "total_open": total_open,
+                "total": total_close,
+                "moneyline_home": ml_home,
+                "moneyline_away": ml_away,
+                "implied_prob_home": round(imp_home, 4),
+                "implied_prob_away": round(imp_away, 4),
+                "is_neutral": is_neutral,
+                "source": "sportsbookreviewsonline",
+                "book": "closing",
+            }
+        )
 
     return games
 
@@ -293,8 +319,7 @@ def _process_season(season_label: str, season_year: int, tournament_only: bool, 
     spreads = sum(1 for g in games if g["spread"] != 0)
     mls = sum(1 for g in games if g["moneyline_home"] != 0)
 
-    print(f" {len(games)} games, {len(unique_teams)} teams, "
-          f"{spreads} spreads, {mls} moneylines")
+    print(f" {len(games)} games, {len(unique_teams)} teams, {spreads} spreads, {mls} moneylines")
     return len(games)
 
 

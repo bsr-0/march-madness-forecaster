@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # implementation when scipy is not available.
 try:
     from scipy.stats import spearmanr as _scipy_spearmanr
+
     _HAS_SCIPY = True
 except ImportError:  # pragma: no cover
     _HAS_SCIPY = False
@@ -97,6 +98,7 @@ def _spearman_p_value(rho: float, n: int) -> float:
 
     if _HAS_SCIPY:
         from scipy.stats import t as t_dist
+
         return float(2.0 * t_dist.sf(abs(t_stat), df))
 
     # Normal approximation (conservative for small df).
@@ -105,7 +107,11 @@ def _spearman_p_value(rho: float, n: int) -> float:
     # Abramowitz & Stegun approximation 26.2.17
     p = 0.3275911
     a1, a2, a3, a4, a5 = (
-        0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429,
+        0.254829592,
+        -0.284496736,
+        1.421413741,
+        -1.453152027,
+        1.061405429,
     )
     t_val = 1.0 / (1.0 + p * z)
     poly = ((((a5 * t_val + a4) * t_val + a3) * t_val + a2) * t_val + a1) * t_val
@@ -124,6 +130,7 @@ def _chi2_sf(chi2: float, df: int) -> float:
 
     if _HAS_SCIPY:
         from scipy.stats import chi2 as chi2_dist
+
         return float(chi2_dist.sf(chi2, df))
 
     # Wilson-Hilferty normal approximation:
@@ -135,7 +142,11 @@ def _chi2_sf(chi2: float, df: int) -> float:
     z = abs(z)
     p = 0.3275911
     a1, a2, a3, a4, a5 = (
-        0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429,
+        0.254829592,
+        -0.284496736,
+        1.421413741,
+        -1.453152027,
+        1.061405429,
     )
     t_val = 1.0 / (1.0 + p * z)
     poly = ((((a5 * t_val + a4) * t_val + a3) * t_val + a2) * t_val + a1) * t_val
@@ -149,6 +160,7 @@ def _chi2_sf(chi2: float, df: int) -> float:
 # ---------------------------------------------------------------------------
 # Public data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SourceAgreementReport:
@@ -181,6 +193,7 @@ _ROUND_ATTR = {
 # ---------------------------------------------------------------------------
 # Core agreement assessment
 # ---------------------------------------------------------------------------
+
 
 def assess_source_agreement(
     sources: Dict[str, "ConsensusData"],
@@ -219,9 +232,7 @@ def assess_source_agreement(
     if len(source_names) < 2:
         # Cannot assess agreement with fewer than two sources.
         report.agreement_level = "unknown"
-        report.details.append(
-            f"Only {len(source_names)} source(s) available; skipping agreement check."
-        )
+        report.details.append(f"Only {len(source_names)} source(s) available; skipping agreement check.")
         if configured_weights:
             report.recommended_weights = dict(configured_weights)
         elif source_names:
@@ -235,10 +246,8 @@ def assess_source_agreement(
     pair_n_shared: Dict[Tuple[str, str], int] = {}
 
     for i, src_a in enumerate(source_names):
-        for src_b in source_names[i + 1:]:
-            shared_teams = sorted(
-                set(sources[src_a].teams.keys()) & set(sources[src_b].teams.keys())
-            )
+        for src_b in source_names[i + 1 :]:
+            shared_teams = sorted(set(sources[src_a].teams.keys()) & set(sources[src_b].teams.keys()))
             # Minimum n=10 for Spearman ρ.  With fewer shared teams,
             # the t-distribution approximation (df = n-2) is unreliable
             # and p-values are meaningless.  At n=10, df=8, which is the
@@ -247,8 +256,7 @@ def assess_source_agreement(
             _MIN_SHARED_TEAMS = 10
             if len(shared_teams) < _MIN_SHARED_TEAMS:
                 report.details.append(
-                    f"{src_a}-{src_b}: only {len(shared_teams)} shared teams "
-                    f"(need ≥{_MIN_SHARED_TEAMS}), skipping."
+                    f"{src_a}-{src_b}: only {len(shared_teams)} shared teams (need ≥{_MIN_SHARED_TEAMS}), skipping."
                 )
                 continue
 
@@ -308,7 +316,7 @@ def assess_source_agreement(
     # Sources outside the clique are flagged.
     agreeing_clique: List[str] = []
     for i, src_a in enumerate(source_names):
-        for src_b in source_names[i + 1:]:
+        for src_b in source_names[i + 1 :]:
             pair_key = (src_a, src_b)
             if not _pair_agrees(pair_key):
                 continue
@@ -329,17 +337,12 @@ def assess_source_agreement(
         # No pair of sources agrees — everything is conflicting.
         report.flagged_sources = list(source_names)
         report.agreement_level = "conflicting"
-        report.details.append(
-            "All sources disagree with each other (no pairwise CHAMP ρ ≥ "
-            f"{min_correlation:.2f})."
-        )
+        report.details.append(f"All sources disagree with each other (no pairwise CHAMP ρ ≥ {min_correlation:.2f}).")
     elif flagged:
         report.flagged_sources = flagged
         report.agreement_level = "low"
         for s in flagged:
-            report.details.append(
-                f"{s}: avg CHAMP ρ = {source_avg_rho[s]:.3f} < {min_correlation:.2f}"
-            )
+            report.details.append(f"{s}: avg CHAMP ρ = {source_avg_rho[s]:.3f} < {min_correlation:.2f}")
     else:
         # All sources are in the agreeing clique.
         min_observed = min(
@@ -348,9 +351,7 @@ def assess_source_agreement(
         )
         if min_observed < 0.95:
             report.agreement_level = "moderate"
-            report.details.append(
-                f"Moderate agreement: lowest avg CHAMP ρ = {min_observed:.3f}."
-            )
+            report.details.append(f"Moderate agreement: lowest avg CHAMP ρ = {min_observed:.3f}.")
         else:
             report.agreement_level = "high"
             report.details.append("High agreement across all sources.")
@@ -432,7 +433,7 @@ def assess_source_agreement(
         # reduces the source's weight by 5%, compounding.
         n_outliers = len(team_outliers.get(s, []))
         if n_outliers > 0:
-            outlier_penalty = 0.95 ** n_outliers
+            outlier_penalty = 0.95**n_outliers
             recommended[s] *= outlier_penalty
 
     total = sum(recommended.values())
@@ -446,6 +447,7 @@ def assess_source_agreement(
 # ---------------------------------------------------------------------------
 # Team-level outlier detection
 # ---------------------------------------------------------------------------
+
 
 def _detect_team_outliers(
     sources: Dict[str, "ConsensusData"],
@@ -501,11 +503,7 @@ def _detect_team_outliers(
 
         sorted_vals = sorted(vals.values())
         n = len(sorted_vals)
-        median = (
-            sorted_vals[n // 2]
-            if n % 2 == 1
-            else (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
-        )
+        median = sorted_vals[n // 2] if n % 2 == 1 else (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
 
         for s, v in vals.items():
             if abs(v - median) > abs_deviation_pp:

@@ -82,6 +82,7 @@ ROUND_NAME_MAP: Dict[str, str] = {
 # Game record for evaluation
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class EvalGame:
     """A tournament game with prediction and outcome for evaluation."""
@@ -102,8 +103,7 @@ class EvalGame:
     @property
     def seed_pair(self) -> Tuple[int, int]:
         """Return (lower_seed, higher_seed) for matchup categorisation."""
-        return (min(self.team1_seed, self.team2_seed),
-                max(self.team1_seed, self.team2_seed))
+        return (min(self.team1_seed, self.team2_seed), max(self.team1_seed, self.team2_seed))
 
     @property
     def favorite_prediction(self) -> float:
@@ -129,6 +129,7 @@ class EvalGame:
 # ---------------------------------------------------------------------------
 # Segment metrics result
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SegmentMetrics:
@@ -168,6 +169,7 @@ class SegmentMetrics:
 # Round analysis report
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RoundAnalysisReport:
     """Complete round-aware evaluation report.
@@ -186,18 +188,15 @@ class RoundAnalysisReport:
             "n_total_games": self.n_total_games,
             "years_evaluated": self.years_evaluated,
             "global_metrics": {k: v.to_dict() for k, v in self.global_metrics.items()},
-            "seed_matchup_segments": {
-                k: v.to_dict() for k, v in self.seed_matchup_segments.items()
-            },
-            "round_segments": {
-                k: v.to_dict() for k, v in self.round_segments.items()
-            },
+            "seed_matchup_segments": {k: v.to_dict() for k, v in self.seed_matchup_segments.items()},
+            "round_segments": {k: v.to_dict() for k, v in self.round_segments.items()},
         }
 
 
 # ---------------------------------------------------------------------------
 # Segmentation logic
 # ---------------------------------------------------------------------------
+
 
 class RoundSegmenter:
     """Categorises tournament games into evaluation segments."""
@@ -272,6 +271,7 @@ class RoundSegmenter:
 # Metrics computation
 # ---------------------------------------------------------------------------
 
+
 def compute_segment_metrics(
     games: List[EvalGame],
     segment_name: str,
@@ -300,34 +300,42 @@ def compute_segment_metrics(
 
     # Core metrics with bootstrap CIs
     brier_result = bootstrap_brier(
-        predictions, outcomes, n_bootstrap, ci_level, random_seed,
+        predictions,
+        outcomes,
+        n_bootstrap,
+        ci_level,
+        random_seed,
     )
     ll_result = bootstrap_log_loss(
-        predictions, outcomes, n_bootstrap, ci_level,
+        predictions,
+        outcomes,
+        n_bootstrap,
+        ci_level,
         random_seed + 1 if random_seed else None,
     )
     acc_result = bootstrap_accuracy(
-        predictions, outcomes, n_bootstrap, ci_level,
+        predictions,
+        outcomes,
+        n_bootstrap,
+        ci_level,
         random_seed + 2 if random_seed else None,
     )
     ece_result = bootstrap_ece(
-        predictions, outcomes, min(max(n // 3, 2), 10), n_bootstrap, ci_level,
+        predictions,
+        outcomes,
+        min(max(n // 3, 2), 10),
+        n_bootstrap,
+        ci_level,
         random_seed + 3 if random_seed else None,
     )
 
     # Upset metrics (not bootstrapped — counts)
     n_upsets = sum(1 for g in games if g.is_upset)
     # Predicted upset: model gives < 0.5 to the favorite
-    n_upsets_predicted = sum(
-        1 for g in games
-        if g.favorite_prediction < 0.5 and g.team1_seed != g.team2_seed
-    )
+    n_upsets_predicted = sum(1 for g in games if g.favorite_prediction < 0.5 and g.team1_seed != g.team2_seed)
     ur = None
     if n_upsets > 0:
-        correct_upset_preds = sum(
-            1 for g in games
-            if g.is_upset and g.favorite_prediction < 0.5
-        )
+        correct_upset_preds = sum(1 for g in games if g.is_upset and g.favorite_prediction < 0.5)
         ur = correct_upset_preds / n_upsets
 
     return SegmentMetrics(
@@ -346,6 +354,7 @@ def compute_segment_metrics(
 # ---------------------------------------------------------------------------
 # Main analysis function
 # ---------------------------------------------------------------------------
+
 
 def compute_round_analysis(
     games: List[EvalGame],
@@ -373,7 +382,11 @@ def compute_round_analysis(
     predictions = np.array([g.prediction for g in games])
     outcomes = np.array([g.outcome for g in games])
     global_metrics = compute_all_metrics_with_ci(
-        predictions, outcomes, n_bootstrap, ci_level, random_seed,
+        predictions,
+        outcomes,
+        n_bootstrap,
+        ci_level,
+        random_seed,
     )
 
     # Seed matchup segments
@@ -381,7 +394,10 @@ def compute_round_analysis(
     seed_segment_metrics: Dict[str, SegmentMetrics] = {}
     for seg_name, seg_games in seed_segments.items():
         seed_segment_metrics[seg_name] = compute_segment_metrics(
-            seg_games, seg_name, n_bootstrap, ci_level,
+            seg_games,
+            seg_name,
+            n_bootstrap,
+            ci_level,
             random_seed + hash(seg_name) % 10000 if random_seed else None,
         )
 
@@ -390,7 +406,10 @@ def compute_round_analysis(
     round_segment_metrics: Dict[str, SegmentMetrics] = {}
     for seg_name, seg_games in round_segments.items():
         round_segment_metrics[seg_name] = compute_segment_metrics(
-            seg_games, seg_name, n_bootstrap, ci_level,
+            seg_games,
+            seg_name,
+            n_bootstrap,
+            ci_level,
             random_seed + hash(seg_name) % 10000 if random_seed else None,
         )
 

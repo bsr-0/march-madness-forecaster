@@ -38,12 +38,14 @@ SELECTION_SUNDAY_DATES: Dict[int, date] = {
 
 class PITViolationError(Exception):
     """Raised when a feature violates the Point-in-Time protocol."""
+
     pass
 
 
 @dataclass
 class PITCheckResult:
     """Result of a PIT validation check for a single LOYO fold."""
+
     year: int
     passed: bool
     violations: List[str] = field(default_factory=list)
@@ -55,6 +57,7 @@ class PITCheckResult:
 @dataclass
 class FeatureTierInfo:
     """Tier classification for a single feature."""
+
     name: str
     tier: int  # 1, 2, or 3
     description: str = ""
@@ -89,8 +92,7 @@ class PITValidator:
         """Load and parse the feature MANIFEST.yaml."""
         if not os.path.exists(self.manifest_path):
             logger.warning(
-                "PIT MANIFEST not found at %s. "
-                "PIT enforcement will be limited to structural checks.",
+                "PIT MANIFEST not found at %s. PIT enforcement will be limited to structural checks.",
                 self.manifest_path,
             )
             return
@@ -98,10 +100,7 @@ class PITValidator:
         try:
             import yaml
         except ImportError:
-            logger.warning(
-                "PyYAML not installed. PIT enforcement requires PyYAML. "
-                "Install with: pip install pyyaml"
-            )
+            logger.warning("PyYAML not installed. PIT enforcement requires PyYAML. Install with: pip install pyyaml")
             return
 
         with open(self.manifest_path) as f:
@@ -129,8 +128,7 @@ class PITValidator:
                     )
 
         logger.info(
-            "PIT MANIFEST loaded: %d features "
-            "(Tier 1: %d, Tier 2: %d, Tier 3: %d)",
+            "PIT MANIFEST loaded: %d features (Tier 1: %d, Tier 2: %d, Tier 3: %d)",
             len(self._tier_map),
             sum(1 for f in self._tier_map.values() if f.tier == 1),
             sum(1 for f in self._tier_map.values() if f.tier == 2),
@@ -196,8 +194,7 @@ class PITValidator:
         if feature_metadata is None:
             # Without metadata, we can only do structural checks
             result.warnings.append(
-                f"PIT: No feature metadata provided for year {year}. "
-                "Temporal validation limited to structural checks."
+                f"PIT: No feature metadata provided for year {year}. Temporal validation limited to structural checks."
             )
             return result
 
@@ -279,9 +276,10 @@ class PITValidator:
 
         if result.passed:
             logger.info(
-                "PIT validation passed for year %d: "
-                "%d Tier 2 features, %d Tier 3 features checked.",
-                year, result.tier2_features_checked, result.tier3_features_checked,
+                "PIT validation passed for year %d: %d Tier 2 features, %d Tier 3 features checked.",
+                year,
+                result.tier2_features_checked,
+                result.tier3_features_checked,
             )
 
         return result
@@ -306,11 +304,7 @@ class PITValidator:
         """
         results = []
         for year in years:
-            year_meta = (
-                feature_metadata_by_year.get(year)
-                if feature_metadata_by_year
-                else None
-            )
+            year_meta = feature_metadata_by_year.get(year) if feature_metadata_by_year else None
             result = self.validate_fold(
                 year=year,
                 feature_names=feature_names,
@@ -322,6 +316,7 @@ class PITValidator:
         n_passed = sum(1 for r in results if r.passed)
         logger.info(
             "PIT validation complete: %d/%d folds passed.",
-            n_passed, len(results),
+            n_passed,
+            len(results),
         )
         return results

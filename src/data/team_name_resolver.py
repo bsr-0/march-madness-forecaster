@@ -594,16 +594,12 @@ class TeamNameResolver:
         # (e.g., "michigan" matching "michigan_state" at score 0.84).
         # Also require minimum length ratio to prevent short-string mismatches.
         if best_score >= 0.88 and best_id:
-            return MatchResult(
-                best_id, self._id_to_display[best_id], best_score, "fuzzy"
-            )
+            return MatchResult(best_id, self._id_to_display[best_id], best_score, "fuzzy")
 
         # Unresolved — return normalized form as ID
         return MatchResult(cid, raw, best_score, "unresolved")
 
-    def resolve_batch(
-        self, names: List[str], warn_threshold: float = 0.85
-    ) -> List[MatchResult]:
+    def resolve_batch(self, names: List[str], warn_threshold: float = 0.85) -> List[MatchResult]:
         """Resolve a list of names. Logs warnings for low-confidence matches."""
         results = []
         for name in names:

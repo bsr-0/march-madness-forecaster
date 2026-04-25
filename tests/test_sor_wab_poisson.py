@@ -30,6 +30,7 @@ from src.data.features.feature_engineering import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_game(
     team_id: str,
     opp_id: str,
@@ -50,12 +51,32 @@ def _make_game(
         points=team_pts,
         opp_points=opp_pts,
         possessions=70.0,
-        fga=60.0, fgm=25.0, fg3a=20.0, fg3m=7.0,
-        fta=15.0, ftm=11.0, tov=12.0, orb=10.0, drb=25.0,
-        opp_fga=60.0, opp_fgm=24.0, opp_fg3a=20.0, opp_fg3m=6.0,
-        opp_fta=14.0, opp_ftm=10.0, opp_tov=13.0, opp_orb=9.0, opp_drb=24.0,
-        ast=14.0, stl=7.0, blk=4.0, pf=16.0,
-        opp_ast=13.0, opp_stl=6.0, opp_blk=3.0, opp_pf=15.0,
+        fga=60.0,
+        fgm=25.0,
+        fg3a=20.0,
+        fg3m=7.0,
+        fta=15.0,
+        ftm=11.0,
+        tov=12.0,
+        orb=10.0,
+        drb=25.0,
+        opp_fga=60.0,
+        opp_fgm=24.0,
+        opp_fg3a=20.0,
+        opp_fg3m=6.0,
+        opp_fta=14.0,
+        opp_ftm=10.0,
+        opp_tov=13.0,
+        opp_orb=9.0,
+        opp_drb=24.0,
+        ast=14.0,
+        stl=7.0,
+        blk=4.0,
+        pf=16.0,
+        opp_ast=13.0,
+        opp_stl=6.0,
+        opp_blk=3.0,
+        opp_pf=15.0,
         is_home=is_home,
         is_neutral=is_neutral,
     )
@@ -78,30 +99,35 @@ def _build_season(
     """
     games = []
     for i, (opp_id, (pts, opp_pts)) in enumerate(zip(opponents, results)):
-        date = f"2025-01-{(i+1):02d}"
-        games.append(_make_game(
-            team_id=team_id,
-            opp_id=opp_id,
-            team_pts=pts,
-            opp_pts=opp_pts,
-            is_neutral=is_neutral,
-            game_date=date,
-        ))
+        date = f"2025-01-{(i + 1):02d}"
+        games.append(
+            _make_game(
+                team_id=team_id,
+                opp_id=opp_id,
+                team_pts=pts,
+                opp_pts=opp_pts,
+                is_neutral=is_neutral,
+                game_date=date,
+            )
+        )
         # Mirror game for opponent
-        games.append(_make_game(
-            team_id=opp_id,
-            opp_id=team_id,
-            team_pts=opp_pts,
-            opp_pts=pts,
-            is_neutral=is_neutral,
-            game_date=date,
-        ))
+        games.append(
+            _make_game(
+                team_id=opp_id,
+                opp_id=team_id,
+                team_pts=opp_pts,
+                opp_pts=pts,
+                is_neutral=is_neutral,
+                game_date=date,
+            )
+        )
     return games
 
 
 # ---------------------------------------------------------------------------
 # Test: Poisson Binomial CDF correctness
 # ---------------------------------------------------------------------------
+
 
 class TestPoissonBinomialCDF:
     """Test the _poisson_binomial_cdf static method."""
@@ -175,6 +201,7 @@ class TestPoissonBinomialCDF:
 # Test: SOR properties
 # ---------------------------------------------------------------------------
 
+
 class TestSOR:
     """Test SOR computation via the full engine."""
 
@@ -231,8 +258,7 @@ class TestSOR:
 
         results = self._run_engine(games)
         assert results["A"].sor > results["B"].sor, (
-            f"Hard-schedule SOR ({results['A'].sor}) should exceed "
-            f"easy-schedule SOR ({results['B'].sor})"
+            f"Hard-schedule SOR ({results['A'].sor}) should exceed easy-schedule SOR ({results['B'].sor})"
         )
 
     def test_sor_range(self):
@@ -247,9 +273,7 @@ class TestSOR:
         opps = [f"T{i}" for i in range(1, 16)]
         games = _build_season("CHAMP", opps, [(85, 65)] * 15)
         results = self._run_engine(games)
-        assert results["CHAMP"].sor > 0.85, (
-            f"15-0 team should have high SOR, got {results['CHAMP'].sor}"
-        )
+        assert results["CHAMP"].sor > 0.85, f"15-0 team should have high SOR, got {results['CHAMP'].sor}"
 
     def test_winless_team_low_sor(self):
         """Winless team against decent opponents should have low SOR."""
@@ -263,8 +287,8 @@ class TestSOR:
 
         # Opponents also play each other (round robin) to establish quality
         for i, t1 in enumerate(opps):
-            for t2 in opps[i+1:]:
-                date = f"2025-02-{(i*5+int(t2[1:])):02d}"
+            for t2 in opps[i + 1 :]:
+                date = f"2025-02-{(i * 5 + int(t2[1:])):02d}"
                 games.append(_make_game(t1, t2, 75, 70, game_date=date))
                 games.append(_make_game(t2, t1, 70, 75, game_date=date))
 
@@ -277,6 +301,7 @@ class TestSOR:
 # ---------------------------------------------------------------------------
 # Test: WAB Poisson properties
 # ---------------------------------------------------------------------------
+
 
 class TestWABPoisson:
     """Test WAB_poisson metric properties."""
@@ -301,16 +326,15 @@ class TestWABPoisson:
 
         # Opponents play each other (round robin) — establishes moderate quality
         for i, t1 in enumerate(opps):
-            for t2 in opps[i+1:]:
-                date = f"2025-02-{(i*5+int(t2[1:])):02d}"
+            for t2 in opps[i + 1 :]:
+                date = f"2025-02-{(i * 5 + int(t2[1:])):02d}"
                 games.append(_make_game(t1, t2, 72, 70, game_date=date))
                 games.append(_make_game(t2, t1, 70, 72, game_date=date))
 
         results = self._run_engine(games)
 
         assert results["STRONG"].wab_poisson > results["WEAK"].wab_poisson, (
-            f"5-0 WAB_pb ({results['STRONG'].wab_poisson}) should exceed "
-            f"0-5 WAB_pb ({results['WEAK'].wab_poisson})"
+            f"5-0 WAB_pb ({results['STRONG'].wab_poisson}) should exceed 0-5 WAB_pb ({results['WEAK'].wab_poisson})"
         )
 
     def test_wab_poisson_consistent_with_pergame_wab(self):
@@ -338,14 +362,14 @@ class TestWABPoisson:
         results = self._run_engine(all_games)
 
         assert results["B"].wab_poisson > results["A"].wab_poisson, (
-            f"4-1 WAB_pb ({results['B'].wab_poisson}) should exceed "
-            f"3-2 WAB_pb ({results['A'].wab_poisson})"
+            f"4-1 WAB_pb ({results['B'].wab_poisson}) should exceed 3-2 WAB_pb ({results['A'].wab_poisson})"
         )
 
 
 # ---------------------------------------------------------------------------
 # Test: Feature vector integration
 # ---------------------------------------------------------------------------
+
 
 class TestFeatureVectorIntegration:
     """Ensure the pruned feature vector still exposes WAB_pb correctly."""
@@ -358,9 +382,7 @@ class TestFeatureVectorIntegration:
         """to_vector() output length should match TEAM_FEATURE_DIM."""
         tf = TeamFeatures(team_id="test", team_name="Test", seed=8, region="East")
         vec = tf.to_vector()
-        assert len(vec) == TEAM_FEATURE_DIM, (
-            f"to_vector() produced {len(vec)} features, expected {TEAM_FEATURE_DIM}"
-        )
+        assert len(vec) == TEAM_FEATURE_DIM, f"to_vector() produced {len(vec)} features, expected {TEAM_FEATURE_DIM}"
 
     def test_feature_names_length(self):
         """get_feature_names() should match TEAM_FEATURE_DIM."""
@@ -370,40 +392,50 @@ class TestFeatureVectorIntegration:
     def test_wab_poisson_in_feature_names(self):
         """'wab_poisson' should remain in feature names after pruning."""
         names = TeamFeatures.get_feature_names()
-        assert 'sor' not in names, "sor should be pruned from the feature vector"
-        assert 'wab_poisson' in names, "Missing 'wab_poisson' in feature names"
+        assert "sor" not in names, "sor should be pruned from the feature vector"
+        assert "wab_poisson" in names, "Missing 'wab_poisson' in feature names"
 
     def test_wab_poisson_value_in_vector(self):
         """WAB_pb value should appear in the vector."""
         tf = TeamFeatures(
-            team_id="test", team_name="Test", seed=1, region="East",
-            sor=0.85, wab_poisson=3.5,
+            team_id="test",
+            team_name="Test",
+            seed=1,
+            region="East",
+            sor=0.85,
+            wab_poisson=3.5,
         )
         vec = tf.to_vector()
         names = TeamFeatures.get_feature_names()
 
-        wab_pb_idx = names.index('wab_poisson')
+        wab_pb_idx = names.index("wab_poisson")
 
         assert abs(vec[wab_pb_idx] - 3.5) < 1e-10, f"WAB_pb value mismatch: {vec[wab_pb_idx]}"
 
     def test_vector_names_alignment(self):
         """Every feature name should correspond to the correct position in to_vector()."""
         tf = TeamFeatures(
-            team_id="test", team_name="Test", seed=5, region="West",
-            wab=2.0, sor=0.7, wab_poisson=1.5,
+            team_id="test",
+            team_name="Test",
+            seed=5,
+            region="West",
+            wab=2.0,
+            sor=0.7,
+            wab_poisson=1.5,
         )
         vec = tf.to_vector()
         names = TeamFeatures.get_feature_names()
 
         # FIX C4: wab removed from feature vector (near-redundant with wab_poisson)
-        assert 'wab' not in names, "wab should be removed (FIX C4)"
-        wab_pb_idx = names.index('wab_poisson')
+        assert "wab" not in names, "wab should be removed (FIX C4)"
+        wab_pb_idx = names.index("wab_poisson")
         assert wab_pb_idx >= 0
 
 
 # ---------------------------------------------------------------------------
 # Test: Poisson Binomial mean
 # ---------------------------------------------------------------------------
+
 
 class TestPoissonBinomialMean:
     """Test the _poisson_binomial_mean helper."""
@@ -422,6 +454,7 @@ class TestPoissonBinomialMean:
 # Test: End-to-end with engine
 # ---------------------------------------------------------------------------
 
+
 class TestEndToEnd:
     """Integration test: full engine produces valid SOR/WAB_pb values."""
 
@@ -432,8 +465,8 @@ class TestEndToEnd:
 
         # Round-robin: each team plays every other team once
         for i, t1 in enumerate(teams):
-            for t2 in teams[i+1:]:
-                date = f"2025-01-{(i+1):02d}"
+            for t2 in teams[i + 1 :]:
+                date = f"2025-01-{(i + 1):02d}"
                 # Higher-indexed teams generally win (creates a hierarchy)
                 t1_pts = 70 + int(t1[1:]) * 2
                 t2_pts = 70 + int(t2[1:]) * 2
@@ -459,7 +492,7 @@ class TestEndToEnd:
             for j, t2 in enumerate(teams):
                 if i >= j:
                     continue
-                date = f"2025-01-{(i*5+j):02d}"
+                date = f"2025-01-{(i * 5 + j):02d}"
                 # Team with higher index wins by larger margin
                 t1_pts = 65 + i * 3
                 t2_pts = 65 + j * 3

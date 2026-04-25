@@ -37,6 +37,7 @@ from pydantic import ValidationError
 # PublicPicksSchema
 # -----------------------------------------------------------------------
 
+
 class TestPublicPicksSchema:
     def test_valid_picks(self):
         p = PublicPicksSchema(
@@ -76,6 +77,7 @@ class TestPublicPicksSchema:
 # BettingOddsSchema
 # -----------------------------------------------------------------------
 
+
 class TestBettingOddsSchema:
     def test_valid_odds(self):
         o = BettingOddsSchema(
@@ -112,6 +114,7 @@ class TestBettingOddsSchema:
 # PlayerStatsSchema
 # -----------------------------------------------------------------------
 
+
 class TestPlayerStatsSchema:
     def test_valid_player(self):
         p = PlayerStatsSchema(
@@ -143,6 +146,7 @@ class TestPlayerStatsSchema:
 # -----------------------------------------------------------------------
 # TournamentGameSchema
 # -----------------------------------------------------------------------
+
 
 class TestTournamentGameSchema:
     def test_valid_game(self):
@@ -178,6 +182,7 @@ class TestTournamentGameSchema:
 # PreseasonAPSchema
 # -----------------------------------------------------------------------
 
+
 class TestPreseasonAPSchema:
     def test_valid_rankings(self):
         r = PreseasonAPSchema(rankings={"duke": 1, "unc": 5, "kansas": 25})
@@ -196,6 +201,7 @@ class TestPreseasonAPSchema:
 # ConferenceSeedsSchema
 # -----------------------------------------------------------------------
 
+
 class TestConferenceSeedsSchema:
     def test_valid_seeds(self):
         s = ConferenceSeedsSchema(seeds={"ACC": {"duke": 1, "unc": 2}})
@@ -209,6 +215,7 @@ class TestConferenceSeedsSchema:
 # -----------------------------------------------------------------------
 # CoachTournamentSchema
 # -----------------------------------------------------------------------
+
 
 class TestCoachTournamentSchema:
     def test_valid_coach(self):
@@ -229,6 +236,7 @@ class TestCoachTournamentSchema:
 # -----------------------------------------------------------------------
 # Validate helper functions
 # -----------------------------------------------------------------------
+
 
 class TestValidateConsensusData:
     def test_valid_data(self):
@@ -406,16 +414,20 @@ class TestValidatePreseasonAP:
 
 class TestValidateCoachData:
     def test_valid(self):
-        result = validate_coach_tournament_data({
-            "coach_k": {"name": "Coach K", "appearances": 36, "wins": 101, "losses": 30, "teams": ["Duke"]},
-        })
+        result = validate_coach_tournament_data(
+            {
+                "coach_k": {"name": "Coach K", "appearances": 36, "wins": 101, "losses": 30, "teams": ["Duke"]},
+            }
+        )
         assert "coach_k" in result
 
     def test_skips_invalid(self):
-        result = validate_coach_tournament_data({
-            "good": {"name": "Good", "appearances": 5, "wins": 3, "losses": 2, "teams": []},
-            "bad": {"name": "Bad", "wins": -1, "losses": 0, "appearances": 0, "teams": []},
-        })
+        result = validate_coach_tournament_data(
+            {
+                "good": {"name": "Good", "appearances": 5, "wins": 3, "losses": 2, "teams": []},
+                "bad": {"name": "Bad", "wins": -1, "losses": 0, "appearances": 0, "teams": []},
+            }
+        )
         assert "good" in result
         assert "bad" not in result
 
@@ -482,6 +494,7 @@ class TestValidateInjuryReports:
 # MarketConsensusSchema
 # -----------------------------------------------------------------------
 
+
 class TestMarketConsensusSchema:
     def test_valid(self):
         m = MarketConsensusSchema(
@@ -502,6 +515,7 @@ class TestMarketConsensusSchema:
 # -----------------------------------------------------------------------
 # ExternalRatingSchema
 # -----------------------------------------------------------------------
+
 
 class TestExternalRatingSchema:
     def test_valid(self):

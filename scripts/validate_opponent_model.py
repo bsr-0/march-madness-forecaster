@@ -134,8 +134,10 @@ def run_validation():
         r = validate_year(year, scoring_vector, rng)
         if r is not None:
             results.append(r)
-            print(f"  {year}: median={r['avg_median']:.0f}, max={r['avg_max']:.0f}, "
-                  f"std={r['avg_std']:.0f}, zeros={r['zero_score_frac']:.4f} [{r['pick_source']}]")
+            print(
+                f"  {year}: median={r['avg_median']:.0f}, max={r['avg_max']:.0f}, "
+                f"std={r['avg_std']:.0f}, zeros={r['zero_score_frac']:.4f} [{r['pick_source']}]"
+            )
         else:
             print(f"  {year}: SKIP")
 
@@ -152,10 +154,7 @@ def print_summary(results):
     print(f"  Scoring: ESPN standard (R64=10, R32=20, S16=40, E8=80, F4=160, CHAMP=320)")
     print()
 
-    hdr = (
-        f"{'Year':<6}{'Source':<10}{'Avg Med':>8}{'Avg Max':>8}{'Med Max':>8}"
-        f"{'Avg Std':>8}{'Avg Min':>8}{'Zero%':>7}"
-    )
+    hdr = f"{'Year':<6}{'Source':<10}{'Avg Med':>8}{'Avg Max':>8}{'Med Max':>8}{'Avg Std':>8}{'Avg Min':>8}{'Zero%':>7}"
     print(hdr)
     print("-" * len(hdr))
 
@@ -174,11 +173,7 @@ def print_summary(results):
         )
 
     print("-" * len(hdr))
-    print(
-        f"{'MEAN':<16}"
-        f"{np.mean(all_medians):>8.0f}{np.mean(all_maxes):>8.0f}{'':>8}"
-        f"{np.mean(all_stds):>8.0f}"
-    )
+    print(f"{'MEAN':<16}{np.mean(all_medians):>8.0f}{np.mean(all_maxes):>8.0f}{'':>8}{np.mean(all_stds):>8.0f}")
 
     # Diagnostic checks
     print()

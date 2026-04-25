@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HistoricalTournamentGame:
     """A historical women's tournament game result."""
+
     year: int
     round_name: str  # "R64", "R32", "S16", "E8", "F4", "CHAMP"
     team1_seed: int
@@ -41,8 +42,7 @@ class HistoricalTournamentGame:
     @property
     def seed_matchup(self) -> Tuple[int, int]:
         """Return (lower_seed, higher_seed) tuple."""
-        return (min(self.team1_seed, self.team2_seed),
-                max(self.team1_seed, self.team2_seed))
+        return (min(self.team1_seed, self.team2_seed), max(self.team1_seed, self.team2_seed))
 
     @property
     def favored_won(self) -> bool:
@@ -73,19 +73,16 @@ class WomensHistoricalResults:
 
         self.games = []
         for entry in data:
-            game = HistoricalTournamentGame(**{
-                k: v for k, v in entry.items()
-                if k in HistoricalTournamentGame.__dataclass_fields__
-            })
+            game = HistoricalTournamentGame(
+                **{k: v for k, v in entry.items() if k in HistoricalTournamentGame.__dataclass_fields__}
+            )
             if years is None or game.year in years:
                 self.games.append(game)
 
         logger.info("Loaded %d historical women's tournament games", len(self.games))
         return self.games
 
-    def _generate_synthetic_history(
-        self, years: Optional[List[int]] = None
-    ) -> List[HistoricalTournamentGame]:
+    def _generate_synthetic_history(self, years: Optional[List[int]] = None) -> List[HistoricalTournamentGame]:
         """Generate synthetic historical data from known upset rates.
 
         When actual game-level data isn't cached, we generate statistically
@@ -93,6 +90,7 @@ class WomensHistoricalResults:
         for women's tournament (2000-2025).
         """
         import numpy as np
+
         rng = np.random.default_rng(42)
 
         if years is None:
@@ -100,13 +98,18 @@ class WomensHistoricalResults:
             years = [y for y in years if y != 2020]  # COVID year
 
         # First round: 4 regions x 8 games = 32 games per year
-        seed_matchups = [(1, 16), (8, 9), (5, 12), (4, 13),
-                         (6, 11), (3, 14), (7, 10), (2, 15)]
+        seed_matchups = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 
         # Women's historical favored-team win rates
         favored_win_rates = {
-            (1, 16): 0.993, (2, 15): 0.965, (3, 14): 0.900, (4, 13): 0.840,
-            (5, 12): 0.690, (6, 11): 0.650, (7, 10): 0.620, (8, 9): 0.520,
+            (1, 16): 0.993,
+            (2, 15): 0.965,
+            (3, 14): 0.900,
+            (4, 13): 0.840,
+            (5, 12): 0.690,
+            (6, 11): 0.650,
+            (7, 10): 0.620,
+            (8, 9): 0.520,
         }
 
         self.games = []

@@ -120,6 +120,7 @@ TORVIK_ID_ALIASES: Dict[str, str] = {
     "william___mary": "william___mary",
 }
 
+
 def build_game_id_resolver(
     team_metrics: Dict[str, Dict],
     games_payload: Dict,
@@ -149,10 +150,8 @@ def build_game_id_resolver(
         # Unicode normalization (san_josé_state → san_jose_state)
         try:
             import unicodedata as _ud
-            _ascii = "".join(
-                c for c in _ud.normalize("NFKD", loc_norm)
-                if not _ud.combining(c)
-            )
+
+            _ascii = "".join(c for c in _ud.normalize("NFKD", loc_norm) if not _ud.combining(c))
             if _ascii != loc_norm:
                 return _loc_to_metric(_ascii)
         except Exception:
@@ -209,10 +208,7 @@ def build_game_id_resolver(
                 # Reject ambiguous short aliases (e.g., "a_m", "unc", "miami").
                 if len(alias_prefix) < 4:
                     continue
-                ambiguous = any(
-                    mk.startswith(alias_prefix + "_") and mk != metric_id
-                    for mk in metric_keys
-                )
+                ambiguous = any(mk.startswith(alias_prefix + "_") and mk != metric_id for mk in metric_keys)
                 if ambiguous:
                     continue
                 if metric_id in team_metrics:
@@ -225,10 +221,8 @@ def build_game_id_resolver(
         # Unicode normalization fallback
         try:
             import unicodedata as _udata
-            _ascii_id = "".join(
-                c for c in _udata.normalize("NFKD", game_id)
-                if not _udata.combining(c)
-            )
+
+            _ascii_id = "".join(c for c in _udata.normalize("NFKD", game_id) if not _udata.combining(c))
             if _ascii_id != game_id:
                 _result = _resolve_team(_ascii_id)
                 if _result:
@@ -244,6 +238,7 @@ def build_game_id_resolver(
 def _normalize_team_id(name: str) -> str:
     # FIX #2: Delegate to shared normalizer for cross-pipeline consistency.
     from .normalize import normalize_team_id as _shared
+
     return _shared(name)
 
 
@@ -453,34 +448,38 @@ def run_coverage_audit(
     os.makedirs(os.path.dirname(out_csv), exist_ok=True)
     with open(out_csv, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "year",
-            "total_games",
-            "resolved_games",
-            "missing_team_entries",
-            "missing_unique_teams",
-            "missing_probable_d1",
-            "missing_probable_non_d1",
-            "missing_strict_d1",
-            "missing_vs_seeded",
-            "missing_vs_seeded_wins",
-        ])
+        writer.writerow(
+            [
+                "year",
+                "total_games",
+                "resolved_games",
+                "missing_team_entries",
+                "missing_unique_teams",
+                "missing_probable_d1",
+                "missing_probable_non_d1",
+                "missing_strict_d1",
+                "missing_vs_seeded",
+                "missing_vs_seeded_wins",
+            ]
+        )
         for year in years:
             yr = results.get(str(year))
             if not yr:
                 continue
-            writer.writerow([
-                year,
-                yr["total_games"],
-                yr["resolved_games"],
-                yr["missing_team_entries"],
-                yr["missing_unique_teams"],
-                yr["missing_probable_d1"],
-                yr["missing_probable_non_d1"],
-                yr["missing_strict_d1"],
-                yr["missing_vs_seeded"],
-                yr["missing_vs_seeded_wins"],
-            ])
+            writer.writerow(
+                [
+                    year,
+                    yr["total_games"],
+                    yr["resolved_games"],
+                    yr["missing_team_entries"],
+                    yr["missing_unique_teams"],
+                    yr["missing_probable_d1"],
+                    yr["missing_probable_non_d1"],
+                    yr["missing_strict_d1"],
+                    yr["missing_vs_seeded"],
+                    yr["missing_vs_seeded_wins"],
+                ]
+            )
 
     return out_json, out_csv
 

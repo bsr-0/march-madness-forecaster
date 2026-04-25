@@ -96,9 +96,9 @@ def run_convergence_test():
     results = []
 
     for year in test_years:
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"YEAR {year}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         seeds, regions = load_seeds_and_regions(year)
         if not seeds:
@@ -134,7 +134,7 @@ def run_convergence_test():
 
         header = f"  {'Mode':<14} {'n_model':>8} {'n_rep':>6} {'P(1st)':>8} {'MeanRnk':>8} {'StdP1':>8} {'time':>6}"
         print(header)
-        print(f"  {'-'*66}")
+        print(f"  {'-' * 66}")
 
         for mode_name in modes_to_test:
             for n_model in n_model_values:
@@ -149,14 +149,24 @@ def run_convergence_test():
                     else:
                         rp = torvik_rp
                         model_brackets = sample_f4_first_brackets(
-                            first_round, rp, n_model, rng, seeds, regions,
+                            first_round,
+                            rp,
+                            n_model,
+                            rng,
+                            seeds,
+                            regions,
                         )
 
                     all_ranks = np.zeros((n_model, n_repeats))
 
                     for rep in range(n_repeats):
                         opp = generate_opponent_brackets(
-                            n_opponents, first_round, seed_pw, pick_dist, seeds, rng,
+                            n_opponents,
+                            first_round,
+                            seed_pw,
+                            pick_dist,
+                            seeds,
+                            rng,
                         )
                         sim_outcomes, sim_by_round = simulate_tournament_outcomes(
                             n_tournaments=1,
@@ -166,15 +176,18 @@ def run_convergence_test():
                             noise_std=0.16,
                             rng=rng,
                         )
-                        sim_winners = {
-                            rnd: set(sim_by_round[0][ri])
-                            for ri, rnd in enumerate(ROUND_NAMES)
-                        }
+                        sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
                         model_scores = score_brackets_team_identity(
-                            model_brackets, sim_winners, first_round, ESPN_SCORING,
+                            model_brackets,
+                            sim_winners,
+                            first_round,
+                            ESPN_SCORING,
                         )
                         opp_scores = score_brackets_team_identity(
-                            opp, sim_winners, first_round, ESPN_SCORING,
+                            opp,
+                            sim_winners,
+                            first_round,
+                            ESPN_SCORING,
                         )
 
                         for m in range(n_model):
@@ -199,16 +212,18 @@ def run_convergence_test():
                         f"{p_first:>8.4f} {mean_rank:>8.1f} {std_p1:>8.4f} {elapsed:>5.1f}s"
                     )
 
-                    results.append({
-                        "year": year,
-                        "mode": mode_name,
-                        "n_model": n_model,
-                        "n_repeats": n_repeats,
-                        "p_first": float(p_first),
-                        "mean_rank": float(mean_rank),
-                        "std_p1": float(std_p1),
-                        "elapsed": float(elapsed),
-                    })
+                    results.append(
+                        {
+                            "year": year,
+                            "mode": mode_name,
+                            "n_model": n_model,
+                            "n_repeats": n_repeats,
+                            "p_first": float(p_first),
+                            "mean_rank": float(mean_rank),
+                            "std_p1": float(std_p1),
+                            "elapsed": float(elapsed),
+                        }
+                    )
 
     # Save results
     out_path = PROJECT_ROOT / "artifacts" / "convergence_test_results.json"
@@ -218,9 +233,9 @@ def run_convergence_test():
     print(f"\nResults saved to {out_path}")
 
     # Summary table
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("CONVERGENCE SUMMARY")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"\nQuestion: Does P(1st) stabilize at 50 brackets x 50 repeats?")
     print(f"If StdP1 > |P(1st) difference between modes|, we're measuring noise.\n")
 

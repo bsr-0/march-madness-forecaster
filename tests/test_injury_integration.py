@@ -51,17 +51,24 @@ def _make_player(
 
 def _make_roster(n_players: int = 12) -> Roster:
     positions = [
-        Position.POINT_GUARD, Position.SHOOTING_GUARD, Position.SMALL_FORWARD,
-        Position.POWER_FORWARD, Position.CENTER,
-        Position.POINT_GUARD, Position.SHOOTING_GUARD, Position.SMALL_FORWARD,
-        Position.POWER_FORWARD, Position.CENTER,
-        Position.SHOOTING_GUARD, Position.POWER_FORWARD,
+        Position.POINT_GUARD,
+        Position.SHOOTING_GUARD,
+        Position.SMALL_FORWARD,
+        Position.POWER_FORWARD,
+        Position.CENTER,
+        Position.POINT_GUARD,
+        Position.SHOOTING_GUARD,
+        Position.SMALL_FORWARD,
+        Position.POWER_FORWARD,
+        Position.CENTER,
+        Position.SHOOTING_GUARD,
+        Position.POWER_FORWARD,
     ]
     players = []
     for i in range(min(n_players, len(positions))):
         players.append(
             _make_player(
-                f"Player {i+1}",
+                f"Player {i + 1}",
                 position=positions[i],
                 minutes=35.0 - i * 2,
                 rapm_o=3.0 - i * 0.3,
@@ -202,12 +209,18 @@ class TestInjurySeverityEstimator:
         model = InjurySeverityEstimator(random_seed=42)
 
         ankle_q = InjuryReport(
-            player_name="A", team_id="t", status=InjuryStatus.QUESTIONABLE,
-            injury_type="ankle", expected_return="day-to-day",
+            player_name="A",
+            team_id="t",
+            status=InjuryStatus.QUESTIONABLE,
+            injury_type="ankle",
+            expected_return="day-to-day",
         )
         knee_d = InjuryReport(
-            player_name="B", team_id="t", status=InjuryStatus.DOUBTFUL,
-            injury_type="knee", expected_return="week-to-week",
+            player_name="B",
+            team_id="t",
+            status=InjuryStatus.DOUBTFUL,
+            injury_type="knee",
+            expected_return="week-to-week",
         )
 
         ankle_mean, _ = model.estimate_availability(ankle_q)
@@ -217,8 +230,10 @@ class TestInjurySeverityEstimator:
     def test_more_recovery_time_improves_availability(self):
         model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
-            player_name="Test", team_id="t",
-            status=InjuryStatus.QUESTIONABLE, injury_type="ankle",
+            player_name="Test",
+            team_id="t",
+            status=InjuryStatus.QUESTIONABLE,
+            injury_type="ankle",
         )
         mean_1day, _ = model.estimate_availability(report, days_until_game=1.0)
         mean_7day, _ = model.estimate_availability(report, days_until_game=7.0)
@@ -227,8 +242,10 @@ class TestInjurySeverityEstimator:
     def test_sample_availability_shape(self):
         model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
-            player_name="Test", team_id="t",
-            status=InjuryStatus.QUESTIONABLE, injury_type="ankle",
+            player_name="Test",
+            team_id="t",
+            status=InjuryStatus.QUESTIONABLE,
+            injury_type="ankle",
         )
         samples = model.sample_availability(report, n_samples=500)
         assert samples.shape == (500,)

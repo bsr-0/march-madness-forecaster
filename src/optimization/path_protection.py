@@ -42,6 +42,7 @@ ROUND_POINTS = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PathConflict:
     """A detected inconsistency in a bracket's pick chain.
@@ -90,6 +91,7 @@ class BracketPath:
 # Bracket topology helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_bracket_slot(round_num: int, game_idx: int) -> int:
     """Convert (round_num, game_idx) to a flat slot index (0-62)."""
     offset = 0
@@ -123,6 +125,7 @@ def _build_pick_index(
 # ---------------------------------------------------------------------------
 # Path Protection Scorer
 # ---------------------------------------------------------------------------
+
 
 class PathProtectionScorer:
     """Computes path consistency metrics for a filled bracket.
@@ -174,7 +177,9 @@ class PathProtectionScorer:
             # Conditional EV: probability the winner actually reaches this game
             # given all earlier-round picks in the bracket
             path_survival = self._compute_path_survival(
-                pick, pick_index, predict_fn,
+                pick,
+                pick_index,
+                predict_fn,
             )
             cond_ev = pick.win_probability * path_survival * points
             conditional_ev += cond_ev
@@ -212,7 +217,11 @@ class PathProtectionScorer:
         # Check each feeder chain for the winner
         winner = pick.winner_id
         survival = self._trace_winner_path(
-            winner, current_round, current_game, pick_index, predict_fn,
+            winner,
+            current_round,
+            current_game,
+            pick_index,
+            predict_fn,
         )
         return survival
 
@@ -307,8 +316,11 @@ class PathProtectionScorer:
 
         # Compute P(champion reaches F4) WITHOUT the upset
         baseline_survival = self._trace_winner_path(
-            champion_id, f4_round, 0,  # game_idx doesn't matter for tracing
-            pick_index, predict_fn,
+            champion_id,
+            f4_round,
+            0,  # game_idx doesn't matter for tracing
+            pick_index,
+            predict_fn,
         )
 
         # Compute P(champion reaches F4) WITH the upset
@@ -318,8 +330,11 @@ class PathProtectionScorer:
         pick_index[upset_key] = upset_pick
 
         disrupted_survival = self._trace_winner_path(
-            champion_id, f4_round, 0,
-            pick_index, predict_fn,
+            champion_id,
+            f4_round,
+            0,
+            pick_index,
+            predict_fn,
         )
 
         # Restore original
@@ -367,16 +382,15 @@ class PathProtectionScorer:
                         region = team_regions.get(team_id, "Unknown")
                         loss_name = ROUND_NAMES[loss_r] if loss_r < 6 else "CHAMP"
                         win_name = ROUND_NAMES[win_r] if win_r < 6 else "CHAMP"
-                        conflicts.append(PathConflict(
-                            team_id=team_id,
-                            region=region,
-                            conflict_round=loss_name,
-                            description=(
-                                f"{team_id} picked to lose in {loss_name} "
-                                f"but win in {win_name}"
-                            ),
-                            disruption_cost=1.0,
-                        ))
+                        conflicts.append(
+                            PathConflict(
+                                team_id=team_id,
+                                region=region,
+                                conflict_round=loss_name,
+                                description=(f"{team_id} picked to lose in {loss_name} but win in {win_name}"),
+                                disruption_cost=1.0,
+                            )
+                        )
 
         return conflicts
 
@@ -384,6 +398,7 @@ class PathProtectionScorer:
 # ---------------------------------------------------------------------------
 # Quadrant Correlation Constraint
 # ---------------------------------------------------------------------------
+
 
 class QuadrantCorrelationConstraint:
     """Enforces protocol Section 4.4 quadrant (region) rules.
@@ -459,13 +474,17 @@ class QuadrantCorrelationConstraint:
                     region_upsets.append(pick)
 
             # Is this the champion's region?
-            is_champion_region = (region == champion_region)
+            is_champion_region = region == champion_region
 
             # Check disruption cost for each upset in champion's region
             if is_champion_region:
                 for upset in region_upsets:
                     cost = scorer.compute_path_disruption_cost(
-                        picks, upset, champion_id, predict_fn, team_regions,
+                        picks,
+                        upset,
+                        champion_id,
+                        predict_fn,
+                        team_regions,
                     )
                     if cost > self.max_disruption_cost:
                         violations.append(
@@ -478,21 +497,15 @@ class QuadrantCorrelationConstraint:
             region_details[region] = {
                 "n_upsets": upset_count,
                 "is_champion_region": is_champion_region,
-                "has_f4_pick": any(
-                    f4_regions.get(tid) == region for tid in final_four_picks
-                ),
+                "has_f4_pick": any(f4_regions.get(tid) == region for tid in final_four_picks),
             }
 
         # Rule 4: At least one F4 pick with seed <= 3
         if self.require_safe_f4:
-            safe_f4 = [
-                tid for tid in final_four_picks
-                if team_seeds.get(tid, 16) <= 3
-            ]
+            safe_f4 = [tid for tid in final_four_picks if team_seeds.get(tid, 16) <= 3]
             if not safe_f4:
                 violations.append(
-                    "No Final Four pick has seed <= 3. At least one safe "
-                    "pick is required for bracket robustness."
+                    "No Final Four pick has seed <= 3. At least one safe pick is required for bracket robustness."
                 )
 
         # Compute overall penalty
@@ -523,7 +536,12 @@ class QuadrantCorrelationConstraint:
         1.0 = fully compliant, <1.0 = penalized proportionally.
         """
         report = self.evaluate(
-            picks, final_four_picks, champion_id,
-            team_regions, team_seeds, predict_fn, public_picks,
+            picks,
+            final_four_picks,
+            champion_id,
+            team_regions,
+            team_seeds,
+            predict_fn,
+            public_picks,
         )
         return report.penalty

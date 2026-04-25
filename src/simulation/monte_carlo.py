@@ -114,9 +114,7 @@ class AggregatedResults:
     _MIN_PUBLIC_ODDS = 0.01
 
     def get_leverage_picks(
-        self,
-        public_odds: Dict[str, float],
-        min_leverage: float = 1.5
+        self, public_odds: Dict[str, float], min_leverage: float = 1.5
     ) -> List[Tuple[str, float, float, float]]:
         """
         Find high-leverage picks.
@@ -218,8 +216,7 @@ def _run_batch(
             round_regional_std = regional_correlation * decay
             if round_regional_std > 1e-6:
                 region_noise_mult_by_round[round_idx] = {
-                    r: max(0.2, 1.0 + rng.normal(0, round_regional_std))
-                    for r in unique_regions
+                    r: max(0.2, 1.0 + rng.normal(0, round_regional_std)) for r in unique_regions
                 }
             else:
                 region_noise_mult_by_round[round_idx] = {r: 1.0 for r in unique_regions}
@@ -291,7 +288,7 @@ def _run_batch(
                     # Injury differential
                     inj1 = team_injury_shift.get(team1, 0.0)
                     inj2 = team_injury_shift.get(team2, 0.0)
-                    logit += (inj1 - inj2)
+                    logit += inj1 - inj2
 
                     # Per-game idiosyncratic noise (scaled by regional factor)
                     game_noise = rng.normal(0, idiosyncratic_std * noise_mult)
@@ -318,13 +315,15 @@ def _run_batch(
         elite_eight = round_results[2] if len(round_results) >= 3 else []
         final_four = round_results[3] if len(round_results) >= 4 else []
 
-        results.append({
-            "champion": champion,
-            "final_four": final_four,
-            "elite_eight": elite_eight,
-            "sweet_sixteen": sweet_sixteen,
-            "round_of_32": round_of_32,
-        })
+        results.append(
+            {
+                "champion": champion,
+                "final_four": final_four,
+                "elite_eight": elite_eight,
+                "sweet_sixteen": sweet_sixteen,
+                "round_of_32": round_of_32,
+            }
+        )
 
     return results
 
@@ -340,11 +339,7 @@ class MonteCarloEngine:
     - Pre-computed matchup probability cache
     """
 
-    def __init__(
-        self,
-        predict_fn: Callable[[str, str], float],
-        config: SimulationConfig = None
-    ):
+    def __init__(self, predict_fn: Callable[[str, str], float], config: SimulationConfig = None):
         """
         Initialize Monte Carlo engine.
 
@@ -356,12 +351,7 @@ class MonteCarloEngine:
         self.predict_fn = predict_fn
         self.config = config or SimulationConfig()
 
-
-    def simulate_tournament(
-        self,
-        bracket: "TournamentBracket",
-        show_progress: bool = True
-    ) -> AggregatedResults:
+    def simulate_tournament(self, bracket: "TournamentBracket", show_progress: bool = True) -> AggregatedResults:
         """
         Run full Monte Carlo simulation with true parallelism.
 
@@ -390,13 +380,11 @@ class MonteCarloEngine:
         # When the simulation stage provides _matchup_probs_by_round, the MC
         # engine uses round-specific probabilities (R64 priors decay in later
         # rounds). Otherwise falls back to the single matchup_probs dict.
-        matchup_probs_by_round: Optional[Dict[int, Dict[Tuple[str, str], float]]] = (
-            getattr(self, '_matchup_probs_by_round', None)
+        matchup_probs_by_round: Optional[Dict[int, Dict[Tuple[str, str], float]]] = getattr(
+            self, "_matchup_probs_by_round", None
         )
 
-        team_data = {
-            t.team_id: (t.seed, t.region, t.strength) for t in bracket.teams
-        }
+        team_data = {t.team_id: (t.seed, t.region, t.strength) for t in bracket.teams}
 
         num_sims = self.config.num_simulations
         batch_size = self.config.batch_size
@@ -424,9 +412,11 @@ class MonteCarloEngine:
                     for bs, seed in batches:
                         future = executor.submit(
                             _run_batch,
-                            bs, seed,
+                            bs,
+                            seed,
                             bracket.first_round_matchups,
-                            team_data, matchup_probs,
+                            team_data,
+                            matchup_probs,
                             self.config.noise_std,
                             self.config.injury_probability,
                             rc,
@@ -440,9 +430,13 @@ class MonteCarloEngine:
                 # Fallback to sequential if multiprocessing fails
                 for bs, seed in batches:
                     batch_results = _run_batch(
-                        bs, seed, bracket.first_round_matchups,
-                        team_data, matchup_probs,
-                        self.config.noise_std, self.config.injury_probability,
+                        bs,
+                        seed,
+                        bracket.first_round_matchups,
+                        team_data,
+                        matchup_probs,
+                        self.config.noise_std,
+                        self.config.injury_probability,
                         rc,
                         matchup_probs_by_round,
                     )
@@ -450,9 +444,13 @@ class MonteCarloEngine:
         else:
             for bs, seed in batches:
                 batch_results = _run_batch(
-                    bs, seed, bracket.first_round_matchups,
-                    team_data, matchup_probs,
-                    self.config.noise_std, self.config.injury_probability,
+                    bs,
+                    seed,
+                    bracket.first_round_matchups,
+                    team_data,
+                    matchup_probs,
+                    self.config.noise_std,
+                    self.config.injury_probability,
                     rc,
                     matchup_probs_by_round,
                 )
@@ -460,10 +458,7 @@ class MonteCarloEngine:
 
         return self._aggregate_raw_results(all_raw_results)
 
-    def _aggregate_raw_results(
-        self,
-        results: List[Dict]
-    ) -> AggregatedResults:
+    def _aggregate_raw_results(self, results: List[Dict]) -> AggregatedResults:
         """Aggregate raw simulation result dictionaries."""
         n = len(results)
 
@@ -530,6 +525,7 @@ class MonteCarloEngine:
 @dataclass
 class TournamentTeam:
     """Team in tournament bracket."""
+
     team_id: str
     seed: int
     region: str
@@ -579,7 +575,7 @@ def run_simulation(
     predict_fn: Callable[[str, str], float],
     teams_by_region: Dict[str, List[TournamentTeam]],
     num_simulations: int = 10000,
-    show_progress: bool = True
+    show_progress: bool = True,
 ) -> AggregatedResults:
     """
     Convenience function to run Monte Carlo simulation.
@@ -612,11 +608,12 @@ HISTORICAL_UPSET_RATES: Dict[Tuple[int, int], float] = {
     (5, 12): 0.360,
     (6, 11): 0.380,
     (7, 10): 0.390,
-    (8, 9):  0.490,
+    (8, 9): 0.490,
 }
 
 
 import logging as _logging
+
 _mc_logger = _logging.getLogger(__name__)
 
 
@@ -640,8 +637,7 @@ def validate_upset_rates(
         Dict with per-matchup comparison and overall ``passed`` boolean.
     """
     # Build seed -> team_id mapping per region
-    seed_matchup_order = [(1, 16), (8, 9), (5, 12), (4, 13),
-                          (6, 11), (3, 14), (7, 10), (2, 15)]
+    seed_matchup_order = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 
     # Aggregate simulated upset rate for each canonical seed matchup
     simulated_rates: Dict[Tuple[int, int], List[float]] = {m: [] for m in seed_matchup_order}
@@ -680,12 +676,21 @@ def validate_upset_rates(
             all_pass = False
             _mc_logger.warning(
                 "Upset rate mismatch %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f > %.3f)",
-                matchup[0], matchup[1], sim_rate, hist_rate, delta, tolerance,
+                matchup[0],
+                matchup[1],
+                sim_rate,
+                hist_rate,
+                delta,
+                tolerance,
             )
         elif delta > 0.05:
             _mc_logger.warning(
                 "Upset rate near threshold %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f)",
-                matchup[0], matchup[1], sim_rate, hist_rate, delta,
+                matchup[0],
+                matchup[1],
+                sim_rate,
+                hist_rate,
+                delta,
             )
 
     # Champion seed sanity check (1985-2025 historical priors)
@@ -725,8 +730,7 @@ def validate_upset_rates(
     if not champion_seed_passed:
         all_pass = False
         _mc_logger.warning(
-            "Champion seed distribution mismatch: seed-1 champion share=%.3f "
-            "(expected range [0.45, 0.70]).",
+            "Champion seed distribution mismatch: seed-1 champion share=%.3f (expected range [0.45, 0.70]).",
             seed1_share,
         )
 

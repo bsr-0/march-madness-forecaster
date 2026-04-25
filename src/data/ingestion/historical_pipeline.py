@@ -108,7 +108,8 @@ class HistoricalDataPipeline:
             # pace-based fallback paths of _compute_def_rtg_from_games.
             all_game_rows = game_payload.get("team_games", [])
             team_payload, team_provider = self._collect_team_metrics(
-                season, game_records=all_game_rows,
+                season,
+                game_records=all_game_rows,
             )
             team_errors = validate_ratings_payload(team_payload, name_field="team_name")
             self._assert_valid(f"team_metrics_{season}", team_errors)
@@ -156,6 +157,7 @@ class HistoricalDataPipeline:
             if not self.config.kaggle_dir:
                 try:
                     from ..kaggle_downloader import ensure_kaggle_data
+
                     _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
                     if _resolved:
                         self.config.kaggle_dir = _resolved
@@ -217,10 +219,8 @@ class HistoricalDataPipeline:
                 critical_warnings.append(warning)
         if critical_warnings:
             from .game_fetchers import IngestionQualityError
-            raise IngestionQualityError(
-                f"Season {season} date validation failed: "
-                + "; ".join(critical_warnings)
-            )
+
+            raise IngestionQualityError(f"Season {season} date validation failed: " + "; ".join(critical_warnings))
 
         payload = {
             "season": season,
@@ -257,7 +257,8 @@ class HistoricalDataPipeline:
         if not rows:
             rows = self._ensure_team_ids(
                 self.sports_reference.fetch_team_season_stats(
-                    season, game_records=game_records,
+                    season,
+                    game_records=game_records,
                 )
             )
             provider = "sports_reference_scraper"
@@ -266,13 +267,15 @@ class HistoricalDataPipeline:
             zero_count = sum(1 for r in rows if (r.get("def_rtg") or 0) <= 0)
             if zero_count > len(rows) * 0.5:
                 from ..scrapers.sports_reference import SportsReferenceScraper
+
                 team_paces = {
                     SportsReferenceScraper._normalize_id(r.get("team_name", "")): float(r.get("pace", 0))
                     for r in rows
                     if float(r.get("pace", 0)) > 0
                 }
                 game_def_rtg = SportsReferenceScraper._compute_def_rtg_from_games(
-                    game_records, team_paces=team_paces,
+                    game_records,
+                    team_paces=team_paces,
                 )
                 for row in rows:
                     if (row.get("def_rtg") or 0) <= 0:
@@ -305,7 +308,8 @@ class HistoricalDataPipeline:
     def _collect_tournament_context(self, season: int) -> Tuple[Dict, str]:
         try:
             pipeline = BracketIngestionPipeline(
-                season=season, cache_dir=str(self.cache_dir),
+                season=season,
+                cache_dir=str(self.cache_dir),
             )
             bracket = pipeline.fetch()
             teams = [
@@ -342,14 +346,11 @@ class HistoricalDataPipeline:
             )
         empty_count = sum(1 for g in games if not g.get("date"))
         if empty_count > 0:
-            warnings.append(
-                f"WARNING: {empty_count}/{total} games have empty or missing date field."
-            )
+            warnings.append(f"WARNING: {empty_count}/{total} games have empty or missing date field.")
         unique_dates = len(set(g.get("date", "") for g in games))
         if unique_dates < 10 and total > 100:
             warnings.append(
-                f"CRITICAL: Only {unique_dates} unique dates across {total} games. "
-                f"Date diversity is suspiciously low."
+                f"CRITICAL: Only {unique_dates} unique dates across {total} games. Date diversity is suspiciously low."
             )
         return warnings
 
@@ -370,6 +371,7 @@ class HistoricalDataPipeline:
         historical_dir = self.output_dir
         if seasons is None:
             import glob as _glob
+
             files = sorted(_glob.glob(str(historical_dir / "historical_games_*.json")))
             seasons = []
             for f in files:
@@ -413,10 +415,9 @@ class HistoricalDataPipeline:
                     if not dry_run:
                         tg["date"] = game_date_map[gid]
 
-            unique_dates = len(set(
-                game_date_map.get(str(g.get("game_id", "")).strip(), g.get("date", ""))
-                for g in games
-            ))
+            unique_dates = len(
+                set(game_date_map.get(str(g.get("game_id", "")).strip(), g.get("date", "")) for g in games)
+            )
 
             if not dry_run and repaired > 0:
                 with open(json_path, "w") as f:
@@ -424,7 +425,10 @@ class HistoricalDataPipeline:
 
             logger.info(
                 "Season %d: %d games, %d dates repaired, %d unique dates%s",
-                season, len(games), repaired, unique_dates,
+                season,
+                len(games),
+                repaired,
+                unique_dates,
                 " (dry run)" if dry_run else "",
             )
             results[season] = {
@@ -446,13 +450,15 @@ class HistoricalDataPipeline:
         logger.info("Season %d: fetching game IDs for %d days via ESPN API", season, len(days))
 
         session = _requests.Session()
-        session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        })
+        session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            }
+        )
 
         def _fetch_day(day):
             day_str = day.isoformat()
@@ -523,6 +529,7 @@ class HistoricalDataPipeline:
     def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15, session=None) -> List[str]:
         """Lightweight ESPN API call for game IDs on a single date."""
         import requests as _requests
+
         d = day_str.replace("-", "")
         api_url = (
             f"https://site.api.espn.com/apis/site/v2/sports/basketball/"

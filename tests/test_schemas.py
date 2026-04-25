@@ -54,7 +54,9 @@ class TestValidateFeatureMatrix:
     def test_feature_names_in_warnings(self):
         X = np.full((100, 2), np.nan)
         result = validate_feature_matrix(
-            X, feature_names=["feat_a", "feat_b"], max_nan_fraction=0.5,
+            X,
+            feature_names=["feat_a", "feat_b"],
+            max_nan_fraction=0.5,
         )
         assert any("feat_a" in str(w) for w in result.warnings)
 

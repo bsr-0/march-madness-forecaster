@@ -21,6 +21,7 @@ import numpy as np
 # Result container
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class BootstrapResult:
     """Bootstrap estimate with confidence interval."""
@@ -46,6 +47,7 @@ class BootstrapResult:
 # ---------------------------------------------------------------------------
 # Core metric functions
 # ---------------------------------------------------------------------------
+
 
 def brier_score(predictions: np.ndarray, outcomes: np.ndarray) -> float:
     """Mean Brier score (lower is better)."""
@@ -134,6 +136,7 @@ def upset_recall(
 # Generic bootstrap engine
 # ---------------------------------------------------------------------------
 
+
 def bootstrap_metric(
     metric_fn: Callable[..., float],
     *arrays: np.ndarray,
@@ -163,8 +166,12 @@ def bootstrap_metric(
 
     if n == 0:
         return BootstrapResult(
-            estimate=0.0, ci_lower=0.0, ci_upper=0.0,
-            ci_level=ci_level, n_bootstrap=0, n_samples=0,
+            estimate=0.0,
+            ci_lower=0.0,
+            ci_upper=0.0,
+            ci_level=ci_level,
+            n_bootstrap=0,
+            n_samples=0,
         )
 
     point_estimate = float(metric_fn(*arrays))
@@ -204,6 +211,7 @@ def bootstrap_metric(
 # ---------------------------------------------------------------------------
 # Convenience wrappers for common metrics
 # ---------------------------------------------------------------------------
+
 
 def bootstrap_brier(
     predictions: np.ndarray,
@@ -268,6 +276,7 @@ def bootstrap_ece(
     random_seed: Optional[int] = 42,
 ) -> BootstrapResult:
     """Expected Calibration Error with bootstrap CI."""
+
     def _ece(p: np.ndarray, o: np.ndarray) -> float:
         return expected_calibration_error(p, o, n_bins=n_bins)
 
@@ -284,6 +293,7 @@ def bootstrap_ece(
 # ---------------------------------------------------------------------------
 # Multi-metric bundle
 # ---------------------------------------------------------------------------
+
 
 def compute_all_metrics_with_ci(
     predictions: np.ndarray,
@@ -303,18 +313,32 @@ def compute_all_metrics_with_ci(
 
     return {
         "brier_score": bootstrap_brier(
-            predictions, outcomes, n_bootstrap, ci_level, random_seed,
+            predictions,
+            outcomes,
+            n_bootstrap,
+            ci_level,
+            random_seed,
         ),
         "log_loss": bootstrap_log_loss(
-            predictions, outcomes, n_bootstrap, ci_level,
+            predictions,
+            outcomes,
+            n_bootstrap,
+            ci_level,
             random_seed + 1 if random_seed is not None else None,
         ),
         "accuracy": bootstrap_accuracy(
-            predictions, outcomes, n_bootstrap, ci_level,
+            predictions,
+            outcomes,
+            n_bootstrap,
+            ci_level,
             random_seed + 2 if random_seed is not None else None,
         ),
         "ece": bootstrap_ece(
-            predictions, outcomes, n_ece_bins, n_bootstrap, ci_level,
+            predictions,
+            outcomes,
+            n_ece_bins,
+            n_bootstrap,
+            ci_level,
             random_seed + 3 if random_seed is not None else None,
         ),
     }

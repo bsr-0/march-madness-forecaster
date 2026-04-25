@@ -42,7 +42,7 @@ class IngestionGameRecord:
     """
 
     game_id: str
-    date: str       # YYYY-MM-DD
+    date: str  # YYYY-MM-DD
     season: int
 
     home_team_id: str
@@ -144,6 +144,7 @@ class IngestionGameRecord:
         downstream consumers to **exclude** this game from any box-score-
         dependent computation (Four Factors, shooting splits, etc.).
         """
+
         def _poss(fga: float, orb: float, tov: float, fta: float) -> float:
             p = fga - orb + tov + 0.475 * fta
             return max(p, 0.0)
@@ -163,8 +164,11 @@ class IngestionGameRecord:
             home_poss = away_poss = fallback
 
         base = {
-            "game_id": self.game_id, "date": self.date, "season": self.season,
-            "overtime": self.overtime, "has_box_score": self.has_box_score,
+            "game_id": self.game_id,
+            "date": self.date,
+            "season": self.season,
+            "overtime": self.overtime,
+            "has_box_score": self.has_box_score,
             "is_tournament": self.is_tournament,
         }
 

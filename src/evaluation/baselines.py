@@ -48,7 +48,7 @@ SEED_WIN_RATES: Dict[Tuple[int, int], float] = {
     (5, 12): 0.640,
     (6, 11): 0.620,
     (7, 10): 0.610,
-    (8, 9):  0.510,
+    (8, 9): 0.510,
 }
 
 
@@ -81,6 +81,7 @@ def seed_baseline_probability(seed1: int, seed2: int) -> float:
 # ---------------------------------------------------------------------------
 # Baseline prediction functions
 # ---------------------------------------------------------------------------
+
 
 def make_seed_baseline_predictions(
     matchups: List[Tuple[str, str]],
@@ -150,6 +151,7 @@ def make_constant_baseline_predictions(
 # Comparison result
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BaselineComparison:
     """Comparison of a model against a baseline."""
@@ -194,6 +196,7 @@ class BaselineComparison:
 # Comparison engine
 # ---------------------------------------------------------------------------
 
+
 def compare_to_baseline(
     model_predictions: np.ndarray,
     baseline_predictions: np.ndarray,
@@ -224,7 +227,9 @@ def compare_to_baseline(
 
     model_brier = bootstrap_brier(model_predictions, outcomes, n_bootstrap, random_seed=random_seed)
     baseline_brier = bootstrap_brier(
-        baseline_predictions, outcomes, n_bootstrap,
+        baseline_predictions,
+        outcomes,
+        n_bootstrap,
         random_seed=random_seed + 1 if random_seed else None,
     )
 
@@ -232,26 +237,36 @@ def compare_to_baseline(
     improvement_pct = (improvement / max(baseline_brier.estimate, 1e-10)) * 100
 
     model_ll = bootstrap_log_loss(
-        model_predictions, outcomes, n_bootstrap,
+        model_predictions,
+        outcomes,
+        n_bootstrap,
         random_seed=random_seed + 2 if random_seed else None,
     )
     baseline_ll = bootstrap_log_loss(
-        baseline_predictions, outcomes, n_bootstrap,
+        baseline_predictions,
+        outcomes,
+        n_bootstrap,
         random_seed=random_seed + 3 if random_seed else None,
     )
 
     model_acc = bootstrap_accuracy(
-        model_predictions, outcomes, n_bootstrap,
+        model_predictions,
+        outcomes,
+        n_bootstrap,
         random_seed=random_seed + 4 if random_seed else None,
     )
     baseline_acc = bootstrap_accuracy(
-        baseline_predictions, outcomes, n_bootstrap,
+        baseline_predictions,
+        outcomes,
+        n_bootstrap,
         random_seed=random_seed + 5 if random_seed else None,
     )
 
     # Bootstrap significance: how often is model worse than baseline?
     p_value = _bootstrap_significance(
-        model_predictions, baseline_predictions, outcomes,
+        model_predictions,
+        baseline_predictions,
+        outcomes,
         n_bootstrap=n_bootstrap,
         random_seed=random_seed + 6 if random_seed else None,
     )
@@ -305,6 +320,7 @@ def _bootstrap_significance(
 # Run all baselines
 # ---------------------------------------------------------------------------
 
+
 def run_all_baseline_comparisons(
     model_predictions: np.ndarray,
     outcomes: np.ndarray,
@@ -343,39 +359,52 @@ def run_all_baseline_comparisons(
     comparisons: List[BaselineComparison] = []
 
     # 1. Seed-only baseline
-    seed_preds = np.array([
-        seed_baseline_probability(int(s1), int(s2))
-        for s1, s2 in zip(seeds_team1, seeds_team2)
-    ])
-    comparisons.append(compare_to_baseline(
-        model_predictions, seed_preds, outcomes,
-        model_name=model_name, baseline_name="seed_only",
-        n_bootstrap=n_bootstrap, random_seed=random_seed,
-    ))
+    seed_preds = np.array([seed_baseline_probability(int(s1), int(s2)) for s1, s2 in zip(seeds_team1, seeds_team2)])
+    comparisons.append(
+        compare_to_baseline(
+            model_predictions,
+            seed_preds,
+            outcomes,
+            model_name=model_name,
+            baseline_name="seed_only",
+            n_bootstrap=n_bootstrap,
+            random_seed=random_seed,
+        )
+    )
 
     # 2. Constant (0.5) baseline
     constant_preds = np.full(n, 0.5)
-    comparisons.append(compare_to_baseline(
-        model_predictions, constant_preds, outcomes,
-        model_name=model_name, baseline_name="constant_0.5",
-        n_bootstrap=n_bootstrap,
-        random_seed=random_seed + 10 if random_seed else None,
-    ))
+    comparisons.append(
+        compare_to_baseline(
+            model_predictions,
+            constant_preds,
+            outcomes,
+            model_name=model_name,
+            baseline_name="constant_0.5",
+            n_bootstrap=n_bootstrap,
+            random_seed=random_seed + 10 if random_seed else None,
+        )
+    )
 
     # 3. AdjEM baseline (if data available)
     if team_adjem and team1_ids and team2_ids:
-        adjem_preds = np.array([
-            1.0 / (1.0 + math.exp(-0.08 * (
-                team_adjem.get(t1, 0.0) - team_adjem.get(t2, 0.0)
-            )))
-            for t1, t2 in zip(team1_ids, team2_ids)
-        ])
+        adjem_preds = np.array(
+            [
+                1.0 / (1.0 + math.exp(-0.08 * (team_adjem.get(t1, 0.0) - team_adjem.get(t2, 0.0))))
+                for t1, t2 in zip(team1_ids, team2_ids)
+            ]
+        )
         adjem_preds = np.clip(adjem_preds, 0.001, 0.999)
-        comparisons.append(compare_to_baseline(
-            model_predictions, adjem_preds, outcomes,
-            model_name=model_name, baseline_name="adjem_only",
-            n_bootstrap=n_bootstrap,
-            random_seed=random_seed + 20 if random_seed else None,
-        ))
+        comparisons.append(
+            compare_to_baseline(
+                model_predictions,
+                adjem_preds,
+                outcomes,
+                model_name=model_name,
+                baseline_name="adjem_only",
+                n_bootstrap=n_bootstrap,
+                random_seed=random_seed + 20 if random_seed else None,
+            )
+        )
 
     return comparisons

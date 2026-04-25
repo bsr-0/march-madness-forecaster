@@ -50,7 +50,7 @@ def retry_request(
             response = func(*args, **kwargs)
             if response.status_code == 429 or response.status_code >= 500:
                 if attempt < max_retries:
-                    wait = _jittered_wait(backoff_base * (2 ** attempt))
+                    wait = _jittered_wait(backoff_base * (2**attempt))
                     # Respect Retry-After header if present
                     retry_after = response.headers.get("Retry-After")
                     if retry_after:
@@ -60,7 +60,10 @@ def retry_request(
                             pass
                     logger.warning(
                         "HTTP %d on attempt %d/%d — retrying in %.1fs",
-                        response.status_code, attempt + 1, max_retries + 1, wait,
+                        response.status_code,
+                        attempt + 1,
+                        max_retries + 1,
+                        wait,
                     )
                     time.sleep(wait)
                     continue
@@ -70,10 +73,13 @@ def retry_request(
             last_exc = exc
             all_exceptions.append(exc)
             if attempt < max_retries:
-                wait = _jittered_wait(backoff_base * (2 ** attempt))
+                wait = _jittered_wait(backoff_base * (2**attempt))
                 logger.warning(
                     "%s on attempt %d/%d — retrying in %.1fs",
-                    type(exc).__name__, attempt + 1, max_retries + 1, wait,
+                    type(exc).__name__,
+                    attempt + 1,
+                    max_retries + 1,
+                    wait,
                 )
                 time.sleep(wait)
             else:
@@ -116,11 +122,14 @@ def rate_limited_call(
             last_exc = exc
             all_exceptions.append(exc)
             if attempt < max_retries:
-                wait = _jittered_wait(backoff_base * (2 ** attempt))
+                wait = _jittered_wait(backoff_base * (2**attempt))
                 logger.warning(
                     "%s in %s on attempt %d/%d — retrying in %.1fs",
-                    type(exc).__name__, func.__name__ if hasattr(func, '__name__') else str(func),
-                    attempt + 1, max_retries + 1, wait,
+                    type(exc).__name__,
+                    func.__name__ if hasattr(func, "__name__") else str(func),
+                    attempt + 1,
+                    max_retries + 1,
+                    wait,
                 )
                 time.sleep(wait)
             else:
@@ -128,7 +137,7 @@ def rate_limited_call(
                     logger.error(
                         "All %d attempts failed for %s: %s",
                         len(all_exceptions),
-                        func.__name__ if hasattr(func, '__name__') else str(func),
+                        func.__name__ if hasattr(func, "__name__") else str(func),
                         [str(e) for e in all_exceptions],
                     )
                 raise

@@ -17,7 +17,13 @@ from ._helpers import (
 def run_kaggle_export(args):
     """Generate a Kaggle submission CSV using the SOTA pipeline."""
     from ..pipeline.womens import WomensPipeline, WomensPipelineConfig
-    from ..exports.kaggle import load_kaggle_womens_teams, is_womens_team, build_team_id_map, generate_predictions, load_kaggle_teams
+    from ..exports.kaggle import (
+        load_kaggle_womens_teams,
+        is_womens_team,
+        build_team_id_map,
+        generate_predictions,
+        load_kaggle_teams,
+    )
     from ..ml.evaluation.kaggle_backtest import validate_submission
     from ..pipeline.tournament_pipeline import TournamentPipeline, DataRequirementError
     from ..data.team_name_resolver import TeamNameResolver
@@ -69,6 +75,7 @@ def run_kaggle_export(args):
         womens_id_map = build_team_id_map(womens_team_id_to_name, womens_resolver)
 
         import pandas as pd
+
         sample_df_peek = pd.read_csv(args.sample_submission)
         womens_team_ids = set()
         for raw_id in sample_df_peek["ID"].astype(str):
@@ -92,10 +99,10 @@ def run_kaggle_export(args):
         womens_predict_fn = womens_pipeline.predict_probability
         print(f"  Women's teams mapped: {len(womens_id_map)}")
     else:
-        print("No women's teams CSV provided (--womens-teams). "
-              "Women's matchups will default to 0.5.")
+        print("No women's teams CSV provided (--womens-teams). Women's matchups will default to 0.5.")
 
     import pandas as pd
+
     sample_df = pd.read_csv(args.sample_submission)
     pred_df = generate_predictions(
         sample_df=sample_df,
@@ -149,9 +156,9 @@ def run_kaggle_export(args):
                     continue
 
             team_seeds = {}
-            if hasattr(pipeline, 'feature_engineer') and pipeline.feature_engineer:
+            if hasattr(pipeline, "feature_engineer") and pipeline.feature_engineer:
                 for tid, tf in pipeline.feature_engineer.team_features.items():
-                    if hasattr(tf, 'seed') and tf.seed > 0:
+                    if hasattr(tf, "seed") and tf.seed > 0:
                         team_seeds[tid] = tf.seed
 
             if matchup_ids and team_seeds:
@@ -257,7 +264,9 @@ def register(subparsers):
     kaggle_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
     kaggle_parser.add_argument("--simulations", type=int, default=1, help="Monte Carlo simulations (default: 1)")
     kaggle_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
-    kaggle_parser.add_argument("--womens-teams", default=None, help="Path to Kaggle WTeams.csv for women's tournament predictions")
+    kaggle_parser.add_argument(
+        "--womens-teams", default=None, help="Path to Kaggle WTeams.csv for women's tournament predictions"
+    )
     kaggle_parser.add_argument(
         "--enable-hedge",
         action="store_true",
@@ -282,10 +291,14 @@ def register(subparsers):
         default="artifacts/espn_ev_report.json",
         help="Full EV pipeline report output JSON",
     )
-    espn_export_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
+    espn_export_parser.add_argument(
+        "--year", type=int, default=None, help="Season year override (default: manifest year)"
+    )
     espn_export_parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     espn_export_parser.add_argument("--pool-size", type=int, default=30, help="Pool size for ESPN-style optimization")
-    espn_export_parser.add_argument("--seed", type=int, default=_default_year(), help="Random seed (default: current year)")
+    espn_export_parser.add_argument(
+        "--seed", type=int, default=_default_year(), help="Random seed (default: current year)"
+    )
     espn_export_parser.add_argument(
         "--require-freeze",
         action="store_true",

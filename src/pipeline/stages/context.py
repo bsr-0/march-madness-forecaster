@@ -52,8 +52,7 @@ def get_code_version() -> str:
     """Return short git SHA for reproducibility tracking."""
     try:
         import subprocess
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], text=True, timeout=5
-        ).strip()[:12]
+
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, timeout=5).strip()[:12]
     except Exception:
         return "unknown"

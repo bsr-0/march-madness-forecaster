@@ -63,14 +63,14 @@ from src.prediction.massey_probabilities import load_massey_avg_barthag
 
 # Category-A base names in stable order (determines feature columns)
 _BASE_NAMES = (
-    "seed",           # A1
-    "torvik",         # A2
-    "odds",           # A3
-    "elo",            # A4
-    "massey_avg",     # A5
-    "massey_best",    # A6
-    "spread_power",   # A7
-    "ap_strength",    # A8
+    "seed",  # A1
+    "torvik",  # A2
+    "odds",  # A3
+    "elo",  # A4
+    "massey_avg",  # A5
+    "massey_best",  # A6
+    "spread_power",  # A7
+    "ap_strength",  # A8
 )
 
 _EXCLUDED_YEARS = {2020}
@@ -119,7 +119,9 @@ def _load_torvik_barthag(year: int, seeds: Dict[str, int], data_root: Path) -> O
 
 
 def _load_all_base_barthag(
-    year: int, seeds: Dict[str, int], data_root: Path,
+    year: int,
+    seeds: Dict[str, int],
+    data_root: Path,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Load barthag from all 8 Category-A bases for a given year.
 
@@ -359,7 +361,9 @@ def build_stacked_round_probabilities(
     Returns None if insufficient training data or source unavailability.
     """
     barthag = load_stacked_barthag(
-        test_year, seeds, data_root,
+        test_year,
+        seeds,
+        data_root,
         min_prior_years=min_prior_years,
         ridge_alpha=ridge_alpha,
     )

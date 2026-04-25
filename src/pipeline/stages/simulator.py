@@ -63,6 +63,7 @@ class SimulationStage:
                     try:
                         from ...governance.market_validation import validate_model_vs_market
                         import dataclasses as _dc
+
                         model_champ = {}
                         if hasattr(sim_result, "championship_odds"):
                             model_champ = dict(sim_result.championship_odds)
@@ -75,8 +76,7 @@ class SimulationStage:
                             if validation is not None:
                                 market_validation_dict = _dc.asdict(validation)
                                 logger.info(
-                                    "Vegas cross-reference: RMSD=%.4f, Spearman=%.4f, "
-                                    "interpretation=%s (%d teams)",
+                                    "Vegas cross-reference: RMSD=%.4f, Spearman=%.4f, interpretation=%s (%d teams)",
                                     validation.rmsd,
                                     validation.spearman_rank_corr or 0.0,
                                     validation.interpretation,
@@ -87,13 +87,10 @@ class SimulationStage:
                                     "major_disagreement",
                                 ):
                                     logger.warning(
-                                        "Vegas cross-reference flagged %s "
-                                        "(RMSD=%.4f). Top disagreement: %s",
+                                        "Vegas cross-reference flagged %s (RMSD=%.4f). Top disagreement: %s",
                                         validation.interpretation,
                                         validation.rmsd,
-                                        validation.top_disagreements[0]
-                                        if validation.top_disagreements
-                                        else "N/A",
+                                        validation.top_disagreements[0] if validation.top_disagreements else "N/A",
                                     )
                     except Exception as exc:
                         logger.debug("Vegas cross-reference skipped: %s", exc)
@@ -131,4 +128,5 @@ class SimulationStage:
 
 def _noop_ctx():
     from contextlib import nullcontext
+
     return nullcontext()

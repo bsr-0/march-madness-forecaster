@@ -167,31 +167,28 @@ class ExtendedHistoricalIngestor:
                 continue  # No tournament (COVID)
             filename = f"tournament_results_{year}.json"
             if self._artifact_exists(filename):
-                manifest.setdefault("skipped", {}).setdefault(
-                    "tournament_results", []
-                ).append(year)
+                manifest.setdefault("skipped", {}).setdefault("tournament_results", []).append(year)
                 continue
 
             try:
                 results = scraper.scrape_tournament(year)
                 if results:
-                    self._write_json(filename, {
-                        "season": year,
-                        "source": "sports_reference",
-                        "games": results,
-                        "n_games": len(results),
-                    })
-                    manifest.setdefault("sources", {}).setdefault(
-                        "tournament_results", {}
-                    )[str(year)] = len(results)
+                    self._write_json(
+                        filename,
+                        {
+                            "season": year,
+                            "source": "sports_reference",
+                            "games": results,
+                            "n_games": len(results),
+                        },
+                    )
+                    manifest.setdefault("sources", {}).setdefault("tournament_results", {})[str(year)] = len(results)
                     logger.info("Tournament results %d: %d games", year, len(results))
                 else:
                     logger.warning("No tournament results for %d", year)
             except Exception as exc:
                 logger.warning("Tournament results %d failed: %s", year, exc)
-                manifest.setdefault("errors", {}).setdefault(
-                    "tournament_results", {}
-                )[str(year)] = str(exc)
+                manifest.setdefault("errors", {}).setdefault("tournament_results", {})[str(year)] = str(exc)
 
             time.sleep(self.config.scraper_delay)
 
@@ -210,9 +207,7 @@ class ExtendedHistoricalIngestor:
                 continue
             filename = f"historical_games_{year}.json"
             if self._artifact_exists(filename):
-                manifest.setdefault("skipped", {}).setdefault(
-                    "game_data", []
-                ).append(year)
+                manifest.setdefault("skipped", {}).setdefault("game_data", []).append(year)
                 continue
 
             try:
@@ -243,16 +238,12 @@ class ExtendedHistoricalIngestor:
                     logger.warning("Game data validation errors for %d: %s", year, errors)
 
                 self._write_json(filename, payload)
-                manifest.setdefault("sources", {}).setdefault(
-                    "game_data", {}
-                )[str(year)] = len(games)
+                manifest.setdefault("sources", {}).setdefault("game_data", {})[str(year)] = len(games)
                 logger.info("Game data %d: %d games (%s)", year, len(games), dominant)
 
             except Exception as exc:
                 logger.warning("Game data %d failed: %s", year, exc)
-                manifest.setdefault("errors", {}).setdefault(
-                    "game_data", {}
-                )[str(year)] = str(exc)
+                manifest.setdefault("errors", {}).setdefault("game_data", {})[str(year)] = str(exc)
 
     # ── Team Stats ─────────────────────────────────────────────────────
 
@@ -267,9 +258,7 @@ class ExtendedHistoricalIngestor:
         for year in range(start, self.config.end_season + 1):
             filename = f"team_metrics_{year}.json"
             if self._artifact_exists(filename):
-                manifest.setdefault("skipped", {}).setdefault(
-                    "team_stats", []
-                ).append(year)
+                manifest.setdefault("skipped", {}).setdefault("team_stats", []).append(year)
                 continue
 
             try:
@@ -287,16 +276,12 @@ class ExtendedHistoricalIngestor:
                     logger.warning("Team stats validation for %d: %s", year, errors)
 
                 self._write_json(filename, payload)
-                manifest.setdefault("sources", {}).setdefault(
-                    "team_stats", {}
-                )[str(year)] = len(teams)
+                manifest.setdefault("sources", {}).setdefault("team_stats", {})[str(year)] = len(teams)
                 logger.info("Team stats %d: %d teams", year, len(teams))
 
             except Exception as exc:
                 logger.warning("Team stats %d failed: %s", year, exc)
-                manifest.setdefault("errors", {}).setdefault(
-                    "team_stats", {}
-                )[str(year)] = str(exc)
+                manifest.setdefault("errors", {}).setdefault("team_stats", {})[str(year)] = str(exc)
 
             time.sleep(self.config.scraper_delay)
 
@@ -314,9 +299,7 @@ class ExtendedHistoricalIngestor:
                 continue
             filename = f"torvik_{year}.json"
             if self._artifact_exists(filename):
-                manifest.setdefault("skipped", {}).setdefault(
-                    "torvik", []
-                ).append(year)
+                manifest.setdefault("skipped", {}).setdefault("torvik", []).append(year)
                 continue
 
             try:
@@ -324,17 +307,13 @@ class ExtendedHistoricalIngestor:
                 teams = [t for t in result.records if isinstance(t, dict)]
                 if teams:
                     self._write_json(filename, {"teams": teams})
-                    manifest.setdefault("sources", {}).setdefault(
-                        "torvik", {}
-                    )[str(year)] = len(teams)
+                    manifest.setdefault("sources", {}).setdefault("torvik", {})[str(year)] = len(teams)
                     logger.info("Torvik %d: %d teams", year, len(teams))
                 else:
                     logger.warning("No Torvik data for %d", year)
             except Exception as exc:
                 logger.warning("Torvik %d failed: %s", year, exc)
-                manifest.setdefault("errors", {}).setdefault(
-                    "torvik", {}
-                )[str(year)] = str(exc)
+                manifest.setdefault("errors", {}).setdefault("torvik", {})[str(year)] = str(exc)
 
     # ── External Ratings ───────────────────────────────────────────────
 
@@ -344,6 +323,7 @@ class ExtendedHistoricalIngestor:
         if not kaggle_dir:
             try:
                 from ..kaggle_downloader import ensure_kaggle_data
+
                 kaggle_dir = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
             except (ImportError, OSError, ValueError) as exc:
                 logger.debug("Could not auto-resolve kaggle_dir: %s", exc)
@@ -364,15 +344,11 @@ class ExtendedHistoricalIngestor:
             try:
                 n_systems = loader.populate_from_massey_ordinals(kaggle_dir, year)
                 if n_systems > 0:
-                    manifest.setdefault("sources", {}).setdefault(
-                        "external_ratings", {}
-                    )[str(year)] = n_systems
+                    manifest.setdefault("sources", {}).setdefault("external_ratings", {})[str(year)] = n_systems
                     logger.info("External ratings %d: %d systems", year, n_systems)
             except (ValueError, KeyError, OSError, ImportError) as exc:
                 logger.warning("External ratings %d failed: %s", year, exc)
-                manifest.setdefault("errors", {}).setdefault(
-                    "external_ratings", {}
-                )[str(year)] = str(exc)
+                manifest.setdefault("errors", {}).setdefault("external_ratings", {})[str(year)] = str(exc)
 
     # ── Helpers ────────────────────────────────────────────────────────
 
@@ -419,18 +395,10 @@ def get_data_availability_summary(output_dir: str = "data/raw/historical") -> Di
         if year == 2020:
             continue
         year_data: Dict[str, bool] = {}
-        year_data["tournament_results"] = (
-            hist_dir / f"tournament_results_{year}.json"
-        ).exists()
-        year_data["game_data"] = (
-            hist_dir / f"historical_games_{year}.json"
-        ).exists()
-        year_data["team_metrics"] = (
-            hist_dir / f"team_metrics_{year}.json"
-        ).exists()
-        year_data["torvik"] = (
-            hist_dir / f"torvik_{year}.json"
-        ).exists()
+        year_data["tournament_results"] = (hist_dir / f"tournament_results_{year}.json").exists()
+        year_data["game_data"] = (hist_dir / f"historical_games_{year}.json").exists()
+        year_data["team_metrics"] = (hist_dir / f"team_metrics_{year}.json").exists()
+        year_data["torvik"] = (hist_dir / f"torvik_{year}.json").exists()
         summary[year] = year_data
 
     return summary

@@ -34,7 +34,7 @@ COMPETITION_SLUGS = [
 # The critical CSV files we need (in priority order)
 REQUIRED_FILES = [
     "MMasseyOrdinals",  # Primary target: 50-160+ ranking systems
-    "MTeams",           # Team ID resolution
+    "MTeams",  # Team ID resolution
 ]
 
 OPTIONAL_FILES = [
@@ -65,6 +65,7 @@ def kaggle_api_available() -> bool:
     """Check if the Kaggle API is importable and credentials exist."""
     try:
         import kaggle  # noqa: F401
+
         return True
     except (ImportError, OSError):
         pass
@@ -128,9 +129,14 @@ def _load_env_file(path: Path) -> None:
                     key, _, value = line.partition("=")
                     key = key.strip()
                     value = value.strip().strip("'\"")
-                    if key and value and value not in (
-                        "your_kaggle_api_key_here",
-                        "your_kaggle_username_here",
+                    if (
+                        key
+                        and value
+                        and value
+                        not in (
+                            "your_kaggle_api_key_here",
+                            "your_kaggle_username_here",
+                        )
                     ):
                         os.environ.setdefault(key, value)
     except (OSError, ValueError, UnicodeDecodeError):
@@ -141,6 +147,7 @@ def _kaggle_api_exception():
     """Return the Kaggle ApiException class, or None if unavailable."""
     try:
         from kaggle.rest import ApiException
+
         return ApiException
     except ImportError:
         return None
@@ -152,8 +159,7 @@ def _get_kaggle_api():
         from kaggle.api.kaggle_api_extended import KaggleApi
     except ImportError:
         raise ImportError(
-            "The 'kaggle' package is required to download competition data. "
-            "Install it with: pip install kaggle"
+            "The 'kaggle' package is required to download competition data. Install it with: pip install kaggle"
         )
     api = KaggleApi()
     api.authenticate()
@@ -230,7 +236,8 @@ def download_competition_data(
             if _has_massey_ordinals(output_path):
                 logger.info(
                     "Successfully downloaded Kaggle data to %s from %s",
-                    output_dir, slug,
+                    output_dir,
+                    slug,
                 )
                 return str(output_path)
             logger.info("Downloaded %s but no MMasseyOrdinals found", slug)
@@ -256,9 +263,7 @@ def download_competition_data(
     return None
 
 
-def _download_individual_files(
-    api, competition: str, output_path: Path
-) -> Optional[str]:
+def _download_individual_files(api, competition: str, output_path: Path) -> Optional[str]:
     """Try downloading critical files individually."""
     _api_exc = _kaggle_api_exception()
     _catch = (OSError, ValueError, RuntimeError, zipfile.BadZipFile) + ((_api_exc,) if _api_exc else ())
@@ -350,17 +355,14 @@ def ensure_kaggle_data(
     no_auto = os.environ.get("KAGGLE_NO_AUTO_DOWNLOAD", "").lower()
     if no_auto in ("1", "true", "yes"):
         auto_download = False
-        logger.info(
-            "KAGGLE_NO_AUTO_DOWNLOAD is set — skipping auto-download"
-        )
+        logger.info("KAGGLE_NO_AUTO_DOWNLOAD is set — skipping auto-download")
 
     if auto_download:
         download_dir = kaggle_dir or DEFAULT_KAGGLE_DIR
         sentinel = Path(download_dir) / _DOWNLOAD_FAILED_SENTINEL
         if sentinel.exists():
             logger.debug(
-                "Previous download attempt failed (sentinel %s exists). "
-                "Delete it or run with --force to retry.",
+                "Previous download attempt failed (sentinel %s exists). Delete it or run with --force to retry.",
                 sentinel,
             )
         else:
@@ -394,12 +396,14 @@ def _get_kaggle_dir_candidates(explicit_dir: Optional[str] = None) -> List[str]:
         candidates.append(explicit_dir)
 
     cwd = os.getcwd()
-    candidates.extend([
-        os.path.join(cwd, "data", "kaggle"),
-        os.path.join(cwd, "data", "raw", "kaggle"),
-        os.path.join(cwd, "kaggle"),
-        os.path.join(cwd, "data", "raw"),
-    ])
+    candidates.extend(
+        [
+            os.path.join(cwd, "data", "kaggle"),
+            os.path.join(cwd, "data", "raw", "kaggle"),
+            os.path.join(cwd, "kaggle"),
+            os.path.join(cwd, "data", "raw"),
+        ]
+    )
     return candidates
 
 
@@ -452,9 +456,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    parser = argparse.ArgumentParser(
-        description="Download Kaggle March Mania competition data (MMasseyOrdinals, etc.)"
-    )
+    parser = argparse.ArgumentParser(description="Download Kaggle March Mania competition data (MMasseyOrdinals, etc.)")
     parser.add_argument(
         "--output-dir",
         default=DEFAULT_KAGGLE_DIR,

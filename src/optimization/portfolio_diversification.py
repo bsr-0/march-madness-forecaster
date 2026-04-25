@@ -86,10 +86,7 @@ def compute_bracket_correlation(
     if not common_keys:
         return 0.0
 
-    agreements = sum(
-        1 for key in common_keys
-        if bracket1[key] == bracket2[key]
-    )
+    agreements = sum(1 for key in common_keys if bracket1[key] == bracket2[key])
     return agreements / len(common_keys)
 
 
@@ -116,7 +113,7 @@ def compute_portfolio_anti_correlation(
     for i in range(n):
         for j in range(i + 1, n):
             corr = compute_bracket_correlation(brackets[i], brackets[j])
-            total_anti_corr += (1.0 - corr)
+            total_anti_corr += 1.0 - corr
             n_pairs += 1
 
     return total_anti_corr / n_pairs if n_pairs > 0 else 0.0
@@ -154,9 +151,7 @@ def compute_champion_diversity(
     return {
         "n_unique_champions": n_unique,
         "champion_entropy": champ_entropy,
-        "champion_distribution": dict(
-            sorted(champion_counts.items(), key=lambda x: -x[1])
-        ),
+        "champion_distribution": dict(sorted(champion_counts.items(), key=lambda x: -x[1])),
     }
 
 
@@ -185,5 +180,5 @@ def compute_top_k_coverage_estimate(
     # P(any entry in top-K) = 1 - P(all entries miss)
     # P(single entry misses) = 1 - avg_entry_win_prob
     p_miss = max(0.0, min(1.0, 1.0 - avg_entry_win_prob))
-    p_all_miss = p_miss ** n_entries
+    p_all_miss = p_miss**n_entries
     return 1.0 - p_all_miss

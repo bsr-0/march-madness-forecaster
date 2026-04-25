@@ -36,22 +36,20 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 MASSEY_TOP_SYSTEMS: List[str] = [
-    "POM",   # KenPom — efficiency-based, gold standard
-    "SAG",   # Sagarin — Elo/Bayesian hybrid, long track record
-    "MOR",   # Massey — mathematical, namesake of the dataset
-    "DOL",   # Dolchini — reliability-adjusted ratings
-    "COL",   # Colley — bias-free linear algebra method
-    "WOL",   # Wolfe — schedule-adjusted power ratings
-    "RTH",   # Rothman — Bayesian approach
-    "AP",    # AP Poll — human expert consensus (sports writers)
-    "USA",   # Coaches Poll — insider perspective
-    "RPI",   # RPI — NCAA's historical selection metric
+    "POM",  # KenPom — efficiency-based, gold standard
+    "SAG",  # Sagarin — Elo/Bayesian hybrid, long track record
+    "MOR",  # Massey — mathematical, namesake of the dataset
+    "DOL",  # Dolchini — reliability-adjusted ratings
+    "COL",  # Colley — bias-free linear algebra method
+    "WOL",  # Wolfe — schedule-adjusted power ratings
+    "RTH",  # Rothman — Bayesian approach
+    "AP",  # AP Poll — human expert consensus (sports writers)
+    "USA",  # Coaches Poll — insider perspective
+    "RPI",  # RPI — NCAA's historical selection metric
 ]
 
 # Canonical feature names (used in TeamFeatures.get_feature_names)
-SYSTEM_FEATURE_NAMES: List[str] = [
-    f"massey_{s.lower()}" for s in MASSEY_TOP_SYSTEMS
-]
+SYSTEM_FEATURE_NAMES: List[str] = [f"massey_{s.lower()}" for s in MASSEY_TOP_SYSTEMS]
 DERIVED_FEATURE_NAMES: List[str] = [
     "massey_rank_mean",
     "massey_rank_std",
@@ -75,6 +73,7 @@ class MasseyMultiSystemFeatures:
             signal correlated with tournament upset likelihood.
         n_systems: Number of systems that rated this team.
     """
+
     system_ratings: Dict[str, float] = field(default_factory=dict)
     rank_mean: float = float("nan")
     rank_std: float = float("nan")
@@ -183,7 +182,9 @@ def extract_all_teams(
     result: Dict[str, MasseyMultiSystemFeatures] = {}
     for team_id in all_team_ids:
         features = extract_multi_system_features(
-            ordinals, team_id, n_teams_approx,
+            ordinals,
+            team_id,
+            n_teams_approx,
             min_system_coverage=min_system_coverage,
         )
         if features.n_systems > 0:
@@ -191,8 +192,7 @@ def extract_all_teams(
 
     n_with_5plus = sum(1 for f in result.values() if f.n_systems >= 5)
     logger.info(
-        "Massey multi-system: extracted features for %d teams "
-        "(%d with 5+ systems) from %d total systems in ordinals",
+        "Massey multi-system: extracted features for %d teams (%d with 5+ systems) from %d total systems in ordinals",
         len(result),
         n_with_5plus,
         len(ordinals),

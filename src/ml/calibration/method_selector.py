@@ -23,9 +23,11 @@ logger = logging.getLogger(__name__)
 # Solution 4: Nested CV for temperature scaling
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CalibrationStability:
     """Stability diagnostics for temperature parameter across inner folds."""
+
     t_mean: float
     t_std: float
     t_per_fold: List[float]
@@ -62,8 +64,11 @@ def fit_temperature_nested(
         # Not enough data for nested CV; fit directly
         t_direct = _fit_single_temperature(predictions, outcomes)
         stability = CalibrationStability(
-            t_mean=t_direct, t_std=0.0, t_per_fold=[t_direct],
-            n_inner_folds=1, is_stable=True,
+            t_mean=t_direct,
+            t_std=0.0,
+            t_per_fold=[t_direct],
+            n_inner_folds=1,
+            is_stable=True,
         )
         return t_direct, stability
 
@@ -89,8 +94,11 @@ def fit_temperature_nested(
     if not t_values:
         t_direct = _fit_single_temperature(predictions, outcomes)
         return t_direct, CalibrationStability(
-            t_mean=t_direct, t_std=0.0, t_per_fold=[t_direct],
-            n_inner_folds=1, is_stable=True,
+            t_mean=t_direct,
+            t_std=0.0,
+            t_per_fold=[t_direct],
+            n_inner_folds=1,
+            is_stable=True,
         )
 
     t_mean = float(np.mean(t_values))
@@ -100,19 +108,27 @@ def fit_temperature_nested(
 
     if not is_stable:
         logger.warning(
-            "Calibration unstable: T_std=%.3f across %d folds (threshold: 0.3). "
-            "T values: %s", t_std, len(t_values), [f"{t:.3f}" for t in t_values],
+            "Calibration unstable: T_std=%.3f across %d folds (threshold: 0.3). T values: %s",
+            t_std,
+            len(t_values),
+            [f"{t:.3f}" for t in t_values],
         )
 
     stability = CalibrationStability(
-        t_mean=t_mean, t_std=t_std, t_per_fold=t_values,
-        n_inner_folds=len(t_values), is_stable=is_stable,
+        t_mean=t_mean,
+        t_std=t_std,
+        t_per_fold=t_values,
+        n_inner_folds=len(t_values),
+        is_stable=is_stable,
     )
 
     # Use median (robust to outlier folds)
     logger.info(
         "Nested CV temperature: T_median=%.3f, T_mean=%.3f, T_std=%.3f (%d folds)",
-        t_median, t_mean, t_std, len(t_values),
+        t_median,
+        t_mean,
+        t_std,
+        len(t_values),
     )
     return t_median, stability
 
@@ -130,14 +146,15 @@ def _fit_single_temperature(
         scaled = np.clip(logits / T, -30.0, 30.0)
         probs = 1.0 / (1.0 + np.exp(-scaled))
         probs = np.clip(probs, 1e-7, 1 - 1e-7)
-        return float(-np.mean(
-            outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-        ))
+        return float(-np.mean(outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)))
 
     try:
         from scipy.optimize import minimize_scalar
+
         result = minimize_scalar(
-            nll_at_T, bounds=(0.1, 10.0), method="bounded",
+            nll_at_T,
+            bounds=(0.1, 10.0),
+            method="bounded",
             options={"xatol": 1e-6, "maxiter": 500},
         )
         return float(result.x)
@@ -156,9 +173,11 @@ def _fit_single_temperature(
 # Solution 7: Calibration method selector
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CalibrationMethodResult:
     """Result for a single calibration method."""
+
     method_name: str
     brier_score: float
     ece: float
@@ -168,6 +187,7 @@ class CalibrationMethodResult:
 @dataclass
 class CalibrationSelectionResult:
     """Result of automatic calibration method selection."""
+
     selected_method: str
     method_results: List[CalibrationMethodResult]
     selection_criterion: str  # "brier" or "ece"
@@ -244,7 +264,10 @@ class CalibrationMethodSelector:
             for method in self.methods:
                 try:
                     cal_preds = self._apply_method(
-                        method, train_preds, train_outcomes, val_preds,
+                        method,
+                        train_preds,
+                        train_outcomes,
+                        val_preds,
                     )
                     brier = float(np.mean((cal_preds - val_outcomes) ** 2))
                     ece = self._compute_ece(cal_preds, val_outcomes)
@@ -259,17 +282,23 @@ class CalibrationMethodSelector:
             briers = method_briers[method]
             eces = method_eces[method]
             if briers:
-                results.append(CalibrationMethodResult(
-                    method_name=method,
-                    brier_score=float(np.mean(briers)),
-                    ece=float(np.mean(eces)),
-                ))
+                results.append(
+                    CalibrationMethodResult(
+                        method_name=method,
+                        brier_score=float(np.mean(briers)),
+                        ece=float(np.mean(eces)),
+                    )
+                )
 
         if not results:
             # Fallback to temperature
-            results.append(CalibrationMethodResult(
-                method_name="temperature", brier_score=0.25, ece=0.1,
-            ))
+            results.append(
+                CalibrationMethodResult(
+                    method_name="temperature",
+                    brier_score=0.25,
+                    ece=0.1,
+                )
+            )
 
         # Select best
         if self.selection_criterion == "brier":
@@ -278,9 +307,10 @@ class CalibrationMethodSelector:
             best = min(results, key=lambda r: r.ece)
 
         logger.info(
-            "Calibration method selection: %s (Brier=%.4f, ECE=%.4f). "
-            "Alternatives: %s",
-            best.method_name, best.brier_score, best.ece,
+            "Calibration method selection: %s (Brier=%.4f, ECE=%.4f). Alternatives: %s",
+            best.method_name,
+            best.brier_score,
+            best.ece,
             [(r.method_name, f"B={r.brier_score:.4f}") for r in results if r.method_name != best.method_name],
         )
 
@@ -314,6 +344,7 @@ class CalibrationMethodSelector:
             val_logits = np.log(val_preds_clipped / (1 - val_preds_clipped)).reshape(-1, 1)
             try:
                 from sklearn.linear_model import LogisticRegression
+
                 lr = LogisticRegression(C=1e10, max_iter=1000, solver="lbfgs")
                 lr.fit(train_logits, train_outcomes)
                 return lr.predict_proba(val_logits)[:, 1]
@@ -323,6 +354,7 @@ class CalibrationMethodSelector:
         elif method == "isotonic":
             try:
                 from sklearn.isotonic import IsotonicRegression
+
                 iso = IsotonicRegression(out_of_bounds="clip", y_min=0.001, y_max=0.999)
                 iso.fit(train_preds, train_outcomes)
                 return iso.predict(val_preds)

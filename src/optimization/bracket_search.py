@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BracketSearchConfig:
     """Configuration for bracket search algorithms."""
@@ -65,6 +66,7 @@ class SAConfig(BracketSearchConfig):
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class BracketPick:
@@ -113,6 +115,7 @@ ROUND_POINTS = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 # Base class
 # ---------------------------------------------------------------------------
 
+
 class BracketSearchOptimizer(ABC):
     """Abstract base for bracket search algorithms.
 
@@ -158,6 +161,7 @@ class BracketSearchOptimizer(ABC):
         self._path_scorer = None
         if config.enable_path_protection and self.team_regions:
             from .path_protection import PathProtectionScorer
+
             self._path_scorer = PathProtectionScorer()
 
     @abstractmethod
@@ -254,10 +258,13 @@ class BracketSearchOptimizer(ABC):
         # Path protection penalty (Protocol Section 4.4)
         if self._path_scorer is not None and bracket.picks:
             path_score = self._path_scorer.compute_path_protection_score(
-                bracket.picks, self.predict_fn, self.team_regions, self.scoring,
+                bracket.picks,
+                self.predict_fn,
+                self.team_regions,
+                self.scoring,
             )
             if path_score < self.config.min_path_protection:
-                fitness *= (path_score / self.config.min_path_protection)
+                fitness *= path_score / self.config.min_path_protection
 
         return fitness
 
@@ -292,7 +299,10 @@ class BracketSearchOptimizer(ABC):
         path_score = 0.0
         if self._path_scorer is not None and bracket.picks:
             path_score = self._path_scorer.compute_path_protection_score(
-                bracket.picks, self.predict_fn, self.team_regions, self.scoring,
+                bracket.picks,
+                self.predict_fn,
+                self.team_regions,
+                self.scoring,
             )
 
         # Composite fitness with optional path protection
@@ -367,15 +377,11 @@ class BracketSearchOptimizer(ABC):
             if downstream.winner_id == old_winner:
                 # The old winner was picked to advance — swap to new winner
                 downstream.winner_id = new_winner
-                downstream.win_probability = self.predict_fn(
-                    new_winner, downstream.loser_id
-                )
+                downstream.win_probability = self.predict_fn(new_winner, downstream.loser_id)
             elif downstream.loser_id == old_winner:
                 # The old winner was the losing opponent — replace
                 downstream.loser_id = new_winner
-                downstream.win_probability = self.predict_fn(
-                    downstream.winner_id, new_winner
-                )
+                downstream.win_probability = self.predict_fn(downstream.winner_id, new_winner)
 
         # Update champion
         if new_bracket.picks:
@@ -388,6 +394,7 @@ class BracketSearchOptimizer(ABC):
 # ---------------------------------------------------------------------------
 # Hill Climbing
 # ---------------------------------------------------------------------------
+
 
 class HillClimbOptimizer(BracketSearchOptimizer):
     """Greedy best-neighbor search across bracket picks.
@@ -440,14 +447,14 @@ class HillClimbOptimizer(BracketSearchOptimizer):
                 if self.config.verbose:
                     logger.info(
                         "Hill climb: early stop at iteration %d (no improve for %d)",
-                        iteration, no_improve,
+                        iteration,
+                        no_improve,
                     )
                 break
 
         if self.config.verbose:
             logger.info(
-                "Hill climb: finished after %d iterations, "
-                "fitness %.4f -> %.4f",
+                "Hill climb: finished after %d iterations, fitness %.4f -> %.4f",
                 iteration + 1,
                 initial_bracket.fitness,
                 best.fitness,
@@ -459,6 +466,7 @@ class HillClimbOptimizer(BracketSearchOptimizer):
 # ---------------------------------------------------------------------------
 # Simulated Annealing
 # ---------------------------------------------------------------------------
+
 
 class SimulatedAnnealingOptimizer(BracketSearchOptimizer):
     """Stochastic search with Metropolis-Hastings acceptance.
@@ -479,8 +487,13 @@ class SimulatedAnnealingOptimizer(BracketSearchOptimizer):
         team_seeds: Optional[Dict[str, int]] = None,
     ):
         super().__init__(
-            predict_fn, config, public_picks, scoring_system,
-            round_public_picks, team_regions, team_seeds,
+            predict_fn,
+            config,
+            public_picks,
+            scoring_system,
+            round_public_picks,
+            team_regions,
+            team_seeds,
         )
         self.sa_config = config
 
@@ -532,8 +545,7 @@ class SimulatedAnnealingOptimizer(BracketSearchOptimizer):
 
         if self.config.verbose:
             logger.info(
-                "SA: finished after %d iterations, temperature %.6f, "
-                "fitness %.4f -> %.4f, accepted_worse=%d/%d",
+                "SA: finished after %d iterations, temperature %.6f, fitness %.4f -> %.4f, accepted_worse=%d/%d",
                 self.config.max_iterations,
                 temperature,
                 initial_bracket.fitness,

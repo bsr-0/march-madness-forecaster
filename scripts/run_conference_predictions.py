@@ -33,6 +33,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # 1.  DATA ACQUISITION — scrape fresh 2026 Four Factors & Shooting
 # ──────────────────────────────────────────────────────────────────────
 
+
 def scrape_fresh_data():
     """Scrape fresh 2026 Torvik Four Factors + Shooting via BartTorvikScraper.
 
@@ -56,8 +57,7 @@ def scrape_fresh_data():
                 json.dump(ff, f, indent=2)
             logger.info("  Saved %d teams to %s", len(ff), ff_path.name)
         else:
-            logger.warning("  Scrape returned %d teams — pipeline will use fallback files",
-                           len(ff) if ff else 0)
+            logger.warning("  Scrape returned %d teams — pipeline will use fallback files", len(ff) if ff else 0)
     except Exception as e:
         logger.warning("  Four Factors scrape failed (%s) — pipeline will use fallback files", e)
 
@@ -71,8 +71,7 @@ def scrape_fresh_data():
                 json.dump(sh, f, indent=2)
             logger.info("  Saved %d teams to %s", len(sh), sh_path.name)
         else:
-            logger.warning("  Scrape returned %d teams — pipeline will use fallback files",
-                           len(sh) if sh else 0)
+            logger.warning("  Scrape returned %d teams — pipeline will use fallback files", len(sh) if sh else 0)
     except Exception as e:
         logger.warning("  Shooting scrape failed (%s) — pipeline will use fallback files", e)
 
@@ -80,6 +79,7 @@ def scrape_fresh_data():
 # ──────────────────────────────────────────────────────────────────────
 # 2.  ENHANCED LOGISTIC MODEL (better than base standalone)
 # ──────────────────────────────────────────────────────────────────────
+
 
 class EnhancedPredictor:
     """
@@ -145,21 +145,31 @@ class EnhancedPredictor:
             # Enrich with Four Factors
             if self.four_factors and tid in self.four_factors:
                 ff = self.four_factors[tid]
-                team.update({
-                    "efg": ff.get("effective_fg_pct", 0.0),
-                    "to_rate": ff.get("turnover_rate", 0.0),
-                    "orb_rate": ff.get("offensive_reb_rate", 0.0),
-                    "ft_rate": ff.get("free_throw_rate", 0.0),
-                    "opp_efg": ff.get("opp_effective_fg_pct", 0.0),
-                    "opp_to_rate": ff.get("opp_turnover_rate", 0.0),
-                    "drb_rate": ff.get("defensive_reb_rate", 0.0),
-                    "opp_ft_rate": ff.get("opp_free_throw_rate", 0.0),
-                })
+                team.update(
+                    {
+                        "efg": ff.get("effective_fg_pct", 0.0),
+                        "to_rate": ff.get("turnover_rate", 0.0),
+                        "orb_rate": ff.get("offensive_reb_rate", 0.0),
+                        "ft_rate": ff.get("free_throw_rate", 0.0),
+                        "opp_efg": ff.get("opp_effective_fg_pct", 0.0),
+                        "opp_to_rate": ff.get("opp_turnover_rate", 0.0),
+                        "drb_rate": ff.get("defensive_reb_rate", 0.0),
+                        "opp_ft_rate": ff.get("opp_free_throw_rate", 0.0),
+                    }
+                )
             else:
-                team.update({
-                    "efg": 0.0, "to_rate": 0.0, "orb_rate": 0.0, "ft_rate": 0.0,
-                    "opp_efg": 0.0, "opp_to_rate": 0.0, "drb_rate": 0.0, "opp_ft_rate": 0.0,
-                })
+                team.update(
+                    {
+                        "efg": 0.0,
+                        "to_rate": 0.0,
+                        "orb_rate": 0.0,
+                        "ft_rate": 0.0,
+                        "opp_efg": 0.0,
+                        "opp_to_rate": 0.0,
+                        "drb_rate": 0.0,
+                        "opp_ft_rate": 0.0,
+                    }
+                )
 
             # Enrich with Shooting
             if self.shooting and tid in self.shooting:
@@ -181,10 +191,9 @@ class EnhancedPredictor:
                 with open(seed_path) as f:
                     raw_overrides = json.load(f)
                 from src.data.normalize import normalize_team_id
+
                 for conf_key, seeds in raw_overrides.items():
-                    seed_overrides[conf_key] = {
-                        normalize_team_id(k): v for k, v in seeds.items()
-                    }
+                    seed_overrides[conf_key] = {normalize_team_id(k): v for k, v in seeds.items()}
                 logger.info("Loaded seed overrides from %s", seed_path)
             except Exception as e:
                 logger.warning("Failed to load seed overrides: %s", e)
@@ -254,32 +263,77 @@ class EnhancedPredictor:
 
 # Conference tournament sizes (2025-26 formats)
 CONF_TOURNAMENT_SIZES = {
-    "ACC": 15, "B10": 18, "B12": 16, "SEC": 16, "BE": 11,
-    "Amer": 10, "MWC": 12, "WCC": 12, "A10": 14, "MVC": 11,
-    "CAA": 13, "AE": 8, "ASun": 12, "BSky": 10, "BSth": 9,
-    "BW": 8, "CUSA": 10, "Horz": 11, "Ivy": 4, "MAAC": 10,
-    "MAC": 8, "MEAC": 8, "NEC": 8, "OVC": 8, "Pat": 10,
-    "SB": 14, "SC": 10, "SWAC": 12, "Slnd": 8, "Sum": 8, "WAC": 7,
+    "ACC": 15,
+    "B10": 18,
+    "B12": 16,
+    "SEC": 16,
+    "BE": 11,
+    "Amer": 10,
+    "MWC": 12,
+    "WCC": 12,
+    "A10": 14,
+    "MVC": 11,
+    "CAA": 13,
+    "AE": 8,
+    "ASun": 12,
+    "BSky": 10,
+    "BSth": 9,
+    "BW": 8,
+    "CUSA": 10,
+    "Horz": 11,
+    "Ivy": 4,
+    "MAAC": 10,
+    "MAC": 8,
+    "MEAC": 8,
+    "NEC": 8,
+    "OVC": 8,
+    "Pat": 10,
+    "SB": 14,
+    "SC": 10,
+    "SWAC": 12,
+    "Slnd": 8,
+    "Sum": 8,
+    "WAC": 7,
 }
 
 CONF_FULL_NAMES = {
-    "A10": "Atlantic 10", "ACC": "ACC", "AE": "America East",
-    "ASun": "ASUN", "Amer": "American Athletic", "B10": "Big Ten",
-    "B12": "Big 12", "BE": "Big East", "BSky": "Big Sky",
-    "BSth": "Big South", "BW": "Big West", "CAA": "CAA",
-    "CUSA": "Conference USA", "Horz": "Horizon League",
-    "Ivy": "Ivy League", "MAAC": "MAAC", "MAC": "MAC",
-    "MEAC": "MEAC", "MVC": "Missouri Valley", "MWC": "Mountain West",
-    "NEC": "NEC", "OVC": "Ohio Valley", "Pat": "Patriot League",
-    "SB": "Sun Belt", "SC": "Southern", "SEC": "SEC",
-    "SWAC": "SWAC", "Slnd": "Southland", "Sum": "Summit League",
-    "WAC": "WAC", "WCC": "WCC",
+    "A10": "Atlantic 10",
+    "ACC": "ACC",
+    "AE": "America East",
+    "ASun": "ASUN",
+    "Amer": "American Athletic",
+    "B10": "Big Ten",
+    "B12": "Big 12",
+    "BE": "Big East",
+    "BSky": "Big Sky",
+    "BSth": "Big South",
+    "BW": "Big West",
+    "CAA": "CAA",
+    "CUSA": "Conference USA",
+    "Horz": "Horizon League",
+    "Ivy": "Ivy League",
+    "MAAC": "MAAC",
+    "MAC": "MAC",
+    "MEAC": "MEAC",
+    "MVC": "Missouri Valley",
+    "MWC": "Mountain West",
+    "NEC": "NEC",
+    "OVC": "Ohio Valley",
+    "Pat": "Patriot League",
+    "SB": "Sun Belt",
+    "SC": "Southern",
+    "SEC": "SEC",
+    "SWAC": "SWAC",
+    "Slnd": "Southland",
+    "Sum": "Summit League",
+    "WAC": "WAC",
+    "WCC": "WCC",
 }
 
 
-def simulate_bracket(predictor: EnhancedPredictor, conf: str,
-                     num_sims: int = 10000, noise_std: float = 0.16,
-                     seed: int = 2026) -> dict:
+def simulate_bracket(
+    predictor: EnhancedPredictor, conf: str, num_sims: int = 10000, noise_std: float = 0.16, seed: int = 2026
+) -> dict:
     """
     Simulate a conference tournament bracket via Monte Carlo.
 
@@ -320,10 +374,12 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
 
     # Track convergence: snapshot championship probs at intervals
     # Use ~40 sample points (logarithmically spaced early, linear later)
-    snapshot_points = sorted(set(
-        [int(x) for x in np.geomspace(10, min(500, num_sims), 15)] +
-        list(range(500, num_sims + 1, max(1, num_sims // 25)))
-    ))
+    snapshot_points = sorted(
+        set(
+            [int(x) for x in np.geomspace(10, min(500, num_sims), 15)]
+            + list(range(500, num_sims + 1, max(1, num_sims // 25)))
+        )
+    )
     # Ensure final point is included
     if num_sims not in snapshot_points:
         snapshot_points.append(num_sims)
@@ -333,8 +389,9 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
     convergence_x = []  # simulation counts where snapshots taken
 
     for sim_i in range(1, num_sims + 1):
-        result = _run_bracket(predictor, teams, deterministic=False,
-                              rng=rng, noise_std=noise_std, base_probs=base_probs)
+        result = _run_bracket(
+            predictor, teams, deterministic=False, rng=rng, noise_std=noise_std, base_probs=base_probs
+        )
         if result["champion"]:
             champ_counts[result["champion"]["team_id"]] += 1
         for t in result.get("semifinalists", []):
@@ -344,9 +401,7 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
         if sim_i in snapshot_set:
             convergence_x.append(sim_i)
             for t in teams:
-                convergence[t["team_id"]].append(
-                    round(champ_counts.get(t["team_id"], 0) / sim_i, 4)
-                )
+                convergence[t["team_id"]].append(round(champ_counts.get(t["team_id"], 0) / sim_i, 4))
 
     # Compute probabilities
     champ_probs = {t["team_id"]: champ_counts.get(t["team_id"], 0) / num_sims for t in teams}
@@ -380,9 +435,7 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
     }
 
 
-def _run_bracket(predictor, teams, deterministic=True,
-                 rng=None, noise_std=0.16, base_probs=None,
-                 bracket_format=None):
+def _run_bracket(predictor, teams, deterministic=True, rng=None, noise_std=0.16, base_probs=None, bracket_format=None):
     """Run a single bracket simulation using BracketFormat definitions.
 
     Uses the BracketFormat to determine which seeds enter at each round,
@@ -423,6 +476,7 @@ def _run_bracket(predictor, teams, deterministic=True,
 
         if not has_byes and len(r1_teams) >= 4:
             from src.models.conference_tournament import bracket_seed_order
+
             positions = bracket_seed_order(len(r1_teams))
             ordered_r1 = [r1_teams[p] for p in positions]
         else:
@@ -436,11 +490,15 @@ def _run_bracket(predictor, teams, deterministic=True,
         t1 = ordered_r1[2 * i]
         t2 = ordered_r1[2 * i + 1]
         winner, prob = _play_game(predictor, t1, t2, deterministic, rng, noise_std, base_probs)
-        r1_games.append({
-            "team1": t1, "team2": t2, "winner": winner,
-            "win_prob": prob,
-            "is_upset": winner["conf_seed"] > min(t1["conf_seed"], t2["conf_seed"]),
-        })
+        r1_games.append(
+            {
+                "team1": t1,
+                "team2": t2,
+                "winner": winner,
+                "win_prob": prob,
+                "is_upset": winner["conf_seed"] > min(t1["conf_seed"], t2["conf_seed"]),
+            }
+        )
         round_results.append(winner)
 
     all_rounds.append({"round_name": _round_name(1, total_rounds), "games": r1_games})
@@ -456,6 +514,7 @@ def _run_bracket(predictor, teams, deterministic=True,
             entrants = list(new_teams) + list(round_results)
             entrants.sort(key=lambda t: t["conf_seed"])
             from src.models.conference_tournament import bracket_seed_order
+
             positions = bracket_seed_order(len(entrants))
             entrants = [entrants[p] for p in positions]
         else:
@@ -471,11 +530,15 @@ def _run_bracket(predictor, teams, deterministic=True,
             t1 = entrants[2 * i]
             t2 = entrants[2 * i + 1]
             winner, prob = _play_game(predictor, t1, t2, deterministic, rng, noise_std, base_probs)
-            round_games.append({
-                "team1": t1, "team2": t2, "winner": winner,
-                "win_prob": prob,
-                "is_upset": winner["conf_seed"] > min(t1["conf_seed"], t2["conf_seed"]),
-            })
+            round_games.append(
+                {
+                    "team1": t1,
+                    "team2": t2,
+                    "winner": winner,
+                    "win_prob": prob,
+                    "is_upset": winner["conf_seed"] > min(t1["conf_seed"], t2["conf_seed"]),
+                }
+            )
             round_results.append(winner)
 
         if len(entrants) % 2 == 1:
@@ -532,6 +595,7 @@ def _round_name(round_num, total_rounds):
 # 3b.  OUTPUT VALIDATION
 # ──────────────────────────────────────────────────────────────────────
 
+
 def _validate_output(json_path: Path) -> List[str]:
     """Validate generated JSON output against bracket format definitions.
 
@@ -555,9 +619,7 @@ def _validate_output(json_path: Path) -> List[str]:
 
         # Check round count matches format
         if len(rounds) != fmt.total_rounds:
-            errors.append(
-                f"{conf_key}: expected {fmt.total_rounds} rounds, got {len(rounds)}"
-            )
+            errors.append(f"{conf_key}: expected {fmt.total_rounds} rounds, got {len(rounds)}")
 
         # Check R1 matchups match format definition
         if fmt.first_round_matchups and rounds:
@@ -575,17 +637,14 @@ def _validate_output(json_path: Path) -> List[str]:
 
             if actual_matchups != expected_matchups:
                 errors.append(
-                    f"{conf_key}: R1 matchups {sorted(actual_matchups)} "
-                    f"!= expected {sorted(expected_matchups)}"
+                    f"{conf_key}: R1 matchups {sorted(actual_matchups)} != expected {sorted(expected_matchups)}"
                 )
 
         # Check total games == num_teams - 1
         total_games = sum(len(r["games"]) for r in rounds)
         expected_games = num_teams - 1
         if total_games != expected_games:
-            errors.append(
-                f"{conf_key}: {total_games} total games != expected {expected_games}"
-            )
+            errors.append(f"{conf_key}: {total_games} total games != expected {expected_games}")
 
     return errors
 
@@ -593,6 +652,7 @@ def _validate_output(json_path: Path) -> List[str]:
 # ──────────────────────────────────────────────────────────────────────
 # 4.  GENERATE HTML DASHBOARD
 # ──────────────────────────────────────────────────────────────────────
+
 
 def generate_dashboard(all_results: dict, output_path: str):
     """Generate interactive HTML dashboard."""
@@ -615,44 +675,49 @@ def generate_dashboard(all_results: dict, output_path: str):
         top_contenders = []
         for tid, prob in list(result["championship_probs"].items())[:8]:
             t = result["deterministic_bracket"]["rounds"][0]["games"][0]["team1"]  # fallback
-            for conf_teams in [g["team1"] for rnd in det["rounds"] for g in rnd["games"]] + \
-                              [g["team2"] for rnd in det["rounds"] for g in rnd["games"]]:
+            for conf_teams in [g["team1"] for rnd in det["rounds"] for g in rnd["games"]] + [
+                g["team2"] for rnd in det["rounds"] for g in rnd["games"]
+            ]:
                 if conf_teams["team_id"] == tid:
                     t = conf_teams
                     break
-            top_contenders.append({
-                "team_id": tid,
-                "name": t.get("name", tid),
-                "seed": t.get("conf_seed", 99),
-                "t_rank": t.get("t_rank", 999),
-                "adj_em": round(t.get("adj_em", 0), 1),
-                "champ_prob": round(prob * 100, 1),
-            })
+            top_contenders.append(
+                {
+                    "team_id": tid,
+                    "name": t.get("name", tid),
+                    "seed": t.get("conf_seed", 99),
+                    "t_rank": t.get("t_rank", 999),
+                    "adj_em": round(t.get("adj_em", 0), 1),
+                    "champ_prob": round(prob * 100, 1),
+                }
+            )
 
         # Count upsets in deterministic bracket
-        upset_count = sum(
-            1 for rnd in det["rounds"] for g in rnd["games"] if g.get("is_upset")
-        )
+        upset_count = sum(1 for rnd in det["rounds"] for g in rnd["games"] if g.get("is_upset"))
 
         # Build round-by-round for detail view
         rounds_detail = []
         for rnd in det["rounds"]:
             games_detail = []
             for g in rnd["games"]:
-                games_detail.append({
-                    "team1_name": g["team1"]["name"],
-                    "team1_seed": g["team1"]["conf_seed"],
-                    "team2_name": g["team2"]["name"],
-                    "team2_seed": g["team2"]["conf_seed"],
-                    "winner_name": g["winner"]["name"],
-                    "winner_seed": g["winner"]["conf_seed"],
-                    "win_prob": round(g["win_prob"] * 100, 1),
-                    "is_upset": g.get("is_upset", False),
-                })
-            rounds_detail.append({
-                "round_name": rnd["round_name"],
-                "games": games_detail,
-            })
+                games_detail.append(
+                    {
+                        "team1_name": g["team1"]["name"],
+                        "team1_seed": g["team1"]["conf_seed"],
+                        "team2_name": g["team2"]["name"],
+                        "team2_seed": g["team2"]["conf_seed"],
+                        "winner_name": g["winner"]["name"],
+                        "winner_seed": g["winner"]["conf_seed"],
+                        "win_prob": round(g["win_prob"] * 100, 1),
+                        "is_upset": g.get("is_upset", False),
+                    }
+                )
+            rounds_detail.append(
+                {
+                    "round_name": rnd["round_name"],
+                    "games": games_detail,
+                }
+            )
 
         dashboard_data[conf] = {
             "conference": conf,
@@ -690,12 +755,12 @@ def _build_html(data, power_confs, mid_major_confs, small_confs):
             bar_width = min(c["champ_prob"] * 3, 100)
             contender_rows += f"""
             <div class="contender-row">
-                <span class="seed-badge">#{c['seed']}</span>
-                <span class="team-name">{c['name']}</span>
+                <span class="seed-badge">#{c["seed"]}</span>
+                <span class="team-name">{c["name"]}</span>
                 <div class="prob-bar-container">
                     <div class="prob-bar" style="width: {bar_width}%"></div>
                 </div>
-                <span class="prob-pct">{c['champ_prob']}%</span>
+                <span class="prob-pct">{c["champ_prob"]}%</span>
             </div>"""
 
         # Build bracket detail (hidden by default)
@@ -704,38 +769,48 @@ def _build_html(data, power_confs, mid_major_confs, small_confs):
             games_html = ""
             for g in rnd["games"]:
                 upset_class = " upset" if g["is_upset"] else ""
-                winner_indicator = lambda name, is_winner: f'<strong class="winner">{name}</strong>' if is_winner else name
-                t1_display = winner_indicator(f"({g['team1_seed']}) {g['team1_name']}", g['winner_name'] == g['team1_name'])
-                t2_display = winner_indicator(f"({g['team2_seed']}) {g['team2_name']}", g['winner_name'] == g['team2_name'])
+                winner_indicator = lambda name, is_winner: (
+                    f'<strong class="winner">{name}</strong>' if is_winner else name
+                )
+                t1_display = winner_indicator(
+                    f"({g['team1_seed']}) {g['team1_name']}", g["winner_name"] == g["team1_name"]
+                )
+                t2_display = winner_indicator(
+                    f"({g['team2_seed']}) {g['team2_name']}", g["winner_name"] == g["team2_name"]
+                )
 
                 games_html += f"""
                 <div class="bracket-game{upset_class}">
                     <div class="matchup-line">{t1_display}</div>
                     <div class="matchup-line">{t2_display}</div>
-                    <div class="game-prob">{g['win_prob']}%</div>
+                    <div class="game-prob">{g["win_prob"]}%</div>
                 </div>"""
 
             bracket_html += f"""
             <div class="bracket-round">
-                <div class="round-header">{rnd['round_name']}</div>
+                <div class="round-header">{rnd["round_name"]}</div>
                 {games_html}
             </div>"""
 
-        upset_badge = f'<span class="upset-badge">{d["upset_count"]} upset{"s" if d["upset_count"] != 1 else ""}</span>' if d["upset_count"] > 0 else ''
+        upset_badge = (
+            f'<span class="upset-badge">{d["upset_count"]} upset{"s" if d["upset_count"] != 1 else ""}</span>'
+            if d["upset_count"] > 0
+            else ""
+        )
 
         return f"""
         <div class="conf-card" data-conf="{conf}">
             <div class="card-header" onclick="toggleBracket('{conf}')">
                 <div class="conf-title">
-                    <h3>{d['conference_name']}</h3>
-                    <span class="team-count">{d['num_teams']} teams</span>
+                    <h3>{d["conference_name"]}</h3>
+                    <span class="team-count">{d["num_teams"]} teams</span>
                     {upset_badge}
                 </div>
                 <div class="champion-prediction">
                     <div class="champ-label">Predicted Champion</div>
-                    <div class="champ-name">{d['champion_name']}</div>
-                    <div class="champ-detail">Seed #{d['champion_seed']} | T-Rank #{d['champion_rank']}</div>
-                    <div class="mc-prob">MC: {d['mc_favorite_name']} ({d['mc_favorite_prob']}%)</div>
+                    <div class="champ-name">{d["champion_name"]}</div>
+                    <div class="champ-detail">Seed #{d["champion_seed"]} | T-Rank #{d["champion_rank"]}</div>
+                    <div class="mc-prob">MC: {d["mc_favorite_name"]} ({d["mc_favorite_prob"]}%)</div>
                 </div>
             </div>
             <div class="contenders-section">
@@ -928,6 +1003,7 @@ function filterConfs(filter) {{
 # 5.  MAIN PIPELINE
 # ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     logger.info("=" * 70)
     logger.info("  CONFERENCE TOURNAMENT PREDICTION PIPELINE  —  March 2026")
@@ -946,7 +1022,9 @@ def main():
     n_confs = len(predictor.teams_by_conf)
     n_ff = sum(1 for t in predictor.teams_by_id.values() if t.get("efg", 0) > 0)
     logger.info("  Loaded %d teams across %d conferences", n_teams, n_confs)
-    logger.info("  Four Factors enrichment: %d/%d teams (%.0f%%)", n_ff, n_teams, n_ff/n_teams*100 if n_teams else 0)
+    logger.info(
+        "  Four Factors enrichment: %d/%d teams (%.0f%%)", n_ff, n_teams, n_ff / n_teams * 100 if n_teams else 0
+    )
 
     # Step 3: Run simulations for all conferences
     logger.info("\n[STEP 3] Running Monte Carlo Simulations (10,000 per conference)")
@@ -957,11 +1035,14 @@ def main():
             all_results[conf] = result
             mc = result["mc_favorite"]
             det_champ = result["predicted_champion"]
-            logger.info("  %s: Champion=%s (Seed #%d) | MC Favorite=%s (%.1f%%)",
-                       CONF_FULL_NAMES.get(conf, conf),
-                       det_champ["name"] if det_champ else "?",
-                       det_champ["conf_seed"] if det_champ else 0,
-                       mc["name"], mc["prob"] * 100)
+            logger.info(
+                "  %s: Champion=%s (Seed #%d) | MC Favorite=%s (%.1f%%)",
+                CONF_FULL_NAMES.get(conf, conf),
+                det_champ["name"] if det_champ else "?",
+                det_champ["conf_seed"] if det_champ else 0,
+                mc["name"],
+                mc["prob"] * 100,
+            )
 
     # Step 4: Save JSON results
     logger.info("\n[STEP 4] Saving Results")
@@ -995,7 +1076,7 @@ def main():
                             "is_upset": g["is_upset"],
                         }
                         for g in rnd["games"]
-                    ]
+                    ],
                 }
                 for rnd in det["rounds"]
             ],
@@ -1021,8 +1102,7 @@ def main():
         for err in validation_errors:
             logger.critical("  VALIDATION FAIL: %s", err)
         raise RuntimeError(
-            f"Output validation failed with {len(validation_errors)} error(s). "
-            "See log above for details."
+            f"Output validation failed with {len(validation_errors)} error(s). See log above for details."
         )
     logger.info("  All %d conferences passed output validation", len(json_output))
 
@@ -1044,14 +1124,20 @@ def main():
         champ = det["champion"]
         mc = r["mc_favorite"]
         if champ:
-            logger.info(f"  {CONF_FULL_NAMES.get(conf, conf):<23} {champ['name']:<25} {champ['conf_seed']:>4}  {champ['t_rank']:>6}  {mc['prob']*100:>6.1f}%")
+            logger.info(
+                f"  {CONF_FULL_NAMES.get(conf, conf):<23} {champ['name']:<25} {champ['conf_seed']:>4}  {champ['t_rank']:>6}  {mc['prob'] * 100:>6.1f}%"
+            )
 
     # Upset summary
     total_upsets = sum(
         sum(1 for rnd in r["deterministic_bracket"]["rounds"] for g in rnd["games"] if g["is_upset"])
         for r in all_results.values()
     )
-    one_seeds = sum(1 for r in all_results.values() if r["deterministic_bracket"]["champion"] and r["deterministic_bracket"]["champion"]["conf_seed"] == 1)
+    one_seeds = sum(
+        1
+        for r in all_results.values()
+        if r["deterministic_bracket"]["champion"] and r["deterministic_bracket"]["champion"]["conf_seed"] == 1
+    )
 
     logger.info("-" * 75)
     logger.info(f"  #1 seeds winning: {one_seeds}/{len(all_results)}")

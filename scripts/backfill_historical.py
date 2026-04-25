@@ -61,16 +61,10 @@ def _season_complete(base_dir: Path, season: int, require_tournament: bool) -> T
     fallback_date = f"{season - 1}-11-01"
     fallback_count = sum(1 for g in games if g.get("date") == fallback_date)
     if fallback_count > len(games) * 0.5:
-        return False, (
-            f"game dates corrupted: {fallback_count}/{len(games)} games have "
-            f"fallback date {fallback_date}"
-        )
+        return False, (f"game dates corrupted: {fallback_count}/{len(games)} games have fallback date {fallback_date}")
     unique_dates = len(set(g.get("date", "") for g in games))
     if unique_dates < 10 and len(games) > 100:
-        return False, (
-            f"game dates suspicious: only {unique_dates} unique dates "
-            f"across {len(games)} games"
-        )
+        return False, (f"game dates suspicious: only {unique_dates} unique dates across {len(games)} games")
 
     return True, "ok"
 

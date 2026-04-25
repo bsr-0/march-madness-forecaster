@@ -44,10 +44,10 @@ BASE_URL = "https://www.covers.com/sports/ncaab/matchups"
 
 def _parse_game_text(full_text: str, summary: str, game_date: str, season: int) -> dict | None:
     """Parse a game article's text into structured odds data."""
-    lines = [l.strip() for l in full_text.split('\n') if l.strip()]
+    lines = [l.strip() for l in full_text.split("\n") if l.strip()]
 
     header = lines[0] if lines else ""
-    match = re.match(r'^(.+?)\s+@\s+(.+?)(?:\s+\(N\))?$', header, re.IGNORECASE)
+    match = re.match(r"^(.+?)\s+@\s+(.+?)(?:\s+\(N\))?$", header, re.IGNORECASE)
     if not match:
         return None
 
@@ -60,18 +60,18 @@ def _parse_game_text(full_text: str, summary: str, game_date: str, season: int) 
 
     # Extract spread from summary: "Kansas covered the spread of -21.5"
     spread = 0.0
-    spread_match = re.search(r'spread of ([+-]?\d+\.?\d*)', summary)
+    spread_match = re.search(r"spread of ([+-]?\d+\.?\d*)", summary)
     if spread_match:
         spread = float(spread_match.group(1))
 
     # Extract total from summary: "total score of 164 was over 146.5"
     total = 0.0
-    total_match = re.search(r'(?:over|under)\s+(\d+\.?\d*)', summary)
+    total_match = re.search(r"(?:over|under)\s+(\d+\.?\d*)", summary)
     if total_match:
         total = float(total_match.group(1))
 
     # Extract actual scores
-    score_match = re.findall(r'(\d{2,3})\s+FINAL\s+(\d{2,3})', full_text)
+    score_match = re.findall(r"(\d{2,3})\s+FINAL\s+(\d{2,3})", full_text)
     away_score = 0
     home_score = 0
     if score_match:
@@ -81,7 +81,7 @@ def _parse_game_text(full_text: str, summary: str, game_date: str, season: int) 
     # Determine which team the spread belongs to
     cover_line = ""
     for line in lines:
-        if re.match(r'^[A-Z]{2,6}\s+[+-]\d+', line):
+        if re.match(r"^[A-Z]{2,6}\s+[+-]\d+", line):
             cover_line = line
             break
 
@@ -217,7 +217,7 @@ async def _scrape_season(page, season: int, full_season: bool, force: bool) -> i
 
         if full_season:
             if i % 10 == 0:
-                print(f"  {season} [{i+1}/{total_dates}] {scrape_date}...", end="", flush=True)
+                print(f"  {season} [{i + 1}/{total_dates}] {scrape_date}...", end="", flush=True)
         else:
             print(f"  {season} {scrape_date}...", end="", flush=True)
 
@@ -296,10 +296,7 @@ async def _scrape_season(page, season: int, full_season: bool, force: bool) -> i
         unique_teams.add(g["away_team_id"])
 
     spreads = sum(1 for g in all_games if g["spread"] != 0)
-    print(
-        f"  {season}: SAVED {len(all_games)} games, {len(unique_teams)} teams, "
-        f"{spreads} spreads"
-    )
+    print(f"  {season}: SAVED {len(all_games)} games, {len(unique_teams)} teams, {spreads} spreads")
     return len(all_games)
 
 
@@ -307,7 +304,9 @@ async def main():
     parser = argparse.ArgumentParser(description="Scrape Covers.com NCAA basketball odds")
     parser.add_argument("--season", type=int, help="Single season (2023-2026)")
     parser.add_argument("--all", action="store_true", help="Scrape all available seasons")
-    parser.add_argument("--full-season", action="store_true", help="Scrape entire season (Nov-Apr), not just tournament")
+    parser.add_argument(
+        "--full-season", action="store_true", help="Scrape entire season (Nov-Apr), not just tournament"
+    )
     parser.add_argument("--force", action="store_true", help="Re-scrape even if cached")
     args = parser.parse_args()
 

@@ -267,6 +267,5 @@ def validate_source_coverage(
     ratio = len(coverage_map) / team_count
     if ratio < min_ratio:
         raise ValueError(
-            f"{source_name} coverage is too low ({ratio:.1%}). "
-            f"Expected at least {min_ratio:.0%} of teams."
+            f"{source_name} coverage is too low ({ratio:.1%}). Expected at least {min_ratio:.0%} of teams."
         )

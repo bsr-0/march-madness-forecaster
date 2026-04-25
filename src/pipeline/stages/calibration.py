@@ -75,6 +75,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     they are on truly unseen data.
     """
     import logging as _logging
+
     logger = _logging.getLogger(__name__)
 
     probs = []
@@ -94,7 +95,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         key=lambda g: (pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")), g.game_id),
     )
     regular_season_games = [
-        g for g in unique_games_sorted
+        g
+        for g in unique_games_sorted
         if not pipeline._is_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"))
     ]
 
@@ -129,10 +131,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     tourney_cal_count = 0
     _rs = getattr(pipeline, "_runtime_state", {})
     _resolved_games_dir = _rs.get("multi_year_games_dir", pipeline.config.multi_year_games_dir)
-    if (pipeline.config.enable_multi_year_calibration
-            and _resolved_games_dir
-            and hasattr(pipeline, "baseline_model")
-            and pipeline.baseline_model is not None):
+    if (
+        pipeline.config.enable_multi_year_calibration
+        and _resolved_games_dir
+        and hasattr(pipeline, "baseline_model")
+        and pipeline.baseline_model is not None
+    ):
         import os
 
         # Resolve "auto" multi_year_games_dir via runtime state (never mutate config)
@@ -148,8 +152,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         games_dir = _resolved_games_dir
         if not games_dir:
             logger.warning(
-                "multi_year_games_dir is None after resolution; "
-                "historical tournament calibration augmentation skipped."
+                "multi_year_games_dir is None after resolution; historical tournament calibration augmentation skipped."
             )
         else:
             years = pipeline.config.resolve_calibration_years()
@@ -165,7 +168,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             # loading, apply zero-variance pruning to match the model's
             # expected input width.
             raw_feature_dim = getattr(
-                pipeline.baseline_model, "raw_feature_dim",
+                pipeline.baseline_model,
+                "raw_feature_dim",
                 pipeline.baseline_model.feature_dim,
             )
             feature_dim = pipeline.baseline_model.feature_dim
@@ -178,10 +182,16 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
                 metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                 if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
-                    return 0, f"files missing (games={os.path.isfile(games_path)}, metrics={os.path.isfile(metrics_path)})"
+                    return (
+                        0,
+                        f"files missing (games={os.path.isfile(games_path)}, metrics={os.path.isfile(metrics_path)})",
+                    )
                 try:
                     yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
-                        games_path, metrics_path, raw_feature_dim, yr,
+                        games_path,
+                        metrics_path,
+                        raw_feature_dim,
+                        yr,
                     )
                 except Exception as e:
                     return 0, f"loader error: {e}"
@@ -195,7 +205,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                         return 0, f"{n_bad} non-tournament rows (rw <= 1.0)"
                 logger.info(
                     "Loaded %d tournament-only calibration samples for %d",
-                    len(yr_y), yr,
+                    len(yr_y),
+                    yr,
                 )
                 # Apply zero-variance pruning (same mask used during training)
                 if _pre_fs_keep_mask is not None and yr_X.shape[1] > feature_dim:
@@ -240,17 +251,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             # Fallback: if configured calibration years didn't provide enough
             # samples, expand to dev_years. Tournament games are out-of-sample
             # (model trains only on regular-season games), so this is safe.
-            if (len(probs) < pipeline.config.min_calibration_samples_hard
-                    and pipeline.config.dev_years):
-                fallback_years = sorted(
-                    y for y in pipeline.config.dev_years
-                    if y not in set(years) and y != 2020
-                )
+            if len(probs) < pipeline.config.min_calibration_samples_hard and pipeline.config.dev_years:
+                fallback_years = sorted(y for y in pipeline.config.dev_years if y not in set(years) and y != 2020)
                 if fallback_years:
                     logger.info(
-                        "Calibration pool (%d) below hard minimum (%d). "
-                        "Expanding to dev_years tournament games: %s",
-                        len(probs), pipeline.config.min_calibration_samples_hard,
+                        "Calibration pool (%d) below hard minimum (%d). Expanding to dev_years tournament games: %s",
+                        len(probs),
+                        pipeline.config.min_calibration_samples_hard,
                         fallback_years,
                     )
                     for yr in fallback_years:
@@ -272,7 +279,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         "%d historical tournament (holdout-year OOS by default) + %d current-year "
         "validation-era = %d total samples.  Historical tournament "
         "predictions are the cleanest calibration signal.",
-        _n_historical_tourney_cal, _n_current_year_cal, len(probs),
+        _n_historical_tourney_cal,
+        _n_current_year_cal,
+        len(probs),
     )
 
     if len(probs) < pipeline.config.min_calibration_samples_hard:
@@ -284,10 +293,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
 
     if len(probs) < pipeline.config.min_calibration_samples:
         import logging
+
         logging.getLogger(__name__).warning(
             "Calibration sample size (%d) below minimum (%d); "
             "consider enabling multi-year calibration or providing more data.",
-            len(probs), pipeline.config.min_calibration_samples,
+            len(probs),
+            pipeline.config.min_calibration_samples,
         )
 
     if len(probs) < 20:
@@ -298,9 +309,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "samples": len(probs),
             "brier_before": float(metrics.brier_score),
             "brier_after": float(metrics.brier_score),
-            "feature_manifest_hash": (
-                (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
-            ),
+            "feature_manifest_hash": ((getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")),
             "provenance": build_artifact_provenance(
                 pipeline=pipeline,
                 artifact_kind="calibration_report",
@@ -312,10 +321,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             ),
         }
 
-    if (
-        pipeline.config.calibration_method == "none"
-        and pipeline.config.probability_profile == "production"
-    ):
+    if pipeline.config.calibration_method == "none" and pipeline.config.probability_profile == "production":
         pipeline.calibration_pipeline = None
         metrics = calculate_calibration_metrics(np.array(probs), np.array(outcomes))
         return {
@@ -325,9 +331,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "brier_after": float(metrics.brier_score),
             "ece_before": float(metrics.expected_calibration_error),
             "ece_after": float(metrics.expected_calibration_error),
-            "feature_manifest_hash": (
-                (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
-            ),
+            "feature_manifest_hash": ((getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")),
             "provenance": build_artifact_provenance(
                 pipeline=pipeline,
                 artifact_kind="calibration_report",
@@ -363,10 +367,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         # Array layout: current-year validation samples are appended first
         # (lines 104-119), then historical tournament samples (lines 145-188).
         assert len(p_arr) == _n_current_year_cal + _n_historical_tourney_cal, (
-            f"Calibration split mismatch: {len(p_arr)} != "
-            f"{_n_current_year_cal} + {_n_historical_tourney_cal}"
+            f"Calibration split mismatch: {len(p_arr)} != {_n_current_year_cal} + {_n_historical_tourney_cal}"
         )
-        p_fit = p_arr[_n_current_year_cal:]   # Historical tournament
+        p_fit = p_arr[_n_current_year_cal:]  # Historical tournament
         y_fit = y_arr[_n_current_year_cal:]
         p_eval = p_arr[:_n_current_year_cal]  # Current-year validation
         y_eval = y_arr[:_n_current_year_cal]
@@ -376,7 +379,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "FIX-NESTED-CAL: Using nested calibration — fit on %d "
             "historical tournament samples, evaluate on %d current-year "
             "validation samples. No double-dipping.",
-            len(p_fit), len(p_eval),
+            len(p_fit),
+            len(p_eval),
         )
     else:
         # Fallback: chronological 70/30 split (original approach).
@@ -397,11 +401,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # we skip it.  This prevents fitting noise when the calibration sample
     # is too small to distinguish T from 1.0.
     from ...ml.calibration.calibration import TemperatureScaling
+
     bootstrap_info = {}
     if pipeline.config.calibration_method == "temperature" and len(p_fit) >= 20:
         ts_check = TemperatureScaling()
         T_lo, T_hi, T_vals = ts_check.bootstrap_ci(
-            p_fit, y_fit,
+            p_fit,
+            y_fit,
             n_bootstrap=200,
             ci_level=0.95,
             random_seed=pipeline.config.random_seed,
@@ -426,11 +432,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 "brier_after": float(pre_metrics.brier_score),
                 "ece_before": float(pre_metrics.expected_calibration_error),
                 "ece_after": float(pre_metrics.expected_calibration_error),
-                "pre_calibration_clip": [pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi],
+                "pre_calibration_clip": [
+                    pipeline.config.pre_calibration_clip_lo,
+                    pipeline.config.pre_calibration_clip_hi,
+                ],
                 "fit_years": pipeline.config.resolve_calibration_years(),
-                "feature_manifest_hash": (
-                    (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
-                ),
+                "feature_manifest_hash": ((getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")),
                 **bootstrap_info,
             }
             calibration_info["provenance"] = build_artifact_provenance(
@@ -469,7 +476,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 yearly_preds = {1: p_fit[:half], 2: p_fit[half:]}
                 yearly_outs = {1: y_fit[:half], 2: y_fit[half:]}
                 agg = benchmark.run_temporal_benchmark(
-                    yearly_preds, yearly_outs,
+                    yearly_preds,
+                    yearly_outs,
                     random_seed=getattr(pipeline.config, "random_seed", 42),
                 )
                 selection = select_best_calibration(agg)
@@ -480,9 +488,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "isotonic_regression": "isotonic",
                     "beta_calibration": "temperature",  # fallback: no native beta in CalibrationPipeline
                 }
-                effective_calibration_method = method_map.get(
-                    selection.chosen_method, "temperature"
-                )
+                effective_calibration_method = method_map.get(selection.chosen_method, "temperature")
                 _auto_selection_info = {
                     "auto_selected_method": selection.chosen_method,
                     "auto_mapped_to": effective_calibration_method,
@@ -490,8 +496,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "auto_secondary_metrics": selection.secondary_metrics,
                 }
                 logger.info(
-                    "Phase 5 auto-calibration: selected '%s' (mapped to '%s') "
-                    "via temporal benchmark (log_loss=%.4f)",
+                    "Phase 5 auto-calibration: selected '%s' (mapped to '%s') via temporal benchmark (log_loss=%.4f)",
                     selection.chosen_method,
                     effective_calibration_method,
                     selection.secondary_metrics.get("log_loss", 0.0),
@@ -516,8 +521,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 "auto_fallback_reason": f"benchmark error: {e}",
             }
             logger.warning(
-                "Phase 5 auto-calibration benchmark failed (%s); "
-                "defaulting to temperature scaling.",
+                "Phase 5 auto-calibration benchmark failed (%s); defaulting to temperature scaling.",
                 e,
             )
 
@@ -531,11 +535,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             # Isotonic is preferred when enough data is available.
             # Otherwise default to Platt as the lower-variance fallback.
             fallback_method = "isotonic" if len(p_fit) >= 200 else "platt"
-            _auto_selection_info.update({
-                "calibration_enforcement": "isotonic_platt_only",
-                "calibration_method_requested": str(effective_calibration_method),
-                "calibration_method_enforced": fallback_method,
-            })
+            _auto_selection_info.update(
+                {
+                    "calibration_enforcement": "isotonic_platt_only",
+                    "calibration_method_requested": str(effective_calibration_method),
+                    "calibration_method_enforced": fallback_method,
+                }
+            )
             logger.info(
                 "Calibration enforcement: requested '%s' is not permitted in "
                 "non-production profile. Using '%s' instead.",
@@ -603,11 +609,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                         continue
 
                     model_p = pipeline._raw_fusion_probability(g.team1_id, g.team2_id)
-                    model_p = float(np.clip(
-                        model_p,
-                        pipeline.config.pre_calibration_clip_lo,
-                        pipeline.config.pre_calibration_clip_hi,
-                    ))
+                    model_p = float(
+                        np.clip(
+                            model_p,
+                            pipeline.config.pre_calibration_clip_lo,
+                            pipeline.config.pre_calibration_clip_hi,
+                        )
+                    )
                     vegas_p = spread_to_probability(spread, sigma=sigma)
 
                     anchor_model_probs.append(model_p)
@@ -635,13 +643,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                         "(a=%.4f, b=%.4f, logit MSE=%.4f). Falling back to standard "
                         "calibration on tournament holdout is NOT needed.",
                         anchor_cal.n_anchor_games,
-                        anchor_cal.a, anchor_cal.b,
+                        anchor_cal.a,
+                        anchor_cal.b,
                         anchor_cal.anchor_mse or 0.0,
                     )
                 else:
                     logger.info(
-                        "Vegas anchor: only %d games matched (need %d). "
-                        "Falling back to standard calibration.",
+                        "Vegas anchor: only %d games matched (need %d). Falling back to standard calibration.",
                         len(anchor_model_probs),
                         VegasAnchorCalibrator.MIN_GAMES,
                     )
@@ -671,6 +679,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     ):
         try:
             from ...ml.calibration.brier_optimal import BrierCalibrator
+
             rw_cal = BrierCalibrator()
             # Build synthetic round labels for calibration samples:
             # later calibration samples (closer to tournament) get higher
@@ -745,9 +754,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     if pipeline.config.mode == "calibration" and sharpening_enabled:
         # Protocol guardrail: sharpening is prohibited for Kaggle probability
         # submissions (mode="calibration"), regardless of config flag state.
-        logger.info(
-            "Sharpening disabled for calibration mode (Kaggle pathway guardrail)."
-        )
+        logger.info("Sharpening disabled for calibration mode (Kaggle pathway guardrail).")
         sharpening_enabled = False
         sharpener_info = {
             "sharpener_method": "disabled_for_kaggle",
@@ -759,11 +766,14 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     if sharpening_enabled and pipeline._brier_post_processor is not None:
         try:
             from ...ml.calibration.brier_optimal import RoundWeightedSharpener
+
             rw_sharpener = RoundWeightedSharpener()
             # Use evaluation portion for sharpener fitting (no double-dip)
             if use_oos_eval and len(p_eval) >= 20:
                 # Calibrate eval predictions through the fitted temperature
-                cal_preds_for_sharp = pipeline.calibration_pipeline.calibrate(p_eval) if pipeline.calibration_pipeline else p_eval
+                cal_preds_for_sharp = (
+                    pipeline.calibration_pipeline.calibrate(p_eval) if pipeline.calibration_pipeline else p_eval
+                )
                 sharp_y = y_eval
             else:
                 # FIX-LEAKAGE-SHARP: Previously fell back to fitting on
@@ -777,10 +787,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "sharpener_fitted_on_eval_only": False,
                     "sharpener_used_default": True,
                 }
-                logger.info(
-                    "Gap #7: Sharpener using safe default alpha=1.0 "
-                    "(insufficient OOS eval data for fitting)"
-                )
+                logger.info("Gap #7: Sharpener using safe default alpha=1.0 (insufficient OOS eval data for fitting)")
                 cal_preds_for_sharp = None  # Signal to skip fitting below
 
             # Construct synthetic round labels and fit only if we have OOS data
@@ -800,7 +807,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     else:
                         synthetic_round_labels.append("R64")
                 rw_sharpener.fit_weighted(
-                    cal_preds_for_sharp, sharp_y, synthetic_round_labels,
+                    cal_preds_for_sharp,
+                    sharp_y,
+                    synthetic_round_labels,
                     alpha_bounds=pipeline.config.brier_sharpening_alpha_bounds,
                 )
                 pipeline._brier_post_processor.sharpener = rw_sharpener
@@ -810,8 +819,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "sharpener_fitted_on_eval_only": True,
                 }
                 logger.info(
-                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, "
-                    "eval_only=True, n_samples=%d)",
+                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, eval_only=True, n_samples=%d)",
                     rw_sharpener.alpha,
                     n_games_sharp,
                 )
@@ -829,8 +837,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # data fitted the calibration temperature.
     if _fit_flb and not (use_oos_eval and len(p_eval) >= 20):
         logger.info(
-            "Gap #7: goto_conversion skipped (insufficient OOS "
-            "eval data — using default margin to avoid double-dip)"
+            "Gap #7: goto_conversion skipped (insufficient OOS eval data — using default margin to avoid double-dip)"
         )
         flb_info = {"goto_conversion_skipped": True, "reason": "no_oos_eval"}
         _fit_flb = False
@@ -842,13 +849,14 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 # Build round labels for weighted optimization if possible.
                 # This targets the actual Kaggle metric (round-weighted Brier).
                 flb_round_labels = None
-                if hasattr(pipeline, '_cal_round_labels') and pipeline._cal_round_labels is not None:
+                if hasattr(pipeline, "_cal_round_labels") and pipeline._cal_round_labels is not None:
                     flb_round_labels = pipeline._cal_round_labels
                 elif synthetic_round_labels and len(synthetic_round_labels) == len(flb_preds):
                     flb_round_labels = synthetic_round_labels
 
                 pipeline._flb_correction.fit(
-                    flb_preds, flb_outcomes,
+                    flb_preds,
+                    flb_outcomes,
                     strength_bounds=pipeline.config.goto_conversion_margin_bounds,
                     round_labels=flb_round_labels,
                 )
@@ -863,9 +871,15 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "goto_conversion_weighted": flb_round_labels is not None,
                 }
                 if pipeline._flb_correction._fit_details:
-                    flb_info["goto_conversion_brier_before"] = pipeline._flb_correction._fit_details.get("brier_before", 0.0)
-                    flb_info["goto_conversion_brier_after"] = pipeline._flb_correction._fit_details.get("brier_after", 0.0)
-                    flb_info["goto_conversion_brier_delta"] = pipeline._flb_correction._fit_details.get("brier_delta", 0.0)
+                    flb_info["goto_conversion_brier_before"] = pipeline._flb_correction._fit_details.get(
+                        "brier_before", 0.0
+                    )
+                    flb_info["goto_conversion_brier_after"] = pipeline._flb_correction._fit_details.get(
+                        "brier_after", 0.0
+                    )
+                    flb_info["goto_conversion_brier_delta"] = pipeline._flb_correction._fit_details.get(
+                        "brier_delta", 0.0
+                    )
         except Exception as e:
             logger.warning("goto_conversion fitting failed: %s", e)
 
@@ -877,11 +891,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     else:
         _n_cal = max(len(probs), 1)
     _uncertainty_band = round(1.96 * (0.25 / _n_cal) ** 0.5, 4)
-    _uncertainty_level = (
-        "high" if _uncertainty_band >= 0.10
-        else "moderate" if _uncertainty_band >= 0.05
-        else "low"
-    )
+    _uncertainty_level = "high" if _uncertainty_band >= 0.10 else "moderate" if _uncertainty_band >= 0.05 else "low"
 
     calibration_info = {
         "method": effective_calibration_method,
@@ -917,9 +927,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         },
         **sharpener_info,
         **flb_info,
-        "feature_manifest_hash": (
-            (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
-        ),
+        "feature_manifest_hash": ((getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")),
     }
     if bootstrap_info:
         calibration_info.update(bootstrap_info)
@@ -929,7 +937,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         calibration_info["vegas_anchor"] = _vegas_anchor_info
 
     # Add temperature value if using temperature scaling
-    if effective_calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
+    if effective_calibration_method == "temperature" and hasattr(
+        pipeline.calibration_pipeline.calibrator, "temperature"
+    ):
         calibration_info["temperature"] = round(pipeline.calibration_pipeline.calibrator.temperature, 4)
 
     calibration_info["provenance"] = build_artifact_provenance(
@@ -937,13 +947,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         artifact_kind="calibration_report",
         extra={
             "fit_data_source": (
-                "vegas_anchor_regular_season" if _vegas_anchor_used
-                else "historical_tournament_only" if _nested_mode
+                "vegas_anchor_regular_season"
+                if _vegas_anchor_used
+                else "historical_tournament_only"
+                if _nested_mode
                 else "mixed_or_temporal_split"
             ),
-            "evaluation_data_source": (
-                "current_year_validation_only" if _nested_mode else eval_mode
-            ),
+            "evaluation_data_source": ("current_year_validation_only" if _nested_mode else eval_mode),
             "historical_tournament_samples": _n_historical_tourney_cal,
             "current_year_validation_samples": _n_current_year_cal,
             "nested_calibration": _nested_mode,
@@ -969,10 +979,8 @@ def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> 
     if not pipeline.config.fit_massey_on_training or pipeline._massey_predictor is None:
         return {}
 
-    if not hasattr(pipeline, '_external_composites') or not pipeline._external_composites:
-        logger.debug(
-            "_fit_massey_predictor: no external composites loaded; skipping."
-        )
+    if not hasattr(pipeline, "_external_composites") or not pipeline._external_composites:
+        logger.debug("_fit_massey_predictor: no external composites loaded; skipping.")
         return {}
 
     calibration_games = pipeline._get_validation_era_games(game_flows)
@@ -992,11 +1000,13 @@ def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> 
         o = pipeline._game_outcome(g)
         if o is None:
             continue
-        p = float(np.clip(
-            pipeline._raw_fusion_probability(g.team1_id, g.team2_id),
-            pipeline.config.pre_calibration_clip_lo,
-            pipeline.config.pre_calibration_clip_hi,
-        ))
+        p = float(
+            np.clip(
+                pipeline._raw_fusion_probability(g.team1_id, g.team2_id),
+                pipeline.config.pre_calibration_clip_lo,
+                pipeline.config.pre_calibration_clip_hi,
+            )
+        )
         massey_cal_diffs.append(c1.composite_rating - c2.composite_rating)
         massey_cal_outcomes.append(o)
         massey_cal_model_probs.append(p)
@@ -1004,8 +1014,7 @@ def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> 
     n_samples = len(massey_cal_diffs)
     if n_samples < pipeline.config.massey_min_calibration_samples:
         logger.warning(
-            "_fit_massey_predictor: only %d samples (need >= %d); "
-            "using default sigma=%.1f, blend_weight=%.2f",
+            "_fit_massey_predictor: only %d samples (need >= %d); using default sigma=%.1f, blend_weight=%.2f",
             n_samples,
             pipeline.config.massey_min_calibration_samples,
             pipeline._massey_predictor.sigma,
@@ -1020,16 +1029,17 @@ def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> 
 
         # Step 1: Calibrate sigma using configured bounds
         pipeline._massey_predictor.fit(
-            m_diffs, m_outs,
+            m_diffs,
+            m_outs,
             sigma_bounds=pipeline.config.massey_sigma_bounds,
         )
 
         # Step 2: Generate Massey probs and optimize blend weight
-        m_probs = 1.0 / (1.0 + np.exp(
-            -m_diffs / max(pipeline._massey_predictor.sigma, 0.01)
-        ))
+        m_probs = 1.0 / (1.0 + np.exp(-m_diffs / max(pipeline._massey_predictor.sigma, 0.01)))
         pipeline._massey_predictor.fit_blend_weight(
-            m_model_p, m_probs, m_outs,
+            m_model_p,
+            m_probs,
+            m_outs,
             weight_bounds=pipeline.config.massey_blend_weight_bounds,
         )
 
@@ -1041,8 +1051,7 @@ def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> 
             "fitted": True,
         }
         logger.info(
-            "_fit_massey_predictor: sigma=%.3f, blend_weight=%.3f, "
-            "brier=%.4f on %d samples",
+            "_fit_massey_predictor: sigma=%.3f, blend_weight=%.3f, brier=%.4f on %d samples",
             pipeline._massey_predictor.sigma,
             pipeline._massey_predictor.blend_weight,
             pipeline._massey_predictor._fit_brier,
@@ -1076,14 +1085,16 @@ def _fit_tournament_sigma(pipeline, spread_model, tuning_stats: Dict) -> None:
     # Locate Kaggle tournament results CSV
     kaggle_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "data", "kaggle",
+        "data",
+        "kaggle",
     )
     tourney_csv = os.path.join(kaggle_dir, "MNCAATourneyCompactResults.csv")
 
     if not os.path.isfile(tourney_csv):
         logger.info(
             "Tournament sigma: MNCAATourneyCompactResults.csv not found at %s. "
-            "Falling back to margin-distribution method.", kaggle_dir,
+            "Falling back to margin-distribution method.",
+            kaggle_dir,
         )
         tourney_csv = None
 
@@ -1102,8 +1113,8 @@ def _fit_tournament_sigma(pipeline, spread_model, tuning_stats: Dict) -> None:
 
         if len(margins) < 30:
             logger.warning(
-                "Tournament sigma: insufficient historical data (%d games). "
-                "Using defaults.", len(margins),
+                "Tournament sigma: insufficient historical data (%d games). Using defaults.",
+                len(margins),
             )
             calibrator._set_defaults()
             pipeline._tournament_sigma_calibrator = calibrator
@@ -1134,7 +1145,8 @@ def _fit_tournament_sigma(pipeline, spread_model, tuning_stats: Dict) -> None:
         logger.info(
             "Tournament sigma: overrode SpreadRegressor sigma %.2f -> %.2f "
             "(tournament-calibrated from %d historical games)",
-            old_sigma, new_sigma,
+            old_sigma,
+            new_sigma,
             fit_stats.get("n_total_games", 0),
         )
 

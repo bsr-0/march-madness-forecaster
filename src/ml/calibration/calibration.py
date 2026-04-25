@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from scipy.optimize import minimize_scalar
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
@@ -25,12 +26,14 @@ except ImportError:
 try:
     from sklearn.isotonic import IsotonicRegression
     from sklearn.calibration import calibration_curve
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
 
 try:
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
@@ -79,127 +82,119 @@ class CalibrationMetrics:
 class BrierScoreOptimizer:
     """
     Optimizes predictions to minimize Brier Score.
-    
+
     Brier Score = (1/N) * Σ(predicted - actual)²
-    
+
     Lower is better. Perfect = 0, Coin flip = 0.25
     """
-    
+
     @staticmethod
     def calculate(predictions: np.ndarray, outcomes: np.ndarray) -> float:
         """
         Calculate Brier Score.
-        
+
         Args:
             predictions: Predicted probabilities [N]
             outcomes: Actual outcomes (0 or 1) [N]
-            
+
         Returns:
             Brier score
         """
         return np.mean((predictions - outcomes) ** 2)
-    
+
     @staticmethod
-    def decompose(
-        predictions: np.ndarray, 
-        outcomes: np.ndarray,
-        n_bins: int = 10
-    ) -> Tuple[float, float, float]:
+    def decompose(predictions: np.ndarray, outcomes: np.ndarray, n_bins: int = 10) -> Tuple[float, float, float]:
         """
         Decompose Brier Score into reliability, resolution, and uncertainty.
-        
+
         Brier = Reliability - Resolution + Uncertainty
-        
+
         - Reliability (lower is better): How well calibrated
         - Resolution (higher is better): How much predictions deviate from base rate
         - Uncertainty: Inherent variance in outcomes
-        
+
         Args:
             predictions: Predicted probabilities
             outcomes: Actual outcomes
             n_bins: Number of bins for calculation
-            
+
         Returns:
             Tuple of (reliability, resolution, uncertainty)
         """
         # Base rate
         base_rate = np.mean(outcomes)
         uncertainty = base_rate * (1 - base_rate)
-        
+
         # Bin predictions
         bins = np.linspace(0, 1, n_bins + 1)
         bin_indices = np.digitize(predictions, bins) - 1
         bin_indices = np.clip(bin_indices, 0, n_bins - 1)
-        
+
         reliability = 0.0
         resolution = 0.0
-        
+
         for i in range(n_bins):
             mask = bin_indices == i
             n_k = np.sum(mask)
-            
+
             if n_k > 0:
                 mean_pred = np.mean(predictions[mask])
                 mean_outcome = np.mean(outcomes[mask])
-                
+
                 reliability += n_k * (mean_pred - mean_outcome) ** 2
                 resolution += n_k * (mean_outcome - base_rate) ** 2
-        
+
         n = len(predictions)
         reliability /= n
         resolution /= n
-        
+
         return reliability, resolution, uncertainty
-    
+
     @staticmethod
     def skill_score(predictions: np.ndarray, outcomes: np.ndarray) -> float:
         """
         Calculate Brier Skill Score (BSS).
-        
+
         BSS = 1 - (BS / BS_ref)
-        
+
         Where BS_ref is the Brier score of always predicting the base rate.
         BSS > 0 means better than just predicting base rate.
-        
+
         Args:
             predictions: Predicted probabilities
             outcomes: Actual outcomes
-            
+
         Returns:
             Brier Skill Score
         """
         bs = BrierScoreOptimizer.calculate(predictions, outcomes)
-        
+
         # Reference: predicting base rate
         base_rate = np.mean(outcomes)
         bs_ref = base_rate * (1 - base_rate)
-        
+
         if bs_ref == 0:
             return 0.0
-        
+
         return 1 - (bs / bs_ref)
 
 
 class IsotonicCalibrator:
     """
     Isotonic regression calibrator.
-    
+
     Fits a monotonic function to map raw predictions to calibrated probabilities.
     Effective post-processing to improve calibration without hurting discrimination.
     """
-    
+
     def __init__(self):
         """Initialize calibrator."""
         if not SKLEARN_AVAILABLE:
             raise ImportError("scikit-learn required for isotonic calibration")
-        
-        self.isotonic = IsotonicRegression(
-            y_min=0.0,
-            y_max=1.0,
-            out_of_bounds='clip'
-        )
+
+        self.isotonic = IsotonicRegression(y_min=0.0, y_max=1.0, out_of_bounds="clip")
         self.fitted = False
-    
+
     def fit(self, predictions: np.ndarray, outcomes: np.ndarray) -> None:
         """
         Fit calibrator on historical data.
@@ -214,27 +209,23 @@ class IsotonicCalibrator:
             raise ValueError("Predictions contain NaN values")
         self.isotonic.fit(predictions, outcomes)
         self.fitted = True
-    
+
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
         """
         Calibrate predictions.
-        
+
         Args:
             predictions: Raw predictions
-            
+
         Returns:
             Calibrated predictions
         """
         if not self.fitted:
             raise ValueError("Calibrator not fitted. Call fit() first.")
-        
+
         return self.isotonic.predict(predictions)
-    
-    def fit_calibrate(
-        self,
-        predictions: np.ndarray,
-        outcomes: np.ndarray
-    ) -> np.ndarray:
+
+    def fit_calibrate(self, predictions: np.ndarray, outcomes: np.ndarray) -> np.ndarray:
         """
         Fit calibrator and return **leave-one-out cross-validated** predictions.
 
@@ -262,7 +253,7 @@ class IsotonicCalibrator:
             mask[i] = False
             fold_cal = IsotonicCalibrator()
             fold_cal.fit(predictions[mask], outcomes[mask])
-            loo_calibrated[i] = fold_cal.calibrate(predictions[i:i + 1])[0]
+            loo_calibrated[i] = fold_cal.calibrate(predictions[i : i + 1])[0]
 
         # Refit on all data for future calibrate() calls
         self.fit(predictions, outcomes)
@@ -272,15 +263,15 @@ class IsotonicCalibrator:
 class PlattScaling:
     """
     Platt scaling (sigmoid calibration).
-    
+
     Fits a logistic regression to map scores to probabilities.
     """
-    
+
     def __init__(self):
         self.a = 1.0
         self.b = 0.0
         self.fitted = False
-    
+
     def fit(
         self,
         predictions: np.ndarray,
@@ -328,9 +319,7 @@ class PlattScaling:
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
 
             # Negative log-likelihood
-            nll = float(-np.mean(
-                outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-            ))
+            nll = float(-np.mean(outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)))
 
             # Best-tracking
             if nll < best_nll:
@@ -349,7 +338,7 @@ class PlattScaling:
             grad_b = float(np.mean(probs - outcomes))
 
             # Gradient norm convergence check
-            grad_norm = math.sqrt(grad_a ** 2 + grad_b ** 2)
+            grad_norm = math.sqrt(grad_a**2 + grad_b**2)
             if grad_norm < 1e-8:
                 break
 
@@ -365,19 +354,19 @@ class PlattScaling:
         self.a = best_a
         self.b = best_b
         self.fitted = True
-    
+
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
         """Apply Platt scaling."""
         if not self.fitted:
             raise ValueError("Not fitted")
-        
+
         # Convert to log-odds if needed
         if np.all(predictions >= 0) and np.all(predictions <= 1):
             predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
             scores = np.log(predictions / (1 - predictions))
         else:
             scores = predictions
-        
+
         return 1.0 / (1.0 + np.exp(-(self.a * scores + self.b)))
 
 
@@ -451,9 +440,7 @@ class TemperatureScaling:
             scaled = np.clip(scaled, -30.0, 30.0)
             probs = 1.0 / (1.0 + np.exp(-scaled))
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
-            return float(-np.mean(
-                outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-            ))
+            return float(-np.mean(outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)))
 
         if SCIPY_AVAILABLE:
             # Brent's method: superlinearly convergent, respects bounds natively.
@@ -478,16 +465,14 @@ class TemperatureScaling:
                 probs = 1.0 / (1.0 + np.exp(-scaled_logits))
                 probs = np.clip(probs, 1e-7, 1 - 1e-7)
 
-                nll = float(-np.mean(
-                    outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-                ))
+                nll = float(-np.mean(outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)))
 
                 if nll < best_nll:
                     best_nll = nll
                     best_T = T
 
                 # Gradient of NLL w.r.t. T
-                grad = np.mean((probs - outcomes) * (-logits / (T ** 2)))
+                grad = np.mean((probs - outcomes) * (-logits / (T**2)))
                 T -= lr * grad
                 T = max(0.1, min(T, 10.0))
 
@@ -497,16 +482,18 @@ class TemperatureScaling:
         if self._small_sample_guard:
             try:
                 ci_lo, ci_hi = self.bootstrap_ci(
-                    predictions, outcomes,
-                    n_bootstrap=200, ci_level=0.90,
+                    predictions,
+                    outcomes,
+                    n_bootstrap=200,
+                    ci_level=0.90,
                 )
                 if ci_lo <= 1.0 <= ci_hi:
                     # CI includes identity — not enough evidence to calibrate
                     self.temperature = 1.0
             except (ValueError, TypeError, RuntimeError) as e:
                 logger.warning(
-                    "Temperature scaling bootstrap CI failed (%s); "
-                    "falling back to T=1.0", e,
+                    "Temperature scaling bootstrap CI failed (%s); falling back to T=1.0",
+                    e,
                 )
                 self.temperature = 1.0
 
@@ -571,78 +558,71 @@ class TemperatureScaling:
 
 
 def calculate_calibration_metrics(
-    predictions: np.ndarray,
-    outcomes: np.ndarray,
-    n_bins: int = 10
+    predictions: np.ndarray, outcomes: np.ndarray, n_bins: int = 10
 ) -> CalibrationMetrics:
     """
     Calculate comprehensive calibration metrics.
-    
+
     Args:
         predictions: Predicted probabilities
         outcomes: Actual outcomes (0 or 1)
         n_bins: Number of bins for calibration curve
-        
+
     Returns:
         CalibrationMetrics object
     """
     predictions = np.array(predictions)
     outcomes = np.array(outcomes).astype(float)
-    
+
     # Brier Score
     brier = BrierScoreOptimizer.calculate(predictions, outcomes)
-    
+
     # Log Loss
     eps = 1e-7
     probs_clipped = np.clip(predictions, eps, 1 - eps)
-    log_loss = -np.mean(
-        outcomes * np.log(probs_clipped) + 
-        (1 - outcomes) * np.log(1 - probs_clipped)
-    )
-    
+    log_loss = -np.mean(outcomes * np.log(probs_clipped) + (1 - outcomes) * np.log(1 - probs_clipped))
+
     # Calibration curve
     if SKLEARN_AVAILABLE:
-        prob_true, prob_pred = calibration_curve(
-            outcomes, predictions, n_bins=n_bins, strategy='uniform'
-        )
+        prob_true, prob_pred = calibration_curve(outcomes, predictions, n_bins=n_bins, strategy="uniform")
     else:
         # Manual calculation
         bins = np.linspace(0, 1, n_bins + 1)
         bin_indices = np.digitize(predictions, bins) - 1
         bin_indices = np.clip(bin_indices, 0, n_bins - 1)
-        
+
         prob_true = []
         prob_pred = []
-        
+
         for i in range(n_bins):
             mask = bin_indices == i
             if np.sum(mask) > 0:
                 prob_true.append(np.mean(outcomes[mask]))
                 prob_pred.append(np.mean(predictions[mask]))
-        
+
         prob_true = np.array(prob_true)
         prob_pred = np.array(prob_pred)
-    
+
     # ECE and MCE
     bins = np.linspace(0, 1, n_bins + 1)
     bin_indices = np.digitize(predictions, bins) - 1
     bin_indices = np.clip(bin_indices, 0, n_bins - 1)
-    
+
     ece = 0.0
     mce = 0.0
-    
+
     for i in range(n_bins):
         mask = bin_indices == i
         n_k = np.sum(mask)
-        
+
         if n_k > 0:
             mean_pred = np.mean(predictions[mask])
             mean_outcome = np.mean(outcomes[mask])
             gap = abs(mean_pred - mean_outcome)
-            
+
             ece += (n_k / len(predictions)) * gap
             mce = max(mce, gap)
-    
+
     # Accuracy
     predicted_class = (predictions >= 0.5).astype(int)
     accuracy = np.mean(predicted_class == outcomes)
@@ -654,6 +634,7 @@ def calculate_calibration_metrics(
     if len(np.unique(outcomes)) == 2:
         try:
             from sklearn.metrics import roc_auc_score
+
             roc_auc = float(roc_auc_score(outcomes, predictions))
         except (ValueError, TypeError):
             # Can fail if only one class present in a small sample
@@ -687,16 +668,18 @@ def calculate_calibration_metrics(
             gap_i = mean_pred_i - mean_outcome_i  # positive = overconfident
             bin_lo = float(bins[i])
             bin_hi = float(bins[i + 1])
-            per_bin_analysis.append({
-                "bin": f"{bin_lo:.1f}-{bin_hi:.1f}",
-                "count": n_k,
-                "mean_predicted": round(mean_pred_i, 4),
-                "mean_actual": round(mean_outcome_i, 4),
-                "gap": round(gap_i, 4),
-                "direction": "overconfident" if gap_i > 0.02 else (
-                    "underconfident" if gap_i < -0.02 else "calibrated"
-                ),
-            })
+            per_bin_analysis.append(
+                {
+                    "bin": f"{bin_lo:.1f}-{bin_hi:.1f}",
+                    "count": n_k,
+                    "mean_predicted": round(mean_pred_i, 4),
+                    "mean_actual": round(mean_outcome_i, 4),
+                    "gap": round(gap_i, 4),
+                    "direction": "overconfident"
+                    if gap_i > 0.02
+                    else ("underconfident" if gap_i < -0.02 else "calibrated"),
+                }
+            )
 
     return CalibrationMetrics(
         brier_score=brier,
@@ -714,13 +697,11 @@ def calculate_calibration_metrics(
 
 
 def plot_reliability_diagram(
-    metrics: CalibrationMetrics,
-    title: str = "Reliability Diagram",
-    save_path: Optional[str] = None
+    metrics: CalibrationMetrics, title: str = "Reliability Diagram", save_path: Optional[str] = None
 ) -> None:
     """
     Plot reliability diagram (calibration curve).
-    
+
     Args:
         metrics: CalibrationMetrics with prob_true and prob_pred
         title: Plot title
@@ -729,50 +710,50 @@ def plot_reliability_diagram(
     if not MATPLOTLIB_AVAILABLE:
         print("matplotlib not available for plotting")
         return
-    
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
+
     # Reliability diagram
-    ax1.plot([0, 1], [0, 1], 'k--', label='Perfectly calibrated')
-    ax1.plot(metrics.prob_pred, metrics.prob_true, 's-', label='Model')
-    ax1.fill_between(
-        metrics.prob_pred,
-        metrics.prob_true,
-        metrics.prob_pred,
-        alpha=0.3,
-        label='Gap'
-    )
-    
-    ax1.set_xlabel('Mean Predicted Probability')
-    ax1.set_ylabel('Fraction of Positives')
+    ax1.plot([0, 1], [0, 1], "k--", label="Perfectly calibrated")
+    ax1.plot(metrics.prob_pred, metrics.prob_true, "s-", label="Model")
+    ax1.fill_between(metrics.prob_pred, metrics.prob_true, metrics.prob_pred, alpha=0.3, label="Gap")
+
+    ax1.set_xlabel("Mean Predicted Probability")
+    ax1.set_ylabel("Fraction of Positives")
     ax1.set_title(title)
     ax1.legend()
     ax1.set_xlim([0, 1])
     ax1.set_ylim([0, 1])
     ax1.grid(True, alpha=0.3)
-    
+
     # Add metrics text
     metrics_text = (
         f"Brier: {metrics.brier_score:.4f}\n"
         f"ECE: {metrics.expected_calibration_error:.4f}\n"
         f"MCE: {metrics.max_calibration_error:.4f}"
     )
-    ax1.text(0.05, 0.95, metrics_text, transform=ax1.transAxes,
-             fontsize=10, verticalalignment='top',
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    
+    ax1.text(
+        0.05,
+        0.95,
+        metrics_text,
+        transform=ax1.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+    )
+
     # Histogram of predictions
-    ax2.hist(metrics.prob_pred, bins=20, alpha=0.7, edgecolor='black')
-    ax2.set_xlabel('Predicted Probability')
-    ax2.set_ylabel('Count')
-    ax2.set_title('Prediction Distribution')
+    ax2.hist(metrics.prob_pred, bins=20, alpha=0.7, edgecolor="black")
+    ax2.set_xlabel("Predicted Probability")
+    ax2.set_ylabel("Count")
+    ax2.set_title("Prediction Distribution")
     ax2.grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
-    
+
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+
     plt.close()
 
 
@@ -843,8 +824,7 @@ class VegasAnchorCalibrator:
         """
         if len(model_probs) < self.MIN_GAMES:
             raise ValueError(
-                f"VegasAnchorCalibrator requires >= {self.MIN_GAMES} games "
-                f"with spread data, got {len(model_probs)}"
+                f"VegasAnchorCalibrator requires >= {self.MIN_GAMES} games with spread data, got {len(model_probs)}"
             )
 
         model_probs = np.clip(model_probs, 1e-6, 1 - 1e-6)
@@ -871,13 +851,15 @@ class VegasAnchorCalibrator:
 
         self.n_anchor_games = len(model_probs)
         residuals = self.a * model_logits + self.b - vegas_logits
-        self.anchor_mse = float(np.mean(residuals ** 2))
+        self.anchor_mse = float(np.mean(residuals**2))
         self.fitted = True
 
         logger.info(
-            "VegasAnchorCalibrator fitted on %d games: a=%.4f, b=%.4f, "
-            "logit-space MSE=%.4f",
-            self.n_anchor_games, self.a, self.b, self.anchor_mse,
+            "VegasAnchorCalibrator fitted on %d games: a=%.4f, b=%.4f, logit-space MSE=%.4f",
+            self.n_anchor_games,
+            self.a,
+            self.b,
+            self.anchor_mse,
         )
 
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
@@ -961,11 +943,7 @@ class CalibrationPipeline:
         else:
             self.calibrator = None
 
-    def fit(
-        self,
-        predictions: np.ndarray,
-        outcomes: np.ndarray
-    ) -> CalibrationMetrics:
+    def fit(self, predictions: np.ndarray, outcomes: np.ndarray) -> CalibrationMetrics:
         """
         Fit calibrator and return metrics on training data.
 
@@ -985,22 +963,19 @@ class CalibrationPipeline:
         n_samples = len(predictions)
 
         # Track data hash to detect in-sample evaluation
-        self._fit_data_hash = hashlib.sha256(
-            predictions.tobytes() + outcomes.tobytes()
-        ).hexdigest()[:16]
+        self._fit_data_hash = hashlib.sha256(predictions.tobytes() + outcomes.tobytes()).hexdigest()[:16]
 
         # Guardrail: Isotonic/Platt without nested CV on small datasets
-        if (
-            self.method in REQUIRES_NESTED_CV
-            and not self.nested_cv
-        ):
+        if self.method in REQUIRES_NESTED_CV and not self.nested_cv:
             min_required = CALIBRATION_MIN_SAMPLES.get(self.method, 100)
             if n_samples < min_required:
                 logger.warning(
                     "Calibration method '%s' requires %d+ samples without "
                     "nested CV (got %d). Downgrading to temperature scaling "
                     "to prevent overfitting.",
-                    self.method, min_required, n_samples,
+                    self.method,
+                    min_required,
+                    n_samples,
                 )
                 self._downgraded_from = self.method
                 self.method = "temperature"
@@ -1010,48 +985,43 @@ class CalibrationPipeline:
                     "Calibration method '%s' is being used without nested "
                     "CV on %d samples. Consider switching to temperature "
                     "scaling (1 parameter) to reduce overfitting risk.",
-                    self.method, n_samples,
+                    self.method,
+                    n_samples,
                 )
 
         if self.calibrator:
             self.calibrator.fit(predictions, outcomes)
 
         return pre_metrics
-    
+
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
         """
         Calibrate new predictions.
-        
+
         Args:
             predictions: Raw predictions
-            
+
         Returns:
             Calibrated predictions
         """
         if self.calibrator:
             return self.calibrator.calibrate(predictions)
         return predictions
-    
-    def evaluate(
-        self,
-        predictions: np.ndarray,
-        outcomes: np.ndarray
-    ) -> Tuple[CalibrationMetrics, CalibrationMetrics]:
+
+    def evaluate(self, predictions: np.ndarray, outcomes: np.ndarray) -> Tuple[CalibrationMetrics, CalibrationMetrics]:
         """
         Evaluate calibration improvement.
-        
+
         Args:
             predictions: Raw predictions
             outcomes: Actual outcomes
-            
+
         Returns:
             Tuple of (pre_calibration_metrics, post_calibration_metrics)
         """
         # Guard against evaluating on the same data used for fitting
         if self._fit_data_hash is not None:
-            eval_hash = hashlib.sha256(
-                predictions.tobytes() + outcomes.tobytes()
-            ).hexdigest()[:16]
+            eval_hash = hashlib.sha256(predictions.tobytes() + outcomes.tobytes()).hexdigest()[:16]
             if eval_hash == self._fit_data_hash:
                 msg = (
                     "Calibration evaluate() called on same data used for fit(). "
@@ -1069,5 +1039,5 @@ class CalibrationPipeline:
             post_metrics = calculate_calibration_metrics(calibrated, outcomes)
         else:
             post_metrics = pre_metrics
-        
+
         return pre_metrics, post_metrics

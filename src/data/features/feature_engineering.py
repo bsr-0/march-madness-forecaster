@@ -80,11 +80,11 @@ SOS_SEED_NORMALIZATION = 200.0  # Scale factor for SOS-seed interaction term
 # *average level* of both teams matters (not just the difference).
 # Updated after redundancy removal.
 ABSOLUTE_LEVEL_FEATURE_NAMES = [
-    'adj_off_eff',      # Overall offensive quality
-    'adj_def_eff',      # Overall defensive quality
-    'sos_adj_em',       # Schedule strength
-    'elo_rating',       # Elo composite quality
-    'win_pct',          # Win percentage
+    "adj_off_eff",  # Overall offensive quality
+    "adj_def_eff",  # Overall defensive quality
+    "sos_adj_em",  # Schedule strength
+    "elo_rating",  # Elo composite quality
+    "win_pct",  # Win percentage
 ]
 
 # ---------------------------------------------------------------------------
@@ -116,9 +116,9 @@ MATCHUP_SEED_DIFF_IDX = MATCHUP_INTERACT_START + 6
 # FIX #8: Features that are frequently missing/default and get a companion
 # binary indicator.  The indicator lets the model discount the default value.
 SPARSE_FEATURE_NAMES = [
-    'preseason_ap_rank',
-    'coach_tournament_exp',
-    'coach_tournament_win_rate',
+    "preseason_ap_rank",
+    "coach_tournament_exp",
+    "coach_tournament_win_rate",
 ]
 
 
@@ -301,20 +301,20 @@ class TeamFeatures:
     coach_stage_consistency: float = 0.0
 
     # Per-stage coaching breakdowns (count-based, log-scaled in to_vector)
-    coach_f4_appearances: int = 0     # Final Four appearances
-    coach_e8_appearances: int = 0     # Elite Eight appearances
-    coach_s16_appearances: int = 0    # Sweet Sixteen appearances
+    coach_f4_appearances: int = 0  # Final Four appearances
+    coach_e8_appearances: int = 0  # Elite Eight appearances
+    coach_s16_appearances: int = 0  # Sweet Sixteen appearances
 
     # Graph-theoretic features (from schedule_graph.py, exposed as standalone signals)
     # Previously these were baked into sos_adj_em; now exposed independently
     # so the ensemble can learn their weights.
-    pagerank_sos: float = 0.0          # PageRank-derived schedule strength
-    multi_hop_sos: float = 0.0         # Multi-hop propagated schedule strength
+    pagerank_sos: float = 0.0  # PageRank-derived schedule strength
+    multi_hop_sos: float = 0.0  # Multi-hop propagated schedule strength
 
     # Win quality metrics (from compute_win_quality_metrics)
-    best_win_percentile: float = 0.5   # Percentile rank of best win opponent
-    paper_tiger_score: float = 0.0     # Record inflation vs schedule difficulty
-    dominance_ratio: float = 1.0       # Quality-adjusted margin wins / losses
+    best_win_percentile: float = 0.5  # Percentile rank of best win opponent
+    paper_tiger_score: float = 0.0  # Record inflation vs schedule difficulty
+    dominance_ratio: float = 1.0  # Quality-adjusted margin wins / losses
 
     # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
     pace_variance: float = 0.0
@@ -365,26 +365,26 @@ class TeamFeatures:
 
     # External rating composite (WS3: meta-ranking of 100+ systems)
     # NaN when no external ratings available (tree models handle natively)
-    external_rating_composite: float = float('nan')
+    external_rating_composite: float = float("nan")
     # External rating spread (disagreement across rating systems)
-    external_rating_spread: float = float('nan')
+    external_rating_spread: float = float("nan")
 
     # Massey multi-system individual ratings (10) — individual system-level
     # normalized ratings from MMasseyOrdinals.csv top predictive systems.
     # NaN when a system didn't rate this team or is unavailable for the season.
-    massey_pom: float = float('nan')     # KenPom — efficiency-based
-    massey_sag: float = float('nan')     # Sagarin — Elo/Bayesian hybrid
-    massey_mor: float = float('nan')     # Massey — mathematical composite
-    massey_dol: float = float('nan')     # Dolchini — reliability-adjusted
-    massey_col: float = float('nan')     # Colley — bias-free linear algebra
-    massey_wol: float = float('nan')     # Wolfe — schedule-adjusted
-    massey_rth: float = float('nan')     # Rothman — Bayesian approach
-    massey_ap: float = float('nan')      # AP Poll — sports writer consensus
-    massey_usa: float = float('nan')     # Coaches Poll — insider perspective
-    massey_rpi: float = float('nan')     # RPI — NCAA historical selection metric
+    massey_pom: float = float("nan")  # KenPom — efficiency-based
+    massey_sag: float = float("nan")  # Sagarin — Elo/Bayesian hybrid
+    massey_mor: float = float("nan")  # Massey — mathematical composite
+    massey_dol: float = float("nan")  # Dolchini — reliability-adjusted
+    massey_col: float = float("nan")  # Colley — bias-free linear algebra
+    massey_wol: float = float("nan")  # Wolfe — schedule-adjusted
+    massey_rth: float = float("nan")  # Rothman — Bayesian approach
+    massey_ap: float = float("nan")  # AP Poll — sports writer consensus
+    massey_usa: float = float("nan")  # Coaches Poll — insider perspective
+    massey_rpi: float = float("nan")  # RPI — NCAA historical selection metric
     # Derived agreement/disagreement metrics across all available systems
-    massey_rank_mean: float = float('nan')   # Mean normalized rating
-    massey_rank_std: float = float('nan')    # Inter-system disagreement
+    massey_rank_mean: float = float("nan")  # Mean normalized rating
+    massey_rank_std: float = float("nan")  # Inter-system disagreement
 
     # GNN embedding (if available)
     gnn_embedding: Optional[np.ndarray] = None
@@ -398,74 +398,74 @@ class TeamFeatures:
     # StandardScaler handles all normalization from training data.
     _POPULATION_STATS = {
         # (mean, std) — derived from D1 tournament-field data (updated 2026)
-        "adj_off_eff":          (103.5,  7.5),
-        "adj_def_eff":          (103.5,  7.5),
-        "adj_tempo":            (72.0,   4.5),
-        "efg_pct":              (0.498,  0.030),
-        "to_rate":              (0.185,  0.025),
-        "orb_rate":             (0.295,  0.035),
-        "ft_rate":              (0.315,  0.055),
-        "opp_efg_pct":          (0.498,  0.030),
-        "opp_to_rate":          (0.165,  0.030),
-        "drb_rate":             (0.705,  0.035),
-        "opp_ft_rate":          (0.315,  0.055),
-        "total_rapm":           (15.0,   25.0),
-        "top5_rapm":            (10.0,   18.0),
-        "bench_rapm":           (4.0,    8.0),
-        "total_warp":           (1.5,    1.0),
-        "roster_continuity":    (0.45,   0.25),
-        "transfer_impact":      (0.0,    2.0),
-        "avg_experience":       (2.0,    0.6),
-        "bench_depth":          (1.5,    1.5),
-        "injury_risk":          (0.0,    0.15),
-        "lead_volatility":      (5.0,    3.0),
-        "entropy":              (1.5,    0.8),
-        "lead_sustainability":  (0.5,    0.15),
-        "comeback_factor":      (0.0,    0.2),
+        "adj_off_eff": (103.5, 7.5),
+        "adj_def_eff": (103.5, 7.5),
+        "adj_tempo": (72.0, 4.5),
+        "efg_pct": (0.498, 0.030),
+        "to_rate": (0.185, 0.025),
+        "orb_rate": (0.295, 0.035),
+        "ft_rate": (0.315, 0.055),
+        "opp_efg_pct": (0.498, 0.030),
+        "opp_to_rate": (0.165, 0.030),
+        "drb_rate": (0.705, 0.035),
+        "opp_ft_rate": (0.315, 0.055),
+        "total_rapm": (15.0, 25.0),
+        "top5_rapm": (10.0, 18.0),
+        "bench_rapm": (4.0, 8.0),
+        "total_warp": (1.5, 1.0),
+        "roster_continuity": (0.45, 0.25),
+        "transfer_impact": (0.0, 2.0),
+        "avg_experience": (2.0, 0.6),
+        "bench_depth": (1.5, 1.5),
+        "injury_risk": (0.0, 0.15),
+        "lead_volatility": (5.0, 3.0),
+        "entropy": (1.5, 0.8),
+        "lead_sustainability": (0.5, 0.15),
+        "comeback_factor": (0.0, 0.2),
         # close_game_record: REMOVED (FIX 2.4 — pure noise)
-        "xp_per_poss":          (0.85,   0.10),
-        "shot_distribution":    (0.45,   0.10),
-        "sos_adj_em":           (0.0,    6.5),
-        "sos_opp_o":            (100.0,  4.0),
-        "sos_opp_d":            (103.5,  3.0),
-        "ncsos_adj_em":         (-4.0,   6.0),
-        "luck":                 (0.0,    0.025),
+        "xp_per_poss": (0.85, 0.10),
+        "shot_distribution": (0.45, 0.10),
+        "sos_adj_em": (0.0, 6.5),
+        "sos_opp_o": (100.0, 4.0),
+        "sos_opp_d": (103.5, 3.0),
+        "ncsos_adj_em": (-4.0, 6.0),
+        "luck": (0.0, 0.025),
         # FIX C4: 'wab' removed from feature vector (near-redundant with wab_poisson)
-        "sor":                  (0.50,   0.25),
-        "wab_poisson":          (0.0,    4.5),
-        "momentum":             (0.0,    4.0),
-        "three_pt_var":         (0.07,   0.03),
-        "pace_adj_var":         (7.0,    4.0),
-        "elo":                  (1500.0, 120.0),
-        "ft_pct":               (0.72,   0.045),
-        "ast_to":               (1.05,   0.30),
-        "ast_rate":             (0.52,   0.06),
-        "steal_rate":           (0.085,  0.015),
-        "block_rate":           (0.050,  0.020),
-        "opp_2pt_pct":          (0.48,   0.025),
-        "opp_3pt_attempt_rate": (0.35,   0.04),
-        "conf_adj_em":          (0.0,    5.5),
-        "three_pt_pct":         (0.34,   0.035),
-        "three_pt_rate":        (0.35,   0.05),
-        "def_xp_per_poss":      (1.0,    0.08),
-        "win_pct":              (0.5,    0.17),
-        "elite_sos":            (0.0,    5.0),
-        "q1_win_pct":           (0.35,   0.25),
-        "foul_rate":            (0.18,   0.025),
-        "three_pt_regression":  (0.0,    0.025),
-        "rest_days":            (7.0,    3.5),
-        "top5_minutes_share":   (0.70,   0.06),
-        "pace_variance":        (5.0,    2.0),
-        "coach_tourn_win_rate": (0.45,   0.20),
+        "sor": (0.50, 0.25),
+        "wab_poisson": (0.0, 4.5),
+        "momentum": (0.0, 4.0),
+        "three_pt_var": (0.07, 0.03),
+        "pace_adj_var": (7.0, 4.0),
+        "elo": (1500.0, 120.0),
+        "ft_pct": (0.72, 0.045),
+        "ast_to": (1.05, 0.30),
+        "ast_rate": (0.52, 0.06),
+        "steal_rate": (0.085, 0.015),
+        "block_rate": (0.050, 0.020),
+        "opp_2pt_pct": (0.48, 0.025),
+        "opp_3pt_attempt_rate": (0.35, 0.04),
+        "conf_adj_em": (0.0, 5.5),
+        "three_pt_pct": (0.34, 0.035),
+        "three_pt_rate": (0.35, 0.05),
+        "def_xp_per_poss": (1.0, 0.08),
+        "win_pct": (0.5, 0.17),
+        "elite_sos": (0.0, 5.0),
+        "q1_win_pct": (0.35, 0.25),
+        "foul_rate": (0.18, 0.025),
+        "three_pt_regression": (0.0, 0.025),
+        "rest_days": (7.0, 3.5),
+        "top5_minutes_share": (0.70, 0.06),
+        "pace_variance": (5.0, 2.0),
+        "coach_tourn_win_rate": (0.45, 0.20),
         # FIX C3: coach_postseason_score = weighted blend of deep_run_rate,
         # f4/e8 appearances, and stage_consistency.  Estimated from historical data.
-        "coach_postseason_score": (0.15,  0.12),
-        "neutral_site_win":     (0.50,   0.22),
-        "home_court_dep":       (6.0,    5.0),
-        "transition_eff":       (0.0,    0.10),
-        "def_transition_vuln":  (0.0,    0.10),
-        "backcourt_rapm":       (10.0,   18.0),
-        "frontcourt_rapm":      (4.0,    8.0),
+        "coach_postseason_score": (0.15, 0.12),
+        "neutral_site_win": (0.50, 0.22),
+        "home_court_dep": (6.0, 5.0),
+        "transition_eff": (0.0, 0.10),
+        "def_transition_vuln": (0.0, 0.10),
+        "backcourt_rapm": (10.0, 18.0),
+        "frontcourt_rapm": (4.0, 8.0),
     }
 
     # --- Seed-conditional Four Factor priors (historical tournament field averages). ---
@@ -474,15 +474,15 @@ class TeamFeatures:
     # than a missing 16-seed.  Derived from 2016-2024 tournament field data.
     _SEED_CONDITIONAL_PRIORS = {
         # seed: (efg, to_rate, orb_rate, ft_rate, opp_efg, opp_to, drb_rate, opp_ft_rate)
-        1:  (0.535, 0.170, 0.320, 0.340, 0.470, 0.200, 0.740, 0.290),
-        2:  (0.530, 0.172, 0.315, 0.335, 0.475, 0.195, 0.735, 0.295),
-        3:  (0.525, 0.175, 0.310, 0.330, 0.480, 0.192, 0.730, 0.298),
-        4:  (0.520, 0.177, 0.308, 0.325, 0.483, 0.190, 0.725, 0.300),
-        5:  (0.515, 0.178, 0.305, 0.322, 0.485, 0.188, 0.722, 0.302),
-        6:  (0.512, 0.180, 0.302, 0.320, 0.488, 0.186, 0.718, 0.305),
-        7:  (0.508, 0.182, 0.300, 0.318, 0.490, 0.185, 0.715, 0.307),
-        8:  (0.505, 0.183, 0.298, 0.316, 0.492, 0.184, 0.712, 0.308),
-        9:  (0.503, 0.184, 0.296, 0.314, 0.494, 0.183, 0.710, 0.310),
+        1: (0.535, 0.170, 0.320, 0.340, 0.470, 0.200, 0.740, 0.290),
+        2: (0.530, 0.172, 0.315, 0.335, 0.475, 0.195, 0.735, 0.295),
+        3: (0.525, 0.175, 0.310, 0.330, 0.480, 0.192, 0.730, 0.298),
+        4: (0.520, 0.177, 0.308, 0.325, 0.483, 0.190, 0.725, 0.300),
+        5: (0.515, 0.178, 0.305, 0.322, 0.485, 0.188, 0.722, 0.302),
+        6: (0.512, 0.180, 0.302, 0.320, 0.488, 0.186, 0.718, 0.305),
+        7: (0.508, 0.182, 0.300, 0.318, 0.490, 0.185, 0.715, 0.307),
+        8: (0.505, 0.183, 0.298, 0.316, 0.492, 0.184, 0.712, 0.308),
+        9: (0.503, 0.184, 0.296, 0.314, 0.494, 0.183, 0.710, 0.310),
         10: (0.500, 0.185, 0.295, 0.312, 0.496, 0.182, 0.708, 0.312),
         11: (0.498, 0.186, 0.293, 0.310, 0.498, 0.181, 0.705, 0.313),
         12: (0.495, 0.188, 0.292, 0.308, 0.500, 0.180, 0.702, 0.315),
@@ -492,8 +492,14 @@ class TeamFeatures:
         16: (0.470, 0.200, 0.280, 0.295, 0.525, 0.170, 0.680, 0.328),
     }
     _FF_FIELD_ORDER = [
-        'effective_fg_pct', 'turnover_rate', 'offensive_reb_rate', 'free_throw_rate',
-        'opp_effective_fg_pct', 'opp_turnover_rate', 'defensive_reb_rate', 'opp_free_throw_rate',
+        "effective_fg_pct",
+        "turnover_rate",
+        "offensive_reb_rate",
+        "free_throw_rate",
+        "opp_effective_fg_pct",
+        "opp_turnover_rate",
+        "defensive_reb_rate",
+        "opp_free_throw_rate",
     ]
     # Unconditional fallbacks (used when seed is unknown or out of range 1-16)
     _UNCONDITIONAL_DEFAULTS = (0.50, 0.18, 0.30, 0.30, 0.50, 0.18, 0.70, 0.30)
@@ -600,14 +606,14 @@ class TeamFeatures:
             n_nan = int(nan_mask.sum())
             n_inf = int(inf_mask.sum())
             feature_names_list = TeamFeatures.get_feature_names(include_embeddings=False)
-            bad_names = [
-                feature_names_list[i] for i in range(len(result))
-                if nan_mask[i] or inf_mask[i]
-            ]
+            bad_names = [feature_names_list[i] for i in range(len(result)) if nan_mask[i] or inf_mask[i]]
             logger.warning(
                 "Team '%s' has %d NaN + %d inf features: %s. "
                 "Inf replaced with NaN; NaN preserved for tree-native handling.",
-                self.team_id, n_nan, n_inf, bad_names,
+                self.team_id,
+                n_nan,
+                n_inf,
+                bad_names,
             )
             # Convert inf→NaN but preserve existing NaN for tree models
             result = np.where(inf_mask, np.nan, result)
@@ -627,9 +633,7 @@ class TeamFeatures:
         return result
 
     @staticmethod
-    def get_feature_names(include_embeddings: bool = False,
-                          gnn_dim: int = 32,
-                          transformer_dim: int = 64) -> List[str]:
+    def get_feature_names(include_embeddings: bool = False, gnn_dim: int = 32, transformer_dim: int = 64) -> List[str]:
         """Get names for all features.
 
         FIX #10: This list MUST stay in sync with to_vector().  An
@@ -637,28 +641,62 @@ class TeamFeatures:
         TEAM_FEATURE_DIM.
         """
         names = [
-            'adj_off_eff', 'adj_def_eff', 'adj_tempo',
-            'efg_pct', 'to_rate', 'orb_rate', 'ft_rate',
-            'opp_efg_pct', 'opp_to_rate', 'drb_rate', 'opp_ft_rate',
-            'total_rapm', 'top5_rapm', 'bench_rapm', 'total_warp',
-            'roster_continuity', 'avg_experience', 'bench_depth',
-            'xp_per_poss', 'shot_distribution',
-            'sos_adj_em', 'sos_opp_o', 'sos_opp_d', 'ncsos_adj_em',
-            'luck', 'wab_poisson', 'momentum',
-            'three_pt_variance', 'pace_adj_variance', 'elo_rating',
-            'opp_two_pt_pct_allowed', 'opp_three_pt_attempt_rate',
-            'conference_adj_em',
-            'three_pt_pct', 'three_pt_rate',
-            'def_xp_per_poss', 'win_pct', 'three_pt_regression',
-            'rest_days', 'top5_minutes_share',
-            'pace_variance', 'neutral_site_win_pct',
-            'tournament_resume', 'backcourt_rapm', 'frontcourt_rapm',
-            'seed_strength',
-            'conf_tourney_champion', 'conf_tourney_games', 'conf_tourney_margin',
-            'late_season_games', 'late_season_margin', 'late_season_win_pct',
-            'market_implied_prob', 'market_spread',
-            'injury_risk',
-            'coach_tournament_exp',
+            "adj_off_eff",
+            "adj_def_eff",
+            "adj_tempo",
+            "efg_pct",
+            "to_rate",
+            "orb_rate",
+            "ft_rate",
+            "opp_efg_pct",
+            "opp_to_rate",
+            "drb_rate",
+            "opp_ft_rate",
+            "total_rapm",
+            "top5_rapm",
+            "bench_rapm",
+            "total_warp",
+            "roster_continuity",
+            "avg_experience",
+            "bench_depth",
+            "xp_per_poss",
+            "shot_distribution",
+            "sos_adj_em",
+            "sos_opp_o",
+            "sos_opp_d",
+            "ncsos_adj_em",
+            "luck",
+            "wab_poisson",
+            "momentum",
+            "three_pt_variance",
+            "pace_adj_variance",
+            "elo_rating",
+            "opp_two_pt_pct_allowed",
+            "opp_three_pt_attempt_rate",
+            "conference_adj_em",
+            "three_pt_pct",
+            "three_pt_rate",
+            "def_xp_per_poss",
+            "win_pct",
+            "three_pt_regression",
+            "rest_days",
+            "top5_minutes_share",
+            "pace_variance",
+            "neutral_site_win_pct",
+            "tournament_resume",
+            "backcourt_rapm",
+            "frontcourt_rapm",
+            "seed_strength",
+            "conf_tourney_champion",
+            "conf_tourney_games",
+            "conf_tourney_margin",
+            "late_season_games",
+            "late_season_margin",
+            "late_season_win_pct",
+            "market_implied_prob",
+            "market_spread",
+            "injury_risk",
+            "coach_tournament_exp",
         ]
 
         # FIX #10: Static assertion at call time
@@ -668,8 +706,8 @@ class TeamFeatures:
         )
 
         if include_embeddings:
-            names.extend([f'gnn_{i}' for i in range(gnn_dim)])
-            names.extend([f'transformer_{i}' for i in range(transformer_dim)])
+            names.extend([f"gnn_{i}" for i in range(gnn_dim)])
+            names.extend([f"transformer_{i}" for i in range(transformer_dim)])
 
         return names
 
@@ -698,46 +736,82 @@ assert MATCHUP_DIM == TEAM_FEATURE_DIM + N_ABSOLUTE_FEATURES + N_MATCHUP_INTERAC
 
 # Features requiring specific data sources with known start years.
 _TORVIK_FEATURES = {
-    'adj_off_eff', 'adj_def_eff', 'adj_tempo', 'wab', 'luck', 'sor',
-    'wab_poisson', 'elite_sos', 'sos_adj_em', 'sos_opp_o', 'sos_opp_d',
-    'ncsos_adj_em',
+    "adj_off_eff",
+    "adj_def_eff",
+    "adj_tempo",
+    "wab",
+    "luck",
+    "sor",
+    "wab_poisson",
+    "elite_sos",
+    "sos_adj_em",
+    "sos_opp_o",
+    "sos_opp_d",
+    "ncsos_adj_em",
 }
 
 _PLAYER_FEATURES = {
-    'total_rapm', 'top5_rapm', 'bench_rapm', 'total_warp',
-    'roster_continuity', 'transfer_impact', 'avg_experience',
-    'bench_depth', 'injury_risk', 'top5_minutes_share',
-    'backcourt_rapm', 'frontcourt_rapm',
+    "total_rapm",
+    "top5_rapm",
+    "bench_rapm",
+    "total_warp",
+    "roster_continuity",
+    "transfer_impact",
+    "avg_experience",
+    "bench_depth",
+    "injury_risk",
+    "top5_minutes_share",
+    "backcourt_rapm",
+    "frontcourt_rapm",
 }
 
 _ADVANCED_METRICS_FEATURES = {
-    'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor',
-    'xp_per_poss', 'shot_distribution', 'def_xp_per_poss', 'pace_variance',
+    "lead_volatility",
+    "entropy",
+    "lead_sustainability",
+    "comeback_factor",
+    "xp_per_poss",
+    "shot_distribution",
+    "def_xp_per_poss",
+    "pace_variance",
 }
 
 _GRAPH_FEATURES = {
-    'pagerank_sos', 'multi_hop_sos', 'best_win_percentile',
-    'paper_tiger_score', 'dominance_ratio',
+    "pagerank_sos",
+    "multi_hop_sos",
+    "best_win_percentile",
+    "paper_tiger_score",
+    "dominance_ratio",
 }
 
 _EXTERNAL_RATING_FEATURES = {
-    'external_rating_composite', 'external_rating_spread',
+    "external_rating_composite",
+    "external_rating_spread",
 }
 
 _MASSEY_MULTI_SYSTEM_FEATURES = {
-    'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
-    'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
-    'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std',
+    "massey_pom",
+    "massey_sag",
+    "massey_mor",
+    "massey_dol",
+    "massey_col",
+    "massey_wol",
+    "massey_rth",
+    "massey_ap",
+    "massey_usa",
+    "massey_rpi",
+    "massey_rank_mean",
+    "massey_rank_std",
 }
 
 # Source availability thresholds (inclusive start year)
 _SOURCE_START_YEARS = {
-    'torvik': 2008,
-    'player_metrics': 2003,
-    'advanced_metrics': 2008,
-    'graph_features': 2008,
-    'external_ratings': 2003,
-    'massey_multi_system': 2003,
+    "torvik": 2008,
+    "player_metrics": 2003,
+    "advanced_metrics": 2008,
+    "graph_features": 2008,
+    "external_ratings": 2003,
+    "massey_multi_system": 2003,
 }
 
 
@@ -757,17 +831,17 @@ def era_available_features(year: int) -> List[str]:
     all_names = TeamFeatures.get_feature_names(include_embeddings=False)
     unavailable: set = set()
 
-    if year < _SOURCE_START_YEARS['torvik']:
+    if year < _SOURCE_START_YEARS["torvik"]:
         unavailable |= _TORVIK_FEATURES
-    if year < _SOURCE_START_YEARS['player_metrics']:
+    if year < _SOURCE_START_YEARS["player_metrics"]:
         unavailable |= _PLAYER_FEATURES
-    if year < _SOURCE_START_YEARS['advanced_metrics']:
+    if year < _SOURCE_START_YEARS["advanced_metrics"]:
         unavailable |= _ADVANCED_METRICS_FEATURES
-    if year < _SOURCE_START_YEARS['graph_features']:
+    if year < _SOURCE_START_YEARS["graph_features"]:
         unavailable |= _GRAPH_FEATURES
-    if year < _SOURCE_START_YEARS['external_ratings']:
+    if year < _SOURCE_START_YEARS["external_ratings"]:
         unavailable |= _EXTERNAL_RATING_FEATURES
-    if year < _SOURCE_START_YEARS['massey_multi_system']:
+    if year < _SOURCE_START_YEARS["massey_multi_system"]:
         unavailable |= _MASSEY_MULTI_SYSTEM_FEATURES
 
     return [n for n in all_names if n not in unavailable]
@@ -857,19 +931,23 @@ class MatchupFeatures:
         flags encoded scraper availability artifacts, not basketball signal.
         """
         # Always included: encode domain knowledge beyond simple splits
-        always_interaction = np.array([
-            self.seed_diff,           # Strongest single tournament predictor
-            self.seed_em_residual,    # Over/underperformance vs seed expectation
-        ])
+        always_interaction = np.array(
+            [
+                self.seed_diff,  # Strongest single tournament predictor
+                self.seed_em_residual,  # Over/underperformance vs seed expectation
+            ]
+        )
 
         # Optional: product terms that trees can learn natively
-        optional_interaction = np.array([
-            self.tempo_interaction,
-            self.style_mismatch,
-            self.sos_seed_interaction,
-            self.three_pt_var_seed_interaction,
-            self.seed_interaction,
-        ])
+        optional_interaction = np.array(
+            [
+                self.tempo_interaction,
+                self.style_mismatch,
+                self.sos_seed_interaction,
+                self.three_pt_var_seed_interaction,
+                self.seed_interaction,
+            ]
+        )
         parts = [self.diff_features]
         if len(self.absolute_features) > 0:
             parts.append(self.absolute_features)
@@ -934,103 +1012,102 @@ class FeatureEngineer:
         # Extract from proprietary metrics engine (replaces KenPom + ShotQuality)
         pm = proprietary_metrics or {}
         if pm:
-            features.adj_offensive_efficiency = pm.get('adj_offensive_efficiency', 100.0)
-            features.adj_defensive_efficiency = pm.get('adj_defensive_efficiency', 100.0)
-            features.adj_tempo = pm.get('adj_tempo', 68.0)
-            features.adj_efficiency_margin = pm.get('adj_efficiency_margin', 0.0)
-            features.sos_adj_em = pm.get('sos_adj_em', 0.0)
-            features.sos_opp_o = pm.get('sos_opp_o', 100.0)
-            features.sos_opp_d = pm.get('sos_opp_d', 100.0)
-            features.ncsos_adj_em = pm.get('ncsos_adj_em', 0.0)
-            features.luck = pm.get('luck', 0.0)
-            features.wab = pm.get('wab', 0.0)
-            features.sor = pm.get('sor', 0.5)
-            features.wab_poisson = pm.get('wab_poisson', 0.0)
-            features.momentum = pm.get('momentum', 0.0)
-            features.three_pt_variance = pm.get('three_pt_variance', 0.095)
-            features.consistency = pm.get('consistency', 0.5)
-            features.sos_adjusted_consistency = pm.get('sos_adjusted_consistency', 0.5)
-            features.pace_adjusted_variance = pm.get('pace_adjusted_variance', 0.0)
-            features.avg_xp_per_possession = pm.get('offensive_xp_per_possession', 1.0)
-            features.shot_distribution_score = pm.get('shot_distribution_score', 0.0)
+            features.adj_offensive_efficiency = pm.get("adj_offensive_efficiency", 100.0)
+            features.adj_defensive_efficiency = pm.get("adj_defensive_efficiency", 100.0)
+            features.adj_tempo = pm.get("adj_tempo", 68.0)
+            features.adj_efficiency_margin = pm.get("adj_efficiency_margin", 0.0)
+            features.sos_adj_em = pm.get("sos_adj_em", 0.0)
+            features.sos_opp_o = pm.get("sos_opp_o", 100.0)
+            features.sos_opp_d = pm.get("sos_opp_d", 100.0)
+            features.ncsos_adj_em = pm.get("ncsos_adj_em", 0.0)
+            features.luck = pm.get("luck", 0.0)
+            features.wab = pm.get("wab", 0.0)
+            features.sor = pm.get("sor", 0.5)
+            features.wab_poisson = pm.get("wab_poisson", 0.0)
+            features.momentum = pm.get("momentum", 0.0)
+            features.three_pt_variance = pm.get("three_pt_variance", 0.095)
+            features.consistency = pm.get("consistency", 0.5)
+            features.sos_adjusted_consistency = pm.get("sos_adjusted_consistency", 0.5)
+            features.pace_adjusted_variance = pm.get("pace_adjusted_variance", 0.0)
+            features.avg_xp_per_possession = pm.get("offensive_xp_per_possession", 1.0)
+            features.shot_distribution_score = pm.get("shot_distribution_score", 0.0)
 
             # Extended metrics from research gap analysis
-            features.elo_rating = pm.get('elo_rating', 1500.0)
-            features.free_throw_pct = pm.get('free_throw_pct', 0.72)
-            features.assist_to_turnover_ratio = pm.get('assist_to_turnover_ratio', 1.0)
-            features.assist_rate = pm.get('assist_rate', 0.50)
-            features.steal_rate = pm.get('steal_rate', 0.08)
-            features.block_rate = pm.get('block_rate', 0.05)
+            features.elo_rating = pm.get("elo_rating", 1500.0)
+            features.free_throw_pct = pm.get("free_throw_pct", 0.72)
+            features.assist_to_turnover_ratio = pm.get("assist_to_turnover_ratio", 1.0)
+            features.assist_rate = pm.get("assist_rate", 0.50)
+            features.steal_rate = pm.get("steal_rate", 0.08)
+            features.block_rate = pm.get("block_rate", 0.05)
             # opp_two_pt_pct_allowed: three-way precedence handled after Torvik block
-            features.opp_three_pt_attempt_rate = pm.get('opp_three_pt_attempt_rate', 0.35)
-            features.conference_adj_em = pm.get('conference_adj_em', 0.0)
+            features.opp_three_pt_attempt_rate = pm.get("opp_three_pt_attempt_rate", 0.35)
+            features.conference_adj_em = pm.get("conference_adj_em", 0.0)
 
             # Seed-efficiency residual (kept as attribute, not in vector)
             expected_em = 25.0 - (seed - 1) * (40.0 / 15.0)
-            features.seed_efficiency_residual = pm.get('adj_efficiency_margin', 0.0) - expected_em
+            features.seed_efficiency_residual = pm.get("adj_efficiency_margin", 0.0) - expected_em
 
             # --- Exhaustive audit additions ---
-            features.barthag = pm.get('barthag', 0.5)
-            features.two_pt_pct = pm.get('two_pt_pct', 0.48)
-            features.three_pt_pct = pm.get('three_pt_pct', 0.34)
-            features.three_pt_rate = pm.get('three_pt_rate', 0.35)
-            features.defensive_xp_per_possession = pm.get('defensive_xp_per_possession', 1.0)
-            features.win_pct = pm.get('win_pct', 0.5)
-            features.elite_sos = pm.get('elite_sos', 0.0)
-            features.q1_win_pct = pm.get('q1_win_pct', 0.0)
-            features.efficiency_ratio = pm.get('efficiency_ratio', 1.0)
-            features.foul_rate = pm.get('foul_rate', 0.18)
-            features.three_pt_regression_signal = pm.get('three_pt_regression_signal', 0.0)
+            features.barthag = pm.get("barthag", 0.5)
+            features.two_pt_pct = pm.get("two_pt_pct", 0.48)
+            features.three_pt_pct = pm.get("three_pt_pct", 0.34)
+            features.three_pt_rate = pm.get("three_pt_rate", 0.35)
+            features.defensive_xp_per_possession = pm.get("defensive_xp_per_possession", 1.0)
+            features.win_pct = pm.get("win_pct", 0.5)
+            features.elite_sos = pm.get("elite_sos", 0.0)
+            features.q1_win_pct = pm.get("q1_win_pct", 0.0)
+            features.efficiency_ratio = pm.get("efficiency_ratio", 1.0)
+            features.foul_rate = pm.get("foul_rate", 0.18)
+            features.three_pt_regression_signal = pm.get("three_pt_regression_signal", 0.0)
 
             # Schedule/context features
-            features.rest_days = pm.get('rest_days', 5.0)
-            features.top5_minutes_share = pm.get('top5_minutes_share', 0.70)
-            features.preseason_ap_rank = int(pm.get('preseason_ap_rank', 0))
-            features.coach_tournament_appearances = int(pm.get('coach_tournament_appearances', 0))
-            features.coach_tournament_win_rate = float(pm.get('coach_tournament_win_rate', 0.0))
-            features.coach_deep_run_rate = float(pm.get('coach_deep_run_rate', 0.0))
-            features.coach_stage_consistency = float(pm.get('coach_stage_consistency', 0.0))
-            features.coach_f4_appearances = int(pm.get('coach_f4_appearances', 0))
-            features.coach_e8_appearances = int(pm.get('coach_e8_appearances', 0))
-            features.coach_s16_appearances = int(pm.get('coach_s16_appearances', 0))
-            features.pace_variance = float(pm.get('pace_variance', 0.0))
-            features.conf_tourney_champion = float(pm.get('conf_tourney_champion', False))
-            features.conf_tourney_games = float(pm.get('conf_tourney_games', 0))
-            features.conf_tourney_margin = float(pm.get('conf_tourney_margin', 0.0))
-            features.late_season_games = float(pm.get('late_season_games', 0))
-            features.late_season_margin = float(pm.get('late_season_margin', 0.0))
-            features.late_season_win_pct = float(pm.get('late_season_win_pct', 0.0))
+            features.rest_days = pm.get("rest_days", 5.0)
+            features.top5_minutes_share = pm.get("top5_minutes_share", 0.70)
+            features.preseason_ap_rank = int(pm.get("preseason_ap_rank", 0))
+            features.coach_tournament_appearances = int(pm.get("coach_tournament_appearances", 0))
+            features.coach_tournament_win_rate = float(pm.get("coach_tournament_win_rate", 0.0))
+            features.coach_deep_run_rate = float(pm.get("coach_deep_run_rate", 0.0))
+            features.coach_stage_consistency = float(pm.get("coach_stage_consistency", 0.0))
+            features.coach_f4_appearances = int(pm.get("coach_f4_appearances", 0))
+            features.coach_e8_appearances = int(pm.get("coach_e8_appearances", 0))
+            features.coach_s16_appearances = int(pm.get("coach_s16_appearances", 0))
+            features.pace_variance = float(pm.get("pace_variance", 0.0))
+            features.conf_tourney_champion = float(pm.get("conf_tourney_champion", False))
+            features.conf_tourney_games = float(pm.get("conf_tourney_games", 0))
+            features.conf_tourney_margin = float(pm.get("conf_tourney_margin", 0.0))
+            features.late_season_games = float(pm.get("late_season_games", 0))
+            features.late_season_margin = float(pm.get("late_season_margin", 0.0))
+            features.late_season_win_pct = float(pm.get("late_season_win_pct", 0.0))
 
             # KenPom / ShotQuality replacement metrics
-            features.true_shooting_pct = pm.get('true_shooting_pct', 0.54)
-            features.opp_true_shooting_pct = pm.get('opp_true_shooting_pct', 0.54)
-            features.neutral_site_win_pct = pm.get('neutral_site_win_pct', 0.5)
-            features.home_court_dependence = pm.get('home_court_dependence', 0.0)
+            features.true_shooting_pct = pm.get("true_shooting_pct", 0.54)
+            features.opp_true_shooting_pct = pm.get("opp_true_shooting_pct", 0.54)
+            features.neutral_site_win_pct = pm.get("neutral_site_win_pct", 0.5)
+            features.home_court_dependence = pm.get("home_court_dependence", 0.0)
 
             # Tournament resume composite — Bayesian-shrunk opponent quality
             from .tournament_features import compute_tournament_resume_composite
+
             features.tournament_resume = compute_tournament_resume_composite(
                 q1_win_pct=features.q1_win_pct,
-                q1_games=int(pm.get('q1_wins', 0)) + int(pm.get('q1_losses', 0)),
-                road_neutral_win_pct=pm.get('road_neutral_win_pct', features.neutral_site_win_pct),
-                road_neutral_games=int(pm.get('road_neutral_games', 0)),
+                q1_games=int(pm.get("q1_wins", 0)) + int(pm.get("q1_losses", 0)),
+                road_neutral_win_pct=pm.get("road_neutral_win_pct", features.neutral_site_win_pct),
+                road_neutral_games=int(pm.get("road_neutral_games", 0)),
                 elite_sos=features.elite_sos,
-                sor=pm.get('sor', features.sor),
+                sor=pm.get("sor", features.sor),
             )
 
-            features.momentum_5g = pm.get('momentum_5g', 0.0)
+            features.momentum_5g = pm.get("momentum_5g", 0.0)
             # C4: transition_efficiency and defensive_transition_vulnerability no longer set
             # (fields remain on dataclass at default 0.0)
-            features.backcourt_rapm = pm.get('backcourt_rapm', 0.0)
-            features.frontcourt_rapm = pm.get('frontcourt_rapm', 0.0)
+            features.backcourt_rapm = pm.get("backcourt_rapm", 0.0)
+            features.frontcourt_rapm = pm.get("frontcourt_rapm", 0.0)
 
         # Extract from Torvik data (Four Factors + shooting splits + context).
         # When values are zero/missing, impute using seed-conditional population
         # priors (a 1-seed's defaults differ from a 16-seed's).
         if torvik_data:
-            _priors = TeamFeatures._SEED_CONDITIONAL_PRIORS.get(
-                features.seed, None
-            )
+            _priors = TeamFeatures._SEED_CONDITIONAL_PRIORS.get(features.seed, None)
             if _priors is None:
                 _priors = TeamFeatures._UNCONDITIONAL_DEFAULTS
             _defaults_used = []
@@ -1044,38 +1121,43 @@ class FeatureEngineer:
             if _defaults_used:
                 logger.warning(
                     "Torvik seed-conditional defaults for %s (seed %d): %d/8 fields imputed (%s)",
-                    team_id, features.seed, len(_defaults_used), ", ".join(_defaults_used),
+                    team_id,
+                    features.seed,
+                    len(_defaults_used),
+                    ", ".join(_defaults_used),
                 )
 
             # Context features from Torvik/open data feeds (if present)
-            if 'preseason_ap_rank' in torvik_data:
-                features.preseason_ap_rank = int(torvik_data['preseason_ap_rank'])
-            if 'coach_tournament_appearances' in torvik_data:
-                features.coach_tournament_appearances = int(torvik_data['coach_tournament_appearances'])
-            if 'coach_f4_appearances' in torvik_data:
-                features.coach_f4_appearances = int(torvik_data['coach_f4_appearances'])
-            if 'coach_e8_appearances' in torvik_data:
-                features.coach_e8_appearances = int(torvik_data['coach_e8_appearances'])
-            if 'coach_s16_appearances' in torvik_data:
-                features.coach_s16_appearances = int(torvik_data['coach_s16_appearances'])
-            if 'conf_tourney_champion' in torvik_data:
-                features.conf_tourney_champion = float(torvik_data['conf_tourney_champion'])
+            if "preseason_ap_rank" in torvik_data:
+                features.preseason_ap_rank = int(torvik_data["preseason_ap_rank"])
+            if "coach_tournament_appearances" in torvik_data:
+                features.coach_tournament_appearances = int(torvik_data["coach_tournament_appearances"])
+            if "coach_f4_appearances" in torvik_data:
+                features.coach_f4_appearances = int(torvik_data["coach_f4_appearances"])
+            if "coach_e8_appearances" in torvik_data:
+                features.coach_e8_appearances = int(torvik_data["coach_e8_appearances"])
+            if "coach_s16_appearances" in torvik_data:
+                features.coach_s16_appearances = int(torvik_data["coach_s16_appearances"])
+            if "conf_tourney_champion" in torvik_data:
+                features.conf_tourney_champion = float(torvik_data["conf_tourney_champion"])
 
         # opp_two_pt_pct_allowed: three-way precedence.
         # 1. Box-score-derived via ProprietaryMetricsEngine (primary — scraper-independent).
         # 2. Torvik's opp_two_pt_pct (fallback when box scores not available).
         # 3. Population average 0.48 (last resort).
-        if pm and 'opp_two_pt_pct_allowed' in pm:
-            features.opp_two_pt_pct_allowed = pm['opp_two_pt_pct_allowed']
+        if pm and "opp_two_pt_pct_allowed" in pm:
+            features.opp_two_pt_pct_allowed = pm["opp_two_pt_pct_allowed"]
             logger.debug(
                 "opp_two_pt_pct_allowed [box_scores]: %.4f (team %s)",
-                features.opp_two_pt_pct_allowed, team_id,
+                features.opp_two_pt_pct_allowed,
+                team_id,
             )
-        elif torvik_data and torvik_data.get('opp_two_pt_pct'):
-            features.opp_two_pt_pct_allowed = torvik_data['opp_two_pt_pct']
+        elif torvik_data and torvik_data.get("opp_two_pt_pct"):
+            features.opp_two_pt_pct_allowed = torvik_data["opp_two_pt_pct"]
             logger.debug(
                 "opp_two_pt_pct_allowed [torvik_fallback]: %.4f (team %s)",
-                features.opp_two_pt_pct_allowed, team_id,
+                features.opp_two_pt_pct_allowed,
+                team_id,
             )
         else:
             features.opp_two_pt_pct_allowed = 0.48
@@ -1097,22 +1179,14 @@ class FeatureEngineer:
 
         return features
 
-    def _extract_roster_features(
-        self,
-        features: TeamFeatures,
-        roster: Roster
-    ) -> TeamFeatures:
+    def _extract_roster_features(self, features: TeamFeatures, roster: Roster) -> TeamFeatures:
         """Extract player-level features from roster."""
 
         # Total RAPM
         features.total_rapm = sum(p.rapm_total for p in roster.players)
 
         # Top 5 vs bench RAPM
-        sorted_players = sorted(
-            roster.players,
-            key=lambda p: p.contribution_score,
-            reverse=True
-        )
+        sorted_players = sorted(roster.players, key=lambda p: p.contribution_score, reverse=True)
         features.top5_rapm = sum(p.rapm_total for p in sorted_players[:5])
         features.bench_rapm = sum(p.rapm_total for p in sorted_players[5:10])
 
@@ -1128,19 +1202,12 @@ class FeatureEngineer:
 
         # Continuity (% of minutes from non-transfers)
         total_minutes = sum(p.minutes_per_game * p.games_played for p in roster.players)
-        returning_minutes = sum(
-            p.minutes_per_game * p.games_played
-            for p in roster.players
-            if not p.is_transfer
-        )
+        returning_minutes = sum(p.minutes_per_game * p.games_played for p in roster.players if not p.is_transfer)
         features.roster_continuity = returning_minutes / max(total_minutes, 1)
         features.continuity_learning_rate = 1.0 + 0.15 * (1.0 - features.roster_continuity)
 
         # Injury risk
-        injured_impact = sum(
-            p.contribution_score * (1 - p.availability_factor)
-            for p in roster.players
-        )
+        injured_impact = sum(p.contribution_score * (1 - p.availability_factor) for p in roster.players)
         features.injury_risk = injured_impact / (abs(features.total_rapm) + 5.0)
 
         # Top-5 minutes share (bench dependency metric)
@@ -1151,13 +1218,12 @@ class FeatureEngineer:
                 key=lambda p: p.minutes_per_game * p.games_played,
                 reverse=True,
             )
-            top5_minutes = sum(
-                p.minutes_per_game * p.games_played for p in sorted_by_minutes[:5]
-            )
+            top5_minutes = sum(p.minutes_per_game * p.games_played for p in sorted_by_minutes[:5])
             features.top5_minutes_share = top5_minutes / total_minutes
 
         # --- Position-specific depth: backcourt vs frontcourt RAPM splits ---
         from ..models.player import Position
+
         backcourt_rapm = 0.0
         frontcourt_rapm = 0.0
         for p in roster.players:
@@ -1175,11 +1241,7 @@ class FeatureEngineer:
 
         return features
 
-    def _extract_game_flow_features(
-        self,
-        features: TeamFeatures,
-        games: List[GameFlow]
-    ) -> TeamFeatures:
+    def _extract_game_flow_features(self, features: TeamFeatures, games: List[GameFlow]) -> TeamFeatures:
         """Extract volatility/entropy features from game history."""
 
         if not games:
@@ -1221,9 +1283,9 @@ class FeatureEngineer:
             total_shots = sum(shot_counts.values())
             if total_shots > 0:
                 good_shots = (
-                    shot_counts[ShotType.RIM] +
-                    shot_counts[ShotType.CORNER_THREE] +
-                    shot_counts[ShotType.ABOVE_BREAK_THREE]
+                    shot_counts[ShotType.RIM]
+                    + shot_counts[ShotType.CORNER_THREE]
+                    + shot_counts[ShotType.ABOVE_BREAK_THREE]
                 )
                 features.shot_distribution_score = good_shots / total_shots
 
@@ -1283,9 +1345,8 @@ class FeatureEngineer:
         tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / TEMPO_NORMALIZATION
 
         tempo_diff = t1.adj_tempo - t2.adj_tempo
-        efficiency_diff = (
-            (t1.adj_offensive_efficiency - t1.adj_defensive_efficiency)
-            - (t2.adj_offensive_efficiency - t2.adj_defensive_efficiency)
+        efficiency_diff = (t1.adj_offensive_efficiency - t1.adj_defensive_efficiency) - (
+            t2.adj_offensive_efficiency - t2.adj_defensive_efficiency
         )
         pace_efficiency_interaction = (tempo_diff * efficiency_diff) / 600.0
 
@@ -1296,8 +1357,22 @@ class FeatureEngineer:
 
         # Seed-based interaction features (always computable)
         _SEED_EXPECTED_EM = {
-            1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
-            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21,
+            1: 28,
+            2: 21,
+            3: 16,
+            4: 12,
+            5: 9,
+            6: 6,
+            7: 4,
+            8: 2,
+            9: 0,
+            10: -2,
+            11: -4,
+            12: -6,
+            13: -9,
+            14: -12,
+            15: -16,
+            16: -21,
         }
         em1 = t1.adj_offensive_efficiency - t1.adj_defensive_efficiency
         em2 = t2.adj_offensive_efficiency - t2.adj_defensive_efficiency
@@ -1339,19 +1414,13 @@ class FeatureEngineer:
             has_coach_data_t2=has_coach_t2,
         )
 
-    def attach_gnn_embeddings(
-        self,
-        embeddings: Dict[str, np.ndarray]
-    ) -> None:
+    def attach_gnn_embeddings(self, embeddings: Dict[str, np.ndarray]) -> None:
         """Attach GNN embeddings to team features."""
         for team_id, embedding in embeddings.items():
             if team_id in self.team_features:
                 self.team_features[team_id].gnn_embedding = embedding
 
-    def attach_transformer_embeddings(
-        self,
-        embeddings: Dict[str, np.ndarray]
-    ) -> None:
+    def attach_transformer_embeddings(self, embeddings: Dict[str, np.ndarray]) -> None:
         """Attach Transformer embeddings to team features."""
         for team_id, embedding in embeddings.items():
             if team_id in self.team_features:
@@ -1359,6 +1428,7 @@ class FeatureEngineer:
 
 
 # --- FIX #9: Population stats validation utility ---
+
 
 def validate_population_stats(
     team_features: Dict[str, TeamFeatures],
@@ -1448,4 +1518,3 @@ def validate_population_stats(
         )
 
     return warnings
-

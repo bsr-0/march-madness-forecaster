@@ -45,22 +45,78 @@ def _make_full_bracket(season: int = 2026) -> TournamentBracketData:
     regions = ["East", "West", "South", "Midwest"]
     # Use recognizable team names for the top seeds
     top_teams = {
-        "East": ["duke", "alabama", "purdue", "connecticut",
-                  "marquette", "baylor", "creighton", "clemson",
-                  "drake", "nevada", "butler", "richmond",
-                  "vermont", "oakland", "wagner", "howard"],
-        "West": ["houston", "arizona", "kansas", "tennessee",
-                  "gonzaga", "brigham_young", "florida", "wisconsin",
-                  "northwestern", "colorado", "oregon", "dayton",
-                  "yale", "samford", "princeton", "navy"],
-        "South": ["north_carolina", "iowa_state", "texas", "auburn",
-                   "san_diego_state", "illinois", "michigan_state", "florida_atlantic",
-                   "memphis", "nebraska", "new_mexico", "grand_canyon",
-                   "toledo", "kent_state", "morehead_state", "grambling"],
-        "Midwest": ["kentucky", "marquette", "indiana", "virginia",
-                     "texas_am", "kansas_state", "missouri", "villanova",
-                     "notre_dame", "utah_state", "xavier", "james_madison",
-                     "oral_roberts", "liberty", "furman", "stetson"],
+        "East": [
+            "duke",
+            "alabama",
+            "purdue",
+            "connecticut",
+            "marquette",
+            "baylor",
+            "creighton",
+            "clemson",
+            "drake",
+            "nevada",
+            "butler",
+            "richmond",
+            "vermont",
+            "oakland",
+            "wagner",
+            "howard",
+        ],
+        "West": [
+            "houston",
+            "arizona",
+            "kansas",
+            "tennessee",
+            "gonzaga",
+            "brigham_young",
+            "florida",
+            "wisconsin",
+            "northwestern",
+            "colorado",
+            "oregon",
+            "dayton",
+            "yale",
+            "samford",
+            "princeton",
+            "navy",
+        ],
+        "South": [
+            "north_carolina",
+            "iowa_state",
+            "texas",
+            "auburn",
+            "san_diego_state",
+            "illinois",
+            "michigan_state",
+            "florida_atlantic",
+            "memphis",
+            "nebraska",
+            "new_mexico",
+            "grand_canyon",
+            "toledo",
+            "kent_state",
+            "morehead_state",
+            "grambling",
+        ],
+        "Midwest": [
+            "kentucky",
+            "marquette",
+            "indiana",
+            "virginia",
+            "texas_am",
+            "kansas_state",
+            "missouri",
+            "villanova",
+            "notre_dame",
+            "utah_state",
+            "xavier",
+            "james_madison",
+            "oral_roberts",
+            "liberty",
+            "furman",
+            "stetson",
+        ],
     }
     for region in regions:
         for seed_idx, team_id in enumerate(top_teams[region], start=1):
@@ -76,9 +132,7 @@ def _make_full_bracket(season: int = 2026) -> TournamentBracketData:
 def _make_manual_json(teams_data: list, season: int = 2026) -> str:
     """Write a manual bracket JSON file and return its path."""
     data = {"season": season, "teams": teams_data}
-    tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False, prefix="bracket_test_"
-    )
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, prefix="bracket_test_")
     json.dump(data, tmp)
     tmp.close()
     return tmp.name
@@ -146,8 +200,14 @@ class TestTournamentBracketData:
         east_matchups = [m for m in matchups if m[0].region == "East"]
         seed_pairs = sorted([(m[0].seed, m[1].seed) for m in east_matchups])
         expected_pairs = [
-            (1, 16), (2, 15), (3, 14), (4, 13),
-            (5, 12), (6, 11), (7, 10), (8, 9),
+            (1, 16),
+            (2, 15),
+            (3, 14),
+            (4, 13),
+            (5, 12),
+            (6, 11),
+            (7, 10),
+            (8, 9),
         ]
         assert seed_pairs == expected_pairs
 
@@ -338,26 +398,19 @@ class TestBracketIngestionPipelineAuto:
         """When neither bigdance nor sports_reference is available, should raise."""
         from unittest.mock import patch
 
-        with patch(
-            "src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False
-        ), patch(
-            "src.data.scrapers.bracket_ingestion.SPORTS_REF_AVAILABLE", False
+        with (
+            patch("src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False),
+            patch("src.data.scrapers.bracket_ingestion.SPORTS_REF_AVAILABLE", False),
         ):
-            pipeline = BracketIngestionPipeline(
-                season=2026, cache_dir=tempfile.mkdtemp()
-            )
+            pipeline = BracketIngestionPipeline(season=2026, cache_dir=tempfile.mkdtemp())
             with pytest.raises(RuntimeError, match="No bracket source available"):
                 pipeline.fetch(source="auto")
 
     def test_bigdance_source_raises_when_unavailable(self):
         from unittest.mock import patch
 
-        with patch(
-            "src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False
-        ):
-            pipeline = BracketIngestionPipeline(
-                season=2026, cache_dir=tempfile.mkdtemp()
-            )
+        with patch("src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False):
+            pipeline = BracketIngestionPipeline(season=2026, cache_dir=tempfile.mkdtemp())
             with pytest.raises(ImportError, match="bigdance"):
                 pipeline.fetch(source="bigdance")
 
@@ -384,9 +437,7 @@ class TestBracketIngestionPipelineResolver:
             {"team_name": "Duke", "seed": 1, "region": "East"},
         ]
         path = _make_manual_json(teams_data)
-        pipeline = BracketIngestionPipeline(
-            season=2026, cache_dir=tempfile.mkdtemp()
-        )
+        pipeline = BracketIngestionPipeline(season=2026, cache_dir=tempfile.mkdtemp())
         bracket = pipeline.fetch(source=path)
         assert bracket.teams[0].name_confidence >= 0.90
 
@@ -404,24 +455,36 @@ class TestEndToEndPipelineJSON:
         teams_data = []
         regions = ["East", "West", "South", "Midwest"]
         team_pool = [
-            "Duke", "North Carolina", "Kansas", "Kentucky",
-            "Houston", "Arizona", "Purdue", "Alabama",
-            "UConn", "Gonzaga", "Tennessee", "Marquette",
-            "Baylor", "Creighton", "Auburn", "Iowa State",
+            "Duke",
+            "North Carolina",
+            "Kansas",
+            "Kentucky",
+            "Houston",
+            "Arizona",
+            "Purdue",
+            "Alabama",
+            "UConn",
+            "Gonzaga",
+            "Tennessee",
+            "Marquette",
+            "Baylor",
+            "Creighton",
+            "Auburn",
+            "Iowa State",
         ]
         for i, region in enumerate(regions):
             for seed in range(1, 17):
                 idx = (i * 16 + seed - 1) % len(team_pool)
-                teams_data.append({
-                    "team_name": team_pool[idx],
-                    "seed": seed,
-                    "region": region,
-                })
+                teams_data.append(
+                    {
+                        "team_name": team_pool[idx],
+                        "seed": seed,
+                        "region": region,
+                    }
+                )
         path = _make_manual_json(teams_data)
 
-        pipeline = BracketIngestionPipeline(
-            season=2026, cache_dir=tempfile.mkdtemp()
-        )
+        pipeline = BracketIngestionPipeline(season=2026, cache_dir=tempfile.mkdtemp())
         bracket = pipeline.fetch(source=path)
         assert bracket.n_teams == 64
 

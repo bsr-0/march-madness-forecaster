@@ -21,7 +21,10 @@ def _make_consensus(champion_pcts: dict) -> ConsensusData:
     teams = {}
     for tid, pct in champion_pcts.items():
         teams[tid] = PublicPicks(
-            team_id=tid, team_name=tid.title(), seed=1, region="East",
+            team_id=tid,
+            team_name=tid.title(),
+            seed=1,
+            region="East",
             champion_pct=pct,
         )
     return ConsensusData(teams=teams, sources=["espn"])
@@ -36,7 +39,6 @@ def _make_orchestrator_result(champion_pcts: dict) -> OrchestratorResult:
 
 
 class TestRefreshablePicksManagerStaleness:
-
     def test_initially_stale(self):
         orch = MagicMock(spec=ScraperOrchestrator)
         manager = RefreshablePicksManager(orch, staleness_threshold_hours=24.0)
@@ -64,7 +66,6 @@ class TestRefreshablePicksManagerStaleness:
 
 
 class TestRefreshablePicksManagerFetch:
-
     def test_first_fetch_returns_result_no_update(self):
         orch = MagicMock(spec=ScraperOrchestrator)
         result = _make_orchestrator_result({"duke": 20.0})
@@ -101,7 +102,6 @@ class TestRefreshablePicksManagerFetch:
 
 
 class TestPicksUpdateDetection:
-
     def test_detects_changes(self):
         orch = MagicMock(spec=ScraperOrchestrator)
         result1 = _make_orchestrator_result({"duke": 20.0, "unc": 15.0})

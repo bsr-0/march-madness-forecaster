@@ -52,6 +52,7 @@ class UnifiedGameOdds:
 # Normalizers: raw JSON dict → UnifiedGameOdds
 # ------------------------------------------------------------------
 
+
 def normalize_from_sbro(raw: dict) -> UnifiedGameOdds:
     return UnifiedGameOdds(
         season=raw.get("season", 0),
@@ -114,6 +115,7 @@ def normalize_from_sbr(raw: dict) -> UnifiedGameOdds:
 # Loaders
 # ------------------------------------------------------------------
 
+
 def load_unified_odds(season: int, data_dir: str = PROCESSED_DIR) -> List[UnifiedGameOdds]:
     """Load unified odds for a season from processed JSON."""
     path = os.path.join(data_dir, f"unified_odds_{season}.json")
@@ -126,9 +128,7 @@ def load_unified_odds(season: int, data_dir: str = PROCESSED_DIR) -> List[Unifie
     return [UnifiedGameOdds(**g) for g in data.get("games", [])]
 
 
-def load_unified_odds_by_team(
-    season: int, data_dir: str = PROCESSED_DIR
-) -> Dict[str, List[UnifiedGameOdds]]:
+def load_unified_odds_by_team(season: int, data_dir: str = PROCESSED_DIR) -> Dict[str, List[UnifiedGameOdds]]:
     """Load unified odds grouped by team, sorted by date."""
     games = load_unified_odds(season, data_dir)
     by_team: Dict[str, List[UnifiedGameOdds]] = defaultdict(list)
@@ -143,6 +143,7 @@ def load_unified_odds_by_team(
 # ------------------------------------------------------------------
 # Feature computation (point-in-time safe)
 # ------------------------------------------------------------------
+
 
 def compute_team_market_features(
     team_id: str,

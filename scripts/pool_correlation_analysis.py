@@ -18,22 +18,55 @@ ROOT = Path(__file__).resolve().parent.parent
 # --- Team abbreviation mapping ---
 # Pool data uses short abbrevs; results use full IDs
 ABBREV_TO_ID = {
-    "ARIZ": "arizona", "PUR": "purdue", "GONZ": "gonzaga", "ARK": "arkansas",
-    "WIS": "wisconsin", "BYU": "brigham_young", "MIA": "miami__fl",
-    "VILL": "villanova", "USU": "utah_state", "MIZ": "missouri",
-    "TEX": "texas", "HPU": "high_point", "HAW": "hawaii",
-    "DUKE": "duke", "CONN": "connecticut", "MSU": "michigan_state",
-    "KU": "kansas", "SJU": "st__john_s__ny", "LOU": "louisville",
-    "UCLA": "ucla", "OSU": "ohio_state", "TCU": "tcu", "UCF": "ucf",
+    "ARIZ": "arizona",
+    "PUR": "purdue",
+    "GONZ": "gonzaga",
+    "ARK": "arkansas",
+    "WIS": "wisconsin",
+    "BYU": "brigham_young",
+    "MIA": "miami__fl",
+    "VILL": "villanova",
+    "USU": "utah_state",
+    "MIZ": "missouri",
+    "TEX": "texas",
+    "HPU": "high_point",
+    "HAW": "hawaii",
+    "DUKE": "duke",
+    "CONN": "connecticut",
+    "MSU": "michigan_state",
+    "KU": "kansas",
+    "SJU": "st__john_s__ny",
+    "LOU": "louisville",
+    "UCLA": "ucla",
+    "OSU": "ohio_state",
+    "TCU": "tcu",
+    "UCF": "ucf",
     "USF": "south_florida",
-    "FLA": "florida", "HOU": "houston", "ILL": "illinois", "NEB": "nebraska",
-    "VAN": "vanderbilt", "UNC": "north_carolina", "SMC": "saint_mary_s__ca",
-    "CLEM": "clemson", "IOWA": "iowa", "TA&M": "texas_a_m",
-    "VCU": "virginia_commonwealth", "MCN": "mcneese_state", "TROY": "troy",
-    "MICH": "michigan", "ISU": "iowa_state", "UVA": "virginia",
-    "ALA": "alabama", "TTU": "texas_tech", "TENN": "tennessee",
-    "UK": "kentucky", "UGA": "georgia", "SLU": "saint_louis",
-    "SCU": "santa_clara", "AKR": "akron", "HOF": "hofstra",
+    "FLA": "florida",
+    "HOU": "houston",
+    "ILL": "illinois",
+    "NEB": "nebraska",
+    "VAN": "vanderbilt",
+    "UNC": "north_carolina",
+    "SMC": "saint_mary_s__ca",
+    "CLEM": "clemson",
+    "IOWA": "iowa",
+    "TA&M": "texas_a_m",
+    "VCU": "virginia_commonwealth",
+    "MCN": "mcneese_state",
+    "TROY": "troy",
+    "MICH": "michigan",
+    "ISU": "iowa_state",
+    "UVA": "virginia",
+    "ALA": "alabama",
+    "TTU": "texas_tech",
+    "TENN": "tennessee",
+    "UK": "kentucky",
+    "UGA": "georgia",
+    "SLU": "saint_louis",
+    "SCU": "santa_clara",
+    "AKR": "akron",
+    "HOF": "hofstra",
     "M-OH": "miami__oh",
 }
 
@@ -307,9 +340,7 @@ def independence_test(brackets):
         "simulated_mean_corr_std": float(sim_corrs.std()),
         "excess_correlation": float(upper.mean() - sim_corrs.mean()),
         "z_score": float((upper.mean() - sim_corrs.mean()) / max(sim_corrs.std(), 1e-10)),
-        "pct_pairs_above_sim_95th": float(
-            (upper > np.percentile(sim_corrs, 95)).mean() * 100
-        ),
+        "pct_pairs_above_sim_95th": float((upper > np.percentile(sim_corrs, 95)).mean() * 100),
     }
 
 
@@ -403,13 +434,13 @@ def main():
     for i, (s, b) in enumerate(scored[:15]):
         reported = b.get("pts", "?")
         match = "OK" if reported == s else f"!={reported}"
-        print(f"{i+1:>4} {s:>8} {reported:>8} {match:>5}  {b['champ']}")
+        print(f"{i + 1:>4} {s:>8} {reported:>8} {match:>5}  {b['champ']}")
 
     # Show bottom 5
     print("  ...")
     for i, (s, b) in enumerate(scored[-5:]):
         rank = n - 4 + i
-        print(f"{rank:>4} {s:>8} {b.get('pts','?'):>8}       {b['champ']}")
+        print(f"{rank:>4} {s:>8} {b.get('pts', '?'):>8}       {b['champ']}")
 
     # --- 2. What did the winning bracket pick? ---
     print("\n" + "=" * 70)
@@ -455,10 +486,10 @@ def main():
         for team, pool_pct in sorted(rd_freq.items(), key=lambda x: -x[1]):
             espn_pct = "?"
             if team in espn_by_abbrev and espn_rd in espn_by_abbrev[team]:
-                espn_pct = f"{espn_by_abbrev[team][espn_rd]*100:.1f}%"
+                espn_pct = f"{espn_by_abbrev[team][espn_rd] * 100:.1f}%"
             bid = abbrev_to_bracket_id(team)
             actual_flag = " <<< ACTUAL" if bid in actual.get(rd, set()) else ""
-            print(f"    {team:>5}: pool={pool_pct*100:5.1f}%  ESPN={espn_pct:>6s}{actual_flag}")
+            print(f"    {team:>5}: pool={pool_pct * 100:5.1f}%  ESPN={espn_pct:>6s}{actual_flag}")
 
     # --- 4. Correlation analysis ---
     print("\n" + "=" * 70)
@@ -469,8 +500,12 @@ def main():
     print(f"\n  Observed mean pairwise correlation:  {indep['observed_mean_corr']:.4f}")
     print(f"  Observed median pairwise correlation: {indep['observed_median_corr']:.4f}")
     print(f"  Observed std:                         {indep['observed_std_corr']:.4f}")
-    print(f"  Observed range:                       [{indep['observed_min_corr']:.4f}, {indep['observed_max_corr']:.4f}]")
-    print(f"  Simulated (independent) mean:         {indep['simulated_mean_corr_mean']:.4f} ± {indep['simulated_mean_corr_std']:.4f}")
+    print(
+        f"  Observed range:                       [{indep['observed_min_corr']:.4f}, {indep['observed_max_corr']:.4f}]"
+    )
+    print(
+        f"  Simulated (independent) mean:         {indep['simulated_mean_corr_mean']:.4f} ± {indep['simulated_mean_corr_std']:.4f}"
+    )
     print(f"  Excess correlation:                   {indep['excess_correlation']:.4f}")
     print(f"  Z-score vs independence:              {indep['z_score']:.1f}")
     print(f"  % pairs above simulated 95th pctl:    {indep['pct_pairs_above_sim_95th']:.1f}%")
@@ -490,14 +525,14 @@ def main():
 
     game_corr = per_game_correlation(brackets)
     for rd, info in game_corr.items():
-        print(f"\n  {rd.upper()}: {info['n_teams_picked']} unique teams picked, "
-              f"mean |corr| = {info['mean_abs_corr']:.3f}")
+        print(
+            f"\n  {rd.upper()}: {info['n_teams_picked']} unique teams picked, mean |corr| = {info['mean_abs_corr']:.3f}"
+        )
         if info["top_correlations"]:
             print(f"    Top correlated pick pairs:")
             for t1, t2, c in info["top_correlations"][:5]:
                 direction = "+" if c > 0 else "-"
-                print(f"      {t1:>5} & {t2:<5}: r={c:+.3f}  "
-                      f"({'co-picked' if c > 0 else 'anti-picked'})")
+                print(f"      {t1:>5} & {t2:<5}: r={c:+.3f}  ({'co-picked' if c > 0 else 'anti-picked'})")
 
     # --- 6. Champion clustering ---
     print("\n" + "=" * 70)
@@ -510,7 +545,7 @@ def main():
         pct = cnt / n * 100
         espn_champ = "?"
         if team in espn_by_abbrev and "CHAMP" in espn_by_abbrev[team]:
-            espn_champ = f"{espn_by_abbrev[team]['CHAMP']*100:.1f}%"
+            espn_champ = f"{espn_by_abbrev[team]['CHAMP'] * 100:.1f}%"
         actual_flag = " <<< ACTUAL CHAMP" if abbrev_to_bracket_id(team) in actual.get("champ", set()) else ""
         print(f"    {team:>5}: {cnt:2d} ({pct:4.1f}%)  ESPN={espn_champ:>6s}{actual_flag}")
 
@@ -529,11 +564,11 @@ def main():
     actual_champ_abbrev = bracket_id_to_abbrev(list(actual["champ"])[0])
     champ_pickers = champ_picks.get(actual_champ_abbrev, 0)
     print(f"\n  Actual champion: {actual_champ_abbrev}")
-    print(f"  Pool members who picked champion: {champ_pickers}/{n} ({champ_pickers/n*100:.1f}%)")
+    print(f"  Pool members who picked champion: {champ_pickers}/{n} ({champ_pickers / n * 100:.1f}%)")
 
     # How many picked most popular champion?
     top_champ, top_cnt = champ_picks.most_common(1)[0]
-    print(f"  Most popular champion pick: {top_champ} ({top_cnt}/{n}, {top_cnt/n*100:.1f}%)")
+    print(f"  Most popular champion pick: {top_champ} ({top_cnt}/{n}, {top_cnt / n * 100:.1f}%)")
 
     # Chalk score: what fraction of R64 picks are seeds 1-4?
     chalk_scores = []
@@ -543,8 +578,10 @@ def main():
         pass
 
     print(f"\n  Correlation summary:")
-    print(f"    Your pool's brackets are {'MORE' if indep['excess_correlation'] > 0 else 'LESS'} "
-          f"correlated than independent draws")
+    print(
+        f"    Your pool's brackets are {'MORE' if indep['excess_correlation'] > 0 else 'LESS'} "
+        f"correlated than independent draws"
+    )
     print(f"    Excess correlation = {indep['excess_correlation']:.4f} (z={indep['z_score']:.1f})")
     if indep["z_score"] > 2:
         print(f"    >>> The independence assumption in your opponent model is WRONG for this pool")

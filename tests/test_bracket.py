@@ -9,13 +9,7 @@ from src.models.bracket import Bracket
 @pytest.fixture
 def sample_team():
     """Create a sample team."""
-    return Team(
-        name="Duke",
-        seed=1,
-        region="East",
-        elo_rating=1800,
-        stats={"offensive_efficiency": 95}
-    )
+    return Team(name="Duke", seed=1, region="East", elo_rating=1800, stats={"offensive_efficiency": 95})
 
 
 @pytest.fixture
@@ -72,11 +66,7 @@ def test_bracket_creation():
     teams = []
     for region in ["East", "West", "South", "Midwest"]:
         for seed in range(1, 17):
-            teams.append(Team(
-                name=f"{region}-{seed}",
-                seed=seed,
-                region=region
-            ))
+            teams.append(Team(name=f"{region}-{seed}", seed=seed, region=region))
 
     bracket = Bracket(teams)
     assert len(bracket.teams) == 64
@@ -91,13 +81,7 @@ def test_bracket_validation():
 
 def test_team_serialization():
     """Test team to/from dict conversion."""
-    team = Team(
-        name="Duke",
-        seed=1,
-        region="East",
-        elo_rating=1800,
-        stats={"offensive_efficiency": 95}
-    )
+    team = Team(name="Duke", seed=1, region="East", elo_rating=1800, stats={"offensive_efficiency": 95})
 
     team_dict = team.to_dict()
     assert team_dict["name"] == "Duke"

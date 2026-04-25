@@ -179,7 +179,9 @@ def _build_prefix_aliases(seed_map: Dict[str, int], available_ids: Iterable[str]
     return aliases
 
 
-def _load_external_maps(year: int, historical_dir: Path, kaggle_dir: Optional[str]) -> Tuple[Dict[str, float], Dict[str, float], Dict]:
+def _load_external_maps(
+    year: int, historical_dir: Path, kaggle_dir: Optional[str]
+) -> Tuple[Dict[str, float], Dict[str, float], Dict]:
     composite: Dict[str, float] = {}
     spread: Dict[str, float] = {}
     multi: Dict = {}
@@ -337,10 +339,7 @@ def audit_year(
         logger.info("Skipping %d: no seeded teams resolved into vectors", year)
         return None
 
-    rates = {
-        name: round(observed_counts[name] / team_count, 4)
-        for name in feature_names
-    }
+    rates = {name: round(observed_counts[name] / team_count, 4) for name in feature_names}
     return YearAudit(year=year, team_count=team_count, rates=rates)
 
 
@@ -369,19 +368,13 @@ def write_table(
         for name in feature_names:
             rule = _observation_rule(name)
             per_year = [year_to_audit[year].rates[name] for year in years]
-            target_values = [
-                year_to_audit[year].rates[name]
-                for year in cut_years
-                if year in year_to_audit
-            ]
+            target_values = [year_to_audit[year].rates[name] for year in cut_years if year in year_to_audit]
             target_rate = round(float(sum(target_values) / len(target_values)), 4) if target_values else 0.0
             should_cut = target_rate < threshold
             if should_cut:
                 cut_features.append(name)
             writer.writerow(
-                [name, rule]
-                + per_year
-                + [target_rate, len(target_values), threshold, "CUT" if should_cut else "KEEP"]
+                [name, rule] + per_year + [target_rate, len(target_values), threshold, "CUT" if should_cut else "KEEP"]
             )
 
     return cut_features

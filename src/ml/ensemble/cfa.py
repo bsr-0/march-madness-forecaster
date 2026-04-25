@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
 
 try:
     import xgboost as xgb
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
@@ -28,7 +30,7 @@ except ImportError:
 @dataclass
 class ModelPrediction:
     """Prediction from a single model."""
-    
+
     model_name: str
     win_probability: float
     confidence: float  # Model's confidence in its prediction (0-1)
@@ -38,43 +40,43 @@ class ModelPrediction:
 class LightGBMRanker:
     """
     LightGBM-based ranking model for matchup prediction.
-    
+
     Uses gradient boosting on Four Factors and other features
     to predict game outcomes.
     """
-    
+
     def __init__(self, params: Dict = None):
         """
         Initialize LightGBM ranker.
-        
+
         Args:
             params: LightGBM parameters
         """
         if not LIGHTGBM_AVAILABLE:
             raise ImportError("LightGBM not installed")
-        
+
         # OOS-FIX: Conservative defaults — num_leaves=8 and
         # min_child_samples=50 force shallow, well-regularized trees
         # appropriate for ~400 training samples.
         self.params = params or {
-            'objective': 'binary',
-            'metric': 'binary_logloss',
-            'boosting_type': 'gbdt',
-            'num_leaves': 8,
-            'learning_rate': 0.05,
-            'feature_fraction': 0.7,
-            'bagging_fraction': 0.7,
-            'bagging_freq': 5,
-            'min_child_samples': 50,
-            'lambda_l1': 1.0,
-            'lambda_l2': 1.0,
-            'verbose': -1,
-            'num_threads': 1,
+            "objective": "binary",
+            "metric": "binary_logloss",
+            "boosting_type": "gbdt",
+            "num_leaves": 8,
+            "learning_rate": 0.05,
+            "feature_fraction": 0.7,
+            "bagging_fraction": 0.7,
+            "bagging_freq": 5,
+            "min_child_samples": 50,
+            "lambda_l1": 1.0,
+            "lambda_l2": 1.0,
+            "verbose": -1,
+            "num_threads": 1,
         }
-        
+
         self.model = None
         self.feature_names = None
-    
+
     def train(
         self,
         X: np.ndarray,
@@ -105,21 +107,15 @@ class LightGBMRanker:
             logger.warning("Very small training set (%d samples) for LightGBM", X.shape[0])
         self.feature_names = feature_names
 
-        train_data = lgb.Dataset(X, label=y, feature_name=feature_names,
-                                 weight=sample_weight)
+        train_data = lgb.Dataset(X, label=y, feature_name=feature_names, weight=sample_weight)
 
         valid_sets = [train_data]
-        valid_names = ['train']
+        valid_names = ["train"]
 
         if valid_set is not None:
-            valid_data = lgb.Dataset(
-                valid_set[0],
-                label=valid_set[1],
-                feature_name=feature_names,
-                reference=train_data
-            )
+            valid_data = lgb.Dataset(valid_set[0], label=valid_set[1], feature_name=feature_names, reference=train_data)
             valid_sets.append(valid_data)
-            valid_names.append('valid')
+            valid_names.append("valid")
 
         callbacks = []
         # Only add early stopping when a real validation set is provided.
@@ -127,7 +123,7 @@ class LightGBMRanker:
         if early_stopping_rounds and valid_set is not None:
             callbacks.append(lgb.early_stopping(early_stopping_rounds))
         callbacks.append(lgb.log_evaluation(period=100))
-        
+
         self.model = lgb.train(
             self.params,
             train_data,
@@ -136,63 +132,59 @@ class LightGBMRanker:
             valid_names=valid_names,
             callbacks=callbacks,
         )
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict win probabilities.
-        
+
         Args:
             X: Feature matrix [N, D]
-            
+
         Returns:
             Predicted probabilities [N]
         """
         if self.model is None:
             raise ValueError("Model not trained")
-        
+
         return self.model.predict(X)
-    
-    def predict_matchup(
-        self,
-        team1_features: np.ndarray,
-        team2_features: np.ndarray
-    ) -> float:
+
+    def predict_matchup(self, team1_features: np.ndarray, team2_features: np.ndarray) -> float:
         """
         Predict single matchup probability.
-        
+
         Args:
             team1_features: Team 1 feature vector
             team2_features: Team 2 feature vector
-            
+
         Returns:
             Probability that team 1 wins
         """
         # Compute differential features
         diff_features = team1_features - team2_features
         return float(self.predict(diff_features.reshape(1, -1))[0])
-    
+
     def get_feature_importance(self) -> Dict[str, float]:
         """
         Get feature importance scores.
-        
+
         Returns:
             Dict of feature_name -> importance
         """
         if self.model is None:
             return {}
-        
-        importance = self.model.feature_importance(importance_type='gain')
-        
+
+        importance = self.model.feature_importance(importance_type="gain")
+
         if self.feature_names:
             return dict(zip(self.feature_names, importance))
         else:
             return {f"feature_{i}": imp for i, imp in enumerate(importance)}
-    
+
     def save(self, filepath: str) -> None:
         """Save model to file."""
         if self.model is not None:
             self.model.save_model(filepath)
-    
+
     def load(self, filepath: str) -> None:
         """Load model from file."""
         self.model = lgb.Booster(model_file=filepath)
@@ -267,8 +259,7 @@ class XGBoostRanker:
             logger.warning("Very small training set (%d samples) for XGBoost", X.shape[0])
         self.feature_names = feature_names
 
-        dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names,
-                             weight=sample_weight)
+        dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names, weight=sample_weight)
 
         evals = [(dtrain, "train")]
         if valid_set is not None:
@@ -319,68 +310,71 @@ class XGBoostRanker:
 
 
 def create_matchup_features(
-    team1_stats: Dict[str, float],
-    team2_stats: Dict[str, float]
+    team1_stats: Dict[str, float], team2_stats: Dict[str, float]
 ) -> Tuple[np.ndarray, List[str]]:
     """
     Create feature vector for a matchup.
-    
+
     Computes differential and interaction features.
-    
+
     Args:
         team1_stats: Team 1 statistics
         team2_stats: Team 2 statistics
-        
+
     Returns:
         Tuple of (feature_vector, feature_names)
     """
     features = []
     names = []
-    
+
     # Standard features to include
     stat_keys = [
-        'adj_efficiency_margin', 'adj_offensive_efficiency', 
-        'adj_defensive_efficiency', 'adj_tempo',
-        'effective_fg_pct', 'turnover_rate', 
-        'offensive_reb_rate', 'free_throw_rate',
-        'sos_adj_em', 'luck'
+        "adj_efficiency_margin",
+        "adj_offensive_efficiency",
+        "adj_defensive_efficiency",
+        "adj_tempo",
+        "effective_fg_pct",
+        "turnover_rate",
+        "offensive_reb_rate",
+        "free_throw_rate",
+        "sos_adj_em",
+        "luck",
     ]
-    
+
     # Differential features (team1 - team2)
     for key in stat_keys:
         val1 = team1_stats.get(key, 0.0)
         val2 = team2_stats.get(key, 0.0)
-        
+
         features.append(val1 - val2)
         names.append(f"diff_{key}")
-    
+
     # Raw features for each team
     for key in stat_keys[:4]:  # Just main efficiency metrics
         features.append(team1_stats.get(key, 0.0))
         names.append(f"team1_{key}")
         features.append(team2_stats.get(key, 0.0))
         names.append(f"team2_{key}")
-    
+
     # Interaction features
     # Tempo matchup (faster vs slower)
-    tempo1 = team1_stats.get('adj_tempo', 68)
-    tempo2 = team2_stats.get('adj_tempo', 68)
+    tempo1 = team1_stats.get("adj_tempo", 68)
+    tempo2 = team2_stats.get("adj_tempo", 68)
     features.append(tempo1 * tempo2 / 4624)  # Normalized
-    names.append('tempo_interaction')
-    
-    # Style matchup (offense-heavy vs defense-heavy)
-    off1 = team1_stats.get('adj_offensive_efficiency', 100)
-    def1 = team1_stats.get('adj_defensive_efficiency', 100)
-    off2 = team2_stats.get('adj_offensive_efficiency', 100)
-    def2 = team2_stats.get('adj_defensive_efficiency', 100)
-    
-    features.append((off1 - def2) / 10)  # Team1 offense vs Team2 defense
-    names.append('t1_off_vs_t2_def')
-    features.append((off2 - def1) / 10)  # Team2 offense vs Team1 defense
-    names.append('t2_off_vs_t1_def')
-    
-    return np.array(features), names
+    names.append("tempo_interaction")
 
+    # Style matchup (offense-heavy vs defense-heavy)
+    off1 = team1_stats.get("adj_offensive_efficiency", 100)
+    def1 = team1_stats.get("adj_defensive_efficiency", 100)
+    off2 = team2_stats.get("adj_offensive_efficiency", 100)
+    def2 = team2_stats.get("adj_defensive_efficiency", 100)
+
+    features.append((off1 - def2) / 10)  # Team1 offense vs Team2 defense
+    names.append("t1_off_vs_t2_def")
+    features.append((off2 - def1) / 10)  # Team2 offense vs Team1 defense
+    names.append("t2_off_vs_t1_def")
+
+    return np.array(features), names
 
 
 class LightGBMMarginRegressor:
@@ -451,7 +445,9 @@ class LightGBMMarginRegressor:
         """
         self.feature_names = feature_names
         train_data = lgb.Dataset(
-            X, label=margins, feature_name=feature_names,
+            X,
+            label=margins,
+            feature_name=feature_names,
             weight=sample_weight,
         )
 
@@ -459,8 +455,10 @@ class LightGBMMarginRegressor:
         valid_names = ["train"]
         if valid_set is not None:
             valid_data = lgb.Dataset(
-                valid_set[0], label=valid_set[1],
-                feature_name=feature_names, reference=train_data,
+                valid_set[0],
+                label=valid_set[1],
+                feature_name=feature_names,
+                reference=train_data,
             )
             valid_sets.append(valid_data)
             valid_names.append("valid")
@@ -471,7 +469,8 @@ class LightGBMMarginRegressor:
         callbacks.append(lgb.log_evaluation(period=100))
 
         self.model = lgb.train(
-            self.params, train_data,
+            self.params,
+            train_data,
             num_boost_round=num_rounds,
             valid_sets=valid_sets,
             valid_names=valid_names,

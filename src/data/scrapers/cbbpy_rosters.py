@@ -36,10 +36,15 @@ class CBBpyRosterScraper:
             return {}
 
         enable_pbp = str(os.getenv("CBBPY_ROSTER_ENABLE_PBP", "")).strip().lower() in {
-            "1", "true", "yes", "y",
+            "1",
+            "true",
+            "yes",
+            "y",
         }
         box_rows, pbp_rows, collection_mode = self._collect_box_and_pbp_rows(
-            scraper, year, enable_pbp=enable_pbp,
+            scraper,
+            year,
+            enable_pbp=enable_pbp,
         )
         if not box_rows:
             return {}
@@ -53,6 +58,7 @@ class CBBpyRosterScraper:
         # Validate payload through pydantic schemas
         try:
             from .schemas import validate_roster_payload
+
             payload = validate_roster_payload(payload)
         except Exception as e:
             logger.warning("Roster payload schema validation failed: %s", e)
@@ -79,7 +85,11 @@ class CBBpyRosterScraper:
     # ------------------------------------------------------------------
 
     def _collect_box_and_pbp_rows(
-        self, scraper, year: int, *, enable_pbp: bool = False,
+        self,
+        scraper,
+        year: int,
+        *,
+        enable_pbp: bool = False,
     ) -> Tuple[List[Dict], List[Dict], str]:
         """Collect box-score rows and optionally PBP rows.
 
@@ -88,7 +98,10 @@ class CBBpyRosterScraper:
         """
         max_games = self._safe_int(os.getenv("CBBPY_ROSTER_MAX_GAMES"), 0)
         force_schedule = str(os.getenv("CBBPY_ROSTER_FORCE_SCHEDULE", "")).strip().lower() in {
-            "1", "true", "yes", "y",
+            "1",
+            "true",
+            "yes",
+            "y",
         }
         get_games_season = getattr(scraper, "get_games_season", None)
 
@@ -98,14 +111,17 @@ class CBBpyRosterScraper:
         if callable(get_games_season) and not force_schedule and max_games <= 0:
             try:
                 data = self._run_with_timeout(
-                    get_games_season, args=(year,),
+                    get_games_season,
+                    args=(year,),
                     kwargs={"info": False, "box": True, "pbp": enable_pbp},
                     timeout=600,
                 )
             except TypeError:
                 try:
                     data = self._run_with_timeout(
-                        get_games_season, args=(year,), timeout=600,
+                        get_games_season,
+                        args=(year,),
+                        timeout=600,
                     )
                 except Exception:
                     data = None
@@ -118,13 +134,16 @@ class CBBpyRosterScraper:
                 if enable_pbp:
                     logger.info(
                         "Season endpoint returned %d box rows and %d PBP rows",
-                        len(box_rows), len(pbp_rows),
+                        len(box_rows),
+                        len(pbp_rows),
                     )
                 return box_rows, pbp_rows, "season_endpoint"
 
         # Slow path: game-by-game via schedule
         box_rows, pbp_rows = self._collect_rows_via_schedule(
-            scraper, year, enable_pbp=enable_pbp,
+            scraper,
+            year,
+            enable_pbp=enable_pbp,
         )
         if box_rows:
             return box_rows, pbp_rows, "schedule_game_endpoints"
@@ -143,7 +162,11 @@ class CBBpyRosterScraper:
         return []
 
     def _collect_rows_via_schedule(
-        self, scraper, year: int, *, enable_pbp: bool = False,
+        self,
+        scraper,
+        year: int,
+        *,
+        enable_pbp: bool = False,
     ) -> Tuple[List[Dict], List[Dict]]:
         get_game = getattr(scraper, "get_game", None)
         get_boxscore = getattr(scraper, "get_game_boxscore", None)
@@ -173,7 +196,10 @@ class CBBpyRosterScraper:
                 if max_games > 0 and len(seen_game_ids) > max_games:
                     break
                 game_box, game_pbp = self._fetch_single_game(
-                    get_boxscore, get_game, gid, enable_pbp=enable_pbp,
+                    get_boxscore,
+                    get_game,
+                    gid,
+                    enable_pbp=enable_pbp,
                 )
                 if game_box:
                     box_rows.extend(game_box)
@@ -182,7 +208,12 @@ class CBBpyRosterScraper:
         return box_rows, pbp_rows
 
     def _fetch_single_game(
-        self, get_boxscore, get_game, game_id: str, *, enable_pbp: bool = False,
+        self,
+        get_boxscore,
+        get_game,
+        game_id: str,
+        *,
+        enable_pbp: bool = False,
     ) -> Tuple[List[Dict], List[Dict]]:
         """Fetch box score (and optionally PBP) for a single game."""
         # If PBP not needed, use the simpler boxscore endpoint first
@@ -197,8 +228,13 @@ class CBBpyRosterScraper:
         if callable(get_game):
             try:
                 data = rate_limited_call(
-                    get_game, game_id, info=False, box=True, pbp=enable_pbp,
-                    delay=1.0, max_retries=2,
+                    get_game,
+                    game_id,
+                    info=False,
+                    box=True,
+                    pbp=enable_pbp,
+                    delay=1.0,
+                    max_retries=2,
                 )
             except TypeError:
                 try:
@@ -352,8 +388,7 @@ class CBBpyRosterScraper:
                 # 7.1 ppg, 1.3 apg, 1.0 oreb/g, 2.2 dreb/g, 0.65 stl/g, 0.33 blk/g,
                 # 1.15 tov/g, 1.7 pf/g.
                 _AVG_IMPACT = (
-                    7.1 + 0.7 * 1.3 + 0.8 * 1.0 + 0.6 * 2.2
-                    + 1.2 * 0.65 + 1.0 * 0.33 - 0.9 * 1.15 - 0.35 * 1.7
+                    7.1 + 0.7 * 1.3 + 0.8 * 1.0 + 0.6 * 2.2 + 1.2 * 0.65 + 1.0 * 0.33 - 0.9 * 1.15 - 0.35 * 1.7
                 )  # ≈ 9.30
                 raw_impact = (
                     p["pts"]
@@ -374,7 +409,10 @@ class CBBpyRosterScraper:
                 # Box-score RAPM estimate: split raw impact into O/D components
                 # and scale to per-100-possession RAPM range (~-5 to +8).
                 rapm_off, rapm_def = self._estimate_rapm_from_box_score(
-                    p, games_played, minutes_per_game, true_shooting,
+                    p,
+                    games_played,
+                    minutes_per_game,
+                    true_shooting,
                 )
 
                 player_rows.append(
@@ -438,7 +476,10 @@ class CBBpyRosterScraper:
 
     @staticmethod
     def _estimate_rapm_from_box_score(
-        p: Dict, games_played: int, minutes_per_game: float, true_shooting: float,
+        p: Dict,
+        games_played: int,
+        minutes_per_game: float,
+        true_shooting: float,
     ) -> Tuple[float, float]:
         """Estimate offensive/defensive RAPM from box-score stats.
 
@@ -474,12 +515,7 @@ class CBBpyRosterScraper:
 
         # --- Defensive RAPM ---
         # D1 averages: 2.2 dreb/g, 0.65 stl/g, 0.33 blk/g, 1.7 pf/g
-        d_rapm = (
-            (drpg - 2.2) * 0.20
-            + (spg - 0.65) * 1.2
-            + (bpg - 0.33) * 0.9
-            - (pfpg - 1.7) * 0.20
-        )
+        d_rapm = (drpg - 2.2) * 0.20 + (spg - 0.65) * 1.2 + (bpg - 0.33) * 0.9 - (pfpg - 1.7) * 0.20
 
         # Weight by minutes share: a 32+ mpg player gets full value;
         # a 10 mpg bench player gets proportional credit.
@@ -521,7 +557,10 @@ class CBBpyRosterScraper:
                 calls += 1
                 try:
                     raw = rate_limited_call(
-                        get_player_info, player_id, delay=1.0, max_retries=2,
+                        get_player_info,
+                        player_id,
+                        delay=1.0,
+                        max_retries=2,
                     )
                     profile = self._frame_to_single_row(raw)
                 except Exception:
@@ -708,6 +747,7 @@ class CBBpyRosterScraper:
     @staticmethod
     def _team_id(name: str) -> str:
         from ..normalize import normalize_team_id
+
         return normalize_team_id(name)
 
     @staticmethod
@@ -726,8 +766,7 @@ class CBBpyRosterScraper:
             current += timedelta(days=1)
 
     @staticmethod
-    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15,
-                                  session=None) -> List:
+    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15, session=None) -> List:
         """Lightweight ESPN API call for game IDs on a single date.
 
         Bypasses cbbpy's ``get_game_ids`` which uses ``requests.get()``
@@ -743,13 +782,17 @@ class CBBpyRosterScraper:
         )
         getter = session or _requests
         if session is None:
-            resp = getter.get(api_url, headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-            }, timeout=http_timeout)
+            resp = getter.get(
+                api_url,
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                },
+                timeout=http_timeout,
+            )
         else:
             resp = getter.get(api_url, timeout=http_timeout)
         resp.raise_for_status()
@@ -767,6 +810,4 @@ class CBBpyRosterScraper:
             try:
                 return future.result(timeout=timeout)
             except FuturesTimeout:
-                raise TimeoutError(
-                    f"{getattr(fn, '__name__', fn)} timed out after {timeout}s"
-                )
+                raise TimeoutError(f"{getattr(fn, '__name__', fn)} timed out after {timeout}s")

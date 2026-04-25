@@ -355,8 +355,7 @@ class TestCrossSourceConsistency:
         for variant in variants:
             result = resolver.resolve(variant)
             assert result.canonical_id == expected_id, (
-                f"'{variant}' resolved to '{result.canonical_id}' "
-                f"(expected '{expected_id}', method={result.method})"
+                f"'{variant}' resolved to '{result.canonical_id}' (expected '{expected_id}', method={result.method})"
             )
 
 
@@ -391,7 +390,6 @@ class TestGameIdToMetricIdResolution:
         """Display names from game data (with mascots) should resolve correctly."""
         result = resolver.resolve(display_name)
         assert result.canonical_id == expected_id, (
-            f"'{display_name}' resolved to '{result.canonical_id}' "
-            f"(expected '{expected_id}', method={result.method})"
+            f"'{display_name}' resolved to '{result.canonical_id}' (expected '{expected_id}', method={result.method})"
         )
         assert result.confidence >= 0.80

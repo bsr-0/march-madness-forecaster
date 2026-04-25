@@ -64,9 +64,7 @@ class TestComputeConfTourneyFeatures:
         }
         conf_map = self._make_conf_map()
 
-        IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-19"
-        )
+        IncrementalMetricsEngine._compute_conf_tourney_features(results, by_team, conf_map, "2024-03-19")
 
         assert results["duke"].conf_tourney_games == 2
         assert results["duke"].conf_tourney_margin == pytest.approx((5 + 15) / 2)
@@ -89,9 +87,7 @@ class TestComputeConfTourneyFeatures:
         }
         conf_map = self._make_conf_map()
 
-        IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-19"
-        )
+        IncrementalMetricsEngine._compute_conf_tourney_features(results, by_team, conf_map, "2024-03-19")
 
         assert results["duke"].conf_tourney_games == 0
         assert results["duke"].conf_tourney_margin == 0.0
@@ -108,9 +104,7 @@ class TestComputeConfTourneyFeatures:
         }
         conf_map = self._make_conf_map()
 
-        IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-19"
-        )
+        IncrementalMetricsEngine._compute_conf_tourney_features(results, by_team, conf_map, "2024-03-19")
 
         assert results["duke"].conf_tourney_games == 0
 
@@ -125,7 +119,10 @@ class TestComputeConfTourneyFeatures:
         conf_map = self._make_conf_map()
 
         IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-01"  # before window
+            results,
+            by_team,
+            conf_map,
+            "2024-03-01",  # before window
         )
 
         assert results["duke"].conf_tourney_games == 0
@@ -134,16 +131,11 @@ class TestComputeConfTourneyFeatures:
     def test_games_capped_at_5(self):
         """conf_tourney_games is capped at 5."""
         results = {"duke": ProprietaryTeamMetrics(team_id="", team_name="")}
-        games = [
-            _make_game(f"g{i}", f"2024-03-{10+i}", "duke", "unc", 75, 70)
-            for i in range(7)
-        ]
+        games = [_make_game(f"g{i}", f"2024-03-{10 + i}", "duke", "unc", 75, 70) for i in range(7)]
         by_team = {"duke": games}
         conf_map = self._make_conf_map()
 
-        IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-19"
-        )
+        IncrementalMetricsEngine._compute_conf_tourney_features(results, by_team, conf_map, "2024-03-19")
 
         assert results["duke"].conf_tourney_games == 5
 
@@ -154,16 +146,14 @@ class TestComputeConfTourneyFeatures:
         }
         by_team = {
             "duke": [
-                _make_game("g1", "2024-03-10", "duke", "unc", 75, 70),       # same conf
-                _make_game("g2", "2024-03-12", "duke", "kansas", 80, 60),     # cross conf
-                _make_game("g3", "2024-03-14", "duke", "baylor", 65, 70),     # cross conf, loss
+                _make_game("g1", "2024-03-10", "duke", "unc", 75, 70),  # same conf
+                _make_game("g2", "2024-03-12", "duke", "kansas", 80, 60),  # cross conf
+                _make_game("g3", "2024-03-14", "duke", "baylor", 65, 70),  # cross conf, loss
             ],
         }
         conf_map = self._make_conf_map()
 
-        IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-19"
-        )
+        IncrementalMetricsEngine._compute_conf_tourney_features(results, by_team, conf_map, "2024-03-19")
 
         # Conf tourney: only same-conference (duke vs unc)
         assert results["duke"].conf_tourney_games == 1
@@ -186,7 +176,10 @@ class TestComputeConfTourneyFeatures:
         conf_map = self._make_conf_map()
 
         IncrementalMetricsEngine._compute_conf_tourney_features(
-            results, by_team, conf_map, "2024-03-15"  # only g1 should count
+            results,
+            by_team,
+            conf_map,
+            "2024-03-15",  # only g1 should count
         )
 
         assert results["duke"].conf_tourney_games == 1
@@ -206,7 +199,10 @@ class TestFeatureVectorDimensions:
 
     def test_conf_tourney_indices(self):
         tf = TeamFeatures(
-            team_id="duke", team_name="Duke", seed=1, region="East",
+            team_id="duke",
+            team_name="Duke",
+            seed=1,
+            region="East",
             conf_tourney_champion=1.0,
             conf_tourney_games=3.0,
             conf_tourney_margin=7.5,
@@ -225,12 +221,12 @@ class TestFeatureVectorDimensions:
     def test_get_feature_names_length(self):
         names = TeamFeatures.get_feature_names()
         assert len(names) == 56
-        assert names[46] == 'conf_tourney_champion'
-        assert names[47] == 'conf_tourney_games'
-        assert names[48] == 'conf_tourney_margin'
-        assert names[49] == 'late_season_games'
-        assert names[50] == 'late_season_margin'
-        assert names[51] == 'late_season_win_pct'
+        assert names[46] == "conf_tourney_champion"
+        assert names[47] == "conf_tourney_games"
+        assert names[48] == "conf_tourney_margin"
+        assert names[49] == "late_season_games"
+        assert names[50] == "late_season_margin"
+        assert names[51] == "late_season_win_pct"
 
     def test_metrics_to_team_vector_maps_all_recency(self):
         m = ProprietaryTeamMetrics(team_id="duke", team_name="Duke")

@@ -38,9 +38,7 @@ class TestRiskProfiles:
                 + profile.path_protection_weight
                 + profile.diversity_weight
             )
-            assert abs(total - 1.0) < 0.01, (
-                f"Profile {name} weights sum to {total}, expected 1.0"
-            )
+            assert abs(total - 1.0) < 0.01, f"Profile {name} weights sum to {total}, expected 1.0"
 
     def test_leverage_ordering(self):
         """Aggressive should have higher leverage weight than conservative."""
@@ -69,6 +67,7 @@ class TestESPNPoolPortfolio:
 
     def test_init(self):
         """Should initialize without errors."""
+
         def mock_predict(t1, t2):
             return 0.5
 
@@ -82,6 +81,7 @@ class TestESPNPoolPortfolio:
 
     def test_generate_no_base_bracket(self):
         """Generate with no base bracket should return empty (no picks to optimize)."""
+
         def mock_predict(t1, t2):
             return 0.5
 

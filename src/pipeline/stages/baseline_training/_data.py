@@ -1,6 +1,5 @@
 """Baseline model training — data module."""
 
-
 import logging
 import os
 
@@ -49,8 +48,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
-def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort_keys,
-                         X_full, n_current_year_train):
+def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort_keys, X_full, n_current_year_train):
     """Build feature names and load multi-year historical training data.
 
     Returns:
@@ -63,6 +61,7 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
     feature_names_full = None  # pre-selection names (91-dim) for LOYO
     if train_samples >= 40:
         from src.data.features.feature_engineering import TeamFeatures
+
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
         diff_names = [f"diff_{n}" for n in base_names]
         absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
@@ -79,9 +78,9 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
         feature_names_full = list(feature_names)  # preserve pre-selection names for LOYO
         if len(feature_names) != train_X.shape[1]:
             logger.warning(
-                "Feature name count mismatch: %d names vs %d columns. "
-                "Falling back to generic names.",
-                len(feature_names), train_X.shape[1],
+                "Feature name count mismatch: %d names vs %d columns. Falling back to generic names.",
+                len(feature_names),
+                train_X.shape[1],
             )
             feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
 
@@ -104,11 +103,7 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
             _rs["multi_year_games_dir"] = None
             logger.info("No historical directory found; multi-year training disabled")
 
-    if (
-        pipeline.config.enable_multi_year_training
-        and _resolved_games_dir
-        and os.path.isdir(_resolved_games_dir)
-    ):
+    if pipeline.config.enable_multi_year_training and _resolved_games_dir and os.path.isdir(_resolved_games_dir):
         games_dir = _resolved_games_dir
         feature_dim_full = X_full.shape[1]
 
@@ -140,10 +135,7 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
         _optimal_windows = getattr(pipeline.config, "optimal_training_windows", None)
         if _optimal_windows and hist_years:
             # Collect numeric window sizes (None = all available)
-            _window_sizes = [
-                v for v in _optimal_windows.values()
-                if v is not None
-            ]
+            _window_sizes = [v for v in _optimal_windows.values() if v is not None]
             if _window_sizes:
                 _max_window = max(_window_sizes)
                 _n_before = len(hist_years)
@@ -152,7 +144,9 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
                     logger.info(
                         "Phase 3 window optimization: trimmed historical years "
                         "from %d to %d (max optimal window=%d across %s).",
-                        _n_before, len(hist_years), _max_window,
+                        _n_before,
+                        len(hist_years),
+                        _max_window,
                         _optimal_windows,
                     )
 
@@ -188,13 +182,18 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
             if not os.path.exists(gp) or not os.path.exists(mp):
                 logger.warning(
                     "Multi-year training: missing data for %d (games=%s, metrics=%s); skipping.",
-                    yr, gp, mp,
+                    yr,
+                    gp,
+                    mp,
                 )
                 continue
 
             try:
                 hX, hy, _h_margins, _end_elo, _h_rw = pipeline._load_year_samples_incremental(
-                    gp, mp, feature_dim_full, yr,
+                    gp,
+                    mp,
+                    feature_dim_full,
+                    yr,
                     include_tournament=_include_tourney,
                     prior_elo=_cross_year_elo,
                 )
@@ -213,7 +212,8 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
             if len(hy) < 10:
                 logger.warning(
                     "Multi-year training: year %d has too few samples (%d); skipping.",
-                    yr, len(hy),
+                    yr,
+                    len(hy),
                 )
                 continue
 
@@ -229,7 +229,10 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
             # Exclude architecturally-zero columns so they don't penalize
             # quality scores for features that are always unavailable.
             _dq = compute_year_data_quality(
-                hX, yr, feature_names, exclude_cols=_arch_zero_cols,
+                hX,
+                yr,
+                feature_names,
+                exclude_cols=_arch_zero_cols,
             )
             quality_mult = _dq["combined_weight"]
 
@@ -240,14 +243,20 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
                     "completeness=%.2f, active_features=%d/%d, "
                     "zero_cols=%d, bad_rate=%.4f. "
                     "Adaptive weight=%.3f (era=%.2f).",
-                    yr, _dq["completeness"], _dq["n_active_features"],
-                    _dq["n_features"], _dq["zero_columns"],
-                    _dq["bad_rate"], quality_mult, _dq["era_weight"],
+                    yr,
+                    _dq["completeness"],
+                    _dq["n_active_features"],
+                    _dq["n_features"],
+                    _dq["zero_columns"],
+                    _dq["bad_rate"],
+                    quality_mult,
+                    _dq["era_weight"],
                 )
                 if _dq["zero_column_names"]:
                     logger.warning(
                         "FIX-DQ: Year %d zero columns (first 10): %s",
-                        yr, _dq["zero_column_names"],
+                        yr,
+                        _dq["zero_column_names"],
                     )
 
             year_weight *= quality_mult
@@ -276,15 +285,19 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
 
             _n_tourney = int(np.sum(_h_rw > 1.0)) if _h_rw is not None and len(_h_rw) == len(hy) else 0
             logger.info(
-                "Multi-year training: loaded %d samples from %d "
-                "(weight=%.3f, tournament_weighted=%d).",
-                len(hy), yr, year_weight, _n_tourney,
+                "Multi-year training: loaded %d samples from %d (weight=%.3f, tournament_weighted=%d).",
+                len(hy),
+                yr,
+                year_weight,
+                _n_tourney,
             )
 
         total_hist_samples = sum(len(part) for part in hist_y_parts)
         logger.warning(
             "Multi-year training summary: loaded %d/%d years with %d samples total.",
-            len(years_loaded), len(hist_years), total_hist_samples,
+            len(years_loaded),
+            len(hist_years),
+            total_hist_samples,
         )
 
         if hist_X_parts:
@@ -307,10 +320,12 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
 
             # Store year-based weights to combine with recency weighting later.
             # Current-year samples get weight 1.0.
-            pipeline._historical_year_weights = np.concatenate([
-                hist_weights,
-                np.ones(n_current_year_train, dtype=float),
-            ])
+            pipeline._historical_year_weights = np.concatenate(
+                [
+                    hist_weights,
+                    np.ones(n_current_year_train, dtype=float),
+                ]
+            )
 
             # FIX #3: Build round weights array for Kaggle round-weighted
             # Brier optimization.  Historical tournament games get their
@@ -318,10 +333,12 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
             if pipeline.config.enable_round_weighted_training and hist_round_weight_parts:
                 hist_rw = np.concatenate(hist_round_weight_parts)
                 # Current-year training games are regular-season → weight 1.0
-                pipeline._round_weights = np.concatenate([
-                    hist_rw,
-                    np.ones(n_current_year_train, dtype=float),
-                ])
+                pipeline._round_weights = np.concatenate(
+                    [
+                        hist_rw,
+                        np.ones(n_current_year_train, dtype=float),
+                    ]
+                )
                 _n_weighted = int(np.sum(pipeline._round_weights > 1.0))
                 if _n_weighted > 0:
                     logger.info(
@@ -354,9 +371,10 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
                 "per_year_data_quality": _dq_summary,
             }
             logger.info(
-                "Multi-year training pool: %d historical + %d current = %d total "
-                "training samples (%.1fx increase).",
-                len(hist_y), n_current_year_train, train_samples,
+                "Multi-year training pool: %d historical + %d current = %d total training samples (%.1fx increase).",
+                len(hist_y),
+                n_current_year_train,
+                train_samples,
                 train_samples / max(n_current_year_train, 1),
             )
         else:
@@ -364,16 +382,21 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
     else:
         pipeline._historical_year_weights = None
 
-    return (train_X, train_y, train_margins, train_sort_keys,
-            train_samples, feature_names, feature_names_full,
-            historical_training_stats)
+    return (
+        train_X,
+        train_y,
+        train_margins,
+        train_sort_keys,
+        train_samples,
+        feature_names,
+        feature_names_full,
+        historical_training_stats,
+    )
 
 
-
-
-def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
-                                feature_names, feature_names_full,
-                                train_samples, valid_samples):
+def _apply_feature_preprocessing(
+    pipeline, train_X, eval_X, train_y, X_full, feature_names, feature_names_full, train_samples, valid_samples
+):
     """Apply zero-variance pruning, feature selection, scaling, and distribution shift detection.
 
     Returns:
@@ -394,18 +417,19 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
         _n_zero = int(np.sum(_zero_mask))
         if _n_zero > 0:
             _keep_mask = ~_zero_mask
-            _dropped = [feature_names[i] for i in range(len(feature_names))
-                        if i < len(_zero_mask) and _zero_mask[i]]
+            _dropped = [feature_names[i] for i in range(len(feature_names)) if i < len(_zero_mask) and _zero_mask[i]]
             logger.info(
-                "FIX-DQ: Early zero-variance pruning removed %d/%d features "
-                "before feature selection: %s",
-                _n_zero, len(feature_names), _dropped[:15],
+                "FIX-DQ: Early zero-variance pruning removed %d/%d features before feature selection: %s",
+                _n_zero,
+                len(feature_names),
+                _dropped[:15],
             )
             train_X = train_X[:, _keep_mask]
             eval_X = eval_X[:, _keep_mask]
             X_full = X_full[:, _keep_mask]
-            feature_names = [feature_names[i] for i in range(len(feature_names))
-                             if i < len(_keep_mask) and _keep_mask[i]]
+            feature_names = [
+                feature_names[i] for i in range(len(feature_names)) if i < len(_keep_mask) and _keep_mask[i]
+            ]
             # NOTE: Do NOT overwrite feature_names_full here — it must
             # preserve the original (pre-pruning) names so that LOYO can
             # load raw historical data at the full matchup dimension and
@@ -427,9 +451,7 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
             # No model fitting, no label dependency, no double-dipping.
             # Gap #3: Use SIMPLE_FEATURE_SET when model_complexity == "simple"
             active_feature_set = (
-                SIMPLE_FEATURE_SET
-                if pipeline.config.model_complexity == "simple"
-                else FIXED_FEATURE_SET
+                SIMPLE_FEATURE_SET if pipeline.config.model_complexity == "simple" else FIXED_FEATURE_SET
             )
             name_to_idx = {n: i for i, n in enumerate(feature_names)}
             fixed_indices = [name_to_idx[n] for n in active_feature_set if n in name_to_idx]
@@ -452,12 +474,14 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
                 feature_selection_method = "fixed_domain_knowledge"
                 logger.info(
                     "Fixed feature selection: %d/%d features retained (domain knowledge).",
-                    len(fixed_indices), original_dim,
+                    len(fixed_indices),
+                    original_dim,
                 )
             else:
                 logger.warning(
                     "Fixed feature set matched only %d features (required %d) — using all features.",
-                    len(fixed_indices), min_required,
+                    len(fixed_indices),
+                    min_required,
                 )
 
     manifest_original_features = list(feature_names_full or feature_names or [])
@@ -490,9 +514,13 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
     if valid_samples >= 20 and feature_names is not None:
         try:
             from src.data.features.feature_selection import detect_distribution_shift
+
             shift_results = detect_distribution_shift(
-                train_X, eval_X, feature_names,
-                psi_threshold=0.25, ks_alpha=0.05,
+                train_X,
+                eval_X,
+                feature_names,
+                psi_threshold=0.25,
+                ks_alpha=0.05,
             )
             n_flagged = sum(1 for r in shift_results if r.flagged)
             if n_flagged > 0:
@@ -505,7 +533,8 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
                         "ks_pvalue": round(r.ks_pvalue, 4),
                         "mean_shift_std": round(r.mean_shift_std, 3),
                     }
-                    for r in shift_results if r.flagged
+                    for r in shift_results
+                    if r.flagged
                 ][:10]  # Top 10 worst
         except Exception as e:
             logger.debug("Distribution shift detection skipped: %s", e)
@@ -528,25 +557,22 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
             scaler = StandardScaler()
             scaler.mean_ = _means
             scaler.scale_ = _stds
-            scaler.var_ = _stds ** 2
+            scaler.var_ = _stds**2
             scaler.n_features_in_ = train_X.shape[1]
             scaler.n_samples_seen_ = np.sum(~np.isnan(train_X), axis=0)
             # Scale non-NaN values, preserve NaN
-            train_X = np.where(np.isnan(train_X), np.nan,
-                               (train_X - _means) / _stds)
+            train_X = np.where(np.isnan(train_X), np.nan, (train_X - _means) / _stds)
         else:
             scaler = StandardScaler()
             train_X = scaler.fit_transform(train_X)
         if eval_X.shape[0] > 0:
             if _has_nans and int(np.isnan(eval_X).sum()) > 0:
-                eval_X = np.where(np.isnan(eval_X), np.nan,
-                                  (eval_X - scaler.mean_) / scaler.scale_)
+                eval_X = np.where(np.isnan(eval_X), np.nan, (eval_X - scaler.mean_) / scaler.scale_)
             else:
                 eval_X = scaler.transform(eval_X)
         else:
             logger.warning(
-                "Skipping scaler.transform(eval_X) because eval split is empty "
-                "(shape=%s).",
+                "Skipping scaler.transform(eval_X) because eval split is empty (shape=%s).",
                 eval_X.shape,
             )
         pipeline.baseline_model.scaler = scaler
@@ -558,6 +584,13 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
     # Also store the raw (pre-zero-variance-pruning) matchup dimension
     # so calibration can load data at full width then prune post-hoc.
     pipeline.baseline_model.raw_feature_dim = _loyo_raw_feature_dim
-    return (train_X, eval_X, X_full, feature_names, feature_names_full,
-            fs_stats, dist_shift_stats, _loyo_raw_feature_dim)
-
+    return (
+        train_X,
+        eval_X,
+        X_full,
+        feature_names,
+        feature_names_full,
+        fs_stats,
+        dist_shift_stats,
+        _loyo_raw_feature_dim,
+    )

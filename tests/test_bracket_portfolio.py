@@ -12,11 +12,12 @@ from src.optimization.leverage import PoolStrategyProfile, get_strategy_profile
 
 
 class TestBracketPick:
-
     def test_dataclass(self):
         pick = BracketPick(
-            round_num=0, game_idx=0,
-            winner_id="duke", loser_id="unc",
+            round_num=0,
+            game_idx=0,
+            winner_id="duke",
+            loser_id="unc",
             win_probability=0.7,
         )
         assert pick.winner_id == "duke"
@@ -24,14 +25,15 @@ class TestBracketPick:
 
 
 class TestGeneratedBracket:
-
     def test_to_submission_dict(self):
         picks = [
             BracketPick(0, 0, "duke", "unc", 0.7),
             BracketPick(0, 1, "uk", "msu", 0.6),
         ]
         bracket = GeneratedBracket(
-            bracket_id=0, picks=picks, champion="duke",
+            bracket_id=0,
+            picks=picks,
+            champion="duke",
         )
         d = bracket.to_submission_dict()
         assert d["R0G0"] == "duke"
@@ -39,7 +41,6 @@ class TestGeneratedBracket:
 
 
 class TestBracketPortfolioGenerator:
-
     @staticmethod
     def _simple_predict(t1, t2):
         """Simple predict_fn based on alphabetical order."""
@@ -62,7 +63,10 @@ class TestBracketPortfolioGenerator:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=10, n_simulations=50, seed=42,
+            teams,
+            n_brackets=10,
+            n_simulations=50,
+            seed=42,
         )
         assert len(brackets) > 0
         assert all(isinstance(b, GeneratedBracket) for b in brackets)
@@ -71,7 +75,10 @@ class TestBracketPortfolioGenerator:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=5, n_simulations=20, seed=42,
+            teams,
+            n_brackets=5,
+            n_simulations=20,
+            seed=42,
         )
         for b in brackets:
             assert b.champion != ""
@@ -80,7 +87,10 @@ class TestBracketPortfolioGenerator:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=5, n_simulations=20, seed=42,
+            teams,
+            n_brackets=5,
+            n_simulations=20,
+            seed=42,
         )
         for b in brackets:
             assert len(b.picks) > 0
@@ -90,7 +100,10 @@ class TestBracketPortfolioGenerator:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=20, n_simulations=50, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=50,
+            seed=42,
         )
         strategies_seen = set(b.strategy for b in brackets)
         assert len(strategies_seen) >= 2  # At least 2 different strategies
@@ -99,11 +112,15 @@ class TestBracketPortfolioGenerator:
         """Contrarian strategy should use public pick data."""
         public_picks = {"East_1": 0.30, "West_1": 0.25, "South_8": 0.05}
         gen = BracketPortfolioGenerator(
-            self._simple_predict, public_pick_pcts=public_picks,
+            self._simple_predict,
+            public_pick_pcts=public_picks,
         )
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=10, n_simulations=30, seed=42,
+            teams,
+            n_brackets=10,
+            n_simulations=30,
+            seed=42,
             strategy_mix={"contrarian": 1.0},
         )
         assert len(brackets) > 0
@@ -161,7 +178,10 @@ class TestPortfolioWithPoolStrategyProfile:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=20, n_simulations=50, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=50,
+            seed=42,
             pool_strategy_profile=profile,
         )
         assert len(brackets) > 0
@@ -187,7 +207,10 @@ class TestPortfolioWithPoolStrategyProfile:
         teams = self._make_teams_by_region()
         # Explicit mix = all chalk — should override profile
         brackets = gen.generate_portfolio(
-            teams, n_brackets=10, n_simulations=30, seed=42,
+            teams,
+            n_brackets=10,
+            n_simulations=30,
+            seed=42,
             strategy_mix={"chalk": 1.0},
             pool_strategy_profile=profile,
         )
@@ -200,7 +223,10 @@ class TestPortfolioWithPoolStrategyProfile:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=20, n_simulations=50, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=50,
+            seed=42,
         )
         assert len(brackets) > 0
         strategies_seen = set(b.strategy for b in brackets)
@@ -247,11 +273,15 @@ class TestLeverageAwareBrackets:
             champion_risk_level="very_low",
         )
         gen_low = BracketPortfolioGenerator(
-            self._simple_predict, public_pick_pcts=public_picks,
+            self._simple_predict,
+            public_pick_pcts=public_picks,
         )
         teams = self._make_teams_by_region()
         brackets_low = gen_low.generate_portfolio(
-            teams, n_brackets=20, n_simulations=200, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=200,
+            seed=42,
             pool_strategy_profile=low_profile,
         )
 
@@ -264,10 +294,14 @@ class TestLeverageAwareBrackets:
             champion_risk_level="extreme",
         )
         gen_high = BracketPortfolioGenerator(
-            self._simple_predict, public_pick_pcts=public_picks,
+            self._simple_predict,
+            public_pick_pcts=public_picks,
         )
         brackets_high = gen_high.generate_portfolio(
-            teams, n_brackets=20, n_simulations=200, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=200,
+            seed=42,
             pool_strategy_profile=high_profile,
         )
 
@@ -293,10 +327,20 @@ class TestLeverageAwareBrackets:
         """Providing leverage_picks should affect which brackets are preferred."""
         public_picks = {"East_1": 0.35, "West_1": 0.30}
         leverage_picks = [
-            {"team_id": "East_8", "round": "R64", "leverage_ratio": 2.5,
-             "model_probability": 0.45, "public_pick_percentage": 0.18},
-            {"team_id": "West_8", "round": "R64", "leverage_ratio": 2.0,
-             "model_probability": 0.40, "public_pick_percentage": 0.20},
+            {
+                "team_id": "East_8",
+                "round": "R64",
+                "leverage_ratio": 2.5,
+                "model_probability": 0.45,
+                "public_pick_percentage": 0.18,
+            },
+            {
+                "team_id": "West_8",
+                "round": "R64",
+                "leverage_ratio": 2.0,
+                "model_probability": 0.40,
+                "public_pick_percentage": 0.20,
+            },
         ]
 
         gen = BracketPortfolioGenerator(
@@ -306,7 +350,10 @@ class TestLeverageAwareBrackets:
         )
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=10, n_simulations=100, seed=42,
+            teams,
+            n_brackets=10,
+            n_simulations=100,
+            seed=42,
             strategy_mix={"contrarian": 1.0},
         )
         assert len(brackets) > 0
@@ -314,17 +361,21 @@ class TestLeverageAwareBrackets:
     def test_targeted_with_public_picks_uses_leverage_allocation(self):
         """Targeted strategy with public picks should use leverage-weighted allocation."""
         public_picks = {
-            "East_1": 0.50,    # Over-owned
-            "West_1": 0.10,    # Under-owned relative to model probability
+            "East_1": 0.50,  # Over-owned
+            "West_1": 0.10,  # Under-owned relative to model probability
             "South_1": 0.20,
             "Midwest_1": 0.20,
         }
         gen = BracketPortfolioGenerator(
-            self._simple_predict, public_pick_pcts=public_picks,
+            self._simple_predict,
+            public_pick_pcts=public_picks,
         )
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=20, n_simulations=200, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=200,
+            seed=42,
             strategy_mix={"targeted": 1.0},
         )
         assert len(brackets) > 0
@@ -338,7 +389,10 @@ class TestLeverageAwareBrackets:
         gen = BracketPortfolioGenerator(self._simple_predict)
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=10, n_simulations=100, seed=42,
+            teams,
+            n_brackets=10,
+            n_simulations=100,
+            seed=42,
             strategy_mix={"targeted": 1.0},
         )
         assert len(brackets) > 0
@@ -355,7 +409,8 @@ class TestLeverageAwareBrackets:
             {"team_id": "uk", "round": "R64"},
         ]
         gen = BracketPortfolioGenerator(
-            self._simple_predict, leverage_picks=leverage_picks,
+            self._simple_predict,
+            leverage_picks=leverage_picks,
         )
         lookup = gen._build_leverage_lookup()
         assert 5 in lookup  # CHAMP
@@ -372,21 +427,20 @@ class TestLeverageAwareBrackets:
             {"team_id": "East_1", "round": "R64"},
         ]
         gen = BracketPortfolioGenerator(
-            self._simple_predict, leverage_picks=leverage_picks,
+            self._simple_predict,
+            leverage_picks=leverage_picks,
         )
         lookup = gen._build_leverage_lookup()
 
         # Bracket that includes the leverage pick
         picks_with = [
-            BracketPick(round_num=0, game_idx=0, winner_id="East_1",
-                       loser_id="East_16", win_probability=0.95),
+            BracketPick(round_num=0, game_idx=0, winner_id="East_1", loser_id="East_16", win_probability=0.95),
         ]
         bracket_with = GeneratedBracket(bracket_id=0, picks=picks_with)
 
         # Bracket without the leverage pick
         picks_without = [
-            BracketPick(round_num=0, game_idx=0, winner_id="East_16",
-                       loser_id="East_1", win_probability=0.05),
+            BracketPick(round_num=0, game_idx=0, winner_id="East_16", loser_id="East_1", win_probability=0.05),
         ]
         bracket_without = GeneratedBracket(bracket_id=1, picks=picks_without)
 
@@ -402,7 +456,8 @@ class TestLeverageAwareBrackets:
             "unc": {"R64": 0.95, "R32": 0.85, "S16": 0.60, "CHAMP": 0.15},
         }
         gen = BracketPortfolioGenerator(
-            self._simple_predict, round_public_picks=round_picks,
+            self._simple_predict,
+            round_public_picks=round_picks,
         )
         assert gen.round_public_picks == round_picks
 
@@ -410,10 +465,20 @@ class TestLeverageAwareBrackets:
         """End-to-end: EV profile + leverage picks produce smarter brackets."""
         public_picks = {"East_1": 0.40, "West_1": 0.10, "South_1": 0.25, "Midwest_1": 0.25}
         leverage_picks = [
-            {"team_id": "West_1", "round": "CHAMP", "leverage_ratio": 3.0,
-             "model_probability": 0.30, "public_pick_percentage": 0.10},
-            {"team_id": "West_8", "round": "R64", "leverage_ratio": 2.5,
-             "model_probability": 0.45, "public_pick_percentage": 0.18},
+            {
+                "team_id": "West_1",
+                "round": "CHAMP",
+                "leverage_ratio": 3.0,
+                "model_probability": 0.30,
+                "public_pick_percentage": 0.10,
+            },
+            {
+                "team_id": "West_8",
+                "round": "R64",
+                "leverage_ratio": 2.5,
+                "model_probability": 0.45,
+                "public_pick_percentage": 0.18,
+            },
         ]
         profile = PoolStrategyProfile(
             pool_size=500,
@@ -434,7 +499,10 @@ class TestLeverageAwareBrackets:
         )
         teams = self._make_teams_by_region()
         brackets = gen.generate_portfolio(
-            teams, n_brackets=20, n_simulations=200, seed=42,
+            teams,
+            n_brackets=20,
+            n_simulations=200,
+            seed=42,
             pool_strategy_profile=profile,
         )
         assert len(brackets) > 0

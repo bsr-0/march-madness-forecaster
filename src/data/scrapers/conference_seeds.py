@@ -52,30 +52,27 @@ _ESPN_CONF_IDS: Dict[str, int] = {
     "MWC": 44,
     "Amer": 62,
     # Smaller conferences
-    "AE": 1,      # America East
-    "ASun": 46,    # ASUN
-    "BSky": 5,     # Big Sky — ESPN uses 5
-    "BSth": 6,     # Big South
-    "BW": 9,       # Big West
-    "CAA": 10,     # Colonial Athletic
-    "Horz": 45,    # Horizon League
-    "MAAC": 13,    # Metro Atlantic
-    "MAC": 14,     # Mid-American
-    "NEC": 17,     # Northeast
-    "OVC": 20,     # Ohio Valley
-    "Pat": 21,     # Patriot League
-    "SB": 37,      # Sun Belt
-    "SC": 24,      # Southern Conference
-    "SWAC": 25,    # Southwestern Athletic
-    "Slnd": 26,    # Southland
-    "Sum": 49,     # Summit League
+    "AE": 1,  # America East
+    "ASun": 46,  # ASUN
+    "BSky": 5,  # Big Sky — ESPN uses 5
+    "BSth": 6,  # Big South
+    "BW": 9,  # Big West
+    "CAA": 10,  # Colonial Athletic
+    "Horz": 45,  # Horizon League
+    "MAAC": 13,  # Metro Atlantic
+    "MAC": 14,  # Mid-American
+    "NEC": 17,  # Northeast
+    "OVC": 20,  # Ohio Valley
+    "Pat": 21,  # Patriot League
+    "SB": 37,  # Sun Belt
+    "SC": 24,  # Southern Conference
+    "SWAC": 25,  # Southwestern Athletic
+    "Slnd": 26,  # Southland
+    "Sum": 49,  # Summit League
 }
 
 # ESPN scoreboard API base
-_ESPN_API_BASE = (
-    "https://site.api.espn.com/apis/site/v2/sports/basketball"
-    "/mens-college-basketball"
-)
+_ESPN_API_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball"
 
 # Conference tournament date windows (approximate; wide enough to catch all games)
 # Most conference tournaments run in early-to-mid March.
@@ -87,12 +84,14 @@ class ConferenceSeedsScraper:
 
     def __init__(self, cache_dir: Optional[str] = None, timeout: int = 30):
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0"
-            ),
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0"
+                ),
+            }
+        )
         self.timeout = timeout
         self.cache_dir = Path(cache_dir) if cache_dir else None
         if self.cache_dir:
@@ -137,7 +136,8 @@ class ConferenceSeedsScraper:
                 all_seeds[conf] = seeds
                 logger.info(
                     "Scraped %d seeds for %s from scoreboard",
-                    len(seeds), conf,
+                    len(seeds),
+                    conf,
                 )
             else:
                 # Fallback: try standings-based seeding
@@ -146,7 +146,8 @@ class ConferenceSeedsScraper:
                     all_seeds[conf] = seeds
                     logger.info(
                         "Scraped %d seeds for %s from standings (fallback)",
-                        len(seeds), conf,
+                        len(seeds),
+                        conf,
                     )
                 else:
                     logger.warning("Could not scrape seeds for %s", conf)
@@ -158,6 +159,7 @@ class ConferenceSeedsScraper:
         if all_seeds:
             try:
                 from .schemas import validate_conference_seeds
+
                 all_seeds = validate_conference_seeds(all_seeds)
             except Exception as e:
                 logger.warning("Conference seeds schema validation failed: %s", e)
@@ -167,9 +169,7 @@ class ConferenceSeedsScraper:
 
         return all_seeds
 
-    def save_to_file(
-        self, seeds: Dict[str, Dict[str, int]], path: str
-    ) -> None:
+    def save_to_file(self, seeds: Dict[str, Dict[str, int]], path: str) -> None:
         """Write seeds to a JSON file in seed_overrides format."""
         p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -181,9 +181,7 @@ class ConferenceSeedsScraper:
     # ESPN Scoreboard API — primary source
     # ------------------------------------------------------------------
 
-    def _fetch_from_scoreboard(
-        self, year: int, conf: str
-    ) -> Dict[str, int]:
+    def _fetch_from_scoreboard(self, year: int, conf: str) -> Dict[str, int]:
         """Extract seeds from ESPN conference tournament scoreboard games.
 
         The scoreboard API returns game data with team seed numbers when
@@ -203,10 +201,7 @@ class ConferenceSeedsScraper:
 
         while current <= end:
             date_str = current.strftime("%Y%m%d")
-            url = (
-                f"{_ESPN_API_BASE}/scoreboard"
-                f"?dates={date_str}&groups={group_id}&limit=100"
-            )
+            url = f"{_ESPN_API_BASE}/scoreboard?dates={date_str}&groups={group_id}&limit=100"
 
             try:
                 resp = self.session.get(url, timeout=self.timeout)
@@ -215,7 +210,9 @@ class ConferenceSeedsScraper:
             except (requests.RequestException, ValueError) as e:
                 logger.debug(
                     "Scoreboard fetch failed for %s on %s: %s",
-                    conf, date_str, e,
+                    conf,
+                    date_str,
+                    e,
                 )
                 current += timedelta(days=1)
                 continue
@@ -228,9 +225,7 @@ class ConferenceSeedsScraper:
                 # Also check event name for "Tournament" keyword
                 event_name = event.get("name", "")
                 is_conf_tourney = (
-                    season_type == 3
-                    or "tournament" in event_name.lower()
-                    or "championship" in event_name.lower()
+                    season_type == 3 or "tournament" in event_name.lower() or "championship" in event_name.lower()
                 )
                 if not is_conf_tourney:
                     current += timedelta(days=1)
@@ -238,9 +233,7 @@ class ConferenceSeedsScraper:
 
                 for competition in event.get("competitions", []):
                     for competitor in competition.get("competitors", []):
-                        seed = competitor.get("curatedRank", {}).get(
-                            "current", 0
-                        )
+                        seed = competitor.get("curatedRank", {}).get("current", 0)
                         if not seed:
                             # Some responses use a different field
                             seed = competitor.get("seed", 0)
@@ -260,9 +253,7 @@ class ConferenceSeedsScraper:
     # ESPN Standings API — fallback source
     # ------------------------------------------------------------------
 
-    def _fetch_from_standings(
-        self, year: int, conf: str
-    ) -> Dict[str, int]:
+    def _fetch_from_standings(self, year: int, conf: str) -> Dict[str, int]:
         """Derive seeds from ESPN conference standings (conference record).
 
         This is a fallback when scoreboard data doesn't have seed info.
@@ -272,10 +263,7 @@ class ConferenceSeedsScraper:
         if not group_id:
             return {}
 
-        url = (
-            f"{_ESPN_API_BASE}/standings"
-            f"?season={year}&group={group_id}"
-        )
+        url = f"{_ESPN_API_BASE}/standings?season={year}&group={group_id}"
 
         try:
             resp = self.session.get(url, timeout=self.timeout)

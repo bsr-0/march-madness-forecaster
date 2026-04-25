@@ -64,35 +64,39 @@ def _make_roster_json(year, teams):
     for team_id, team_name, players in teams:
         player_list = []
         for pid, pname, mpg, gp in players:
-            player_list.append({
-                "player_id": pid,
-                "name": pname,
-                "position": "PG",
-                "minutes_per_game": mpg,
-                "games_played": gp,
-                "games_started": gp,
-                "rapm_offensive": None,
-                "rapm_defensive": None,
-                "warp": 0.1,
-                "box_plus_minus": 2.0,
-                "usage_rate": 20.0,
-                "true_shooting_pct": 0.55,
-                "effective_fg_pct": 0.50,
-                "points_per_game": 10.0,
-                "rebounds_per_game": 4.0,
-                "assists_per_game": 3.0,
-                "steals_per_game": 1.0,
-                "blocks_per_game": 0.5,
-                "turnovers_per_game": 2.0,
-                "injury_status": "healthy",
-                "is_transfer": False,
-                "eligibility_year": 1,
-            })
-        team_list.append({
-            "team_id": team_id,
-            "team_name": team_name,
-            "players": player_list,
-        })
+            player_list.append(
+                {
+                    "player_id": pid,
+                    "name": pname,
+                    "position": "PG",
+                    "minutes_per_game": mpg,
+                    "games_played": gp,
+                    "games_started": gp,
+                    "rapm_offensive": None,
+                    "rapm_defensive": None,
+                    "warp": 0.1,
+                    "box_plus_minus": 2.0,
+                    "usage_rate": 20.0,
+                    "true_shooting_pct": 0.55,
+                    "effective_fg_pct": 0.50,
+                    "points_per_game": 10.0,
+                    "rebounds_per_game": 4.0,
+                    "assists_per_game": 3.0,
+                    "steals_per_game": 1.0,
+                    "blocks_per_game": 0.5,
+                    "turnovers_per_game": 2.0,
+                    "injury_status": "healthy",
+                    "is_transfer": False,
+                    "eligibility_year": 1,
+                }
+            )
+        team_list.append(
+            {
+                "team_id": team_id,
+                "team_name": team_name,
+                "players": player_list,
+            }
+        )
     return {"year": year, "teams": team_list}
 
 
@@ -101,43 +105,76 @@ def enrichment_dir():
     """Create a temp dir with 3 years of synthetic roster data."""
     with tempfile.TemporaryDirectory() as tmpdir:
         # Year 2022: freshman class
-        y2022 = _make_roster_json(2022, [
-            ("duke", "Duke", [
-                ("1001", "Player A", 30.0, 30),
-                ("1002", "Player B", 25.0, 28),
-                ("1003", "Player C", 20.0, 30),
-            ]),
-            ("unc", "UNC", [
-                ("2001", "Player D", 28.0, 30),
-                ("2002", "Player E", 22.0, 25),
-            ]),
-        ])
+        y2022 = _make_roster_json(
+            2022,
+            [
+                (
+                    "duke",
+                    "Duke",
+                    [
+                        ("1001", "Player A", 30.0, 30),
+                        ("1002", "Player B", 25.0, 28),
+                        ("1003", "Player C", 20.0, 30),
+                    ],
+                ),
+                (
+                    "unc",
+                    "UNC",
+                    [
+                        ("2001", "Player D", 28.0, 30),
+                        ("2002", "Player E", 22.0, 25),
+                    ],
+                ),
+            ],
+        )
 
         # Year 2023: A returns to Duke, B transfers to UNC, C is gone (graduated/left)
-        y2023 = _make_roster_json(2023, [
-            ("duke", "Duke", [
-                ("1001", "Player A", 32.0, 32),  # returnee → SO
-                ("3001", "Player F", 15.0, 20),  # new freshman
-            ]),
-            ("unc", "UNC", [
-                ("2001", "Player D", 30.0, 32),  # returnee → SO
-                ("2002", "Player E", 24.0, 30),  # returnee → SO
-                ("1002", "Player B", 20.0, 28),  # transfer from Duke
-            ]),
-        ])
+        y2023 = _make_roster_json(
+            2023,
+            [
+                (
+                    "duke",
+                    "Duke",
+                    [
+                        ("1001", "Player A", 32.0, 32),  # returnee → SO
+                        ("3001", "Player F", 15.0, 20),  # new freshman
+                    ],
+                ),
+                (
+                    "unc",
+                    "UNC",
+                    [
+                        ("2001", "Player D", 30.0, 32),  # returnee → SO
+                        ("2002", "Player E", 24.0, 30),  # returnee → SO
+                        ("1002", "Player B", 20.0, 28),  # transfer from Duke
+                    ],
+                ),
+            ],
+        )
 
         # Year 2024: A still at Duke (JR), D still at UNC (JR), B still at UNC (JR)
-        y2024 = _make_roster_json(2024, [
-            ("duke", "Duke", [
-                ("1001", "Player A", 33.0, 33),  # JR
-                ("3001", "Player F", 20.0, 30),  # SO
-                ("4001", "Player G", 10.0, 15),  # new freshman
-            ]),
-            ("unc", "UNC", [
-                ("2001", "Player D", 31.0, 33),  # JR
-                ("1002", "Player B", 22.0, 30),  # JR (was transfer last year, returnee now)
-            ]),
-        ])
+        y2024 = _make_roster_json(
+            2024,
+            [
+                (
+                    "duke",
+                    "Duke",
+                    [
+                        ("1001", "Player A", 33.0, 33),  # JR
+                        ("3001", "Player F", 20.0, 30),  # SO
+                        ("4001", "Player G", 10.0, 15),  # new freshman
+                    ],
+                ),
+                (
+                    "unc",
+                    "UNC",
+                    [
+                        ("2001", "Player D", 31.0, 33),  # JR
+                        ("1002", "Player B", 22.0, 30),  # JR (was transfer last year, returnee now)
+                    ],
+                ),
+            ],
+        )
 
         for year, data in [(2022, y2022), (2023, y2023), (2024, y2024)]:
             with open(os.path.join(tmpdir, f"cbbpy_rosters_{year}.json"), "w") as f:
@@ -160,17 +197,27 @@ class TestEligibilityYear:
         assert RosterEnrichment.compute_eligibility_year("p1", 2023, history) == 3
 
     def test_senior_three_prior(self):
-        history = {"p1": [
-            (2020, "duke", 10.0), (2021, "duke", 15.0),
-            (2022, "duke", 20.0), (2023, "duke", 25.0),
-        ]}
+        history = {
+            "p1": [
+                (2020, "duke", 10.0),
+                (2021, "duke", 15.0),
+                (2022, "duke", 20.0),
+                (2023, "duke", 25.0),
+            ]
+        }
         assert RosterEnrichment.compute_eligibility_year("p1", 2023, history) == 4
 
     def test_graduate_cap_at_5(self):
-        history = {"p1": [
-            (2019, "duke", 5.0), (2020, "duke", 10.0), (2021, "duke", 15.0),
-            (2022, "duke", 20.0), (2023, "duke", 25.0), (2024, "duke", 25.0),
-        ]}
+        history = {
+            "p1": [
+                (2019, "duke", 5.0),
+                (2020, "duke", 10.0),
+                (2021, "duke", 15.0),
+                (2022, "duke", 20.0),
+                (2023, "duke", 25.0),
+                (2024, "duke", 25.0),
+            ]
+        }
         # 5 prior years → would be 6, capped at 5
         assert RosterEnrichment.compute_eligibility_year("p1", 2024, history) == 5
 
@@ -298,9 +345,12 @@ class TestEnrichAll:
         """Enrichment works when only some years have roster files."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Only create year 2023
-            data = _make_roster_json(2023, [
-                ("duke", "Duke", [("1001", "Player A", 30.0, 30)]),
-            ])
+            data = _make_roster_json(
+                2023,
+                [
+                    ("duke", "Duke", [("1001", "Player A", 30.0, 30)]),
+                ],
+            )
             with open(os.path.join(tmpdir, "cbbpy_rosters_2023.json"), "w") as f:
                 json.dump(data, f)
 

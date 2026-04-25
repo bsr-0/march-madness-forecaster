@@ -95,14 +95,12 @@ class PublicAdvancedMetricsBuilder:
             # league_avg after each iteration.  Without this the
             # multiplicative formula drifts (Jensen's inequality) and
             # offensive/defensive means diverge from each other.
-            w_off = sum(
-                next_off[tid] * sum(g.possessions for g in games)
-                for tid, games in by_team.items()
-            ) / max(total_poss, 1.0)
-            w_def = sum(
-                next_def[tid] * sum(g.possessions for g in games)
-                for tid, games in by_team.items()
-            ) / max(total_poss, 1.0)
+            w_off = sum(next_off[tid] * sum(g.possessions for g in games) for tid, games in by_team.items()) / max(
+                total_poss, 1.0
+            )
+            w_def = sum(next_def[tid] * sum(g.possessions for g in games) for tid, games in by_team.items()) / max(
+                total_poss, 1.0
+            )
             if w_off > 0:
                 scale_off = league_avg / w_off
                 next_off = {t: v * scale_off for t, v in next_off.items()}
@@ -121,7 +119,9 @@ class PublicAdvancedMetricsBuilder:
             wins = sum(1 for g in games if g.points > g.opp_points)
             losses = len(games) - wins
             adj_em = adj_off[tid] - adj_def[tid]
-            sos = sum((adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)) for g in games) / max(len(games), 1)
+            sos = sum(
+                (adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)) for g in games
+            ) / max(len(games), 1)
 
             teams_out.append(
                 {
@@ -206,12 +206,18 @@ class PublicAdvancedMetricsBuilder:
 
             team_id = self._team_id(self._pick(rec, ["team_id", "team", "team_slug", "school", "team_name"]))
             team_name = str(self._pick(rec, ["team_name", "team", "school", "team_display_name"]) or team_id)
-            opp_id = self._team_id(self._pick(rec, ["opponent_id", "opponent", "opp", "opponent_name", "away_team", "team2", "home_team"]))
+            opp_id = self._team_id(
+                self._pick(rec, ["opponent_id", "opponent", "opp", "opponent_name", "away_team", "team2", "home_team"])
+            )
             if not team_id or not opp_id:
                 continue
 
-            points = self._to_float(self._pick(rec, ["team_score", "points", "pts", "score", "home_score", "team1_score"]))
-            opp_points = self._to_float(self._pick(rec, ["opponent_score", "opp_points", "opp_score", "away_score", "team2_score"]))
+            points = self._to_float(
+                self._pick(rec, ["team_score", "points", "pts", "score", "home_score", "team1_score"])
+            )
+            opp_points = self._to_float(
+                self._pick(rec, ["opponent_score", "opp_points", "opp_score", "away_score", "team2_score"])
+            )
 
             poss = self._to_float(self._pick(rec, ["possessions", "team_possessions", "poss"]))
             fga = self._to_float(self._pick(rec, ["fga", "field_goals_attempted", "team_fga"]))
@@ -242,7 +248,9 @@ class PublicAdvancedMetricsBuilder:
                     opp_fga = self._to_float(self._pick(comp, ["fga", "field_goals_attempted", "team_fga"]))
                     opp_fgm = self._to_float(self._pick(comp, ["fgm", "field_goals_made", "team_fgm"]))
                     opp_fg3a = self._to_float(self._pick(comp, ["fg3a", "three_point_attempts", "team_fg3a", "x3pa"]))
-                    opp_fg3m = self._to_float(self._pick(comp, ["fg3m", "three_point_field_goals_made", "team_fg3m", "x3pm"]))
+                    opp_fg3m = self._to_float(
+                        self._pick(comp, ["fg3m", "three_point_field_goals_made", "team_fg3m", "x3pm"])
+                    )
                     opp_fta = self._to_float(self._pick(comp, ["fta", "free_throws_attempted", "team_fta"]))
                     opp_tov = self._to_float(self._pick(comp, ["turnovers", "tov", "team_tov"]))
                     opp_orb = self._to_float(self._pick(comp, ["orb", "offensive_rebounds", "team_orb"]))

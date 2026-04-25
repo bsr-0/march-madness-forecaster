@@ -134,9 +134,7 @@ class HerHoopStatsScraper:
         logger.info("Loaded %d women's teams from cache for %d", len(teams), year)
         return teams
 
-    def generate_seed_based_estimates(
-        self, seed_matchups: Dict[str, int]
-    ) -> Dict[str, WomensTeamStats]:
+    def generate_seed_based_estimates(self, seed_matchups: Dict[str, int]) -> Dict[str, WomensTeamStats]:
         """Generate basic estimates based on seed alone.
 
         Uses historical relationships between seed and efficiency metrics
@@ -170,6 +168,7 @@ def _normalize_team_id(name: str) -> str:
     FIX #2: Delegate to shared normalizer for cross-pipeline consistency.
     """
     from ...normalize import normalize_team_id as _shared
+
     return _shared(name)
 
 
@@ -183,10 +182,22 @@ def _estimate_from_seed(team_id: str, seed: int) -> WomensTeamStats:
     """
     # Historical seed -> average AdjEM (women's, from Her Hoop Stats archives)
     seed_to_adj_em = {
-        1: 28.0, 2: 22.0, 3: 18.0, 4: 15.0,
-        5: 12.0, 6: 10.0, 7: 8.0, 8: 6.0,
-        9: 4.5, 10: 3.0, 11: 1.5, 12: 0.0,
-        13: -2.0, 14: -5.0, 15: -8.0, 16: -15.0,
+        1: 28.0,
+        2: 22.0,
+        3: 18.0,
+        4: 15.0,
+        5: 12.0,
+        6: 10.0,
+        7: 8.0,
+        8: 6.0,
+        9: 4.5,
+        10: 3.0,
+        11: 1.5,
+        12: 0.0,
+        13: -2.0,
+        14: -5.0,
+        15: -8.0,
+        16: -15.0,
     }
 
     adj_em = seed_to_adj_em.get(seed, 0.0)
@@ -195,18 +206,42 @@ def _estimate_from_seed(team_id: str, seed: int) -> WomensTeamStats:
 
     # Win percentage from seed (historical women's regular season)
     seed_to_win_pct = {
-        1: 0.88, 2: 0.83, 3: 0.79, 4: 0.76,
-        5: 0.73, 6: 0.70, 7: 0.67, 8: 0.62,
-        9: 0.60, 10: 0.57, 11: 0.55, 12: 0.52,
-        13: 0.48, 14: 0.42, 15: 0.35, 16: 0.25,
+        1: 0.88,
+        2: 0.83,
+        3: 0.79,
+        4: 0.76,
+        5: 0.73,
+        6: 0.70,
+        7: 0.67,
+        8: 0.62,
+        9: 0.60,
+        10: 0.57,
+        11: 0.55,
+        12: 0.52,
+        13: 0.48,
+        14: 0.42,
+        15: 0.35,
+        16: 0.25,
     }
 
     # Elo from seed (wider spread in women's — more dominance at top)
     seed_to_elo = {
-        1: 1750, 2: 1700, 3: 1660, 4: 1630,
-        5: 1600, 6: 1575, 7: 1555, 8: 1530,
-        9: 1510, 10: 1490, 11: 1470, 12: 1450,
-        13: 1420, 14: 1380, 15: 1330, 16: 1250,
+        1: 1750,
+        2: 1700,
+        3: 1660,
+        4: 1630,
+        5: 1600,
+        6: 1575,
+        7: 1555,
+        8: 1530,
+        9: 1510,
+        10: 1490,
+        11: 1470,
+        12: 1450,
+        13: 1420,
+        14: 1380,
+        15: 1330,
+        16: 1250,
     }
 
     return WomensTeamStats(
@@ -239,12 +274,12 @@ def _estimate_from_seed(team_id: str, seed: int) -> WomensTeamStats:
 # Historical women's tournament upset rates (2000-2025)
 # Women's tournament has historically fewer upsets than men's
 WOMENS_HISTORICAL_UPSET_RATES = {
-    (1, 16): 0.007,   # Only 1 upset in history (2025: Columbia over SC)
+    (1, 16): 0.007,  # Only 1 upset in history (2025: Columbia over SC)
     (2, 15): 0.035,
     (3, 14): 0.100,
     (4, 13): 0.160,
     (5, 12): 0.310,
     (6, 11): 0.350,
     (7, 10): 0.380,
-    (8, 9):  0.480,
+    (8, 9): 0.480,
 }

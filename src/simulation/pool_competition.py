@@ -1225,7 +1225,10 @@ def compute_bracket_win_probability(
     for t in range(n_tournaments):
         outcome_winners = picks_by_round(outcomes[t], first_round_matchups)
         scores = score_brackets_team_identity(
-            all_brackets, outcome_winners, first_round_matchups, scoring_system,
+            all_brackets,
+            outcome_winners,
+            first_round_matchups,
+            scoring_system,
         )
         if scores[0] >= scores[1:].max():
             wins += 1

@@ -34,63 +34,63 @@ HISTORICAL_SEED_WIN_RATES: Dict[Tuple[int, int], float] = {
     (5, 12): 0.604,
     (6, 11): 0.548,
     (7, 10): 0.614,
-    (8, 9):  0.561,
+    (8, 9): 0.561,
     # Round of 32
-    (1, 8):  0.800,
-    (1, 9):  0.967,
-    (2, 7):  0.650,
+    (1, 8): 0.800,
+    (1, 9): 0.967,
+    (2, 7): 0.650,
     (2, 10): 0.894,
-    (3, 6):  0.760,
+    (3, 6): 0.760,
     (3, 11): 0.541,
-    (4, 5):  0.500,
+    (4, 5): 0.500,
     (4, 12): 0.828,
     (4, 13): 0.798,
     # Sweet 16
-    (1, 4):  0.641,
-    (1, 5):  0.808,
-    (2, 3):  0.394,
-    (2, 6):  0.500,
-    (1, 3):  0.778,
+    (1, 4): 0.641,
+    (1, 5): 0.808,
+    (2, 3): 0.394,
+    (2, 6): 0.500,
+    (1, 3): 0.778,
     # Elite 8 / Final Four
-    (1, 2):  0.623,
-    (1, 1):  0.500,
-    (2, 2):  0.500,
-    (3, 3):  0.500,
+    (1, 2): 0.623,
+    (1, 1): 0.500,
+    (2, 2): 0.500,
+    (3, 3): 0.500,
     # Additional matchups from data (>= 8 games)
-    (1, 6):  0.692,
-    (1, 7):  0.833,
+    (1, 6): 0.692,
+    (1, 7): 0.833,
     (1, 10): 0.833,
     (1, 11): 0.720,
     (1, 12): 1.000,
     (1, 14): 0.167,  # 1-seeds that made it here lost (small N=8)
-    (2, 4):  0.435,
-    (2, 5):  0.778,
-    (2, 8):  0.526,
-    (2, 9):  0.615,
+    (2, 4): 0.435,
+    (2, 5): 0.778,
+    (2, 8): 0.526,
+    (2, 9): 0.615,
     (2, 11): 0.667,
-    (3, 4):  0.400,
-    (3, 5):  0.600,
-    (3, 7):  0.480,
-    (4, 6):  0.190,
-    (4, 7):  0.400,
-    (4, 8):  0.533,
-    (4, 9):  0.273,
+    (3, 4): 0.400,
+    (3, 5): 0.600,
+    (3, 7): 0.480,
+    (4, 6): 0.190,
+    (4, 7): 0.400,
+    (4, 8): 0.533,
+    (4, 9): 0.273,
     (4, 10): 0.600,
     (4, 11): 0.421,
     (4, 16): 0.077,
-    (5, 6):  0.833,
-    (5, 7):  0.733,
-    (5, 8):  0.750,
-    (5, 9):  1.000,
+    (5, 6): 0.833,
+    (5, 7): 0.733,
+    (5, 8): 0.750,
+    (5, 9): 1.000,
     (5, 10): 0.667,
     (5, 11): 0.455,
     (5, 13): 0.875,
-    (6, 7):  0.750,
-    (6, 8):  0.400,
-    (6, 9):  0.333,
+    (6, 7): 0.750,
+    (6, 8): 0.400,
+    (6, 9): 0.333,
     (6, 16): 0.500,
-    (7, 8):  0.333,
-    (7, 9):  0.800,
+    (7, 8): 0.333,
+    (7, 9): 0.800,
     (7, 11): 0.500,
     (7, 15): 0.125,
     (8, 10): 0.556,
@@ -175,12 +175,15 @@ class OpponentAdjustedSignals:
 
     def to_vector(self) -> np.ndarray:
         """Convert to feature vector."""
-        return np.array([
-            self.strength_of_record,
-            self.top25_win_pct,
-            self.road_neutral_win_pct,
-            self.quad1_win_pct,
-        ], dtype=np.float64)
+        return np.array(
+            [
+                self.strength_of_record,
+                self.top25_win_pct,
+                self.road_neutral_win_pct,
+                self.quad1_win_pct,
+            ],
+            dtype=np.float64,
+        )
 
     @staticmethod
     def feature_names() -> List[str]:
@@ -219,19 +222,19 @@ def compute_strength_of_record(
     actual_wins = 0.0
 
     for game in team_results:
-        opp_id = game.get('opponent_id', '')
+        opp_id = game.get("opponent_id", "")
         opp_rating = opponent_ratings.get(opp_id, 0.0)
 
         # Home court adjustment (~3.5 points)
-        location = game.get('location', 'neutral')
-        hca = 3.5 if location == 'home' else (-3.5 if location == 'away' else 0.0)
+        location = game.get("location", "neutral")
+        hca = 3.5 if location == "home" else (-3.5 if location == "away" else 0.0)
 
         # Expected win probability for baseline team
         diff = baseline_rating - opp_rating + hca
         expected_p = 1.0 / (1.0 + math.exp(-diff / 11.0))
         expected_wins += expected_p
 
-        if game.get('win', False):
+        if game.get("win", False):
             actual_wins += 1.0
 
     n_games = len(team_results)
@@ -259,10 +262,10 @@ def compute_top25_performance(
     """
     top25_games = []
     for game in team_results:
-        opp_id = game.get('opponent_id', '')
+        opp_id = game.get("opponent_id", "")
         rank = opponent_rankings.get(opp_id, 0)
         if rank and 1 <= rank <= 25:
-            top25_games.append(game.get('win', False))
+            top25_games.append(game.get("win", False))
 
     if not top25_games:
         return 0.0, 0
@@ -284,15 +287,12 @@ def compute_road_neutral_record(
     Returns:
         Tuple of (road_neutral_win_pct, n_games)
     """
-    rn_games = [
-        g for g in team_results
-        if g.get('location', 'neutral') in ('away', 'neutral')
-    ]
+    rn_games = [g for g in team_results if g.get("location", "neutral") in ("away", "neutral")]
 
     if not rn_games:
         return 0.5, 0
 
-    wins = sum(1 for g in rn_games if g.get('win', False))
+    wins = sum(1 for g in rn_games if g.get("win", False))
     return wins / len(rn_games), len(rn_games)
 
 
@@ -391,10 +391,7 @@ class CoachTournamentPower:
 
         # Deep run bonus (15%)
         # Final Four = 0.5, Championship = 1.0 each, capped
-        deep_run = min(
-            (self.final_fours * 0.3 + self.championships * 0.5),
-            1.0
-        )
+        deep_run = min((self.final_fours * 0.3 + self.championships * 0.5), 1.0)
         deep_component = deep_run * 0.15
 
         return win_component + exp_component + deep_component
@@ -417,14 +414,14 @@ def compute_coach_tournament_power(
         CoachTournamentPower instance
     """
     return CoachTournamentPower(
-        coach_name=coach_data.get('name', ''),
-        career_tournament_wins=coach_data.get('tournament_wins', 0),
-        career_tournament_losses=coach_data.get('tournament_losses', 0),
-        tournament_appearances=coach_data.get('appearances', 0),
-        final_fours=coach_data.get('final_fours', 0),
-        championships=coach_data.get('championships', 0),
-        sweet_16_appearances=coach_data.get('sweet_16_appearances', 0),
-        elite_8_appearances=coach_data.get('elite_8_appearances', 0),
+        coach_name=coach_data.get("name", ""),
+        career_tournament_wins=coach_data.get("tournament_wins", 0),
+        career_tournament_losses=coach_data.get("tournament_losses", 0),
+        tournament_appearances=coach_data.get("appearances", 0),
+        final_fours=coach_data.get("final_fours", 0),
+        championships=coach_data.get("championships", 0),
+        sweet_16_appearances=coach_data.get("sweet_16_appearances", 0),
+        elite_8_appearances=coach_data.get("elite_8_appearances", 0),
     )
 
 
@@ -490,6 +487,7 @@ def compute_tournament_resume_composite(
     Returns:
         Tournament resume composite in [0, 1] range.
     """
+
     # Bayesian shrinkage for win-rate components
     def _shrink(observed: float, n_games: int) -> float:
         """Shrink observed rate toward prior proportional to sample size."""
@@ -515,12 +513,7 @@ def compute_tournament_resume_composite(
         elite_normalized = 0.3  # Prior for teams with no elite opponents
 
     # Weighted combination
-    composite = (
-        0.35 * shrunk_q1
-        + 0.25 * shrunk_rn
-        + 0.25 * sor_normalized
-        + 0.15 * elite_normalized
-    )
+    composite = 0.35 * shrunk_q1 + 0.25 * shrunk_rn + 0.25 * sor_normalized + 0.15 * elite_normalized
 
     return float(np.clip(composite, 0.0, 1.0))
 

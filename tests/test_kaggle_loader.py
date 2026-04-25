@@ -13,16 +13,21 @@ from src.data.kaggle_loader import KaggleDataLoader, MasseyOrdinalEntry
 def kaggle_dir(tmp_path):
     """Create a minimal Kaggle data directory with sample CSVs."""
     # MTeams.csv
-    _write_csv(tmp_path / "MTeams.csv", ["TeamID", "TeamName"], [
-        ["1104", "Alabama"],
-        ["1112", "Arizona"],
-        ["1181", "Duke"],
-        ["1314", "North Carolina"],
-        ["1242", "Kansas"],
-    ])
+    _write_csv(
+        tmp_path / "MTeams.csv",
+        ["TeamID", "TeamName"],
+        [
+            ["1104", "Alabama"],
+            ["1112", "Arizona"],
+            ["1181", "Duke"],
+            ["1314", "North Carolina"],
+            ["1242", "Kansas"],
+        ],
+    )
 
     # MRegularSeasonCompactResults.csv
-    _write_csv(tmp_path / "MRegularSeasonCompactResults.csv",
+    _write_csv(
+        tmp_path / "MRegularSeasonCompactResults.csv",
         ["Season", "DayNum", "WTeamID", "WScore", "LTeamID", "LScore", "WLoc", "NumOT"],
         [
             ["2025", "50", "1181", "85", "1314", "72", "H", "0"],
@@ -32,23 +37,87 @@ def kaggle_dir(tmp_path):
     )
 
     # MRegularSeasonDetailedResults.csv
-    _write_csv(tmp_path / "MRegularSeasonDetailedResults.csv",
-        ["Season", "DayNum", "WTeamID", "WScore", "LTeamID", "LScore", "WLoc", "NumOT",
-         "WFGM", "WFGA", "WFGM3", "WFGA3", "WFTM", "WFTA", "WOR", "WDR",
-         "WAst", "WTO", "WStl", "WBlk", "WPF",
-         "LFGM", "LFGA", "LFGM3", "LFGA3", "LFTM", "LFTA", "LOR", "LDR",
-         "LAst", "LTO", "LStl", "LBlk", "LPF"],
+    _write_csv(
+        tmp_path / "MRegularSeasonDetailedResults.csv",
         [
-            ["2025", "50", "1181", "85", "1314", "72", "H", "0",
-             "30", "60", "8", "20", "17", "22", "10", "25",
-             "15", "12", "6", "4", "18",
-             "25", "58", "6", "18", "16", "20", "8", "22",
-             "12", "14", "5", "3", "20"],
+            "Season",
+            "DayNum",
+            "WTeamID",
+            "WScore",
+            "LTeamID",
+            "LScore",
+            "WLoc",
+            "NumOT",
+            "WFGM",
+            "WFGA",
+            "WFGM3",
+            "WFGA3",
+            "WFTM",
+            "WFTA",
+            "WOR",
+            "WDR",
+            "WAst",
+            "WTO",
+            "WStl",
+            "WBlk",
+            "WPF",
+            "LFGM",
+            "LFGA",
+            "LFGM3",
+            "LFGA3",
+            "LFTM",
+            "LFTA",
+            "LOR",
+            "LDR",
+            "LAst",
+            "LTO",
+            "LStl",
+            "LBlk",
+            "LPF",
+        ],
+        [
+            [
+                "2025",
+                "50",
+                "1181",
+                "85",
+                "1314",
+                "72",
+                "H",
+                "0",
+                "30",
+                "60",
+                "8",
+                "20",
+                "17",
+                "22",
+                "10",
+                "25",
+                "15",
+                "12",
+                "6",
+                "4",
+                "18",
+                "25",
+                "58",
+                "6",
+                "18",
+                "16",
+                "20",
+                "8",
+                "22",
+                "12",
+                "14",
+                "5",
+                "3",
+                "20",
+            ],
         ],
     )
 
     # MNCAATourneySeeds.csv
-    _write_csv(tmp_path / "MNCAATourneySeeds.csv",
+    _write_csv(
+        tmp_path / "MNCAATourneySeeds.csv",
         ["Season", "Seed", "TeamID"],
         [
             ["2025", "W01", "1181"],
@@ -60,7 +129,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MNCAATourneyCompactResults.csv
-    _write_csv(tmp_path / "MNCAATourneyCompactResults.csv",
+    _write_csv(
+        tmp_path / "MNCAATourneyCompactResults.csv",
         ["Season", "DayNum", "WTeamID", "WScore", "LTeamID", "LScore", "WLoc", "NumOT"],
         [
             ["2025", "136", "1181", "82", "1104", "68", "N", "0"],
@@ -69,7 +139,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MMasseyOrdinals.csv
-    _write_csv(tmp_path / "MMasseyOrdinals.csv",
+    _write_csv(
+        tmp_path / "MMasseyOrdinals.csv",
         ["Season", "RankingDayNum", "SystemName", "TeamID", "OrdinalRank"],
         [
             # POM system, day 128
@@ -93,7 +164,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MTeamCoaches.csv
-    _write_csv(tmp_path / "MTeamCoaches.csv",
+    _write_csv(
+        tmp_path / "MTeamCoaches.csv",
         ["Season", "TeamID", "FirstDayNum", "LastDayNum", "CoachName"],
         [
             ["2025", "1181", "0", "154", "Jon Scheyer"],
@@ -103,7 +175,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MTeamConferences.csv
-    _write_csv(tmp_path / "MTeamConferences.csv",
+    _write_csv(
+        tmp_path / "MTeamConferences.csv",
         ["Season", "TeamID", "ConfAbbrev"],
         [
             ["2025", "1181", "acc"],
@@ -115,7 +188,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MConferences.csv
-    _write_csv(tmp_path / "MConferences.csv",
+    _write_csv(
+        tmp_path / "MConferences.csv",
         ["ConfAbbrev", "Description"],
         [
             ["acc", "Atlantic Coast Conference"],
@@ -126,7 +200,8 @@ def kaggle_dir(tmp_path):
     )
 
     # MSeasons.csv
-    _write_csv(tmp_path / "MSeasons.csv",
+    _write_csv(
+        tmp_path / "MSeasons.csv",
         ["Season", "DayZero", "RegionW", "RegionX", "RegionY", "RegionZ"],
         [
             ["2025", "2024-10-14", "West", "East", "South", "Midwest"],
@@ -145,7 +220,6 @@ def _write_csv(path: Path, headers: list, rows: list):
 
 
 class TestKaggleDataLoader:
-
     def test_load_teams(self, kaggle_dir):
         loader = KaggleDataLoader(str(kaggle_dir))
         teams = loader.load_teams()
@@ -279,7 +353,6 @@ class TestKaggleDataLoader:
 
 
 class TestMasseyOrdinalEntry:
-
     def test_repr(self):
         entry = MasseyOrdinalEntry(
             system_name="POM",
@@ -302,7 +375,8 @@ class TestExternalRatingsFromMassey:
 
         loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
         n_cached = loader.populate_from_massey_ordinals(
-            str(kaggle_dir), 2025,
+            str(kaggle_dir),
+            2025,
         )
         # POM (5 teams) and SAG (5 teams) are too small (< 50 threshold),
         # but massey_composite should still be built from them.
@@ -320,10 +394,7 @@ class TestExternalRatingsFromMassey:
         _write_csv(kaggle_dir / "MTeams.csv", ["TeamID", "TeamName"], team_rows)
 
         # Massey ordinals with 60 teams for one system
-        ordinal_rows = [
-            ["2025", "128", "POM", str(1100 + i), str(i + 1)]
-            for i in range(60)
-        ]
+        ordinal_rows = [["2025", "128", "POM", str(1100 + i), str(i + 1)] for i in range(60)]
         _write_csv(
             kaggle_dir / "MMasseyOrdinals.csv",
             ["Season", "RankingDayNum", "SystemName", "TeamID", "OrdinalRank"],
@@ -362,10 +433,7 @@ class TestExternalRatingsFromMassey:
         team_rows = [[str(1100 + i), f"Team{i}"] for i in range(60)]
         _write_csv(kaggle_dir / "MTeams.csv", ["TeamID", "TeamName"], team_rows)
 
-        ordinal_rows = [
-            ["2025", "128", "POM", str(1100 + i), str(i + 1)]
-            for i in range(60)
-        ]
+        ordinal_rows = [["2025", "128", "POM", str(1100 + i), str(i + 1)] for i in range(60)]
         _write_csv(
             kaggle_dir / "MMasseyOrdinals.csv",
             ["Season", "RankingDayNum", "SystemName", "TeamID", "OrdinalRank"],

@@ -114,7 +114,9 @@ class TestChampionDiversity:
 
     def test_distribution_order(self):
         brackets = [
-            {"CHAMP_game0": "A"}, {"CHAMP_game0": "A"}, {"CHAMP_game0": "A"},
+            {"CHAMP_game0": "A"},
+            {"CHAMP_game0": "A"},
+            {"CHAMP_game0": "A"},
             {"CHAMP_game0": "B"},
         ]
         result = compute_champion_diversity(brackets)

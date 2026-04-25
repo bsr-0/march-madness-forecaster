@@ -71,6 +71,7 @@ def load_seeds_and_regions_fallback(year):
         return seeds, regions
     # Fallback: data/raw/tournament_seeds_{year}.json
     import json as _json
+
     path = ALT_DIR / f"tournament_seeds_{year}.json"
     if not path.exists():
         return {}, {}
@@ -188,7 +189,7 @@ def fmt_team(name, max_len=14):
     # Generic: replace underscores, title case, truncate
     display = name.replace("_", " ").replace("__", " ").title()
     if len(display) > max_len:
-        display = display[:max_len - 1] + "."
+        display = display[: max_len - 1] + "."
     return display
 
 
@@ -205,6 +206,7 @@ def simulate_pool_scores(first_round, seeds, pick_dist, actual_outcome, scoring_
     what a typical pool's median and winner score look like.
     """
     from scripts.mc_pool_backtest import build_seed_probabilities
+
     seed_pw = build_seed_probabilities(seeds)
 
     trial_medians = []
@@ -298,9 +300,7 @@ def run_retrospective():
             )
 
             bool_arr = _picks_dict_to_bool_array(picks, first_round)
-            score = score_brackets_against_outcome(
-                bool_arr.reshape(1, -1), actual_outcome, scoring_vector
-            )[0]
+            score = score_brackets_against_outcome(bool_arr.reshape(1, -1), actual_outcome, scoring_vector)[0]
 
             meta = extract_bracket_metadata(picks)
             brackets[strategy] = {
@@ -313,17 +313,17 @@ def run_retrospective():
             }
 
         # Pool competitiveness
-        pool_median, pool_max = simulate_pool_scores(
-            first_round, seeds, pick_dist, actual_outcome, scoring_vector, rng
-        )
+        pool_median, pool_max = simulate_pool_scores(first_round, seeds, pick_dist, actual_outcome, scoring_vector, rng)
 
-        results.append({
-            "year": year,
-            "actual": actual_meta,
-            "brackets": brackets,
-            "pool_median": int(pool_median),
-            "pool_max": int(pool_max),
-        })
+        results.append(
+            {
+                "year": year,
+                "actual": actual_meta,
+                "brackets": brackets,
+                "pool_median": int(pool_median),
+                "pool_max": int(pool_max),
+            }
+        )
 
     return results
 
@@ -348,8 +348,7 @@ def print_results(results):
     print("-" * len(hdr))
 
     # Accumulators for summary
-    summary = {s: {"pts": [], "champ_correct": 0, "f4_overlap": [], "beat_med": 0, "beat_max": 0}
-               for s in STRATEGIES}
+    summary = {s: {"pts": [], "champ_correct": 0, "f4_overlap": [], "beat_med": 0, "beat_max": 0} for s in STRATEGIES}
 
     for r in results:
         year = r["year"]

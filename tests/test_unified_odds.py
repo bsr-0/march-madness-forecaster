@@ -84,32 +84,38 @@ class TestComputeTeamMarketFeatures:
         games = []
         for i, (d, spread) in enumerate(dates_and_spreads):
             imp = 1.0 / (1.0 + 10.0 ** (spread / 10.0))
-            games.append(UnifiedGameOdds(
-                season=2024,
-                game_date=d,
-                home_team_id=team,
-                away_team_id=f"opp_{i}",
-                spread=spread,
-                implied_prob_home=imp,
-                implied_prob_away=1 - imp,
-            ))
+            games.append(
+                UnifiedGameOdds(
+                    season=2024,
+                    game_date=d,
+                    home_team_id=team,
+                    away_team_id=f"opp_{i}",
+                    spread=spread,
+                    implied_prob_home=imp,
+                    implied_prob_away=1 - imp,
+                )
+            )
         return games
 
     def test_basic(self):
-        games = self._make_odds([
-            ("2024-01-10", -5.0),
-            ("2024-01-15", -3.0),
-        ])
+        games = self._make_odds(
+            [
+                ("2024-01-10", -5.0),
+                ("2024-01-15", -3.0),
+            ]
+        )
         result = compute_team_market_features("duke", "2024-02-01", games)
         assert result["market_implied_prob"] > 0.5  # favored in both
         assert result["market_spread"] < 0  # negative = favored
 
     def test_pit_constraint(self):
         """Games on or after as_of_date must be excluded."""
-        games = self._make_odds([
-            ("2024-01-10", -5.0),
-            ("2024-03-15", -10.0),  # after cutoff
-        ])
+        games = self._make_odds(
+            [
+                ("2024-01-10", -5.0),
+                ("2024-03-15", -10.0),  # after cutoff
+            ]
+        )
         result = compute_team_market_features("duke", "2024-03-15", games)
         # Only the Jan 10 game should count
         assert result["market_spread"] == pytest.approx(-5.0)
@@ -121,15 +127,17 @@ class TestComputeTeamMarketFeatures:
 
     def test_away_team_perspective(self):
         """When team is away, spread should be flipped."""
-        games = [UnifiedGameOdds(
-            season=2024,
-            game_date="2024-01-10",
-            home_team_id="unc",
-            away_team_id="duke",
-            spread=-5.0,  # UNC favored by 5
-            implied_prob_home=0.65,
-            implied_prob_away=0.35,
-        )]
+        games = [
+            UnifiedGameOdds(
+                season=2024,
+                game_date="2024-01-10",
+                home_team_id="unc",
+                away_team_id="duke",
+                spread=-5.0,  # UNC favored by 5
+                implied_prob_home=0.65,
+                implied_prob_away=0.35,
+            )
+        ]
         result = compute_team_market_features("duke", "2024-02-01", games)
         assert result["market_spread"] == pytest.approx(5.0)  # +5 from Duke's perspective
         assert result["market_implied_prob"] == pytest.approx(0.35)

@@ -136,9 +136,7 @@ class DagExecutor:
         for name, task in self._tasks.items():
             for dep in task.depends_on:
                 if dep not in self._tasks:
-                    raise ValueError(
-                        f"Task '{name}' depends on unknown task '{dep}'"
-                    )
+                    raise ValueError(f"Task '{name}' depends on unknown task '{dep}'")
 
         # Kahn's algorithm
         in_degree: Dict[str, int] = {name: 0 for name in self._tasks}
@@ -186,11 +184,7 @@ class DagExecutor:
             task = self._tasks[name]
 
             # Idempotency check
-            if (
-                self._skip_cached
-                and not force
-                and task.should_skip(context, self._cache_dir)
-            ):
+            if self._skip_cached and not force and task.should_skip(context, self._cache_dir):
                 cached_output = self._load_cached(task, context)
                 if cached_output is not None:
                     results[name] = TaskResult(
@@ -204,11 +198,7 @@ class DagExecutor:
                     continue
 
             # Collect upstream outputs
-            upstream = {
-                dep: outputs.get(dep)
-                for dep in task.depends_on
-                if dep in outputs
-            }
+            upstream = {dep: outputs.get(dep) for dep in task.depends_on if dep in outputs}
 
             # Execute
             start = time.perf_counter()
@@ -313,9 +303,7 @@ class DagExecutor:
         with open(marker, "w") as f:
             json.dump(marker_data, f)
 
-    def _load_cached(
-        self, task: DagTask, context: Dict[str, Any]
-    ) -> Optional[Any]:
+    def _load_cached(self, task: DagTask, context: Dict[str, Any]) -> Optional[Any]:
         """Load cached output for a task (marker data only)."""
         key = task.output_key(context)
         marker = self._cache_dir / f"{key}.marker"

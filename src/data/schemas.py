@@ -90,9 +90,7 @@ def validate_feature_matrix(
             if feature_names
             else [f"feature_{i}" for i in high_nan_features]
         )
-        warnings.append(
-            f"{len(high_nan_features)} features with >{max_nan_fraction*100:.0f}% NaN: {names[:5]}"
-        )
+        warnings.append(f"{len(high_nan_features)} features with >{max_nan_fraction * 100:.0f}% NaN: {names[:5]}")
 
     # Infinite value check
     inf_count = np.isinf(X).sum()
@@ -103,11 +101,7 @@ def validate_feature_matrix(
     stds = np.nanstd(X, axis=0)
     constant_cols = np.where(stds < 1e-10)[0]
     if len(constant_cols) > 0:
-        names = (
-            [feature_names[i] for i in constant_cols]
-            if feature_names
-            else [f"feature_{i}" for i in constant_cols]
-        )
+        names = [feature_names[i] for i in constant_cols] if feature_names else [f"feature_{i}" for i in constant_cols]
         warnings.append(f"{len(constant_cols)} constant features (zero variance): {names[:5]}")
 
     passed = len(errors) == 0
@@ -168,8 +162,7 @@ def validate_predictions(
         pred_var = float(np.var(predictions[valid_mask]))
         if pred_var < min_variance:
             warnings.append(
-                f"Predictions have near-zero variance ({pred_var:.2e}). "
-                f"Model may be producing degenerate output."
+                f"Predictions have near-zero variance ({pred_var:.2e}). Model may be producing degenerate output."
             )
 
     # Infinite check
@@ -214,14 +207,12 @@ def validate_loyo_fold(
 
     if brier_score > 0.35:
         warnings.append(
-            f"Year {year}: Brier score {brier_score:.4f} is very high "
-            f"(worse than coin-flip baseline of 0.25)"
+            f"Year {year}: Brier score {brier_score:.4f} is very high (worse than coin-flip baseline of 0.25)"
         )
 
     if len(predictions) != len(actuals):
         errors.append(
-            f"Year {year}: predictions ({len(predictions)}) and actuals ({len(actuals)}) "
-            f"have different lengths"
+            f"Year {year}: predictions ({len(predictions)}) and actuals ({len(actuals)}) have different lengths"
         )
 
     pred_validation = validate_predictions(predictions)
@@ -273,9 +264,7 @@ def validate_ensemble_weights(
     # Sum-to-one check
     weight_sum = sum(weights.values())
     if abs(weight_sum - 1.0) > tolerance:
-        errors.append(
-            f"Weights sum to {weight_sum:.4f}, expected ~1.0 (tolerance={tolerance})"
-        )
+        errors.append(f"Weights sum to {weight_sum:.4f}, expected ~1.0 (tolerance={tolerance})")
 
     # Component set check
     if expected_components is not None:
@@ -320,16 +309,11 @@ def validate_calibration_data(
     errors: List[str] = []
 
     if len(predictions) != len(outcomes):
-        errors.append(
-            f"Length mismatch: predictions={len(predictions)}, outcomes={len(outcomes)}"
-        )
+        errors.append(f"Length mismatch: predictions={len(predictions)}, outcomes={len(outcomes)}")
         return ValidationResult(passed=False, warnings=warnings, errors=errors)
 
     if len(predictions) < min_samples:
-        warnings.append(
-            f"Only {len(predictions)} samples for calibration "
-            f"(recommended minimum: {min_samples})"
-        )
+        warnings.append(f"Only {len(predictions)} samples for calibration (recommended minimum: {min_samples})")
 
     # Outcomes binary check
     unique_outcomes = set(np.unique(outcomes))
@@ -337,10 +321,7 @@ def validate_calibration_data(
         errors.append(f"Outcomes must be binary (0 or 1), found: {unique_outcomes}")
 
     if len(unique_outcomes) < 2:
-        errors.append(
-            f"Only one class in outcomes ({unique_outcomes}). "
-            "Calibration requires both classes."
-        )
+        errors.append(f"Only one class in outcomes ({unique_outcomes}). Calibration requires both classes.")
 
     # Predictions range check
     pred_result = validate_predictions(predictions)
@@ -399,9 +380,7 @@ def validate_engineered_features(features: object) -> ValidationResult:
             if hasattr(vec, "shape"):
                 dims.add(vec.shape[0] if vec.ndim >= 1 else 0)
         if len(dims) > 1:
-            errors.append(
-                f"Inconsistent feature dimensions across teams: {sorted(dims)}"
-            )
+            errors.append(f"Inconsistent feature dimensions across teams: {sorted(dims)}")
 
     team_struct = getattr(features, "team_struct", {})
     if not team_struct:
@@ -424,10 +403,7 @@ def validate_trained_models(models: object) -> ValidationResult:
     oof_actuals = getattr(models, "oof_actuals", None)
     if oof_preds is not None and oof_actuals is not None:
         if len(oof_preds) != len(oof_actuals):
-            errors.append(
-                f"OOF predictions ({len(oof_preds)}) and actuals ({len(oof_actuals)}) "
-                "have different lengths"
-            )
+            errors.append(f"OOF predictions ({len(oof_preds)}) and actuals ({len(oof_actuals)}) have different lengths")
 
     passed = len(errors) == 0
     return ValidationResult(passed=passed, warnings=warnings, errors=errors)
@@ -460,9 +436,7 @@ def validate_matchup_vector(
         return ValidationResult(passed=False, warnings=warnings, errors=errors)
 
     if expected_dim is not None and len(vector) != expected_dim:
-        errors.append(
-            f"Matchup vector dimension {len(vector)} != expected {expected_dim}"
-        )
+        errors.append(f"Matchup vector dimension {len(vector)} != expected {expected_dim}")
 
     inf_count = int(np.isinf(vector).sum())
     if inf_count > 0:
@@ -471,13 +445,9 @@ def validate_matchup_vector(
     nan_count = int(np.isnan(vector).sum())
     nan_frac = nan_count / max(len(vector), 1)
     if nan_frac > 0.5:
-        errors.append(
-            f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})"
-        )
+        errors.append(f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})")
     elif nan_frac > 0.2:
-        warnings.append(
-            f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})"
-        )
+        warnings.append(f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})")
 
     passed = len(errors) == 0
     return ValidationResult(passed=passed, warnings=warnings, errors=errors)
