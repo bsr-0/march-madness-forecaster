@@ -203,6 +203,94 @@ def test_parallel_matches_sequential_multimode_torvik_2025_2026() -> None:
             )
 
 
+def test_per_mode_opponent_strategy_workers_equivalence() -> None:
+    """Q3 option A lock: per_mode opponent_strategy stays bit-equal across worker counts.
+
+    opponent_strategy="per_mode" spawns a deterministic
+    SeedSequence(42 + year) sub-stream per mode. Spawn order is the
+    order modes appear in mode_payloads — derived from
+    enabled_modes — so workers=1 and workers=N must produce bit-equal
+    per-(year, mode) rows just like the shared path. This test exists
+    so a future refactor of the per_mode branch can't silently break
+    parallel determinism.
+
+    Sanity check on top of equivalence: per_mode results must NOT be
+    bit-equal to shared on a multi-mode run (the two strategies
+    consume different RNG bytes), guarding against a no-op branch.
+    """
+    pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    try:
+        from scripts.mc_pool_backtest import (
+            StrategiesFitter,
+            _load_torvik_barthag,
+            load_seeds_and_regions,
+            load_tournament_results,
+            run_backtest,
+        )
+    except ImportError:
+        pytest.skip("project deps not available")
+
+    test_years = [2025, 2026]
+    for yr in test_years:
+        try:
+            seeds, _ = load_seeds_and_regions(yr)
+            if _load_torvik_barthag(yr, seeds) is None:
+                pytest.skip(f"torvik barthag for {yr} unavailable")
+            if not load_tournament_results(yr):
+                pytest.skip(f"{yr} tournament results unavailable")
+        except Exception as exc:
+            pytest.skip(f"{yr} prereqs unavailable: {exc}")
+
+    common_kwargs = dict(
+        years=test_years,
+        n_opponents=10,
+        n_repeats=2,
+        n_model=50,
+        opponent_source="pool",
+        hparam_fitter=StrategiesFitter(("torvik", "f4_first_tv")),
+        team_identity=True,
+        opponent_strategy="per_mode",
+    )
+
+    serial_results = run_backtest(**common_kwargs, workers=1)
+    parallel_results = run_backtest(**common_kwargs, workers=2)
+
+    assert serial_results, "per_mode serial run produced no results"
+    assert parallel_results, "per_mode parallel run produced no results"
+
+    def _sort_key(r):
+        return (r["year"], r["mode"])
+
+    serial_sorted = sorted(serial_results, key=_sort_key)
+    parallel_sorted = sorted(parallel_results, key=_sort_key)
+
+    metric_fields = ("best_rank", "mean_rank", "p_first", "p_top5", "p_top25", "best_score", "mean_score", "n_trials")
+    for serial, parallel in zip(serial_sorted, parallel_sorted):
+        assert serial["year"] == parallel["year"]
+        assert serial["mode"] == parallel["mode"]
+        for field in metric_fields:
+            assert serial[field] == pytest.approx(parallel[field], rel=0, abs=0), (
+                f"per_mode workers divergence on {field} for ({serial['year']}, {serial['mode']}): "
+                f"serial={serial[field]} parallel={parallel[field]}"
+            )
+
+    # Sanity: per_mode and shared must produce DIFFERENT results on a
+    # multi-mode run, otherwise the branch is a no-op.
+    shared_results = run_backtest(
+        **{**common_kwargs, "opponent_strategy": "shared"},
+        workers=1,
+    )
+    shared_by_key = {(r["year"], r["mode"]): r for r in shared_results}
+    differs = False
+    for serial in serial_sorted:
+        shared = shared_by_key[(serial["year"], serial["mode"])]
+        if shared["p_first"] != serial["p_first"] or shared["best_rank"] != serial["best_rank"]:
+            differs = True
+            break
+    assert differs, "per_mode produced identical results to shared — branch may be a no-op"
+
+
 def test_strategies_fitter_is_picklable() -> None:
     """StrategiesFitter is the picklable closure replacement — protocol contract."""
     pytest.importorskip("numpy")

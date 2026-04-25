@@ -1711,6 +1711,7 @@ def _run_one_year(
     use_cache,
     write_cache,
     scoring_vector,
+    opponent_strategy="shared",
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -2157,19 +2158,26 @@ def _run_one_year(
         except (ValueError, KeyError) as exc:
             print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
 
-    # year_rng drives opponent generation + tournament simulation, ONCE
-    # per repeat. Phase 2 hoists those draws out of the per-mode loop:
-    # every mode is now scored against the same opponent field per
-    # repeat, which converts mode-vs-mode comparison into a paired test
-    # (lower variance, the whole point of the backtest). Bracket
-    # sampling stays on per-(mode, year) make_mode_rng streams, so
-    # cache hits and live computes still produce identical brackets.
+    # opponent_strategy="shared" (Phase 2 default): year_rng drives
+    # opponent generation + tournament simulation ONCE per repeat —
+    # every mode scored against the same opponent field. Lower variance
+    # via paired comparison, but loses bit-exact independence between
+    # modes.
     #
-    # If we ever want bit-exact rollback to per-mode opponent streams
-    # (Q3 option A: SeedSequence sub-streams), the change is local to
-    # the per-repeat block below — spawn one rng per mode and move the
-    # opp/sim draws back inside the inner mode loop.
-    year_rng = np.random.default_rng(42 + year)
+    # opponent_strategy="per_mode" (Q3 option A): each mode gets its
+    # own opponent stream spawned from a deterministic SeedSequence —
+    # mode-vs-mode comparisons are independent again, at the cost of
+    # the paired-comparison variance reduction. Pre-Phase-2 semantics
+    # are NOT recovered bit-exactly (the spawned streams are different
+    # bytes than the original linear consumption), but the statistical
+    # property (independent draws per mode) is.
+    #
+    # Either way, bracket sampling stays on per-(mode, year)
+    # make_mode_rng streams, so cache hits and live computes always
+    # produce identical brackets regardless of opponent_strategy.
+    if opponent_strategy not in ("shared", "per_mode"):
+        raise ValueError(f"opponent_strategy must be 'shared' or 'per_mode', got {opponent_strategy!r}")
+    year_rng = np.random.default_rng(42 + year) if opponent_strategy == "shared" else None
 
     # Team-id lookup for cache encode/decode. Lazy-loaded once per
     # year — empty dict if the cache hasn't been initialized yet.
@@ -2248,55 +2256,105 @@ def _run_one_year(
             }
         )
 
-    # Pass B: shared per-repeat opponent field + simulated outcome.
-    # Generate once per repeat, score every mode against the same
-    # field. Under --team-identity the ranking uses the simulated
-    # outcome (not the actual result) so mean_rank reflects only
-    # pre-tournament information — fixes the ρ = −1.000 artifact where
-    # ranking against the known actual outcome trivially agreed with
+    # Pass B: opponent field + simulated outcome generation.
+    # Under --team-identity the ranking uses the simulated outcome (not
+    # the actual result) so mean_rank reflects only pre-tournament
+    # information — fixes the ρ = −1.000 artifact where ranking against
+    # the known actual outcome trivially agreed with
     # score_team_identity.
-    for rep in range(n_repeats):
-        opp = generate_opponent_brackets(
-            year_n_opponents,
-            first_round,
-            seed_pw,
-            pick_dist,
-            seeds,
-            year_rng,
-        )
-        if team_identity:
-            sim_outcomes, sim_by_round = simulate_tournament_outcomes(
-                n_tournaments=1,
-                first_round_matchups=first_round,
-                matchup_probs=seed_pw,
-                seeds=seeds,
-                noise_std=0.16,
-                rng=year_rng,
+    if opponent_strategy == "shared":
+        # Generate once per repeat, score every mode against the same
+        # field. Paired comparison → lower variance.
+        for rep in range(n_repeats):
+            opp = generate_opponent_brackets(
+                year_n_opponents,
+                first_round,
+                seed_pw,
+                pick_dist,
+                seeds,
+                year_rng,
             )
-            sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
-            opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
-        else:
-            sim_winners = None
-            opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
-
-        for payload in mode_payloads:
             if team_identity:
-                model_scores_sim = score_brackets_team_identity(
-                    payload["model_brackets"],
-                    sim_winners,
-                    first_round,
-                    ESPN_SCORING,
+                sim_outcomes, sim_by_round = simulate_tournament_outcomes(
+                    n_tournaments=1,
+                    first_round_matchups=first_round,
+                    matchup_probs=seed_pw,
+                    seeds=seeds,
+                    noise_std=0.16,
+                    rng=year_rng,
                 )
+                sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
             else:
-                model_scores_sim = payload["model_scores_actual"]
+                sim_winners = None
+                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
 
+            for payload in mode_payloads:
+                if team_identity:
+                    model_scores_sim = score_brackets_team_identity(
+                        payload["model_brackets"],
+                        sim_winners,
+                        first_round,
+                        ESPN_SCORING,
+                    )
+                else:
+                    model_scores_sim = payload["model_scores_actual"]
+
+                all_ranks = payload["all_ranks"]
+                for m in range(n_model):
+                    # How many opponents scored strictly higher + 1; ties
+                    # split (model is 1 of the tied group).
+                    better = np.sum(opp_scores > model_scores_sim[m])
+                    tied = np.sum(opp_scores == model_scores_sim[m])
+                    all_ranks[m, rep] = better + 1 + tied / 2.0
+    else:
+        # opponent_strategy == "per_mode": spawn a deterministic rng
+        # sub-stream per mode from SeedSequence(42 + year). Each mode
+        # gets its own opponent + sim draws — no paired-comparison
+        # variance reduction, but mode-vs-mode comparisons are
+        # statistically independent. Spawn order is the order modes
+        # appear in mode_payloads, which is the order from
+        # mode_sampler_specs (deterministic w.r.t. enabled_modes), so
+        # workers=1 vs workers=N stay bit-equal.
+        parent_seq = np.random.SeedSequence(42 + year)
+        mode_seeds = parent_seq.spawn(len(mode_payloads))
+        for payload, mode_seed in zip(mode_payloads, mode_seeds):
+            mode_opp_rng = np.random.default_rng(mode_seed)
             all_ranks = payload["all_ranks"]
-            for m in range(n_model):
-                # How many opponents scored strictly higher + 1; ties
-                # split (model is 1 of the tied group).
-                better = np.sum(opp_scores > model_scores_sim[m])
-                tied = np.sum(opp_scores == model_scores_sim[m])
-                all_ranks[m, rep] = better + 1 + tied / 2.0
+            for rep in range(n_repeats):
+                opp = generate_opponent_brackets(
+                    year_n_opponents,
+                    first_round,
+                    seed_pw,
+                    pick_dist,
+                    seeds,
+                    mode_opp_rng,
+                )
+                if team_identity:
+                    sim_outcomes, sim_by_round = simulate_tournament_outcomes(
+                        n_tournaments=1,
+                        first_round_matchups=first_round,
+                        matchup_probs=seed_pw,
+                        seeds=seeds,
+                        noise_std=0.16,
+                        rng=mode_opp_rng,
+                    )
+                    sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                    model_scores_sim = score_brackets_team_identity(
+                        payload["model_brackets"],
+                        sim_winners,
+                        first_round,
+                        ESPN_SCORING,
+                    )
+                    opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
+                else:
+                    model_scores_sim = payload["model_scores_actual"]
+                    opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+
+                for m in range(n_model):
+                    better = np.sum(opp_scores > model_scores_sim[m])
+                    tied = np.sum(opp_scores == model_scores_sim[m])
+                    all_ranks[m, rep] = better + 1 + tied / 2.0
 
     # Pass C: per-mode aggregation, reporting, and --save-brackets
     # serialization. all_ranks is now fully populated for every mode.
@@ -2400,6 +2458,7 @@ def run_backtest(
     use_cache: bool = False,
     write_cache: bool = False,
     workers: int = 1,
+    opponent_strategy: str = "shared",
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -2448,6 +2507,7 @@ def run_backtest(
     fitter_name = getattr(hparam_fitter, "__name__", type(hparam_fitter).__name__)
     print(f"  Hparam fitter: {hparam_fitter.__module__}.{fitter_name}")
     print(f"  Scoring: {'team-identity (real ESPN, §2 O26/O27)' if team_identity else 'shape-encoded'}")
+    print(f"  Opponent strategy: {opponent_strategy} (shared = paired comparison; per_mode = independent streams)")
     print()
 
     header = (
@@ -2472,6 +2532,7 @@ def run_backtest(
         use_cache,
         write_cache,
         scoring_vector,
+        opponent_strategy,
     )
 
     def _absorb(outcome: dict) -> None:
@@ -2667,6 +2728,17 @@ def main():
         help="Skip auto-logging to artifacts/backtest_runs/ (default: log every run).",
     )
     parser.add_argument(
+        "--opponent-strategy",
+        choices=["shared", "per_mode"],
+        default="shared",
+        help="How opponent draws are distributed across modes per repeat. "
+        "shared (DEFAULT, Phase 2): generate the opponent field once per repeat; "
+        "every mode is scored against the same field — paired comparison, lower variance. "
+        "per_mode (Q3 option A): spawn a deterministic SeedSequence sub-stream per mode "
+        "so each mode has independent opponent draws — restores statistical independence "
+        "across modes at the cost of paired-comparison variance reduction.",
+    )
+    parser.add_argument(
         "--hparam-fitter",
         default=None,
         help="Walk-forward pool-hyperparameter fitter, as 'module.path:attr_name'. "
@@ -2777,6 +2849,7 @@ def main():
             hparam_fitter=fitter,
             save_brackets=args.save_brackets,
             team_identity=args.team_identity,
+            opponent_strategy=args.opponent_strategy,
         )
     finally:
         if log_file is not None:
