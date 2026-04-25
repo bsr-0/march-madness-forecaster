@@ -49,12 +49,15 @@ from src.data.strategy_cache import (
     Manifest,
     STRATEGY_CACHE_VERSION,
     array_to_brackets,
+    brackets_to_array,
     compute_cache_key,
     load_brackets,
     load_team_lookup,
     make_mode_rng,
-    save_brackets,
 )
+
+# Aliased to avoid colliding with the run_backtest `save_brackets: bool` parameter.
+from src.data.strategy_cache import save_brackets as cache_save_brackets
 from src.prediction.noseed_model import (
     TRAIN_YEARS,
     train_noseed_model,
@@ -2154,11 +2157,18 @@ def _run_one_year(
         except (ValueError, KeyError) as exc:
             print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
 
-    # year_rng is shared across opponent generation + tournament
-    # simulation per repeat. Bracket sampling uses a per-(mode, year)
-    # child rng (make_mode_rng) so caching one mode's brackets never
-    # perturbs another mode's draws and the live loop matches the
-    # offline cache builder. See src/data/strategy_cache.make_mode_rng.
+    # year_rng drives opponent generation + tournament simulation, ONCE
+    # per repeat. Phase 2 hoists those draws out of the per-mode loop:
+    # every mode is now scored against the same opponent field per
+    # repeat, which converts mode-vs-mode comparison into a paired test
+    # (lower variance, the whole point of the backtest). Bracket
+    # sampling stays on per-(mode, year) make_mode_rng streams, so
+    # cache hits and live computes still produce identical brackets.
+    #
+    # If we ever want bit-exact rollback to per-mode opponent streams
+    # (Q3 option A: SeedSequence sub-streams), the change is local to
+    # the per-repeat block below — spawn one rng per mode and move the
+    # opp/sim draws back inside the inner mode loop.
     year_rng = np.random.default_rng(42 + year)
 
     # Team-id lookup for cache encode/decode. Lazy-loaded once per
@@ -2166,11 +2176,12 @@ def _run_one_year(
     team_lookup = load_team_lookup() if (use_cache or write_cache) else {}
     cache_manifest = Manifest.load() if (use_cache or write_cache) else None
 
+    # Pass A: assemble per-mode brackets (cache-aware) and their
+    # actual-outcome scores. Each mode's bracket_rng is fully isolated
+    # from year_rng and from every other mode, so iteration order
+    # doesn't affect any downstream rng draw.
+    mode_payloads = []
     for mode_name, rp, sampler in mode_sampler_specs:
-        # Per-(mode, year) bracket-sampling rng. Order-independent and
-        # fully isolated from year_rng, so the inner repeat-loop's
-        # opponent / simulation rng consumption is unchanged whether
-        # this mode hits or misses the bracket cache.
         bracket_rng = make_mode_rng(mode_name, year)
         cache_key = compute_cache_key(
             strategy_id=mode_name,
@@ -2204,7 +2215,7 @@ def _run_one_year(
             model_brackets = sampler(first_round, rp, n_model, bracket_rng)
             if write_cache and team_lookup:
                 bracket_array = brackets_to_array(model_brackets, first_round, team_lookup)
-                entry = save_brackets(
+                entry = cache_save_brackets(
                     cache_key,
                     bracket_array,
                     strategy_id=mode_name,
@@ -2218,8 +2229,6 @@ def _run_one_year(
                 _year_manifest_entries.append(entry)
                 print(f"  {year:<6} {mode_name:<10} CACHE WRITE key={cache_key}")
 
-        # Score all model brackets against actual outcome (for reporting
-        # BestScr / MeanScr and for --save-brackets).
         if team_identity:
             model_scores_actual = score_brackets_team_identity(
                 model_brackets,
@@ -2230,63 +2239,74 @@ def _run_one_year(
         else:
             model_scores_actual = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
 
-        # For each repeat: simulate a tournament outcome, generate
-        # opponents, score everything against that SIMULATED outcome,
-        # rank.  Under --team-identity the ranking uses simulated
-        # outcomes (not the actual result) so that mean_rank reflects
-        # the pre-tournament information the ranker would actually
-        # have — fixing the ρ = −1.000 artifact where ranking against
-        # the known actual outcome trivially agreed with
-        # score_team_identity.
-        all_ranks = np.zeros((n_model, n_repeats))
+        mode_payloads.append(
+            {
+                "mode_name": mode_name,
+                "model_brackets": model_brackets,
+                "model_scores_actual": model_scores_actual,
+                "all_ranks": np.zeros((n_model, n_repeats)),
+            }
+        )
 
-        for rep in range(n_repeats):
-            opp = generate_opponent_brackets(
-                year_n_opponents,
-                first_round,
-                seed_pw,
-                pick_dist,
-                seeds,
-                year_rng,
+    # Pass B: shared per-repeat opponent field + simulated outcome.
+    # Generate once per repeat, score every mode against the same
+    # field. Under --team-identity the ranking uses the simulated
+    # outcome (not the actual result) so mean_rank reflects only
+    # pre-tournament information — fixes the ρ = −1.000 artifact where
+    # ranking against the known actual outcome trivially agreed with
+    # score_team_identity.
+    for rep in range(n_repeats):
+        opp = generate_opponent_brackets(
+            year_n_opponents,
+            first_round,
+            seed_pw,
+            pick_dist,
+            seeds,
+            year_rng,
+        )
+        if team_identity:
+            sim_outcomes, sim_by_round = simulate_tournament_outcomes(
+                n_tournaments=1,
+                first_round_matchups=first_round,
+                matchup_probs=seed_pw,
+                seeds=seeds,
+                noise_std=0.16,
+                rng=year_rng,
             )
+            sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+            opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
+        else:
+            sim_winners = None
+            opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+
+        for payload in mode_payloads:
             if team_identity:
-                # Simulate one tournament outcome for this repeat.
-                sim_outcomes, sim_by_round = simulate_tournament_outcomes(
-                    n_tournaments=1,
-                    first_round_matchups=first_round,
-                    matchup_probs=seed_pw,
-                    seeds=seeds,
-                    noise_std=0.16,
-                    rng=year_rng,
-                )
-                sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
                 model_scores_sim = score_brackets_team_identity(
-                    model_brackets,
-                    sim_winners,
-                    first_round,
-                    ESPN_SCORING,
-                )
-                opp_scores = score_brackets_team_identity(
-                    opp,
+                    payload["model_brackets"],
                     sim_winners,
                     first_round,
                     ESPN_SCORING,
                 )
             else:
-                model_scores_sim = model_scores_actual
-                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+                model_scores_sim = payload["model_scores_actual"]
 
-            # Rank each model bracket against this opponent field
+            all_ranks = payload["all_ranks"]
             for m in range(n_model):
-                # How many opponents scored strictly higher + 1
+                # How many opponents scored strictly higher + 1; ties
+                # split (model is 1 of the tied group).
                 better = np.sum(opp_scores > model_scores_sim[m])
                 tied = np.sum(opp_scores == model_scores_sim[m])
-                # Average rank among ties (model is 1 of the tied group)
                 all_ranks[m, rep] = better + 1 + tied / 2.0
 
-        # Per-bracket average rank across repeats
+    # Pass C: per-mode aggregation, reporting, and --save-brackets
+    # serialization. all_ranks is now fully populated for every mode.
+    for payload in mode_payloads:
+        mode_name = payload["mode_name"]
+        model_brackets = payload["model_brackets"]
+        model_scores_actual = payload["model_scores_actual"]
+        all_ranks = payload["all_ranks"]
+
         bracket_mean_ranks = all_ranks.mean(axis=1)
-        # Best bracket = lowest average rank
         best_bracket_idx = np.argmin(bracket_mean_ranks)
         best_rank = bracket_mean_ranks[best_bracket_idx]
         mean_rank = bracket_mean_ranks.mean()
@@ -2424,7 +2444,9 @@ def run_backtest(
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
     print(f"  Years: {len(years)}")
-    print(f"  Hparam fitter: {hparam_fitter.__module__}.{hparam_fitter.__name__}")
+    # __name__ for plain functions; class instances (e.g. StrategiesFitter) fall back to type name.
+    fitter_name = getattr(hparam_fitter, "__name__", type(hparam_fitter).__name__)
+    print(f"  Hparam fitter: {hparam_fitter.__module__}.{fitter_name}")
     print(f"  Scoring: {'team-identity (real ESPN, §2 O26/O27)' if team_identity else 'shape-encoded'}")
     print()
 
