@@ -90,8 +90,10 @@ def build_one(args: tuple[str, int]) -> dict:
     """Worker function — top-level so it's picklable for ProcessPoolExecutor."""
     mode, year = args
     seeds, regions = load_seeds_and_regions(year)
-    seeds = resolve_first_four(year, seeds)
     games = load_tournament_results(year)
+    # resolve_first_four mutates seeds/regions in place to swap First Four
+    # winners into the R64 slots (returns the swap count, not new seeds).
+    resolve_first_four(games, seeds, regions)
     region_order = derive_f4_region_pairing(games, regions)
     first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
     round_probs = load_round_probs_from_cache(year)
