@@ -107,7 +107,8 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "pool_wisdom",  # B7: actual pool picks (or extrapolated) as round probs
     "elo",  # A4: K=38 Elo from historical_games, bridged via cbbpy normalizer
     "massey_avg",  # A5: Massey composite rating (aggregated across ~150 systems)
-    # New bases added here as implemented (A6, A8, B3-B5, C1-C3)
+    "massey_best",  # A6: walk-forward Brier-selected single Massey system
+    # New bases added here as implemented (A8, B3-B5, C1-C3)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -1879,6 +1880,17 @@ def run_backtest(
         else:
             massey_avg_rp = None
 
+        # Massey-best (A6): walk-forward Brier selection over 56+ per-system
+        # rankers (POM, SAG, MOR, BAR, etc.), picking the system with lowest
+        # cumulative Brier on tournament games in years strictly < year.
+        # Falls back gracefully to None when no system qualifies (e.g.
+        # pre-2011 test years without enough historical data).
+        from src.prediction.massey_best_probabilities import (
+            build_massey_best_round_probabilities,
+        )
+
+        massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+
         # Probability base registry: base_name → round_probs
         base_round_probs = {
             "seed": seed_rp,
@@ -1893,6 +1905,8 @@ def run_backtest(
             base_round_probs["elo"] = elo_rp
         if massey_avg_rp is not None:
             base_round_probs["massey_avg"] = massey_avg_rp
+        if massey_best_rp is not None:
+            base_round_probs["massey_best"] = massey_best_rp
         if spread_rp is not None:
             base_round_probs["spread_power"] = spread_rp
 

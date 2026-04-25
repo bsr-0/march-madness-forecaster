@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 6,160 strategies — 7 sources × (1 + 6 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 7,920 strategies — 8 sources × (1 + 6 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -141,14 +141,27 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/massey_probabilities.py`; lock test: `tests/test_massey_source.py`.
 
 #### A6: `massey_best`
-- **Status:** DEFERRED (2026-04-24) — needs a per-system Brier-selection harness.
-- **Data:** 150+ per-system files at `data/raw/external_{SYSTEM}_{year}.json` (POM, SAG, MOR, DOL, COL, WOL, RTH, DUN, MAS, SEL, etc.) are available for historical years.
-- **Why deferred:** The walk-forward Brier-selection algorithm requires:
-  (i) per-system tournament pairwise-win-rate predictions for every game in every historical tournament,
-  (ii) a Brier harness that scores each system vs actual outcomes across years < test_year,
-  (iii) a selection step that picks the best cumulative-Brier system per test year.
-  This is its own phase of work (~4-5 files, separate Brier-accumulator module, additional per-system data-validation). Scoped separately rather than squeezed into 1d.
-- **Next phase:** 1d-2. Once shipped, composes with every adjustment + construction in the catalog (~420 new `massey_best_*` permutations).
+- **Status:** IMPLEMENTED (2026-04-25) — shipped the per-system walk-forward Brier-selection harness. Distinct from A5 `massey_avg`: A5 uses the pre-aggregated composite ensemble; A6 picks one best-historical-Brier system per test year. Only source in the catalog where the data selects the ranker.
+- **Data:** `data/raw/historical/external_{SYSTEM}_{year}.json` — 56+ per-system rankings with 22 years of coverage (2005-2026). Each file is a list of `{team_id, rating, ranking, normalized}`. `normalized ∈ [0, 1]` used directly as barthag-equivalent. Team IDs are canonical — no bridge needed. Plus `tournament_results_{year}.json` for Brier scoring (same file `upset_tuned` uses).
+- **Algorithm:**
+  1. For each candidate system S and each prior year y < test_year (excluding 2020 COVID):
+     - Load S's ratings for year y and the year's tournament games.
+     - For each game (t1 vs t2) in R64-CHAMP rounds: compute P(t1 wins) via Log5 on `normalized(t1)` / `normalized(t2)`. Brier = (P − y_actual)². Skip games where either team isn't in S's ratings.
+  2. Cumulate `(brier_sum, n_games)` per system across all prior years.
+  3. Eligibility filter: system must have (a) ≥500 cumulative scored games (≈ 8+ tournaments) and (b) a ratings file for test_year itself.
+  4. Select `argmin(brier_sum / n_games)` among eligible systems.
+  5. Load the selected system's test-year `normalized` field → treat as barthag → run the same MC round-probs builder as torvik/massey_avg.
+- **Walk-forward contract:** at test_year Y, only tournament outcomes from years strictly < Y contribute to Brier scoring. 2020 excluded. Each test year's selection computed in isolation.
+- **Selection sanity:**
+  - Test_year 2026 → **TRK** (548 games, mean Brier 0.172).
+  - Test_year 2025 → **STY** (earlier years' competition resolves differently).
+  - Test_year 2021 → **ARG** (first post-COVID year).
+  - Top-5 for 2026 cluster tightly at 0.172-0.181 mean Brier — small margins among well-established rankers. 47 systems pass the min_games=500 threshold.
+- **Min-games threshold rationale:** at `min_games=100`, 2026 selection is "DP" with only 113 games (≈2 prior tournaments) — overfit risk. At `min_games=500` (≈8 tournaments), selection is a long-standing data-defensible pick. The threshold is a runtime arg (`select_best_system(..., min_games=500)` by default; operator can tighten/loosen).
+- **Relation to MEMORY.md §2 D1 (BSS=0 ceiling):** A6 does **not** claim to beat BSS=0. Individual systems all sit at BSS≈0. A6 picks the best-historical-Brier one among them — the orthogonal question is whether seed-level calibration differs between systems enough to shift P(1st). Different framing from D1's accuracy-lift kill; selection is not re-litigation.
+- **Fallback:** Missing teams in the selected system → seed-based barthag fallback (`max(0.10, 1 − 0.04 × seed)`, same as torvik). No qualifying system for a test year → loader returns None → the source is unavailable for that year and downstream strategies skip (same pattern as odds / elo missing-data years).
+- **Years:** 2011-2026 (needs ≥ 8 prior tournaments' coverage to clear min_games threshold).
+- **File:** `src/prediction/massey_best_probabilities.py`; lock test: `tests/test_massey_best_source.py` (14 tests).
 
 #### A7: `spread_power`
 - **Status:** IMPLEMENTED (data quality issues — Covers implied_prob is inverted for some games; data quality guard added)
@@ -447,7 +460,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
-| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
+| **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg, massey_best (8) | ap_strength (1) |
 | **Adjustments** | contrarian, upset_tuned, volatile, roster_adj, coach_adj, momentum (6) | _(none)_ |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
@@ -652,8 +665,8 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1b9 | Metrics rollout — phase 2 (Wilson CI per year + multi-metric significance) | **DONE** | `wilson_ci95()` attaches per-year binomial CI to `stats.p1_wilson_ci_by_year`; `_run_significance_tests` now runs paired permutation on P(1st), BestScore, MeanScore (3 blocks) each with its own Bonferroni α; `run_backtest` emits `n_trials` per result row (2026-04-24) |
 | 1b10 | Metrics rollout — phase 3 (auto-Oracle inside T3) | **DONE** | T3 tier passes `save_brackets=True`; new `oracle_sweep_t3_years()` helper scores each (year, strategy) portfolio against ground truth and emits per-year detail + strategy aggregate (`mean_ranker_gap_espn_pts`, `mean_f4_hits`, `mean_finals_hits`, `champ_hit_rate`) into `summary["tiers"]["T3"]["oracle"]`; 7 integration tests lock the sweep against committed 2023-2026 artifacts (2026-04-24) |
 | 1c | Elo base (A4) | **DONE** | Self-contained K=38 Elo from historical_games via cbbpy bridge; 68/68 coverage; +420 `elo_*` permutations (2026-04-24) |
-| 1d | Massey bases (A5, A6) | **PARTIAL** | A5 massey_avg DONE 2026-04-24 (uses pre-aggregated composite + 6-alias ID bridge; 68/68 2025 coverage). A6 massey_best deferred to phase 1d-2 — needs per-system Brier-selection harness. |
-| 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
+| 1d | Massey bases (A5, A6) | **DONE** | A5 massey_avg DONE 2026-04-24 (pre-aggregated composite + 6-alias ID bridge; 68/68 2025 coverage). A6 massey_best DONE 2026-04-25 (walk-forward Brier selection over 56+ per-system rankers; min_games=500 eligibility; 14 lock tests). |
+| 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | **DONE** | Shipped 2026-04-25 in phase 1d. `src/prediction/massey_best_probabilities.py`; top-5 for 2026 cluster at mean Brier 0.172-0.181; 47 eligible systems. |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
 | 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **DONE** | C1 coach_adj DONE 2026-04-25 (one-sided log-experience × +3% cap, MTeamCoaches × MNCAATourneySeeds, 68/68 bridge; 13 lock tests). C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged; 11 lock tests). C3 momentum DONE 2026-04-25 (Jan→Mar Dean-Oliver four-factor-margin delta × tanh(x·10) × ±3% cap; 68/68 snapshot coverage; 14 lock tests). |
@@ -720,7 +733,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 
 | ID | Phase | Blocker / Prereq | Why it's worth it | Scope |
 |----|-------|------------------|-------------------|-------|
-| A6 `massey_best` | 1d-2 | Per-system Brier-selection harness (none today) | All 150+ Massey systems are already on disk (`data/raw/external_{SYSTEM}_{year}.json`); we currently only consume the pre-aggregated composite (`A5 massey_avg`). `massey_best` walks each tournament and *picks the system with best cumulative Brier on years < test_year*. Different signal from A5 — selects the single best ranker rather than ensembling them. | ~4-5 files: per-system loader, Brier accumulator module, walk-forward selection harness, source wrapper, lock test. |
+| ~~A6 `massey_best`~~ | ~~1d-2~~ | ~~Per-system Brier-selection harness (none today)~~ | ~~All 150+ Massey systems are already on disk.~~ — **DONE 2026-04-25** (`src/prediction/massey_best_probabilities.py`, 14 lock tests, walk-forward Brier selection over 56+ systems with min_games=500 eligibility). |
 | A8 `ap_strength` | 1e | Verify `data/kaggle/ap_poll_data.json` ingestion is current | Captures *public-perception* signal that's distinct from efficiency metrics — useful for opponent modeling (the field anchors on rankings, not barthag). Adds another orthogonal source for B4 `consensus`. | 1 file (`src/prediction/ap_probabilities.py`) + lock test. Algorithm is straightforward (rank → barthag table). |
 | B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
 | ~~C1 `coach_adj`~~ | ~~1g~~ | ~~Needs `data/kaggle/MTeamCoaches.csv`~~ | ~~Tournament-experience adjustment.~~ — **DONE 2026-04-25** (`src/prediction/coach_adj_probabilities.py`, 13 lock tests, 68/68 bridge coverage). |
@@ -750,16 +763,16 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 
 | What | Status |
 |------|--------|
-| Next `--tier budget` run on the now-6,160-strategy catalog (Phase 3 ran on 301; +5,859 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj, C3 momentum) | **Authorized 2026-04-25** — operator will run on their machine tonight as "initial result set". Do not trigger from this session. |
+| Next `--tier budget` run on the now-7,920-strategy catalog (Phase 3 ran on 301; +7,619 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj, C3 momentum, A6 massey_best) | **Authorized 2026-04-25** — operator will run on their machine as an "initial result set". Expected wall-time ~100-115 min at T1+T2+T3 full rigor. Do not trigger from this session. |
 | Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
 
 ### Why these matter (orthogonality, not just count)
 
-The catalog is at ~6,160 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+The catalog is at ~7,920 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
 - ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
-- **`massey_best` (A6)** is the only source that *selects* a single best ranker per year via Brier; everything else either uses one fixed model or ensembles them statically.
+- ~~**`massey_best` (A6)** is the only source that *selects* a single best ranker per year via Brier; everything else either uses one fixed model or ensembles them statically.~~ **DONE 2026-04-25** — shipped as the first (and still only) ranker-selection source in the catalog.
 - **C1/C2/C3 enriched bases** introduce roster-, coach-, and trajectory-level signal that no efficiency metric on its own captures.
 
 Each of these closes a *kind of strategy the current catalog literally cannot express* — that's the orthogonality argument for prioritizing them over yet another permutation of the existing surface.
