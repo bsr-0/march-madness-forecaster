@@ -92,6 +92,7 @@ class ContractValidator:
     def _get_active_feature_names(self) -> List[str]:
         """Get feature names from TeamFeatures.get_feature_names()."""
         from src.data.features.feature_engineering import TeamFeatures
+
         return TeamFeatures.get_feature_names(include_embeddings=False)
 
     def _get_contract_feature_names(self) -> List[str]:
@@ -119,12 +120,14 @@ class ContractValidator:
         try:
             import jsonschema
         except ImportError:
-            report.violations.append(ValidationViolation(
-                check="schema_valid",
-                feature_name="*",
-                message="jsonschema package not installed; skipping schema validation",
-                severity="warning",
-            ))
+            report.violations.append(
+                ValidationViolation(
+                    check="schema_valid",
+                    feature_name="*",
+                    message="jsonschema package not installed; skipping schema validation",
+                    severity="warning",
+                )
+            )
             return
 
         schema = self._load_schema()
@@ -133,11 +136,13 @@ class ContractValidator:
             jsonschema.validate(instance=contracts, schema=schema)
             report.checks_passed += 1
         except jsonschema.ValidationError as e:
-            report.violations.append(ValidationViolation(
-                check="schema_valid",
-                feature_name=str(e.path),
-                message=str(e.message)[:200],
-            ))
+            report.violations.append(
+                ValidationViolation(
+                    check="schema_valid",
+                    feature_name=str(e.path),
+                    message=str(e.message)[:200],
+                )
+            )
 
     def _check_forward_completeness(self, report: ValidationReport) -> None:
         """Every active feature in get_feature_names() must have a contract."""
@@ -145,22 +150,26 @@ class ContractValidator:
         try:
             active_names = set(self._get_active_feature_names())
         except Exception as e:
-            report.violations.append(ValidationViolation(
-                check="forward_completeness",
-                feature_name="*",
-                message=f"Could not load active feature names: {e}",
-            ))
+            report.violations.append(
+                ValidationViolation(
+                    check="forward_completeness",
+                    feature_name="*",
+                    message=f"Could not load active feature names: {e}",
+                )
+            )
             return
 
         contract_names = set(self._get_contract_feature_names())
         missing = active_names - contract_names
         if missing:
             for name in sorted(missing):
-                report.violations.append(ValidationViolation(
-                    check="forward_completeness",
-                    feature_name=name,
-                    message="Active feature has no contract entry",
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="forward_completeness",
+                        feature_name=name,
+                        message="Active feature has no contract entry",
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -182,11 +191,13 @@ class ContractValidator:
 
         if orphans:
             for name in orphans:
-                report.violations.append(ValidationViolation(
-                    check="reverse_completeness",
-                    feature_name=name,
-                    message="Contract exists but feature is not active and not marked deprecated",
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="reverse_completeness",
+                        feature_name=name,
+                        message="Contract exists but feature is not active and not marked deprecated",
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -200,6 +211,7 @@ class ContractValidator:
         # We verify that for any diff_ or abs_ feature used in training,
         # the base team-level feature has a contract.
         from src.pipeline.config import FIXED_FEATURE_SET
+
         missing_base = []
         for feat_name in FIXED_FEATURE_SET:
             if feat_name.startswith("diff_"):
@@ -213,11 +225,13 @@ class ContractValidator:
 
         if missing_base:
             for derived, base in missing_base:
-                report.violations.append(ValidationViolation(
-                    check="matchup_lineage",
-                    feature_name=derived,
-                    message=f"Derived feature references base '{base}' which has no contract",
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="matchup_lineage",
+                        feature_name=derived,
+                        message=f"Derived feature references base '{base}' which has no contract",
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -238,35 +252,50 @@ class ContractValidator:
 
             if logic_type == "offset_from_event":
                 if "event_timestamp_field" not in logic or "offset_hours" not in logic:
-                    failures.append((
-                        feat["feature_name"],
-                        "offset_from_event requires event_timestamp_field and offset_hours",
-                    ))
+                    failures.append(
+                        (
+                            feat["feature_name"],
+                            "offset_from_event requires event_timestamp_field and offset_hours",
+                        )
+                    )
             elif logic_type == "function_ref":
                 ref = logic.get("ref", "")
                 if "::" not in ref:
-                    failures.append((
-                        feat["feature_name"],
-                        f"function_ref '{ref}' must be in 'module::function' format",
-                    ))
+                    failures.append(
+                        (
+                            feat["feature_name"],
+                            f"function_ref '{ref}' must be in 'module::function' format",
+                        )
+                    )
 
         if failures:
             for name, msg in failures:
-                report.violations.append(ValidationViolation(
-                    check="available_at_executable",
-                    feature_name=name,
-                    message=msg,
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="available_at_executable",
+                        feature_name=name,
+                        message=msg,
+                    )
+                )
         else:
             report.checks_passed += 1
 
     def _check_transformation_ref_exists(self, report: ValidationReport) -> None:
-        """Every transformation_logic_ref must resolve to an existing file::function."""
+        """Every transformation_logic_ref must resolve to an existing file::function.
+
+        Deprecated contracts with a `sunset_date` are skipped — by the
+        no_dead_contracts contract, sunset_date means the feature is being
+        retained for audit only and its source code may have been removed.
+        Active features and deprecated-but-no-sunset features are still
+        validated (the latter would already fail no_dead_contracts).
+        """
         report.checks_run += 1
         contracts = self._load_contracts()
         failures = []
 
         for feat in contracts.get("features", []):
+            if feat.get("deprecated", False) and feat.get("sunset_date"):
+                continue
             ref = feat.get("transformation_logic_ref", "")
             if "::" not in ref:
                 failures.append((feat["feature_name"], f"Invalid ref format: '{ref}'"))
@@ -275,18 +304,22 @@ class ContractValidator:
             file_part, func_part = ref.rsplit("::", 1)
             file_path = REPO_ROOT / file_part
             if not file_path.exists():
-                failures.append((
-                    feat["feature_name"],
-                    f"File not found: {file_part}",
-                ))
+                failures.append(
+                    (
+                        feat["feature_name"],
+                        f"File not found: {file_part}",
+                    )
+                )
 
         if failures:
             for name, msg in failures:
-                report.violations.append(ValidationViolation(
-                    check="transformation_ref_exists",
-                    feature_name=name,
-                    message=msg,
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="transformation_ref_exists",
+                        feature_name=name,
+                        message=msg,
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -304,11 +337,13 @@ class ContractValidator:
 
         if failures:
             for name in failures:
-                report.violations.append(ValidationViolation(
-                    check="snapshot_policy_high_risk",
-                    feature_name=name,
-                    message="High/critical risk feature missing snapshot_policy",
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="snapshot_policy_high_risk",
+                        feature_name=name,
+                        message="High/critical risk feature missing snapshot_policy",
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -326,11 +361,13 @@ class ContractValidator:
 
         if failures:
             for name, msg in failures:
-                report.violations.append(ValidationViolation(
-                    check="risk_tier_coverage",
-                    feature_name=name,
-                    message=msg,
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="risk_tier_coverage",
+                        feature_name=name,
+                        message=msg,
+                    )
+                )
         else:
             report.checks_passed += 1
 
@@ -346,10 +383,12 @@ class ContractValidator:
 
         if failures:
             for name in failures:
-                report.violations.append(ValidationViolation(
-                    check="no_dead_contracts",
-                    feature_name=name,
-                    message="Deprecated contract missing sunset_date",
-                ))
+                report.violations.append(
+                    ValidationViolation(
+                        check="no_dead_contracts",
+                        feature_name=name,
+                        message="Deprecated contract missing sunset_date",
+                    )
+                )
         else:
             report.checks_passed += 1
