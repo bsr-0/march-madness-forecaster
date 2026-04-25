@@ -793,7 +793,7 @@ After the first bracket build, subsequent budgeted runs hit the cache for `torvi
 
 `run_backtest` parallelizes the per-year loop across `N` worker processes via `ProcessPoolExecutor`. The flag is opt-in (`--workers 1` is the default and reproduces the pre-parallelism sequential path bit-exactly) and is threaded through every `run_experiment` dispatch — `--tier budget`, `--tier 1/2/3`, `--strategies`, `--bases/--modes`, `--permutations`, custom sweeps. One flag covers every command path because they all funnel through `run_backtest`.
 
-**Wall-time win:** roughly linear in `min(N, len(years))`. The 88.8-min Apr-24 budget run drops to roughly 11–13 min at `--workers 8`. Saturating year-level parallelism caps at `len(BACKTEST_YEARS) ≈ 14` workers. Phase 2 (modes-within-year) is not yet shipped — it would buy another ~3× on machines with more cores than years.
+**Wall-time win:** roughly linear in `min(N, len(years))`. The 88.8-min Apr-24 budget run drops to roughly 11–13 min at `--workers 8`. Saturating year-level parallelism caps at `len(BACKTEST_YEARS) ≈ 14` workers. Phase 2 (shared per-repeat opponents) further reduces single-worker wall time inside each year — see below.
 
 **Bit-exactness contract:**
 - `year_rng = np.random.default_rng(42 + year)` is constructed inside `_run_one_year`, so each worker gets a deterministic stream derived purely from its year.
@@ -811,6 +811,30 @@ python -m scripts.run_experiment --tier 3 --workers 8 --use-cache   # parallel +
 **Memory caveat:** each worker is a full Python process. Memory scales linearly with `--workers`. On a 16 GB box, `--workers 8` is comfortable for the 12k-strategy catalog; `--workers 14` may swap. Operator-controlled.
 
 **Architecture decision baked in:** `StrategiesFitter` (top-level callable class in `scripts/mc_pool_backtest.py`) replaces the local closures previously used in `scripts/run_experiment.py` for the `hparam_fitter` argument. Local closures aren't picklable for `ProcessPoolExecutor`; top-level class instances are. Three call sites refactored (`_run_tier`, `_run_pipeline_sweep`, `_run_sweep`); behavior identical to the pre-refactor closure form.
+
+### Parallel execution Phase 2 (shared per-repeat opponents) — DONE 2026-04-25
+
+Inside each year, `_run_one_year` now hoists opponent-bracket generation and (under `--team-identity`) tournament-outcome simulation **out of the per-mode loop**. For each repeat the opponent field is generated once and every mode is scored against the same draw — converting mode-vs-mode comparison into a paired test, which is the variance reduction the backtest actually wants. Saves the `~N_modes ×` redundancy of redrawing identical-distribution opponents inside each mode.
+
+The body splits into three explicit passes:
+
+- **A** — per-mode bracket assembly (cache-aware, isolated `bracket_rng = make_mode_rng(mode, year)`, order-independent across modes)
+- **B** — single per-repeat loop generates `opp` + `sim_winners` once and accumulates per-mode ranks against them
+- **C** — per-mode aggregation, reporting, `--save-brackets` serialization
+
+**Q3 architecture decision (settled 2026-04-25):** option B (shared per-repeat opponents) chosen over option A (`SeedSequence.spawn(n_modes)` per-mode opponent streams). The paired-comparison variance reduction outweighs the loss of bit-exact reproduction against the pre-Phase-2 baseline — and no test or strategy artifact pinned those numerical values. Rollback to option A is local to the per-repeat block (spawn one rng per mode, move opp/sim draws back inside the inner mode loop) if mode-vs-mode independence is ever needed for some downstream analysis.
+
+**Equivalence properties preserved:**
+- `workers=1` vs `workers=N` still bit-equal (year_rng consumption order is determined by year alone, not by mode iteration order).
+- Phase 5 cache equivalence still holds — `bracket_rng` is independent of `year_rng`, so cache hits and live computes produce identical brackets.
+- Single-mode runs are numerically identical to the pre-Phase-2 path (only one mode → no hoist effect).
+- Multi-mode P(1st) values shift vs pre-Phase-2 (different rng consumption order), but no downstream baseline pins those values.
+
+**Lock tests:**
+- `tests/test_parallel_run_backtest.py::test_parallel_matches_sequential_multimode_torvik_2025_2026` — 2 modes × 2 years, asserts `workers=1` vs `workers=2` bit-equal under the new shared-opponents path. The single-mode test in the same file (carried over from Phase 1) still passes unchanged.
+- `tests/test_strategy_cache_phase5_equivalence.py` (3 modes × 2026) — confirms cache hits still bit-match live recomputes after the refactor.
+
+**Incidental fixes** (pre-existing latent bugs that the new equivalence tests surfaced once dependencies were installed): `StrategiesFitter.__name__` AttributeError → `getattr` fallback in the run header; missing `brackets_to_array` import; `save_brackets` cache writer aliased to `cache_save_brackets` so it doesn't shadow the `run_backtest(save_brackets: bool)` parameter.
 
 ### Validation & guardrails
 
