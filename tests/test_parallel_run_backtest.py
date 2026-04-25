@@ -112,6 +112,97 @@ def test_parallel_matches_sequential_on_torvik_2025_2026() -> None:
             )
 
 
+def test_parallel_matches_sequential_multimode_torvik_2025_2026() -> None:
+    """Phase-2 lock: workers=1 vs workers=2 stay bit-equal under multi-mode runs.
+
+    Phase 2 hoists opponent + simulated-outcome generation out of the
+    per-mode loop so every mode is scored against the same field per
+    repeat (paired comparison). The single-mode test above covers the
+    pre-Phase-2 path; this one covers the multi-mode path where the
+    hoist actually does something. Bit-equality between workers=1 and
+    workers=N must still hold — the year_rng consumption order is
+    deterministic per year, independent of completion order.
+    """
+    pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    try:
+        from scripts.mc_pool_backtest import (
+            StrategiesFitter,
+            _load_torvik_barthag,
+            load_seeds_and_regions,
+            load_tournament_results,
+            run_backtest,
+        )
+    except ImportError:
+        pytest.skip("project deps not available")
+
+    test_years = [2025, 2026]
+    for yr in test_years:
+        try:
+            seeds, _ = load_seeds_and_regions(yr)
+            if _load_torvik_barthag(yr, seeds) is None:
+                pytest.skip(f"torvik barthag for {yr} unavailable")
+            if not load_tournament_results(yr):
+                pytest.skip(f"{yr} tournament results unavailable")
+        except Exception as exc:
+            pytest.skip(f"{yr} prereqs unavailable: {exc}")
+
+    # Two production modes: forces the Phase-2 shared-opponents path
+    # (mode_payloads with len>1) through both the workers=1 and
+    # workers=2 code paths.
+    common_kwargs = dict(
+        years=test_years,
+        n_opponents=10,
+        n_repeats=2,
+        n_model=50,
+        opponent_source="pool",
+        hparam_fitter=StrategiesFitter(("torvik", "f4_first_tv")),
+        team_identity=True,
+    )
+
+    serial_results = run_backtest(**common_kwargs, workers=1)
+    parallel_results = run_backtest(**common_kwargs, workers=2)
+
+    assert serial_results, "serial run produced no results"
+    assert parallel_results, "parallel run produced no results"
+
+    def _sort_key(r):
+        return (r["year"], r["mode"])
+
+    serial_sorted = sorted(serial_results, key=_sort_key)
+    parallel_sorted = sorted(parallel_results, key=_sort_key)
+
+    assert len(serial_sorted) == len(parallel_sorted), (
+        f"row count differs: serial={len(serial_sorted)} parallel={len(parallel_sorted)}"
+    )
+    # Both modes must show up in each year's rows — guards against a
+    # silent regression where the multi-mode path collapses to one row.
+    serial_modes_per_year = {y: set() for y in test_years}
+    for row in serial_sorted:
+        serial_modes_per_year[row["year"]].add(row["mode"])
+    for yr, modes in serial_modes_per_year.items():
+        assert {"torvik", "f4_first_tv"}.issubset(modes), f"year {yr} missing one of torvik/f4_first_tv: got {modes}"
+
+    metric_fields = (
+        "best_rank",
+        "mean_rank",
+        "p_first",
+        "p_top5",
+        "p_top25",
+        "best_score",
+        "mean_score",
+        "n_trials",
+    )
+    for serial, parallel in zip(serial_sorted, parallel_sorted):
+        assert serial["year"] == parallel["year"]
+        assert serial["mode"] == parallel["mode"]
+        for field in metric_fields:
+            assert serial[field] == pytest.approx(parallel[field], rel=0, abs=0), (
+                f"divergence on {field} for ({serial['year']}, {serial['mode']}): "
+                f"serial={serial[field]} parallel={parallel[field]}"
+            )
+
+
 def test_strategies_fitter_is_picklable() -> None:
     """StrategiesFitter is the picklable closure replacement — protocol contract."""
     pytest.importorskip("numpy")
