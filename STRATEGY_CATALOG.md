@@ -793,7 +793,7 @@ After the first bracket build, subsequent budgeted runs hit the cache for `torvi
 
 `run_backtest` parallelizes the per-year loop across `N` worker processes via `ProcessPoolExecutor`. The flag is opt-in (`--workers 1` is the default and reproduces the pre-parallelism sequential path bit-exactly) and is threaded through every `run_experiment` dispatch — `--tier budget`, `--tier 1/2/3`, `--strategies`, `--bases/--modes`, `--permutations`, custom sweeps. One flag covers every command path because they all funnel through `run_backtest`.
 
-**Wall-time win:** roughly linear in `min(N, len(years))`. The 88.8-min Apr-24 budget run drops to roughly 11–13 min at `--workers 8`. Saturating year-level parallelism caps at `len(BACKTEST_YEARS) ≈ 14` workers. Phase 2 (shared per-repeat opponents) further reduces single-worker wall time inside each year — see below.
+**Wall-time win:** roughly linear in `min(N, len(years))`. The 88.8-min Apr-24 budget run drops to roughly 11–13 min at `--workers 8`. Saturating year-level parallelism caps at `len(BACKTEST_YEARS) ≈ 14` workers. Phase 2 (shared per-repeat opponents) shaves another modest factor inside each year (~1.2–1.6× depending on `N_modes`); its main payoff is variance reduction via paired comparison, not wall time — see below.
 
 **Bit-exactness contract:**
 - `year_rng = np.random.default_rng(42 + year)` is constructed inside `_run_one_year`, so each worker gets a deterministic stream derived purely from its year.
@@ -814,7 +814,7 @@ python -m scripts.run_experiment --tier 3 --workers 8 --use-cache   # parallel +
 
 ### Parallel execution Phase 2 (shared per-repeat opponents) — DONE 2026-04-25
 
-Inside each year, `_run_one_year` now hoists opponent-bracket generation and (under `--team-identity`) tournament-outcome simulation **out of the per-mode loop**. For each repeat the opponent field is generated once and every mode is scored against the same draw — converting mode-vs-mode comparison into a paired test, which is the variance reduction the backtest actually wants. Saves the `~N_modes ×` redundancy of redrawing identical-distribution opponents inside each mode.
+Inside each year, `_run_one_year` now hoists opponent-bracket generation and (under `--team-identity`) tournament-outcome simulation **out of the per-mode loop**. For each repeat the opponent field is generated once and every mode is scored against the same draw — converting mode-vs-mode comparison into a paired test, which is the variance reduction the backtest actually wants. The primary motivation is the variance reduction; the wall-time savings are real but modest (~1.2–1.6× depending on `N_modes` and opp-gen scale — see "Measured wall-time impact" below).
 
 The body splits into three explicit passes:
 
@@ -835,6 +835,15 @@ The body splits into three explicit passes:
 - `tests/test_strategy_cache_phase5_equivalence.py` (3 modes × 2026) — confirms cache hits still bit-match live recomputes after the refactor.
 
 **Incidental fixes** (pre-existing latent bugs that the new equivalence tests surfaced once dependencies were installed): `StrategiesFitter.__name__` AttributeError → `getattr` fallback in the run header; missing `brackets_to_array` import; `save_brackets` cache writer aliased to `cache_save_brackets` so it doesn't shadow the `run_backtest(save_brackets: bool)` parameter.
+
+**Measured wall-time impact (2026-04-25):** sequential `workers=1`, 3 years × `n_repeats=30` × `n_model=100`, `n_opponents=499`, seed source, `team_identity=True`. Same `mc_pool_backtest.py` code on `HEAD~2` (pre-Phase-2) vs `HEAD` (Phase 2); function-fitter to side-step the `__name__` bug pre-fix.
+
+| `N_modes` | Pre-Phase-2 | Phase 2 | Speedup |
+|---|---|---|---|
+| 3 (`torvik`, `f4_first_tv`, `e8_first_tv`) | 28.26s | 23.43s | **1.21×** |
+| 5 (above + `champ_first_tv`, `det_champ_tv`) | 33.66s | 24.43s | **1.38×** |
+
+Implied per-call cost of (opp gen + sim outcome) is ~27 ms; per-year fixed work (walk-forward training, base round-prob builds, bracket sampling, scoring) is ~7 s/year independent of `N_modes`. Speedup grows with `N_modes`, `n_opponents`, and `n_repeats`. Linear extrapolation puts `ALL_MODES` (11) at roughly 1.6–1.8×, well below the optimistic `~3×` framing the original Phase 2 plan used. Wall-time gains under `opponent_source="pool"` (group size ~25-31) will be smaller; under `seed`/`espn` fallback (`n_opponents=999`) they'll be larger. **Variance reduction via paired comparison is the more valuable Phase 2 win, not wall time.**
 
 ### Validation & guardrails
 
