@@ -42,7 +42,7 @@ python -m scripts.run_experiment --tier 3      # top 5 at full rigor (N=100, 14 
 python -m scripts.run_experiment --tier 1      # screen all bases (legacy, N=100)
 python -m scripts.run_experiment --tier 2      # top 5 × all modes (legacy, N=100)
 
-# Auto-generate all permutations (currently 4,480 strategies — 7 sources × (1 + 5 adj + pair chains) × 10 constructions × blends)
+# Auto-generate all permutations (currently 6,160 strategies — 7 sources × (1 + 6 adj + pair chains) × 10 constructions × blends)
 python -m scripts.run_experiment --permutations
 
 # Specific pipeline combinations
@@ -282,19 +282,30 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 - **File:** `src/prediction/roster_adj_probabilities.py`; lock test: `tests/test_roster_adj_adjustment.py` (11 tests).
 
 #### C3: `momentum`
-- **Status:** NEW
-- **Data:** `data/raw/historical/torvik_four_factors_{year}_*.json` (monthly snapshots)
+- **Status:** IMPLEMENTED (2026-04-25) — shipped as an ADJUSTMENT (not a base) for composability with every source × construction. 108 snapshot files cover 2008-2026. Team IDs in the four-factor snapshots match canonical tournament IDs directly — no bridge needed.
+- **Data:** `data/raw/historical/torvik_four_factors_{year}_{yyyymmdd}.json` — ~5 snapshots per year (Nov/Dec/Jan/Feb/Mar). Uses the January (~YYYY-01-31) and March (~YYYY-03-xx pre-tournament) snapshots for the trajectory delta.
+- **Schema note:** the snapshot files carry only the 8 raw four-factor stats (`effective_fg_pct` + opp, `turnover_rate` + opp, `offensive/defensive_reb_rate`, `free_throw_rate` + opp) — **not** `adj_efficiency_margin`. We synthesize a Dean-Oliver-weighted margin proxy.
 - **Algorithm:**
-  1. Start with torvik barthag (final pre-tournament)
-  2. Load January and March four-factor snapshots
-  3. Compute trajectory: `delta_eff = (march_adjEM - january_adjEM) / january_adjEM`
-  4. Apply adjustment: `barthag *= (1 + 0.03 * tanh(delta_eff * 5))`
-  - Teams improving → slight boost (max +3%)
-  - Teams declining → slight penalty (max -3%)
-  - tanh prevents outliers from dominating
-- **Fallback:** Missing snapshots → torvik unchanged
-- **Years:** 2008-2026
-- **File:** `src/prediction/enriched_probabilities.py` (NEW)
+  1. For each team t, compute ``four_factor_margin(t)`` at January and March snapshots:
+     ```
+     margin = (eFG% - opp_eFG%)
+            + 0.3 * (off_reb_rate + def_reb_rate - 1.0)
+            + 0.2 * (opp_turnover_rate - turnover_rate)
+            + 0.1 * (free_throw_rate - opp_free_throw_rate)
+     ```
+     Dean-Oliver canonical weights (40/25/20/15 for shooting / turnovers / rebounding / FTs).
+  2. `delta_t = march_margin(t) - january_margin(t)` (absolute, not relative — see deviation note).
+  3. `factor_t = 1 + 0.03 * tanh(delta_t × 10)` ∈ [0.97, 1.03].
+  4. `adjusted[r] = base[r] × factor_t`. Re-normalize per round to bracket team-counts.
+  - **Two-sided:** improving teams boosted, declining teams penalized. `tanh` saturation caps both ends — even a pathological delta of 0.5 (huge) stays within ±3%.
+  - **Deliberate deviations from catalog spec:**
+    - Spec called for `delta_eff = (march - january) / january` using Torvik's `adj_efficiency_margin`. But (a) `adj_efficiency_margin` isn't in the snapshot files — only 8 raw four-factor stats — so we use a Dean-Oliver-weighted proxy instead; (b) division by the January value blows up when it's near zero (mean of the distribution), so we switched to absolute delta with a calibrated `tanh_scale=10` multiplier.
+    - Applied at round_probs level, not barthag (same pattern as the other adjustments).
+- **Walk-forward contract:** only reads `torvik_four_factors_{year}_*.json` for `{year}` — each test year's momentum is computed in isolation from its own Jan and Mar snapshots. No cross-year contamination.
+- **Fallback:** Missing January or March snapshot for a year → empty dict for that year → downstream resolver treats every team as delta=0 (no adjustment). Teams present in only one of the two snapshots → absent from result (same neutral fallback).
+- **2026 sanity:** 68/68 coverage. Top improvers: Howard (+0.064), Prairie View (+0.059), UMBC (+0.045) — small low-majors often have schedule-strength artifacts in the delta. Top decliners: Iowa (−0.052), NC State (−0.049), BYU (−0.047), Texas A&M (−0.047), Saint Louis (−0.045). `tanh` cap keeps extreme signals bounded either way.
+- **Years:** 2008-2026.
+- **File:** `src/prediction/momentum_probabilities.py`; lock test: `tests/test_momentum_adjustment.py` (14 tests).
 
 ---
 
@@ -437,7 +448,7 @@ As more sources (elo, massey, AP, coach, roster, momentum) and adjustments (vola
 | Component | Implemented | Not Yet |
 |-----------|:-----------:|:-------:|
 | **Sources** | seed, torvik, odds, spread_power, pool_wisdom, elo, massey_avg (7) | massey_best (deferred 1d-2), ap_strength (2) |
-| **Adjustments** | contrarian, upset_tuned, volatile, roster_adj, coach_adj (5) | momentum (1) |
+| **Adjustments** | contrarian, upset_tuned, volatile, roster_adj, coach_adj, momentum (6) | _(none)_ |
 | **Constructions** | forward, champ_first, f4_first, e8_first, confidence, f4_chalk, f4_diverse, f4_top4, e8_chalk, e8_diverse (10) | _(none — M5 backward killed 2026-04-25 as spec-faithful duplicate of champ_first; resurrection requires barthag plumbing)_ |
 | **Blending** | Equal-weight and custom-weight blends of any 2+ sources | Stacked meta-learner (B5) |
 | **Testing Budget** | `run_budget()` enforces T1/T2/T3 parameters + kill rules, cut-losses gate at T2 | Round-probs caching, multi-proc parallelism, convergence-based repeat stopping |
@@ -645,7 +656,7 @@ Comprehensive ≠ every permutation at full rigor. It means: **every source/adju
 | 1d-2 | A6 massey_best (per-system walk-forward Brier selection) | TODO | Uses existing `data/raw/external_{SYSTEM}_{year}.json` per-system files (POM/SAG/MOR/etc.); selection via walk-forward Brier scoring; ~4-5 file phase. |
 | 1e | AP base (A8) | TODO | ap_strength |
 | 1f | Composite (B3 market_torvik, B4 consensus, B5 stacked) | TODO | handled by pipeline blending for B3/B4; B5 needs Ridge |
-| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **PARTIAL** | C1 coach_adj DONE 2026-04-25 (one-sided log-experience × +3% cap, MTeamCoaches × MNCAATourneySeeds, 68/68 bridge; 13 lock tests). C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged; 11 lock tests). C3 momentum still TODO. |
+| 1g | Enriched bases (C1 coach, C2 roster, C3 momentum) | **DONE** | C1 coach_adj DONE 2026-04-25 (one-sided log-experience × +3% cap, MTeamCoaches × MNCAATourneySeeds, 68/68 bridge; 13 lock tests). C2 roster_adj DONE 2026-04-25 (top-5 WARP × ±4% multiplicative, cbbpy-bridged; 11 lock tests). C3 momentum DONE 2026-04-25 (Jan→Mar Dean-Oliver four-factor-margin delta × tanh(x·10) × ±3% cap; 68/68 snapshot coverage; 14 lock tests). |
 | 1h | Upset bases (D1 volatile, D2 upset_tuned) | **DONE** | D2 upset_tuned (2026-04-24, walk-forward seed-by-round calibration) + D1 volatile (2026-04-24, per-team margin variance from cbbpy bridge). Both shipped as adjustments rather than bases for composability. |
 | 2a | Backward construction (M5) | **KILLED 2026-04-25** | Spec-faithful impl is a strategic duplicate of `champ_first` under the marginal-independence sampler. Resurrection requires plumbing `barthag` through the construction-mode dispatcher (architectural lift, separate phase). See § Deprecated Strategies. |
 | 2b | Confidence construction (M6) | **DONE** | *_confidence — lock chalk / sample medium / boost upsets per-game (2026-04-24) |
@@ -714,7 +725,7 @@ Items below are the open queue as of 2026-04-24 (post-Phase-3). Each is listed w
 | B5 `stacked` | 1f | Needs ≥3 prior years with all Category-A bases available — already true 2014+ | **The only learned-weight source in a sea of hand-weighted blends.** Every existing blend in the catalog is a hand-picked convex combination (`0.5*x+0.5*y`); `stacked` lets a Ridge regression pick the weights from historical accuracy. Different *kind* of strategy, not just another permutation. | 1 file (`src/prediction/composite_probabilities.py`) + walk-forward harness + lock test. Ridge fit is cheap; the work is wiring features and the year-by-year loop. |
 | ~~C1 `coach_adj`~~ | ~~1g~~ | ~~Needs `data/kaggle/MTeamCoaches.csv`~~ | ~~Tournament-experience adjustment.~~ — **DONE 2026-04-25** (`src/prediction/coach_adj_probabilities.py`, 13 lock tests, 68/68 bridge coverage). |
 | ~~C2 `roster_adj`~~ | ~~1g~~ | ~~UNBLOCKED by cbbpy bridge (1b7)~~ | ~~Top-5 player WARP adjustment.~~ — **DONE 2026-04-25** (`src/prediction/roster_adj_probabilities.py`, 11 lock tests). |
-| C3 `momentum` | 1g | Needs Torvik four-factor monthly snapshots ingested for 2008-2026 | January→March efficiency-trend adjustment. Composable with every source/construction. | 1 file + ingestion verification + lock test. |
+| ~~C3 `momentum`~~ | ~~1g~~ | ~~Needs Torvik four-factor monthly snapshots ingested for 2008-2026~~ | ~~January→March efficiency-trend adjustment.~~ — **DONE 2026-04-25** (`src/prediction/momentum_probabilities.py`, 14 lock tests, 68/68 snapshot coverage, Dean-Oliver proxy in lieu of missing `adj_efficiency_margin` field). |
 
 ### Construction modes still to ship
 
@@ -739,12 +750,12 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 
 | What | Status |
 |------|--------|
-| Next `--tier budget` run on the now-4,480-strategy catalog (Phase 3 ran on 301; +4,179 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj) | **Not authorized.** Adding strategies, adjustments, or construction modes does not authorize a run. Operator must say "run the budget" / "kick off the run" / "run tier 1" / etc. per `memory/run_policy.md`. |
+| Next `--tier budget` run on the now-6,160-strategy catalog (Phase 3 ran on 301; +5,859 added by 1c Elo, 1d massey_avg, 2c/2d anchor variants, D1 volatile, M6 confidence, C2 roster_adj, C1 coach_adj, C3 momentum) | **Authorized 2026-04-25** — operator will run on their machine tonight as "initial result set". Do not trigger from this session. |
 | Phase 5 sweeps + submission-ranker test + `seed_f4_first` vs `f4_first_tv` head-to-head | **Not authorized.** Same gate. |
 
 ### Why these matter (orthogonality, not just count)
 
-The catalog is at ~4,480 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
+The catalog is at ~6,160 evaluable permutations and growing — pure count is no longer the bottleneck. The remaining items expand the *qualitative* reach of the search:
 
 - **`stacked` (B5)** is the only source where the data picks the blend weights instead of a human. Every other "blend" in the catalog is hand-weighted.
 - ~~**`backward` (M5)** is the only construction mode that enforces internal bracket consistency.~~ **KILLED 2026-04-25** — a faithful implementation under the marginal-independence sampler is a strategic duplicate of `champ_first` (see § Deprecated Strategies). The "consistency-by-construction" framing was distributionally incorrect; resurrecting it requires the barthag-plumbing architectural lift described above.
