@@ -757,6 +757,38 @@ _(empty — M5 `backward` killed 2026-04-25 as a spec-faithful duplicate of `cha
 |------|-----|-------|---------|
 | Plumb `barthag` through the construction-mode dispatcher | All current samplers (`sample_model_brackets`, `_sample_with_locks`, etc.) sample each game from pairwise-normalized round_probs *marginals*. The true Log5+barthag joint that produces those marginals is invisible at sample time. Plumbing barthag through would let new modes sample from the joint directly. | Modify `_make_sampler` in `mc_pool_backtest.py` to accept `barthag` (optional kwarg for modes that need it); modes that don't, ignore it. ~3 files: dispatcher, one-shot test, catalog. | Resurrects M5 `backward` (joint sampling); enables future modes that need joint access (e.g., "draw the whole bracket from one Log5 MC sample"). |
 
+### Strategy cache (Phases 1–5) — DONE 2026-04-25
+
+Content-addressed per-strategy bracket cache under `artifacts/strategy_cache/`. Trades wall-time for storage in the budgeted pipeline: a populated cache lets `python -m scripts.run_experiment --tier budget --use-cache` skip the bracket-sampling step and read pre-computed `(50, 63) uint16` arrays from disk instead.
+
+**Phase status:**
+
+| Phase | Status | What it ships |
+|-------|--------|---------------|
+| 1 — primitives | ✅ done | `src/data/strategy_cache.py` schema, `compute_cache_key`, `save/load_brackets`, `save/load_outcomes`, manifest with content hashes; one-shot migration of `artifacts/backtest_brackets/*.json` (3 modes × 4 years) and historical `tournament_results_*.json` (21 years) into the cache. |
+| 2 — probabilities | ✅ done | `save/load_probabilities` for `(n_teams, 6) float32` round-advancement tensors; `scripts/build_probability_cache.py` populates the torvik tensor per backtest year. |
+| 3 — brackets | ✅ done | `scripts/build_bracket_cache.py` samples the 3 production modes at `make_mode_rng(mode, year, parent_seed=42)`, encodes via `brackets_to_array`, writes one NPZ per (mode, year). Parallel via `--workers N`. |
+| 4 — loop integration | ✅ done | `STRATEGY_CACHE_VERSION` constant + `make_mode_rng` + `array_to_brackets` decoder; `run_backtest` accepts `use_cache` / `write_cache`; `run_experiment` exposes `--use-cache` / `--write-cache` threaded through every dispatch path. |
+| 5 — equivalence harness | ✅ done | `tests/test_strategy_cache_phase5_equivalence.py` runs `run_backtest` twice (write-cache priming, then use-cache consumption) and asserts bit-equal `best_rank / mean_rank / p_first / p_top5 / p_top25 / best_score / mean_score / n_trials` per (year, mode). The integrity gate that justifies trusting `--use-cache` in budgeted runs. |
+
+**Architectural decisions baked in:**
+
+1. **Per-(mode, year) RNG isolation** via `make_mode_rng(mode, year, parent_seed=42)`. Decouples bracket sampling from `year_rng` (which still drives opponent generation + tournament simulation per repeat). Cache hits don't perturb downstream draws because `year_rng` consumption is identical whether a mode samples live or loads from cache. The cache builder uses the same derivation, so cached brackets are bit-exact reproducible from the live loop side.
+
+2. **`STRATEGY_CACHE_VERSION` (currently `1`)** replaces `git_sha_short()` as the `code_version` component in cache keys. Bumped manually when sampler RNG consumption, `build_torvik_round_probabilities`, `picks_by_round`/`brackets_to_array` encoding, or `make_mode_rng` derivation changes. Survives unrelated commits — without this, hit rate ≈ 0 during active development.
+
+**Operator workflow** (first time after a `STRATEGY_CACHE_VERSION` bump):
+
+```bash
+python -m scripts.build_probability_cache              # all 14 backtest years
+python -m scripts.build_bracket_cache --workers 4      # 3 modes × 14 years
+python -m scripts.run_experiment --tier 3 --use-cache  # consumes cache
+```
+
+After the first bracket build, subsequent budgeted runs hit the cache for `torvik_forward`, `torvik_f4_first`, `torvik_e8_first` etc. (any strategy whose underlying mode is in the cache). Misses fall through to live sampling — printed as `CACHE STALE` (hash mismatch, recomputes loud) or `CACHE SHAPE MISS` (n_model differs from cached count). Add `--write-cache` to populate the cache from a live run instead of running the build scripts separately.
+
+**Stale entries from PR #478:** the manifest carries 12 bracket entries hashed with a one-time git SHA (`code_version=12-char-sha` rather than `code_version="1"`). They sit unused — their cache_key shape doesn't match the live-loop lookup. Cause no errors. Operator can prune them by deleting `artifacts/strategy_cache/manifest.json` and re-running the build scripts; alternatively leave them and let the next `STRATEGY_CACHE_VERSION` bump cycle them out.
+
 ### Validation & guardrails
 
 | Item | Phase | Why | Scope |
