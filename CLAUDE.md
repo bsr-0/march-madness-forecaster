@@ -152,8 +152,47 @@ One-time local setup to match the repo convention:
 ```bash
 git config --local pull.rebase true
 git config --local branch.autosetuprebase always
-git config --local rerere.enabled true   # remember conflict resolutions
+git config --local rerere.enabled true        # remember conflict resolutions
+git config --local rebase.autoStash true      # auto-stash uncommitted work mid-rebase
+git config --local advice.skippedCherryPicks false  # silence the patch-id-skip chatter
 ```
+
+### Recurring pattern: patch-id duplicates on main
+
+You will see this regularly: your feature branch's commits reappear on
+`main` under **different SHAs but identical patches**. This is expected —
+auto-merge workflows in `.github/workflows/` use `gh pr merge --rebase`,
+which rewrites SHAs as it lands the patches on main. The originals on
+your branch are untouched.
+
+When `git status` shows the branch has "diverged from origin/main" with
+duplicate-content commits on both sides:
+
+```bash
+# Standard recovery — git's patch-id detection auto-skips duplicates.
+git fetch origin
+git rebase origin/main
+# Expect: "skipped previously applied commit <SHA>" warnings — those are
+# the duplicates being correctly elided. Not a conflict, not a problem.
+
+# Then push the rebased branch:
+git push --force-with-lease origin <branch>
+```
+
+`--force-with-lease` is safe here because (a) it's a feature branch you
+own and (b) it refuses to push if the remote moved unexpectedly. It is
+NEVER acceptable on `main`.
+
+If the patch-id detection misses a duplicate (rare — usually means whitespace
+or trailing-newline drift between the two versions), the rebase will stop
+on a "real" conflict. In that case, inspect with `git diff` — if the
+content is identical, `git rebase --skip` is the correct response. If
+the content actually differs, resolve the conflict normally and `git
+rebase --continue`.
+
+Do **not** "fix" divergence by `git pull` (without --rebase) or `git
+merge` — both create merge commits that violate the linear-history
+invariant. The local config above prevents this by default.
 
 ## Workflow Reference
 
