@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-04-25T18:57:00",
+  "generated_at": "2026-04-25T14:18:36",
   "entries": [
     {
       "strategy_id": "GROUND_TRUTH",
@@ -489,6 +489,336 @@
         "sampler": "e8_first_tv",
         "n_brackets": 50,
         "from_run_backtest": true
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2011,
+      "cache_key": "d44d8fdc82a303c8",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/d44d8fdc82a303c8.npz",
+      "content_hash": "6df416a8b706c898e9b019062f8dbf5aec0d624b5a5545f1311e93433f0555e2",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:32",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2012,
+      "cache_key": "c91d152b379225c2",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/c91d152b379225c2.npz",
+      "content_hash": "c6b6504479531928e766cbbcbb42669d6a89ec14bda4843504d1eba9ea509335",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:32",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2013,
+      "cache_key": "d75718d2f5ef78ff",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/d75718d2f5ef78ff.npz",
+      "content_hash": "de1d19b810ff14223467cc59a9e881adb07b0afa7a3e756496f42c4abf0a111b",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:33",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2014,
+      "cache_key": "9ef3e4667666c5bf",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/9ef3e4667666c5bf.npz",
+      "content_hash": "20939436505e5ae0ed37f99dd5fb4dc78cab5ea4695cc1e350bace181d16b4ac",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:33",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2015,
+      "cache_key": "0f0d13bcb9684705",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/0f0d13bcb9684705.npz",
+      "content_hash": "f8faa7e93246f891d37de226c0727f2ff8439f7328786f7da309f1eff12daee4",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:33",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2016,
+      "cache_key": "779b28f189a64d5c",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/779b28f189a64d5c.npz",
+      "content_hash": "2f40c2c52aeff82ab61cb250b3b85b8fcbb15cb25bb8e58d6b66709811841e65",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:34",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2017,
+      "cache_key": "4ce266323792c477",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/4ce266323792c477.npz",
+      "content_hash": "83053ac6041418a085ef0687c1d178f342c2b9d2c4fcc9780dfff20266f8c9a3",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:34",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2018,
+      "cache_key": "03f3976edb96ef5e",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/03f3976edb96ef5e.npz",
+      "content_hash": "473354498464bca552ab22159a01522c05b220922e84528368ffffd04225bea8",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:34",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2019,
+      "cache_key": "cb512452c9564229",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/cb512452c9564229.npz",
+      "content_hash": "83a378691a34a2c8a5be285c041268c2a0db46d0600b0d025370a3caa7b18025",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:35",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2021,
+      "cache_key": "a594cf9332fd3092",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/a594cf9332fd3092.npz",
+      "content_hash": "678d8be75111a632f20510cdefb5173b7ea44cccf3aef105e390e2f40e6972bb",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:35",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2022,
+      "cache_key": "efd08a1c0d754d29",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/efd08a1c0d754d29.npz",
+      "content_hash": "7c6dc2075266d5e9968645bbdb3451b6d7f5d5600278c283e60466c3b6414d8e",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:35",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2023,
+      "cache_key": "a31490d3e660370e",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/a31490d3e660370e.npz",
+      "content_hash": "bc415d019465c0509f9e30e2b08fa5ce95a9d763d4b0e5af32ae96f2fe4c8da1",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:35",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2024,
+      "cache_key": "6aa7e980535166f5",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/6aa7e980535166f5.npz",
+      "content_hash": "6c5edb07f5b23fc60f656421b81d6b6a9a47e349128544af82866a4b8c7363ff",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:36",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2025,
+      "cache_key": "57ff1acf78d06881",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/57ff1acf78d06881.npz",
+      "content_hash": "37c7c49c8fa36978e5d934c0a6661c5e3d547587b202a67af86e51c068b6e1b0",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:36",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
+      }
+    },
+    {
+      "strategy_id": "torvik",
+      "year": 2026,
+      "cache_key": "7567f8f6160cafd7",
+      "rng_seed": 42,
+      "code_version": "1",
+      "data_version": "tournament_seeds+torvik_barthag",
+      "model_version": "torvik-barthag-v1",
+      "artifact_kind": "probabilities",
+      "artifact_path": "probabilities/7567f8f6160cafd7.npz",
+      "content_hash": "93ab865df95e60fd62a66f3f18e3461bdcbb4d2b62ac90fc783ef42d21f89825",
+      "shape": [
+        68,
+        6
+      ],
+      "dtype": "float32",
+      "generated_at": "2026-04-25T14:18:36",
+      "provenance": {
+        "builder": "build_torvik_round_probabilities",
+        "n_sims": 10000
       }
     }
   ]

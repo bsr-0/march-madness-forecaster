@@ -139,7 +139,7 @@ CONSTRUCTION_MODES: Tuple[str, ...] = (
     "f4_top4",  # M3c: f4_first restricted to seeds 1-4 as anchors
     "e8_chalk",  # M4a: e8_first restricted to top seeds (1-6) as S16 anchors
     "e8_diverse",  # M4b: e8_first excluding 1-seeds from S16 anchor pool
-    # New modes added here as implemented (M5 backward)
+    "backward",  # M5: champion→F4→E8 backward conditioning, tiered locks
 )
 
 # Legacy mode names mapped to (base, mode) pairs for backward compatibility.
@@ -1288,6 +1288,163 @@ def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rn
     return all_brackets
 
 
+def sample_backward_brackets(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+):
+    """Sample n_brackets brackets via backward construction (M5).
+
+    Builds each bracket from the championship backward:
+      1. Draw champion from P(CHAMP).
+      2. Draw 3 other F4 teams from P(F4|region), champion's region locked.
+      3. Draw 4 E8 opponents from each F4 team's opposite quadrant P(S16).
+      4. Forward-fill with tiered locks:
+         - Champion locked through CHAMP (wins every game).
+         - Other 3 F4 teams locked through E8 (win their regional bracket).
+         - 4 E8 opponents locked through S16 (win their quadrant).
+         - All other games sampled stochastically from round_probs.
+
+    Unlike champ_first (locks 1 team, samples rest independently) or
+    e8_first (draws 8 teams independently per quadrant), backward
+    conditions each tier on the tier above: champion determines F4
+    composition, F4 determines E8 composition. A 7-seed champion's
+    region reflects that the 7-seed is strong enough to win it all.
+    """
+    _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
+
+    # Pre-compute team groupings by region and quadrant.
+    teams_by_region = {r: [] for r in ("East", "West", "South", "Midwest")}
+    teams_by_quadrant: dict = {}
+    team_region_map: dict = {}
+    team_quadrant_map: dict = {}
+
+    for tid in round_probs:
+        raw_region = regions.get(tid, "")
+        region = _region_aliases.get(raw_region, raw_region)
+        if region not in teams_by_region:
+            continue
+        teams_by_region[region].append(tid)
+        team_region_map[tid] = region
+        s = seeds.get(tid, 0)
+        quadrant = "top" if s in _TOP_QUADRANT_SEEDS else "bottom"
+        team_quadrant_map[tid] = quadrant
+        teams_by_quadrant.setdefault((region, quadrant), []).append(tid)
+
+    all_brackets = np.zeros((n_brackets, 63), dtype=bool)
+
+    for b in range(n_brackets):
+        # --- Backward anchor selection (condition each tier on the tier above) ---
+
+        # Step 1: Draw champion from P(CHAMP).
+        all_teams = list(round_probs.keys())
+        champ_weights = [round_probs[t].get("CHAMP", 0.0) for t in all_teams]
+        champion = _draw_categorical(rng, all_teams, champ_weights)
+        champ_region = team_region_map.get(champion)
+
+        # Step 2: Draw F4 teams — one per region, champion's region is decided.
+        f4_teams: dict = {}
+        for region in ("East", "West", "South", "Midwest"):
+            if region == champ_region:
+                f4_teams[region] = champion
+            else:
+                rt = teams_by_region[region]
+                if not rt:
+                    continue
+                w = [round_probs[t].get("F4", 0.0) for t in rt]
+                f4_teams[region] = _draw_categorical(rng, rt, w)
+
+        # Step 3: For each region, draw E8 opponent from opposite quadrant.
+        # The F4 team came from one quadrant; their E8 opponent came from the other.
+        champion_set = {champion}
+        f4_set = {t for t in f4_teams.values() if t != champion}
+        e8_set: set = set()
+
+        for region in ("East", "West", "South", "Midwest"):
+            f4_team = f4_teams.get(region)
+            if f4_team is None:
+                continue
+            f4_quad = team_quadrant_map.get(f4_team, "top")
+            opp_quad = "bottom" if f4_quad == "top" else "top"
+            opp_teams = teams_by_quadrant.get((region, opp_quad), [])
+            if not opp_teams:
+                continue
+            w = [round_probs[t].get("S16", 0.0) for t in opp_teams]
+            e8_set.add(_draw_categorical(rng, opp_teams, w))
+
+        # --- Forward fill with tiered locks ---
+        # Lock levels (by round_idx):
+        #   champion_set: all rounds (0-5, through CHAMP)
+        #   f4_set:       rounds 0-3 (through E8)
+        #   e8_set:       rounds 0-2 (through S16)
+        # When two locked teams meet, higher tier wins (champion > f4 > e8).
+        # When same-tier teams meet at an unlocked round, sample stochastically.
+
+        current_teams = list(first_round_matchups)
+        game_idx = 0
+
+        for round_idx in range(6):
+            round_name = ROUND_NAMES[round_idx]
+            next_round = []
+
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round.append(current_teams[g])
+                    continue
+
+                t1, t2 = current_teams[g], current_teams[g + 1]
+
+                # Check active locks at this round.
+                t1_lock = (
+                    0 if t1 in champion_set else
+                    1 if t1 in f4_set and round_idx <= 3 else
+                    2 if t1 in e8_set and round_idx <= 2 else
+                    -1
+                )
+                t2_lock = (
+                    0 if t2 in champion_set else
+                    1 if t2 in f4_set and round_idx <= 3 else
+                    2 if t2 in e8_set and round_idx <= 2 else
+                    -1
+                )
+
+                locked_winner = None
+                if t1_lock >= 0 and t2_lock >= 0:
+                    # Both locked — higher tier (lower number) wins.
+                    locked_winner = t1 if t1_lock <= t2_lock else t2
+                elif t1_lock >= 0:
+                    locked_winner = t1
+                elif t2_lock >= 0:
+                    locked_winner = t2
+
+                if locked_winner is not None:
+                    winner = locked_winner
+                    all_brackets[b, game_idx] = (winner == t1)
+                else:
+                    p1 = round_probs.get(t1, {}).get(round_name, 0.0)
+                    p2 = round_probs.get(t2, {}).get(round_name, 0.0)
+                    if p1 + p2 > 1e-8:
+                        p_t1 = p1 / (p1 + p2)
+                    else:
+                        p_t1 = 0.5
+                    if rng.random() < p_t1:
+                        winner = t1
+                        all_brackets[b, game_idx] = True
+                    else:
+                        winner = t2
+                        all_brackets[b, game_idx] = False
+
+                next_round.append(winner)
+                game_idx += 1
+
+            current_teams = next_round
+
+    return all_brackets
+
+
 def build_actual_outcome(first_round_matchups, games):
     """Convert actual tournament results into a (63,) boolean vector.
 
@@ -2023,9 +2180,8 @@ def _run_one_year(
             return lambda fr, rp, n, r: sample_e8_chalk_brackets(fr, rp, n, r, seeds, regions)
         elif mode_name == "e8_diverse":
             return lambda fr, rp, n, r: sample_e8_diverse_brackets(fr, rp, n, r, seeds, regions)
-        # New construction modes register here:
-        # elif mode_name == "backward":
-        #     return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
+        elif mode_name == "backward":
+            return lambda fr, rp, n, r: sample_backward_brackets(fr, rp, n, r, seeds, regions)
         else:
             raise ValueError(f"Unknown construction mode: {mode_name}")
 

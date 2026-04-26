@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; if echo \"$f\" | grep -qE '\\.py$'; then cd /home/user/march-madness-forecaster && ruff check --fix --quiet \"$f\" 2>/dev/null && ruff format --quiet \"$f\" 2>/dev/null; fi; } || true",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; if echo \"$f\" | grep -qE '\\.py$'; then cd /Users/benrosen/march-madness-forecaster && ruff check --fix --quiet \"$f\" 2>/dev/null && ruff format --quiet \"$f\" 2>/dev/null; fi; } || true",
             "timeout": 30000
           }
         ]
@@ -52,22 +52,6 @@
         ]
       }
     ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd /home/user/march-madness-forecaster && issues=$(ruff check src/ --quiet 2>&1 | head -10) && if [ -n \"$issues\" ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"additionalContext\\\":\\\"WARNING: ruff found lint issues:\\n$issues\\\"}}\"; fi || true",
-            "timeout": 15000
-          },
-          {
-            "type": "command",
-            "command": "result=$(pytest --tb=no -q 2>&1 | tail -3) && if echo \"$result\" | grep -qE 'failed|error'; then echo \"{\\\"hookSpecificOutput\\\":{\\\"additionalContext\\\":\\\"WARNING: pytest failures detected: $result\\\"}}\"; fi || true",
-            "timeout": 60000
-          }
-        ]
-      }
-    ]
+    "Stop": []
   }
 }
