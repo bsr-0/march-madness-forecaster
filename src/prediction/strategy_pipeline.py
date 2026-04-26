@@ -84,6 +84,7 @@ IMPLEMENTED_CONSTRUCTIONS = {
     "f4_top4",
     "e8_chalk",
     "e8_diverse",
+    "backward",
 }
 
 
