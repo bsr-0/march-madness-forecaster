@@ -156,6 +156,8 @@ LEGACY_MODE_MAP = {
     "det_champ_tv": ("torvik", "champ_first"),  # deterministic variant
     "det_f4_tv": ("torvik", "f4_first"),
     "det_e8_tv": ("torvik", "e8_first"),
+    "meta_leverage": ("meta", "leverage"),  # deterministic learned selector
+    "meta_gbm": ("meta", "gbm"),  # trained GBM learned selector
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -172,6 +174,9 @@ ALL_MODES: Tuple[str, ...] = (
     "det_champ_tv",
     "det_f4_tv",
     "det_e8_tv",
+    "meta_leverage",
+    "meta_gbm",
+    "meta_gbm_tuned",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -1399,16 +1404,22 @@ def sample_backward_brackets(
 
                 # Check active locks at this round.
                 t1_lock = (
-                    0 if t1 in champion_set else
-                    1 if t1 in f4_set and round_idx <= 3 else
-                    2 if t1 in e8_set and round_idx <= 2 else
-                    -1
+                    0
+                    if t1 in champion_set
+                    else 1
+                    if t1 in f4_set and round_idx <= 3
+                    else 2
+                    if t1 in e8_set and round_idx <= 2
+                    else -1
                 )
                 t2_lock = (
-                    0 if t2 in champion_set else
-                    1 if t2 in f4_set and round_idx <= 3 else
-                    2 if t2 in e8_set and round_idx <= 2 else
-                    -1
+                    0
+                    if t2 in champion_set
+                    else 1
+                    if t2 in f4_set and round_idx <= 3
+                    else 2
+                    if t2 in e8_set and round_idx <= 2
+                    else -1
                 )
 
                 locked_winner = None
@@ -1422,7 +1433,7 @@ def sample_backward_brackets(
 
                 if locked_winner is not None:
                     winner = locked_winner
-                    all_brackets[b, game_idx] = (winner == t1)
+                    all_brackets[b, game_idx] = winner == t1
                 else:
                     p1 = round_probs.get(t1, {}).get(round_name, 0.0)
                     p2 = round_probs.get(t2, {}).get(round_name, 0.0)
@@ -2268,6 +2279,9 @@ def _run_one_year(
     )
 
     for mode_name in hparams.enabled_modes:
+        # Meta-selector modes are handled in Pass A2, not here
+        if mode_name.startswith("meta_"):
+            continue
         # Try legacy name first
         if mode_name in legacy_specs:
             mode_sampler_specs.append(legacy_specs[mode_name])
@@ -2313,6 +2327,20 @@ def _run_one_year(
                 print(f"  WARNING: pipeline '{mode_name}' sources not available for year {year}, skipping")
         except (ValueError, KeyError) as exc:
             print(f"  WARNING: failed to resolve '{mode_name}': {exc}, skipping")
+
+    # --- Meta-selector modes (deterministic, 1 bracket each) ---
+    # These produce a single bracket per year via a learned model, not
+    # stochastic sampling. They bypass mode_sampler_specs and are injected
+    # directly into mode_payloads after Pass A.
+    _meta_modes_enabled = [m for m in hparams.enabled_modes if m.startswith("meta_")]
+    _meta_context = None
+    if _meta_modes_enabled:
+        _meta_context = {
+            "coach_experience": coach_experience,
+            "momentum": team_momentum,
+            "talent": team_talent,
+            "volatility": team_volatility,
+        }
 
     # opponent_strategy="shared" (Phase 2 default): year_rng drives
     # opponent generation + tournament simulation ONCE per repeat —
@@ -2412,6 +2440,84 @@ def _run_one_year(
             }
         )
 
+    # Pass A2: meta-selector modes (deterministic, 1 bracket each).
+    # These bypass the stochastic sampler loop. Each produces exactly ONE
+    # bracket from the learned model, wrapped in a (1, 63) array so the
+    # downstream ranking loop (Pass B) works unchanged.
+    if _meta_modes_enabled:
+        from src.prediction.meta_selector import (
+            build_leverage_bracket,
+            build_trained_bracket,
+            build_training_data,
+            train_meta_selector,
+            tune_and_train_meta_selector,
+        )
+
+        _meta_gbm_model = None  # lazy-trained, shared across meta_gbm variants
+        _meta_gbm_tuned_model = None
+        _meta_training_data = None  # (X, y, w) cached for reuse
+
+        for meta_mode in _meta_modes_enabled:
+            if meta_mode == "meta_leverage":
+                meta_bracket = build_leverage_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    primary_base="torvik",
+                )
+            elif meta_mode == "meta_gbm":
+                if _meta_training_data is None:
+                    _meta_training_data = build_training_data(train_years, augment=False, drop_chalk=False)
+                if _meta_gbm_model is None:
+                    _meta_gbm_model = train_meta_selector(*_meta_training_data)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_gbm_model,
+                )
+            elif meta_mode == "meta_gbm_tuned":
+                # v3: augmented + chalk-filtered + hyperparameter-tuned
+                X_t, y_t, w_t = build_training_data(train_years, augment=True, drop_chalk=True)
+                _meta_gbm_tuned_model = tune_and_train_meta_selector(X_t, y_t, w_t)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_gbm_tuned_model,
+                )
+            else:
+                print(f"  WARNING: unknown meta mode '{meta_mode}', skipping")
+                continue
+
+            # Wrap single bracket as (1, 63) array for compatibility
+            meta_brackets = meta_bracket.reshape(1, 63)
+
+            if team_identity:
+                meta_scores = score_brackets_team_identity(
+                    meta_brackets,
+                    winners_by_rnd,
+                    first_round,
+                    ESPN_SCORING,
+                )
+            else:
+                meta_scores = score_brackets_against_outcome(meta_brackets, actual, scoring_vector)
+
+            mode_payloads.append(
+                {
+                    "mode_name": meta_mode,
+                    "model_brackets": meta_brackets,
+                    "model_scores_actual": meta_scores,
+                    "all_ranks": np.zeros((1, n_repeats)),
+                }
+            )
+            print(f"  {year:<6} {meta_mode:<20} META bracket built (1 deterministic)")
+
     # Pass B: opponent field + simulated outcome generation.
     # Under --team-identity the ranking uses the simulated outcome (not
     # the actual result) so mean_rank reflects only pre-tournament
@@ -2457,7 +2563,8 @@ def _run_one_year(
                     model_scores_sim = payload["model_scores_actual"]
 
                 all_ranks = payload["all_ranks"]
-                for m in range(n_model):
+                payload_n = all_ranks.shape[0]  # 1 for meta modes, n_model for stochastic
+                for m in range(payload_n):
                     # How many opponents scored strictly higher + 1; ties
                     # split (model is 1 of the tied group).
                     better = np.sum(opp_scores > model_scores_sim[m])
@@ -2507,7 +2614,8 @@ def _run_one_year(
                     model_scores_sim = payload["model_scores_actual"]
                     opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
 
-                for m in range(n_model):
+                payload_n = all_ranks.shape[0]
+                for m in range(payload_n):
                     better = np.sum(opp_scores > model_scores_sim[m])
                     tied = np.sum(opp_scores == model_scores_sim[m])
                     all_ranks[m, rep] = better + 1 + tied / 2.0

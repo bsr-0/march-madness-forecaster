@@ -67,7 +67,8 @@ probabilities.
 | `src/optimization/portfolio_diversification.py` | Portfolio variance optimization |
 | `src/optimization/live_refresh.py` | Live probability refresh during tournament |
 | `src/optimization/dual_submission.py` | Multi-bracket submission strategy |
-| `scripts/mc_pool_backtest.py` | Monte Carlo pool backtest harness (2011-2025) |
+| `src/prediction/meta_selector.py` | **Meta-selector: 26-feature GBM + leverage baseline (v2 primary path)** |
+| `scripts/mc_pool_backtest.py` | Pool backtest harness — stochastic (v1) + meta (v2) modes |
 | `src/evaluation/backtest_harness.py` | Unified LOYO backtest orchestrator |
 | `src/evaluation/selection_sunday_backtest.py` | Point-in-time Selection Sunday reconstruction |
 | `configs/production_2026.json` | Production config (frozen, no CLI overrides) |
@@ -138,11 +139,18 @@ get the actual per-year region order from F4 game data. The hardcoded
 `REGION_ORDER` is only a fallback default; using it directly for ground-truth
 decoding produces wrong champions (e.g., Duke instead of Florida for 2025).
 
-### 6. Stochastic Brackets, Not Argmax
-The MC backtest samples stochastic brackets (path-consistent random draws),
-NOT deterministic argmax picks. Argmax collapses calibrated probabilities
-into a single crowd-following bracket. Stochastic sampling preserves the
-model's ability to identify high-leverage upsets.
+### 6. Bracket Construction: Meta-Selector (primary) vs Stochastic (baseline)
+**Primary path (v2):** The meta-selector produces ONE deterministic bracket
+per model per year. It uses multiple probability bases as input features to
+a learned model that makes per-game pick decisions. No coin flips.
+
+**Baseline comparator (v1):** The MC backtest samples stochastic brackets
+(path-consistent random draws) as a baseline. This approach hit a noise
+ceiling at ~5% P(1st) and is no longer the primary development path.
+
+**Dead (D12):** Naive deterministic argmax (always pick the favorite) is
+still killed. The meta-selector is NOT argmax — it's a trained model that
+learns which upsets to pick based on multi-signal features.
 
 ### 7. Sensitivity Stability
 If shifting public sentiment by +/-5% changes the optimal champion or >=2
@@ -244,7 +252,10 @@ its output structure against the existing modes.
 | NUM_SIMULATIONS | 10,000 | production_2026.json |
 | TOURNAMENT_SHRINKAGE | 0.06 | production_2026.json |
 | MC_NOISE_STD | 0.16 | production_2026.json |
-| ALL_MODES | seed, noseed, blend, torvik, champ_first_tv, f4_first_tv, e8_first_tv | mc_pool_backtest.py |
+| ALL_MODES | seed, noseed, blend, torvik, champ_first_tv, f4_first_tv, e8_first_tv, **meta_leverage, meta_gbm** | mc_pool_backtest.py |
+| META_FEATURES | 26 per game (12 base probs + seeds + ESPN picks + derived + context) | meta_selector.py |
+| META_GBM_DEPTH | 3 (max 8 leaves) | meta_selector.py |
+| META_GBM_TREES | 50 | meta_selector.py |
 
 ---
 
@@ -265,9 +276,10 @@ its output structure against the existing modes.
 4. **Fitting pool hyperparameters on all years.** Pool metagame drifts.
    Always use walk-forward: fit on years < test_year only.
 
-5. **Using deterministic argmax brackets in backtests.** This was identified
-   as the core defect in earlier backtests. Always use stochastic sampling
-   to preserve the model's leverage signal.
+5. **Confusing naive argmax with learned selection.** D12 killed naive
+   `argmax(probability)` — that produces chalk. The meta-selector is a
+   trained model that can pick upsets when features support it. Don't
+   reject all deterministic approaches because D12 killed the dumbest one.
 
 6. **Ignoring sensitivity flags.** If sensitivity_flag is
    HIGH_STRATEGY_UNCERTAINTY, the recommendation is fragile. Surface this

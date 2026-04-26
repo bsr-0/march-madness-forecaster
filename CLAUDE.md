@@ -7,12 +7,30 @@
 - **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
 - **Current baseline:** 4.27% P(1st) per bracket (vs 3.23% random). Oracle best-of-50: ~9%.
-- **Three levers (priority order):** (1) Opponent model calibration, (2) Bracket selection/ranking, (3) Generation mode tuning.
-- **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring). Run `scripts/mc_pool_backtest.py --team-identity --n-opponents 30`.
+- **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
 - **Before proposing any new strategy:** Read `memory/project_strategies_tested.md` for what's been tried and killed.
 - **Before running `--tier budget` or any backtest pipeline:** Read `memory/run_policy.md`. Strategy-addition phases are **no-run by default** — `python -m scripts.run_experiment --tier budget` (and any `--tier 1|2|3|all` variant) requires **explicit human approval**. Adding new strategies, adjustments, or construction modes does NOT authorize a run. If the operator's signal is ambiguous, ask.
+
+## Architectural Direction: Learned Meta-Selector (2026-04-26)
+
+**READ BEFORE ANY BRACKET CONSTRUCTION WORK.** Full details in `memory/project_meta_selector_pivot.md`.
+
+The stochastic coin-flip bracket generation approach has been **retired as the primary development path**. Convergence testing proved all stochastic modes converge to ~5% P(1st) regardless of probability base or anchor strategy — barely above random (3.2%). The D12 deterministic-argmax test killed only naive argmax, not learned deterministic models.
+
+**Implementation:** `src/prediction/meta_selector.py` (module) + `tests/test_meta_selector.py` (19 tests). Two modes wired into `scripts/mc_pool_backtest.py`:
+
+- **`meta_gbm` v2** — trained: shallow LightGBM on 26-feature vector, round-pts-only weighting. **ACTIVE — first significant improvement over seed in project history.** P(1st) 2.71% vs seed 1.76%, MeanRank 317 vs 403, 11/14 years, Bonferroni p=0.041.
+- **`meta_leverage`** — no ML: `pick = argmax(P(win) × (1 - public_pick%))`. **KILLED** — 0/14 years, too contrarian.
+
+**Critical lesson (v1 → v2):** ESPN scoring has NO contrarian bonus. Training weight must be `round_pts` only — never multiply by ownership. Contrarian differentiation is emergent from the feature vector, not forced in the loss.
+
+**Key principles:**
+- 12 probability bases as FEATURES — disagreement between them is signal
+- Deterministic bracket, no coin flips, 1 bracket per year
+- Walk-forward LOYO, path-consistent construction
+- MeanScore 1062 vs seed 704 — the model picks more correct games in high-value rounds
 
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").
