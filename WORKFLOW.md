@@ -9,19 +9,19 @@
 
 ```
 Phase 1          Phase 2            Phase 3           Phase 4            Phase 5           Phase 6
-DATA             FEATURES           MODEL              CALIBRATION        SIMULATION         OPTIMIZATION
-FOUNDATION       ENGINEERING        SELECTION           & VALIDATION       ENGINE             & EXPORT
+DATA             FEATURES           PROBABILITY        CALIBRATION        META-SELECTOR      EVALUATION
+FOUNDATION       ENGINEERING        BASES               & VALIDATION       TRAINING           & EXPORT
                                                                           
 ┌──────────┐    ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│ Ingest    │───▶│ Build 56-dim │──▶│ Prove simple │──▶│ Temperature  │──▶│ Monte Carlo  │──▶│ Contrarian   │
-│ Multi-src │    │ team vectors │   │ LR = ceiling │   │ scaling on   │   │ 10k bracket  │   │ bracket      │
-│ + PIT     │    │ + matchup    │   │ via LOYO     │   │ tourney-only │   │ simulations  │   │ portfolio    │
-│ guardrails│    │ diffs        │   │ backtest     │   │ data         │   │              │   │ vs public    │
+│ Ingest    │───▶│ Build 56-dim │──▶│ Multi-source │──▶│ Temperature  │──▶│ Learned      │──▶│ LOYO eval    │
+│ Multi-src │    │ team vectors │   │ prob bases   │   │ scaling on   │   │ meta-model   │   │ P(1st) vs    │
+│ + PIT     │    │ + matchup    │   │ (torvik,elo, │   │ tourney-only │   │ per-game     │   │ opponent     │
+│ guardrails│    │ diffs        │   │ odds,massey) │   │ data         │   │ decisions    │   │ field        │
 └──────────┘    └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
      │                │                   │                  │                  │                   │
      ▼                ▼                   ▼                  ▼                  ▼                   ▼
-  raw JSON         98-dim             7-feature LR       calibrated          bracket           optimized
-  + manifest       matchup vec        (seed = 2026)      probabilities       distributions     picks + CSV
+  raw JSON         56-dim             round_probs        calibrated          1 bracket          P(1st) per
+  + manifest       team vec           per source          probabilities       per model/year     backtest yr
 ```
 
 ---
@@ -187,53 +187,75 @@ Step 4.4: Validation Gates
 
 ---
 
-## Phase 5 — Simulation Engine
+## Phase 5 — Meta-Selector Training
 
-**Goal:** Probabilities → full bracket distributions.
+**Goal:** Multiple probability sources → one learned model that picks brackets to win pools.
 
 ```
-Step 5.1: Monte Carlo Bracket Simulation
-├── 10,000 tournament simulations
-├── Each sim: draw winner for every game using calibrated P(win)
-├── Noise injection: small perturbation for bracket diversity
-├── Track: team advancement rates per round
-└── Output: P(team reaches R32), P(S16), ..., P(Champion)
+Step 5.1: Assemble Per-Game Feature Vectors (src/prediction/meta_selector.py)
+├── 26-dim feature vector per game:
+│   ├── 12 probability bases: pairwise P(team1 wins) from each base
+│   ├── 2 seeds, 2 ESPN public pick percentages
+│   ├── leverage_diff, source_agreement, consensus_prob
+│   ├── max_disagreement, seed_matchup_type, round_index
+│   └── 4 context diffs: coach, momentum, talent, volatility
+├── Walk-forward: build_training_data(train_years) loads only years < test_year
+├── Missing bases filled with NaN (LightGBM handles natively)
+└── Output: (n_games, 26) feature matrix + labels + leverage weights
 
-Step 5.2: Bracket Validity
-├── Every simulated bracket is structurally valid (no byes skipped)
-├── Upset rates match historical tournament distributions
-├── Seed-matchup outcomes follow expected patterns
-└── Champion distribution is not degenerate (top team < 30%)
+Step 5.2: Two Meta Modes
+├── meta_leverage (no ML):
+│   ├── Per game: pick = argmax(P(win) × (1 - public_pick%))
+│   ├── Uses torvik as primary base + ESPN picks for ownership
+│   └── Zero training — pure leverage formula
+├── meta_gbm (trained):
+│   ├── LightGBM(depth=3, trees=50, min_child=20, subsample=0.8)
+│   ├── Label: which team actually won (binary)
+│   ├── Weight: round_pts × (1 - winner_public_pct)
+│   └── Walk-forward LOYO training per test year
+
+Step 5.3: Generate Bracket
+├── Walk bracket R64 → Championship sequentially
+├── Per game: build 26-feature vector → model predicts → pick winner
+├── Path-consistent: winners advance to next round matchups
+├── Output: one (63,) boolean bracket per mode per year (deterministic)
+└── Integrated into backtest as Pass A2 (after stochastic Pass A)
+
+Step 5.4: Legacy (baseline reference)
+├── Monte Carlo stochastic simulation remains as comparator
+├── seed + f4_first_tv modes run alongside meta modes
+├── Used for paired statistical comparison
+└── NOT the primary development path (noise ceiling at ~5%)
 ```
 
 ---
 
-## Phase 6 — Optimization & Export
+## Phase 6 — Evaluation & Export
 
 **Goal:** Win the pool, not the accuracy contest.
 
 ```
-Step 6.1: Contrarian Bracket Optimization
-├── Input: our P(advance) vs ESPN public pick %
-├── Strategy: game theory — maximize EV against the field
-├── Leverage = our_probability / public_pick_percentage
-├── High leverage = undervalued teams to target
-├── Low leverage = overvalued favorites to fade
-└── Kelly-inspired portfolio construction
+Step 6.1: LOYO Bracket Evaluation
+├── Score meta-selector bracket against actual tournament outcome
+├── Rank against simulated opponent field (or actual pool history)
+├── P(1st) as primary metric across 14 backtest years
+├── Consistency gate: improvement in >= 8/14 years
+└── Compare against stochastic baseline and seed baseline
 
-Step 6.2: Bracket Portfolio Generation
-├── Generate diverse set of optimized brackets
-├── Each bracket: unique contrarian angles
-├── Portfolio: covers multiple tournament scenarios
-└── Not all-in on one outcome
+Step 6.2: Production Bracket Selection
+├── Run meta-selector on current year's data
+├── One bracket output (deterministic)
+├── Verify field differentiation via ownership analysis
+├── Sensitivity check: stable under ±5% public pick shifts
+└── Human review before submission
 
 Step 6.3: Export
 ├── Kaggle submission CSV (team-pair probabilities)
 ├── Bracket picks (human-readable)
 ├── Governance artifacts:
-│   ├── production_manifest_2026.json
-│   ├── production_freeze_2026.json
-│   └── production_governance_report_2026.json
+│   ├── production_manifest_2027.json
+│   ├── production_freeze_2027.json
+│   └── production_governance_report_2027.json
 └── Provenance: git SHA, config hash, data hashes
 ```
 
@@ -278,13 +300,15 @@ Step 7.3: Production Run
 ```
 Week 1:  Ingest + PIT framework + data contracts
 Week 2:  Feature engineering (56-dim) + redundancy audit
-Week 3:  LOYO backtest → prove LR = ceiling → lock 7 features
-Week 4:  Temperature calibration on tournament data + validation gates
-Week 5:  Monte Carlo sims + contrarian optimizer + Kaggle export
+Week 3:  LOYO backtest → prove LR = ceiling → lock features
+Week 4:  Build all probability bases (torvik, elo, odds, massey, ESPN picks)
+Week 5:  Train meta-selector on per-game features → LOYO P(1st) evaluation
 Week 6:  Governance layer + freeze + production lock
 
-Total: 6 focused weeks, no detours into GNN/transformers/ensembles
-       (those experiments confirmed the ceiling but weren't needed)
+Total: 6 focused weeks. Skip stochastic sampling entirely — go straight
+       from probability bases to learned meta-selector. The MC simulation
+       era proved that coin flips can't beat a model that learns which
+       upsets to pick.
 ```
 
 ---
@@ -294,12 +318,14 @@ Total: 6 focused weeks, no detours into GNN/transformers/ensembles
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   The winning move was PROVING that complexity doesn't help,    │
-│   then building a production system around simplicity.          │
+│   Prediction accuracy has a ceiling (BSS = 0 vs seeds).         │
+│   Stochastic bracket generation also has a ceiling (~5% P(1st)).│
+│   The remaining edge is in LEARNED BRACKET SELECTION:           │
+│   using multiple probability sources as features for a model    │
+│   that decides which picks — including which upsets — to make.  │
 │                                                                 │
-│   Seeds explain ~87% of tournament outcomes.                    │
-│   63 games/year is not enough data for ML to beat that.         │
-│   The real edge is in POOL OPTIMIZATION, not prediction.        │
+│   The meta-selector doesn't predict better probabilities.       │
+│   It makes better DECISIONS given the probabilities we have.    │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
