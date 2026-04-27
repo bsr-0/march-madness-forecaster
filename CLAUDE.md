@@ -6,7 +6,7 @@
 
 - **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
-- **Current baseline:** 4.27% P(1st) per bracket (vs 3.23% random). Oracle best-of-50: ~9%.
+- **Current baseline:** 4.27% P(1st) per bracket (vs 3.23% random). Oracle best-of-50: ~9%. **Regime caveat:** the 9% oracle figure is a **stochastic-regime** ceiling (one strategy emits 50 brackets, ranker selects 1). It does **not** bound the post-pivot deterministic meta-learner regime (1 model → 1 bracket; no within-strategy selection step). The deterministic ceiling is unmeasured and theoretically much higher (a perfect-knowledge bracket finishes #1 with P(1st) ≈ 100%). Do NOT cite the 9% figure to argue meta-selector improvements have small expected effect size.
 - **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
@@ -31,6 +31,16 @@ The stochastic coin-flip bracket generation approach has been **retired as the p
 - Deterministic bracket, no coin flips, 1 bracket per year
 - Walk-forward LOYO, path-consistent construction
 - MeanScore 1062 vs seed 704 — the model picks more correct games in high-value rounds
+
+**Regime distinction — applicability of stochastic-regime ceilings (read before citing P(1st) bounds):**
+
+The pre-pivot stochastic regime emits 50 brackets per strategy and selects 1 via a ranker. Two ceilings were measured against that pipeline:
+- **"Oracle best-of-50: ~9% P(1st)"** (CLAUDE.md North Star section).
+- **"Mean 8.08-rank gap between MC ranker pick and oracle-best-of-50"** (MEMORY.md §3 council 64 row, 2026-04-25).
+
+Both numbers are **regime-specific to stochastic-50-then-select**. The post-pivot deterministic meta-learner regime emits ONE bracket per model — there is no within-strategy candidate pool and no selection step, so neither ceiling applies. The deterministic-regime ceiling has not been measured. The theoretical upper bound is P(1st) ≈ 100% (a perfect-knowledge bracket wins).
+
+meta_gbm v2 sits at 2.71% P(1st) versus seed 1.76% — much closer to baseline than to any plausible deterministic ceiling. **Headroom for follow-up meta-selector strategies is substantial and not bounded by the 9% / 8-rank measurements.** When proposing successors, do not invoke those numbers to argue expected effect size is small. There is no measurement that supports that claim in this regime.
 
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").

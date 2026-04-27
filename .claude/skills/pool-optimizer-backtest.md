@@ -152,6 +152,27 @@ ceiling at ~5% P(1st) and is no longer the primary development path.
 still killed. The meta-selector is NOT argmax — it's a trained model that
 learns which upsets to pick based on multi-signal features.
 
+**Regime-specific ceilings — do not cross-apply.** Two oft-cited bounds come
+from the stochastic-50-bracket regime and do NOT bound the deterministic
+meta-learner regime:
+
+- "Oracle best-of-50: ~9% P(1st)" (CLAUDE.md North Star).
+- "Mean 8.08-rank gap, MC ranker vs oracle best-of-50" (MEMORY.md §3
+  council 64 row, 2026-04-25; `scripts/noise_floor_ceiling.py`).
+
+Both are gaps between a *ranker selecting from a 50-bracket portfolio* and
+the oracle-best of that same portfolio. The deterministic meta-learner
+emits 1 bracket — there is no portfolio and no selection step. The
+deterministic-regime ceiling has not been measured; the theoretical upper
+bound is P(1st) ≈ 100% (perfect-knowledge bracket).
+
+meta_gbm v2 at 2.71% P(1st) is much closer to seed-baseline (1.76%) than
+to any plausible deterministic ceiling. When proposing or evaluating
+successor strategies (round-specialized GBMs, path-conditional features,
+listwise objectives, etc.), do not invoke the 9% or 8-rank numbers to
+argue expected effect size is small — they are not measurements of this
+regime.
+
 ### 7. Sensitivity Stability
 If shifting public sentiment by +/-5% changes the optimal champion or >=2
 Final Four picks, the recommendation gets flagged as
