@@ -15,8 +15,12 @@ from src.prediction.meta_selector import (
     CONTEXT_KEYS,
     ESPN_SCORING,
     ROUND_NAMES,
+    _compute_team_path,
     _game_features,
     _pairwise_prob,
+    _rank_champion_candidates,
+    build_champion_first_brackets,
+    build_champion_locked_bracket,
     build_leverage_bracket,
     build_training_data,
     feature_names,
@@ -387,3 +391,170 @@ class TestTrainedSelector:
         # At most 28/32 chalk (at least 4 upsets in R64)
         # This is a soft check — the model SHOULD pick some upsets
         assert chalk_count < 32, "Model picked all favorites — degenerated to argmax"
+
+
+# ---------------------------------------------------------------------------
+# S1: Champion-First Construction Tests
+# ---------------------------------------------------------------------------
+
+TEST_YEAR = 2024  # noqa: F811 — reuse for champion tests
+
+
+class TestChampionFirst:
+    """Tests for the champion-first two-phase bracket construction."""
+
+    @pytest.fixture(autouse=True)
+    def _load_test_data(self):
+        """Load test year data once for the class."""
+        from src.prediction.meta_selector import _load_year_data
+
+        if not _has_year_data(TEST_YEAR):
+            pytest.skip(f"No data for {TEST_YEAR}")
+        self.brp, self.pick_dist, self.seeds, self.context, self.first_round, _ = _load_year_data(TEST_YEAR, DATA_ROOT)
+
+    def test_compute_team_path_length(self):
+        """Path from R64 to CHAMP is exactly 6 games."""
+        team = self.first_round[0]  # first team in bracket
+        path = _compute_team_path(team, self.first_round)
+        assert len(path) == 6
+
+    def test_compute_team_path_indices_valid(self):
+        """All game indices in [0, 62] and unique."""
+        team = self.first_round[0]
+        path = _compute_team_path(team, self.first_round)
+        indices = [gi for gi, _ in path]
+        assert all(0 <= gi <= 62 for gi in indices)
+        assert len(set(indices)) == 6
+
+    def test_compute_team_path_round_indices(self):
+        """Round indices go 0, 1, 2, 3, 4, 5."""
+        team = self.first_round[0]
+        path = _compute_team_path(team, self.first_round)
+        rounds = [ri for _, ri in path]
+        assert rounds == [0, 1, 2, 3, 4, 5]
+
+    def test_compute_team_path_invalid_team(self):
+        """Raises ValueError for team not in matchups."""
+        with pytest.raises(ValueError):
+            _compute_team_path("nonexistent_team", self.first_round)
+
+    def test_rank_champion_candidates_sorted(self):
+        """Candidates sorted descending by mean CHAMP prob."""
+        candidates = _rank_champion_candidates(self.brp, self.first_round, top_n=6)
+        assert len(candidates) <= 6
+        probs = [p for _, p in candidates]
+        assert probs == sorted(probs, reverse=True)
+
+    def test_rank_champion_candidates_in_bracket(self):
+        """All candidates are teams in the bracket."""
+        candidates = _rank_champion_candidates(self.brp, self.first_round, top_n=6)
+        fr_set = set(self.first_round)
+        for team_id, _ in candidates:
+            assert team_id in fr_set
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_locked_bracket_has_correct_champion(self):
+        """The locked champion appears in the bracket's CHAMP pick."""
+        from src.prediction.meta_selector import train_meta_selector
+        from src.simulation.pool_competition import picks_by_round
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector(X, y, w)
+        champion = self.first_round[0]  # lock the first team
+
+        bracket = build_champion_locked_bracket(
+            champion,
+            self.first_round,
+            self.brp,
+            self.pick_dist,
+            self.seeds,
+            self.context,
+            model,
+        )
+        picks = picks_by_round(bracket, self.first_round)
+        assert champion in picks["CHAMP"]
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_locked_bracket_path_consistent(self):
+        """Champion appears in every round from R64 to CHAMP."""
+        from src.prediction.meta_selector import train_meta_selector
+        from src.simulation.pool_competition import picks_by_round
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector(X, y, w)
+        champion = self.first_round[0]
+
+        bracket = build_champion_locked_bracket(
+            champion,
+            self.first_round,
+            self.brp,
+            self.pick_dist,
+            self.seeds,
+            self.context,
+            model,
+        )
+        picks = picks_by_round(bracket, self.first_round)
+        for rnd in ROUND_NAMES:
+            assert champion in picks[rnd], f"Champion {champion} missing from {rnd}"
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_locked_bracket_deterministic(self):
+        """Same inputs produce identical brackets."""
+        from src.prediction.meta_selector import train_meta_selector
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector(X, y, w)
+        champion = self.first_round[0]
+
+        b1 = build_champion_locked_bracket(
+            champion,
+            self.first_round,
+            self.brp,
+            self.pick_dist,
+            self.seeds,
+            self.context,
+            model,
+        )
+        b2 = build_champion_locked_bracket(
+            champion,
+            self.first_round,
+            self.brp,
+            self.pick_dist,
+            self.seeds,
+            self.context,
+            model,
+        )
+        np.testing.assert_array_equal(b1, b2)
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_champion_first_brackets_shape(self):
+        """build_champion_first_brackets returns (N, 63) + N champion names."""
+        from src.prediction.meta_selector import train_meta_selector
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector(X, y, w)
+
+        brackets, champs = build_champion_first_brackets(
+            self.first_round,
+            self.brp,
+            self.pick_dist,
+            self.seeds,
+            self.context,
+            model,
+            top_n=4,
+        )
+        assert brackets.shape[1] == 63
+        assert brackets.shape[0] == len(champs)
+        assert len(champs) <= 4

@@ -19,12 +19,30 @@
 
 The stochastic coin-flip bracket generation approach has been **retired as the primary development path**. Convergence testing proved all stochastic modes converge to ~5% P(1st) regardless of probability base or anchor strategy — barely above random (3.2%). The D12 deterministic-argmax test killed only naive argmax, not learned deterministic models.
 
-**Implementation:** `src/prediction/meta_selector.py` (module) + `tests/test_meta_selector.py` (19 tests). Two modes wired into `scripts/mc_pool_backtest.py`:
+### All Deterministic Strategies Tested (4 total)
 
-- **`meta_gbm` v2** — trained: shallow LightGBM on 26-feature vector, round-pts-only weighting. **ACTIVE — first significant improvement over seed in project history.** P(1st) 2.71% vs seed 1.76%, MeanRank 317 vs 403, 11/14 years, Bonferroni p=0.041.
-- **`meta_leverage`** — no ML: `pick = argmax(P(win) × (1 - public_pick%))`. **KILLED** — 0/14 years, too contrarian.
+| Mode | Algorithm | P(1st) | MeanRank | MeanScr | vs Seed | Status |
+|------|-----------|:------:|:--------:|:-------:|:-------:|--------|
+| **meta_gbm v2** | LightGBM 26-feat, `weight=round_pts` | **2.71%** | **317** | **1062** | **11/14** | **ACTIVE — p=0.041** |
+| meta_gbm v1 | LightGBM 26-feat, `weight=pts×(1-pub%)` | 0.43% | 600 | 502 | 0/14 | KILLED — contrarian loss |
+| meta_leverage | `argmax(P(win) × (1-pub%))` | 0.29% | 661 | 316 | 0/14 | KILLED — too contrarian |
+| det_argmax (D12) | `argmax(probability)` per game | 0.00% | — | — | 0/14 | KILLED — pure chalk |
 
-**Critical lesson (v1 → v2):** ESPN scoring has NO contrarian bonus. Training weight must be `round_pts` only — never multiply by ownership. Contrarian differentiation is emergent from the feature vector, not forced in the loss.
+Baselines: seed stochastic 1.76% P(1st) / MeanRank 403 / MeanScr 704. Random: 3.2% P(1st).
+
+### Hard-Won Rule: ESPN Has NO Contrarian Bonus
+
+**This is the single most important lesson in the project.** ESPN scoring awards points ONLY for correct picks × round multiplier (10/20/40/80/160/320). There is zero bonus for picking differently from the public. Three of the four deterministic strategies above died because they forced contrarian behavior in the loss function or formula.
+
+- **NEVER put ownership/public_pick_pct in the training weight or loss function.** Contrarian value is a property of the full bracket vs the field — it is not decomposable into per-game weights.
+- **DO keep public_pick_pct as a feature.** The model can learn when crowd consensus is wrong.
+- **Contrarian differentiation is emergent.** Wherever the model is correct AND the field is wrong, you gain position naturally. You don't need to force it.
+
+The v1→v2 fix was literally one line: `weight = float(pts)` instead of `pts * (1.0 - winner_pp)`.
+
+### Implementation
+
+`src/prediction/meta_selector.py` (module) + `tests/test_meta_selector.py` (19 tests). Wired into `scripts/mc_pool_backtest.py`.
 
 **Key principles:**
 - 12 probability bases as FEATURES — disagreement between them is signal
@@ -32,10 +50,10 @@ The stochastic coin-flip bracket generation approach has been **retired as the p
 - Walk-forward LOYO, path-consistent construction
 - MeanScore 1062 vs seed 704 — the model picks more correct games in high-value rounds
 
-**Regime distinction — applicability of stochastic-regime ceilings (read before citing P(1st) bounds):**
+### Regime Distinction (read before citing P(1st) bounds)
 
 The pre-pivot stochastic regime emits 50 brackets per strategy and selects 1 via a ranker. Two ceilings were measured against that pipeline:
-- **"Oracle best-of-50: ~9% P(1st)"** (CLAUDE.md North Star section).
+- **"Oracle best-of-50: ~9% P(1st)"** (North Star section above).
 - **"Mean 8.08-rank gap between MC ranker pick and oracle-best-of-50"** (MEMORY.md §3 council 64 row, 2026-04-25).
 
 Both numbers are **regime-specific to stochastic-50-then-select**. The post-pivot deterministic meta-learner regime emits ONE bracket per model — there is no within-strategy candidate pool and no selection step, so neither ceiling applies. The deterministic-regime ceiling has not been measured. The theoretical upper bound is P(1st) ≈ 100% (a perfect-knowledge bracket wins).

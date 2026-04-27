@@ -27,7 +27,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Sequence, Tuple
+from typing import Any, Callable, Dict, Sequence, Tuple
 from scripts._common import load_tournament_results  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -158,6 +158,11 @@ LEGACY_MODE_MAP = {
     "det_e8_tv": ("torvik", "e8_first"),
     "meta_leverage": ("meta", "leverage"),  # deterministic learned selector
     "meta_gbm": ("meta", "gbm"),  # trained GBM learned selector
+    "meta_gbm_aug": ("meta", "gbm_aug"),  # + symmetric augmentation
+    "meta_gbm_nochalk": ("meta", "gbm_nochalk"),  # + chalk filtering
+    "meta_gbm_champ_first": ("meta", "gbm_champ_first"),  # S1: champion-first (sim-selected)
+    "meta_gbm_champ_top1": ("meta", "gbm_champ_top1"),  # S1b: lock #1 consensus champion
+    "meta_gbm_champ_leverage": ("meta", "gbm_champ_lev"),  # S1c: lock undervalued champion
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -176,7 +181,12 @@ ALL_MODES: Tuple[str, ...] = (
     "det_e8_tv",
     "meta_leverage",
     "meta_gbm",
+    "meta_gbm_aug",
+    "meta_gbm_nochalk",
     "meta_gbm_tuned",
+    "meta_gbm_champ_first",
+    "meta_gbm_champ_top1",
+    "meta_gbm_champ_leverage",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -2446,6 +2456,7 @@ def _run_one_year(
     # downstream ranking loop (Pass B) works unchanged.
     if _meta_modes_enabled:
         from src.prediction.meta_selector import (
+            build_champion_first_brackets,
             build_leverage_bracket,
             build_trained_bracket,
             build_training_data,
@@ -2453,9 +2464,17 @@ def _run_one_year(
             tune_and_train_meta_selector,
         )
 
-        _meta_gbm_model = None  # lazy-trained, shared across meta_gbm variants
-        _meta_gbm_tuned_model = None
-        _meta_training_data = None  # (X, y, w) cached for reuse
+        # Lazy-trained models, one per (augment, drop_chalk) combo.
+        _meta_models: Dict[str, Any] = {}
+        _meta_training_cache: Dict[str, Any] = {}
+
+        # Map each meta_gbm variant to its training config.
+        _META_GBM_CONFIGS = {
+            "meta_gbm": {"augment": False, "drop_chalk": False, "tune": False},
+            "meta_gbm_aug": {"augment": True, "drop_chalk": False, "tune": False},
+            "meta_gbm_nochalk": {"augment": False, "drop_chalk": True, "tune": False},
+            "meta_gbm_tuned": {"augment": True, "drop_chalk": True, "tune": True},
+        }
 
         for meta_mode in _meta_modes_enabled:
             if meta_mode == "meta_leverage":
@@ -2466,30 +2485,155 @@ def _run_one_year(
                     seeds,
                     primary_base="torvik",
                 )
-            elif meta_mode == "meta_gbm":
-                if _meta_training_data is None:
-                    _meta_training_data = build_training_data(train_years, augment=False, drop_chalk=False)
-                if _meta_gbm_model is None:
-                    _meta_gbm_model = train_meta_selector(*_meta_training_data)
+            elif meta_mode in _META_GBM_CONFIGS:
+                cfg = _META_GBM_CONFIGS[meta_mode]
+                cache_key = f"aug={cfg['augment']}_chalk={cfg['drop_chalk']}"
+                if cache_key not in _meta_training_cache:
+                    _meta_training_cache[cache_key] = build_training_data(
+                        train_years, augment=cfg["augment"], drop_chalk=cfg["drop_chalk"]
+                    )
+                X_td, y_td, w_td = _meta_training_cache[cache_key]
+
+                model_key = f"{cache_key}_tune={cfg['tune']}"
+                if model_key not in _meta_models:
+                    if cfg["tune"]:
+                        _meta_models[model_key] = tune_and_train_meta_selector(X_td, y_td, w_td)
+                    else:
+                        _meta_models[model_key] = train_meta_selector(X_td, y_td, w_td)
+
                 meta_bracket = build_trained_bracket(
                     first_round,
                     base_round_probs,
                     pick_dist,
                     seeds,
                     _meta_context,
-                    _meta_gbm_model,
+                    _meta_models[model_key],
                 )
-            elif meta_mode == "meta_gbm_tuned":
-                # v3: augmented + chalk-filtered + hyperparameter-tuned
-                X_t, y_t, w_t = build_training_data(train_years, augment=True, drop_chalk=True)
-                _meta_gbm_tuned_model = tune_and_train_meta_selector(X_t, y_t, w_t)
-                meta_bracket = build_trained_bracket(
+            elif meta_mode in ("meta_gbm_champ_top1", "meta_gbm_champ_leverage"):
+                # S1b/c: Lock a single champion, no simulation.
+                # top1 = highest consensus P(champ)
+                # leverage = highest P(champ) / public_champ_pct ratio (undervalued)
+                from src.prediction.meta_selector import (
+                    _rank_champion_candidates,
+                    build_champion_locked_bracket,
+                )
+
+                _ct_cache_key = "aug=False_chalk=False"
+                if _ct_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_ct_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_ct, y_ct, w_ct = _meta_training_cache[_ct_cache_key]
+                _ct_model_key = f"{_ct_cache_key}_tune=False"
+                if _ct_model_key not in _meta_models:
+                    _meta_models[_ct_model_key] = train_meta_selector(X_ct, y_ct, w_ct)
+
+                # Pick champion based on mode variant
+                candidates = _rank_champion_candidates(base_round_probs, first_round, top_n=6)
+                if meta_mode == "meta_gbm_champ_top1":
+                    top_champ = candidates[0][0]
+                    sel_method = "top-1 consensus"
+                else:
+                    # Leverage: pick champion with highest P(champ) / public_champ_pct
+                    best_lev = -1.0
+                    top_champ = candidates[0][0]
+                    for cid, cprob in candidates:
+                        pub_pct = 0.5  # default if no pick data
+                        if pick_dist and "CHAMP" in (pick_dist or {}):
+                            pub_pct = pick_dist["CHAMP"].get(cid, 0.05)
+                        elif pick_dist:
+                            # Approximate from F4/E8 picks
+                            for rnd in ("CHAMP", "F4", "E8"):
+                                if rnd in pick_dist and cid in pick_dist[rnd]:
+                                    pub_pct = pick_dist[rnd][cid]
+                                    break
+                        pub_pct = max(pub_pct, 0.01)  # avoid div by zero
+                        lev = cprob / pub_pct
+                        if lev > best_lev:
+                            best_lev = lev
+                            top_champ = cid
+                    sel_method = f"leverage={best_lev:.2f}"
+
+                meta_bracket = build_champion_locked_bracket(
+                    top_champ,
                     first_round,
                     base_round_probs,
                     pick_dist,
                     seeds,
                     _meta_context,
-                    _meta_gbm_tuned_model,
+                    _meta_models[_ct_model_key],
+                )
+                print(f"  {year}   {meta_mode:<20} champion={top_champ} ({sel_method})")
+            elif meta_mode == "meta_gbm_champ_first":
+                # S1: Champion-first two-phase construction.
+                # Train the base GBM (same config as meta_gbm v2).
+                _cf_cache_key = "aug=False_chalk=False"
+                if _cf_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_cf_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_cf, y_cf, w_cf = _meta_training_cache[_cf_cache_key]
+                _cf_model_key = f"{_cf_cache_key}_tune=False"
+                if _cf_model_key not in _meta_models:
+                    _meta_models[_cf_model_key] = train_meta_selector(X_cf, y_cf, w_cf)
+
+                # Build N candidate brackets (one per champion candidate).
+                cand_brackets, cand_champs = build_champion_first_brackets(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_cf_model_key],
+                    top_n=6,
+                )
+
+                # Score each candidate against opponents to select the best.
+                # Use a deterministic child RNG so this doesn't perturb Pass B.
+                _cf_rng = np.random.default_rng(54321 + year)
+                best_p1 = -1.0
+                best_idx = 0
+                for ci in range(len(cand_champs)):
+                    wins = 0
+                    n_trials = 200
+                    for _trial in range(n_trials):
+                        opp = generate_opponent_brackets(
+                            n_opponents=n_opponents,
+                            first_round_matchups=first_round,
+                            pick_distribution=pick_dist if pick_dist else {},
+                            matchup_probs=seed_pw,
+                            seeds=seeds,
+                            rng=_cf_rng,
+                        )
+                        # Score candidate + opponents against a simulated outcome
+                        _sim_out, _sim_br = simulate_tournament_outcomes(
+                            n_tournaments=1,
+                            first_round_matchups=first_round,
+                            matchup_probs=seed_pw,
+                            seeds=seeds,
+                            noise_std=0.16,
+                            rng=_cf_rng,
+                        )
+                        sim_winners = {rnd: set(_sim_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                        c_score = score_brackets_team_identity(
+                            cand_brackets[ci : ci + 1],
+                            sim_winners,
+                            first_round,
+                            ESPN_SCORING,
+                        )[0]
+                        opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
+                        if c_score >= opp_scores.max():
+                            wins += 1
+                    p1 = wins / n_trials
+                    if p1 > best_p1:
+                        best_p1 = p1
+                        best_idx = ci
+
+                meta_bracket = cand_brackets[best_idx]
+                print(
+                    f"  {year}   {meta_mode:<20} "
+                    f"champion={cand_champs[best_idx]} "
+                    f"(best of {len(cand_champs)}, P1={best_p1:.3f})"
                 )
             else:
                 print(f"  WARNING: unknown meta mode '{meta_mode}', skipping")

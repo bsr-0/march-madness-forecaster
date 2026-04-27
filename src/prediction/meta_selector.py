@@ -914,3 +914,158 @@ def build_trained_bracket(
         current_teams = next_round
 
     return bracket
+
+
+# ---------------------------------------------------------------------------
+# S1: Champion-First Two-Phase Construction
+# ---------------------------------------------------------------------------
+
+GAMES_PER_ROUND = (32, 16, 8, 4, 2, 1)  # R64 through CHAMP
+
+
+def _compute_team_path(
+    team_id: str,
+    first_round_matchups: List[str],
+) -> List[Tuple[int, int]]:
+    """Compute the game indices a team must win to reach the championship.
+
+    Returns list of (game_index, round_index) pairs, length 6.
+    Raises ValueError if team_id is not in first_round_matchups.
+    """
+    if team_id not in first_round_matchups:
+        raise ValueError(f"{team_id} not in first_round_matchups")
+
+    pos = first_round_matchups.index(team_id)
+    slot = pos
+    path = []
+    offset = 0
+
+    for r in range(6):
+        game_in_round = slot // 2
+        game_idx = offset + game_in_round
+        path.append((game_idx, r))
+        offset += GAMES_PER_ROUND[r]
+        slot = game_in_round  # advance to next round's slot
+
+    return path
+
+
+def _rank_champion_candidates(
+    base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
+    first_round_matchups: List[str],
+    top_n: int = 6,
+) -> List[Tuple[str, float]]:
+    """Return top-N teams by mean CHAMP probability across available bases."""
+    team_set = set(first_round_matchups)
+    scores: Dict[str, List[float]] = {}
+
+    for base, team_rounds in base_round_probs.items():
+        for team_id, rounds in team_rounds.items():
+            if team_id not in team_set:
+                continue
+            champ_prob = rounds.get("CHAMP", 0.0)
+            if champ_prob > 0:
+                scores.setdefault(team_id, []).append(champ_prob)
+
+    ranked = [(tid, sum(probs) / len(probs)) for tid, probs in scores.items() if probs]
+    ranked.sort(key=lambda x: -x[1])
+    return ranked[:top_n]
+
+
+def build_champion_locked_bracket(
+    champion: str,
+    first_round_matchups: List[str],
+    base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
+    pick_distribution: Optional[Dict[str, Dict[str, float]]],
+    seeds: Dict[str, int],
+    context: Optional[Dict[str, Dict[str, float]]],
+    model: Any,
+) -> np.ndarray:
+    """Build one deterministic bracket with a specific champion locked.
+
+    The champion wins every game on their R64-to-CHAMP path.
+    All other games decided by the GBM model.
+    Path-consistent by construction.
+    Returns (63,) boolean array.
+    """
+    import pandas as pd
+
+    path = _compute_team_path(champion, first_round_matchups)
+    locked_game_indices = {gi for gi, _ in path}
+
+    _feat_names = feature_names()
+    bracket = np.zeros(63, dtype=bool)
+    current_teams = list(first_round_matchups)
+    game_idx = 0
+
+    for round_idx in range(6):
+        round_name = ROUND_NAMES[round_idx]
+        next_round = []
+
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+
+            t1, t2 = current_teams[g], current_teams[g + 1]
+
+            if game_idx in locked_game_indices:
+                pick_t1 = t1 == champion
+            else:
+                feat = _game_features(
+                    t1,
+                    t2,
+                    round_name,
+                    round_idx,
+                    base_round_probs,
+                    pick_distribution,
+                    seeds,
+                    context,
+                )
+                feat_df = pd.DataFrame(feat.reshape(1, -1), columns=_feat_names)
+                pred = model.predict(feat_df)[0]
+                pick_t1 = pred == 1
+
+            bracket[game_idx] = pick_t1
+            winner = t1 if pick_t1 else t2
+            next_round.append(winner)
+            game_idx += 1
+
+        current_teams = next_round
+
+    return bracket
+
+
+def build_champion_first_brackets(
+    first_round_matchups: List[str],
+    base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
+    pick_distribution: Optional[Dict[str, Dict[str, float]]],
+    seeds: Dict[str, int],
+    context: Optional[Dict[str, Dict[str, float]]],
+    model: Any,
+    top_n: int = 6,
+) -> Tuple[np.ndarray, List[str]]:
+    """Build champion-first brackets for top-N champion candidates.
+
+    Returns:
+        brackets: (N, 63) boolean array, one bracket per candidate.
+        champions: list of team_ids (the locked champion per bracket).
+    """
+    candidates = _rank_champion_candidates(base_round_probs, first_round_matchups, top_n)
+
+    brackets = []
+    champion_ids = []
+    for team_id, _prob in candidates:
+        b = build_champion_locked_bracket(
+            team_id,
+            first_round_matchups,
+            base_round_probs,
+            pick_distribution,
+            seeds,
+            context,
+            model,
+        )
+        brackets.append(b)
+        champion_ids.append(team_id)
+
+    return np.array(brackets, dtype=bool), champion_ids
