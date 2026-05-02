@@ -182,6 +182,10 @@ LEGACY_MODE_MAP = {
     "meta_exhaustive_gbm": ("meta", "exhaustive_gbm"),  # Exhaustive champion with GBM round probs
     "meta_exhaustive_margin": ("meta", "exhaustive_margin"),  # Exhaustive champion with margin probs
     "meta_region_blend": ("meta", "region_blend"),  # Region top-N with 90% torvik + 10% GBM probs
+    "meta_region_4champ": ("meta", "region_4champ"),  # Region top-N × 4 1-seeds, pool-optimized selection
+    "meta_region_elo": ("meta", "region_elo"),  # Region top-N with elo round probs
+    "meta_region_massey": ("meta", "region_massey"),  # Region top-N with massey_avg round probs
+    "meta_region_blend90": ("meta", "region_blend90"),  # Region top-N with 90% torvik + 10% massey_avg
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -225,6 +229,10 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_exhaustive_gbm",
     "meta_exhaustive_margin",
     "meta_region_blend",
+    "meta_region_4champ",
+    "meta_region_elo",
+    "meta_region_massey",
+    "meta_region_blend90",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -2968,6 +2976,95 @@ def _run_one_year(
                     _meta_context,
                     _meta_models[_mn_model_key],
                 )
+            elif meta_mode == "meta_region_4champ":
+                # Pool-optimized champion: build 4 region brackets (one per 1-seed),
+                # simulate each against opponents, pick highest P(1st).
+                from src.optimization.bracket_construction import construct_bracket
+
+                one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
+                cand_brackets = []
+                cand_champs = []
+                for forced in one_seed_teams:
+                    try:
+                        picks_c, champ_c, _, _, _ = construct_bracket(
+                            mode="region_top_n",
+                            seeds=seeds,
+                            regions=regions,
+                            round_probs=torvik_rp,
+                            public_picks=pick_dist if pick_dist else {},
+                            risk_level=0.5,
+                            pool_size=n_opponents,
+                            scoring_system=dict(ESPN_SCORING),
+                            forced_champion=forced,
+                        )
+                        cand_brackets.append(_picks_dict_to_bool_array(picks_c, first_round))
+                        cand_champs.append(forced)
+                    except Exception:
+                        pass
+
+                if not cand_brackets:
+                    # Fallback to standard region
+                    picks_fb, champ_fb, _, _, _ = construct_bracket(
+                        mode="region_top_n",
+                        seeds=seeds,
+                        regions=regions,
+                        round_probs=torvik_rp,
+                        public_picks=pick_dist if pick_dist else {},
+                        risk_level=0.5,
+                        pool_size=n_opponents,
+                        scoring_system=dict(ESPN_SCORING),
+                    )
+                    meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
+                else:
+                    # Score each candidate against simulated opponents
+                    _4c_rng = np.random.default_rng(99999 + year)
+                    best_p1 = -1.0
+                    best_idx = 0
+                    n_trials = 300
+                    for ci in range(len(cand_brackets)):
+                        wins = 0
+                        for _ in range(n_trials):
+                            opp = generate_opponent_brackets(
+                                n_opponents=n_opponents,
+                                first_round_matchups=first_round,
+                                pick_distribution=pick_dist if pick_dist else {},
+                                matchup_probs=seed_pw,
+                                seeds=seeds,
+                                rng=_4c_rng,
+                            )
+                            _sim_out, _sim_br = simulate_tournament_outcomes(
+                                n_tournaments=1,
+                                first_round_matchups=first_round,
+                                matchup_probs=seed_pw,
+                                seeds=seeds,
+                                noise_std=0.16,
+                                rng=_4c_rng,
+                            )
+                            sim_winners = {rnd: set(_sim_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                            c_score = score_brackets_team_identity(
+                                cand_brackets[ci].reshape(1, 63),
+                                sim_winners,
+                                first_round,
+                                ESPN_SCORING,
+                            )[0]
+                            opp_scores = score_brackets_team_identity(
+                                opp,
+                                sim_winners,
+                                first_round,
+                                ESPN_SCORING,
+                            )
+                            if c_score >= opp_scores.max():
+                                wins += 1
+                        p1 = wins / n_trials
+                        if p1 > best_p1:
+                            best_p1 = p1
+                            best_idx = ci
+                    meta_bracket = cand_brackets[best_idx]
+                    print(
+                        f"  {year}   {meta_mode:<24} "
+                        f"champion={cand_champs[best_idx]} "
+                        f"(best of {len(cand_champs)}, P1={best_p1:.3f})"
+                    )
             elif meta_mode == "meta_region_blend":
                 # Light blend: 90% torvik + 10% GBM round probs → region construction
                 from src.optimization.bracket_construction import construct_bracket
@@ -3005,6 +3102,47 @@ def _run_one_year(
                     seeds=seeds,
                     regions=regions,
                     round_probs=blended_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=0.5,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+                print(f"  {year}   {meta_mode:<24} champ={_champ}")
+            elif meta_mode in ("meta_region_elo", "meta_region_massey", "meta_region_blend90"):
+                # Region construction with alternative probability bases
+                from src.optimization.bracket_construction import construct_bracket
+
+                if meta_mode == "meta_region_elo":
+                    _alt_rp = base_round_probs.get("elo")
+                    if _alt_rp is None:
+                        print(f"  {year}   {meta_mode:<24} SKIP (no elo data)")
+                        continue
+                elif meta_mode == "meta_region_massey":
+                    _alt_rp = base_round_probs.get("massey_avg")
+                    if _alt_rp is None:
+                        print(f"  {year}   {meta_mode:<24} SKIP (no massey_avg data)")
+                        continue
+                else:  # meta_region_blend90
+                    _massey_rp = base_round_probs.get("massey_avg")
+                    if _massey_rp is None:
+                        # Fall back to pure torvik if massey not available
+                        _alt_rp = torvik_rp
+                        print(f"  {year}   {meta_mode:<24} WARNING: no massey_avg, using pure torvik")
+                    else:
+                        _alt_rp = {}
+                        for tid in torvik_rp:
+                            _alt_rp[tid] = {}
+                            for rn in torvik_rp[tid]:
+                                tv_val = torvik_rp[tid][rn]
+                                ma_val = _massey_rp.get(tid, {}).get(rn, tv_val)
+                                _alt_rp[tid][rn] = 0.9 * tv_val + 0.1 * ma_val
+
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode="region_top_n",
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=_alt_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
                     pool_size=n_opponents,
