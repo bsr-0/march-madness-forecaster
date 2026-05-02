@@ -45,10 +45,25 @@ BASE_FEATURE_ORDER = (
     "noseed",
     "blend",
     "contrarian",
+    "colley",
+    "srs",
+    "glm",
 )
 
 # Context features appended after base probability features.
-CONTEXT_KEYS = ("coach_experience", "momentum", "talent", "volatility")
+CONTEXT_KEYS = (
+    "coach_experience",
+    "momentum",
+    "talent",
+    "volatility",
+    "coach_pase",
+    "conf_tourney_depth",
+    "field_chalk_signal",
+    "ncsos",
+    "close_game_pct",
+    "elo_slope",
+    "injury_bpr_deduction",
+)
 
 
 def _pairwise_prob(
@@ -75,6 +90,7 @@ def _game_features(
     pick_distribution: Optional[Dict[str, Dict[str, float]]],
     seeds: Dict[str, int],
     context: Optional[Dict[str, Dict[str, float]]],
+    vegas_r1: Optional[Dict[Tuple[str, str], float]] = None,
 ) -> np.ndarray:
     """Build feature vector for a single game.
 
@@ -89,9 +105,16 @@ def _game_features(
         seed_matchup_type = min(s1,s2) encoding matchup tier [1]
         round_index (0-5)                                    [1]
         Per context key: value_team1 - value_team2           [len(CONTEXT_KEYS)]
+        prob_variance, prob_skewness                         [2]
+        market_model_gap                                     [1]
+        vegas_r1_prob: game-specific Vegas no-vig implied     [1] (NaN if not R1 or no data)
 
-    Total: len(BASE_FEATURE_ORDER) + 2 + 2 + 1 + 1 + 1 + 1 + 1 + 1 + len(CONTEXT_KEYS)
-         = 12 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + 1 + 4 = 26
+    Total: 26 (base) + 1 (vegas_r1) = 27 when vegas_r1 enabled, else 26.
+
+    Args:
+        vegas_r1: Optional mapping of (team1_id, team2_id) → P(team1 wins)
+            from game-specific R1 moneylines. Key order: (min_id, max_id) by
+            string sort. Only populated for R1 games with available data.
     """
     feats = []
 
@@ -167,11 +190,51 @@ def _game_features(
         for _ in CONTEXT_KEYS:
             feats.append(0.0)
 
+    # S4: Cognitive diversity metrics (derived from existing base probs).
+    if len(valid_probs) >= 2:
+        vp = np.array(valid_probs)
+        feats.append(float(np.var(vp)))  # prob_variance
+        mean_p = np.mean(vp)
+        std_p = np.std(vp)
+        feats.append(float(((vp - mean_p) ** 3).mean() / (std_p**3)) if std_p > 1e-8 else 0.0)  # prob_skewness
+    else:
+        feats.append(0.0)  # prob_variance
+        feats.append(0.0)  # prob_skewness
+
+    # market_model_gap: odds_prob - torvik_prob (when sharp money disagrees)
+    odds_rp = base_round_probs.get("odds")
+    torvik_rp = base_round_probs.get("torvik")
+    if odds_rp is not None and torvik_rp is not None:
+        p_odds = _pairwise_prob(team1, team2, round_name, odds_rp)
+        p_torvik = _pairwise_prob(team1, team2, round_name, torvik_rp)
+        feats.append(p_odds - p_torvik)
+    else:
+        feats.append(0.0)
+
+    # Vegas R1 game-specific probability (only for R1, NaN otherwise)
+    if vegas_r1 is not None and round_name == "R64":
+        key = (min(team1, team2), max(team1, team2))
+        vr1 = vegas_r1.get(key)
+        if vr1 is not None:
+            # vr1 is P(min_id wins); convert to P(team1 wins)
+            feats.append(vr1 if team1 == key[0] else 1.0 - vr1)
+        else:
+            feats.append(np.nan)
+    elif vegas_r1 is not None:
+        # Non-R1 round: NaN (model learns to ignore for later rounds)
+        feats.append(np.nan)
+    # If vegas_r1 is None, don't append anything (feature not enabled)
+
     return np.array(feats, dtype=np.float64)
 
 
-def feature_names() -> List[str]:
-    """Return ordered list of feature names matching _game_features output."""
+def feature_names(include_vegas_r1: bool = False) -> List[str]:
+    """Return ordered list of feature names matching _game_features output.
+
+    Args:
+        include_vegas_r1: If True, includes the vegas_r1_prob feature (27 total).
+            Default False preserves backward compatibility (26 features).
+    """
     names = [f"p_{base}" for base in BASE_FEATURE_ORDER]
     names.extend(["seed_t1", "seed_t2", "public_pick_t1", "public_pick_t2"])
     names.extend(
@@ -185,12 +248,15 @@ def feature_names() -> List[str]:
         ]
     )
     names.extend([f"ctx_{key}_diff" for key in CONTEXT_KEYS])
+    names.extend(["prob_variance", "prob_skewness", "market_model_gap"])
+    if include_vegas_r1:
+        names.append("vegas_r1_prob")
     return names
 
 
-def n_features() -> int:
+def n_features(include_vegas_r1: bool = False) -> int:
     """Number of features per game."""
-    return len(feature_names())
+    return len(feature_names(include_vegas_r1))
 
 
 # ---------------------------------------------------------------------------
@@ -284,13 +350,16 @@ def build_training_data(
     data_root: Path = Path("data"),
     augment: bool = True,
     drop_chalk: bool = True,
+    e_pap_weight: bool = False,
+    pool_size: int = 30,
+    use_vegas_r1: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build (X, y, weights) for meta-selector training.
 
     For each tournament game in each training year:
         X:       feature vector (all base probs + ESPN picks + context)
         y:       1 if team1 actually won, 0 if team2 won
-        weight:  round_pts (ESPN scoring, no contrarian adjustment)
+        weight:  round_pts (default) or E[PAP] if e_pap_weight=True
 
     Args:
         augment: If True, also include the swapped (team2, team1) view of
@@ -298,6 +367,10 @@ def build_training_data(
             positional bias (team1 is always the higher seed in R64).
         drop_chalk: If True, exclude R64 games where min seed <= 2
             (1v16 and 2v15 matchups). These are ~96% chalk and add noise.
+        e_pap_weight: If True, weight = pts × (1 - pub_winner_rate × (N-1)/N)
+            where pub_winner_rate is the public pick % for the actual winner.
+            Label is STILL correctness (no contrarian forcing in the loss).
+        pool_size: Pool size for E[PAP] denominator (default 30).
 
     Walk-forward safe: only loads data for years in train_years.
     """
@@ -312,8 +385,13 @@ def build_training_data(
             logger.debug("Skipping training year %d: %s", year, exc)
             continue
 
+        # Load Vegas R1 data if enabled
+        vr1 = (load_vegas_r1(year, data_root) or {}) if use_vegas_r1 else None
+
         # Walk the actual tournament to get real matchups per round
-        game_features_and_labels = _extract_game_features_and_labels(games, first_round, brp, pick_dist, seeds, context)
+        game_features_and_labels = _extract_game_features_and_labels(
+            games, first_round, brp, pick_dist, seeds, context, vegas_r1=vr1
+        )
 
         for feat_vec, label, round_name, team1, team2 in game_features_and_labels:
             pts = ESPN_SCORING.get(round_name, 10)
@@ -325,7 +403,14 @@ def build_training_data(
                 if min(s1, s2) <= 2:
                     continue
 
-            weight = float(pts)
+            if e_pap_weight and pick_dist:
+                # E[PAP]: weight by competitive edge of the correct pick.
+                winner = team1 if label == 1 else team2
+                winner_pub = pick_dist.get(winner, {}).get(round_name, 0.5)
+                weight = float(pts) * (1.0 - winner_pub * (pool_size - 1) / pool_size)
+                weight = max(weight, 1.0)  # floor at 1 to keep all games in training
+            else:
+                weight = float(pts)
             all_X.append(feat_vec)
             all_y.append(float(label))
             all_w.append(weight)
@@ -341,6 +426,7 @@ def build_training_data(
                     pick_dist,
                     seeds,
                     context,
+                    vegas_r1=vr1,
                 )
                 all_X.append(feat_swapped)
                 all_y.append(1.0 - float(label))
@@ -523,7 +609,90 @@ def _build_base_round_probs(
 
     # Contrarian (requires pick_dist — added in build_training_data if available)
 
+    # Custom ratings (Colley, SRS, GLM Quality) — computed from regular season
+    # game results. No external data needed. Used by Kaggle 3rd + 10th place.
+    try:
+        from src.data.features.custom_ratings import (
+            compute_all_custom_ratings,
+            ratings_to_canonical,
+        )
+
+        all_custom = compute_all_custom_ratings(year, data_root)
+        for rating_name, raw_ratings in all_custom.items():
+            canonical = ratings_to_canonical(raw_ratings, data_root)
+            # Filter to tournament teams and convert to barthag-like [0,1]
+            tourney_ratings = {}
+            vals = [v for k, v in canonical.items() if k in seeds]
+            if not vals:
+                continue
+            vmin, vmax = min(vals), max(vals)
+            span = vmax - vmin if vmax > vmin else 1.0
+            for tid in seeds:
+                raw = canonical.get(tid)
+                if raw is not None:
+                    tourney_ratings[tid] = 0.1 + 0.8 * (raw - vmin) / span
+                else:
+                    tourney_ratings[tid] = 0.5
+            brp[rating_name] = _build_mc_round_probs(seeds, regions, tourney_ratings)
+    except (ImportError, Exception) as exc:
+        logger.debug("Custom ratings unavailable for %d: %s", year, exc)
+
     return brp
+
+
+def load_vegas_r1(
+    year: int,
+    data_root: Path = Path("data"),
+) -> Optional[Dict[Tuple[str, str], float]]:
+    """Load game-specific Vegas R1 implied probabilities for a year.
+
+    Returns dict of (min_team_id, max_team_id) → P(min_team_id wins),
+    or None if no data. Uses no-vig implied probabilities from closing
+    moneylines (SBRO 2008-2022) or the 2026 pre-tournament snapshot.
+
+    These are pre-game probabilities (no leakage): closing lines are set
+    before tip-off.
+    """
+    import csv
+
+    # Try processed tournament-filtered data first
+    for pattern in [
+        data_root / "processed" / "vegas_r1" / f"vegas_r1_{year}.csv",
+        data_root / "raw" / "bpi" / f"vegas_r1_moneylines_{year}.csv",
+    ]:
+        if not pattern.exists():
+            continue
+        try:
+            games: Dict[Tuple[str, str], float] = {}
+            with open(pattern) as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    # Determine team IDs and probability
+                    if "favored_team" in row:
+                        # 2026 format from 3rd-place repo: (favored, underdog, prob)
+                        from src.data.normalize import normalize_team_id
+
+                        fav = normalize_team_id(row["favored_team"])
+                        dog = normalize_team_id(row["underdog_team"])
+                        fav_prob = float(row["favored_novig_prob"])
+                        key = (min(fav, dog), max(fav, dog))
+                        games[key] = fav_prob if fav == key[0] else 1.0 - fav_prob
+                    elif "home_team" in row:
+                        # SBRO format: (home, away, moneyline_home, implied_prob)
+                        home = row["home_team"]
+                        away = row["away_team"]
+                        prob_h = float(row.get("implied_prob_home", 0.5))
+                        key = (min(home, away), max(home, away))
+                        games[key] = prob_h if home == key[0] else 1.0 - prob_h
+
+            if games:
+                logger.debug("Loaded %d Vegas R1 games for %d", len(games), year)
+                return games
+        except (FileNotFoundError, KeyError, ValueError) as exc:
+            logger.debug("Failed to load Vegas R1 for %d: %s", year, exc)
+            continue
+
+    return None
 
 
 def _build_mc_round_probs(
@@ -689,7 +858,192 @@ def _load_context(
     except (FileNotFoundError, ImportError):
         context["volatility"] = {}
 
+    # S2: Tournament-specific box score features
+    try:
+        from src.prediction.tournament_features import load_four_factors
+
+        ft_rate, to_margin = load_four_factors(year, seeds.keys(), data_root)
+        context["four_factor_ft_rate"] = ft_rate
+        context["four_factor_to_margin"] = to_margin
+    except (FileNotFoundError, ImportError):
+        context["four_factor_ft_rate"] = {}
+        context["four_factor_to_margin"] = {}
+
+    try:
+        from src.prediction.tournament_features import load_conf_tourney_champ
+
+        context["conf_tourney_champ"] = load_conf_tourney_champ(year, seeds.keys(), data_root)
+    except (FileNotFoundError, ImportError):
+        context["conf_tourney_champ"] = {}
+
+    try:
+        from src.prediction.tournament_features import load_ranking_momentum
+
+        context["ranking_momentum"] = load_ranking_momentum(year, seeds.keys(), data_root)
+    except (FileNotFoundError, ImportError):
+        context["ranking_momentum"] = {}
+
+    # Coach PASE (Performance Above Seed Expectation) from nishaanamin dataset.
+    # Maps coach name → PASE score, then resolves to team_id via MTeamCoaches.csv.
+    try:
+        import csv as _csv
+        import json as _json
+
+        pase_path = data_root / "kaggle" / "coach_results.json"
+        coaches_path = data_root / "kaggle" / "MTeamCoaches.csv"
+        teams_path = data_root / "kaggle" / "MTeams.csv"
+
+        if pase_path.exists() and coaches_path.exists() and teams_path.exists():
+            with open(pase_path) as f:
+                cr = _json.load(f)
+            cols = cr["columns"]
+            pase_idx = cols.index("pase")
+            coach_name_idx = cols.index("coach")
+
+            def _norm(s: str) -> str:
+                return s.lower().replace(" ", "_").replace(".", "").replace("'", "")
+
+            pase_by_norm = {_norm(row[coach_name_idx]): row[pase_idx] for row in cr["data"]}
+
+            # Map TeamID → canonical via MTeams
+            tid_to_name = {}
+            with open(teams_path) as f:
+                for row in _csv.DictReader(f):
+                    tid_to_name[int(row["TeamID"])] = row["TeamName"]
+
+            # Map team_id → coach PASE for this season
+            from src.data.normalize import normalize_team_id
+
+            coach_pase: Dict[str, float] = {}
+            with open(coaches_path) as f:
+                for row in _csv.DictReader(f):
+                    if int(row["Season"]) != year:
+                        continue
+                    team_num = int(row["TeamID"])
+                    coach_norm = _norm(row["CoachName"].replace("_", " "))
+                    pase = pase_by_norm.get(coach_norm, 0.0)
+                    team_name = tid_to_name.get(team_num, "")
+                    if team_name:
+                        canonical = normalize_team_id(team_name)
+                        if canonical in seeds:
+                            coach_pase[canonical] = float(pase) if pase else 0.0
+
+            context["coach_pase"] = coach_pase
+        else:
+            context["coach_pase"] = {}
+    except Exception:
+        context["coach_pase"] = {}
+
+    # ncsos, close_game_pct, elo_slope — computed from Kaggle regular season data
+    try:
+        from src.data.features.custom_ratings import (
+            compute_close_game_pct,
+            compute_elo_slope,
+            compute_ncsos,
+            ratings_to_canonical,
+        )
+
+        ncsos_raw = compute_ncsos(year, data_root)
+        close_raw = compute_close_game_pct(year, data_root)
+        slope_raw = compute_elo_slope(year, data_root)
+
+        ncsos_can = ratings_to_canonical(ncsos_raw, data_root)
+        close_can = ratings_to_canonical(close_raw, data_root)
+        slope_can = ratings_to_canonical(slope_raw, data_root)
+
+        context["ncsos"] = {t: v for t, v in ncsos_can.items() if t in seeds}
+        context["close_game_pct"] = {t: v for t, v in close_can.items() if t in seeds}
+        context["elo_slope"] = {t: v for t, v in slope_can.items() if t in seeds}
+    except Exception:
+        context["ncsos"] = {}
+        context["close_game_pct"] = {}
+        context["elo_slope"] = {}
+
+    # Conference tournament depth
+    try:
+        from src.data.features.custom_ratings import (
+            compute_conf_tourney_depth,
+            ratings_to_canonical,
+        )
+
+        depth_raw = compute_conf_tourney_depth(year, data_root)
+        depth_can = ratings_to_canonical(depth_raw, data_root)
+        context["conf_tourney_depth"] = {t: v for t, v in depth_can.items() if t in seeds}
+    except Exception:
+        context["conf_tourney_depth"] = {}
+
+    # Field chalk signal — same value for all teams (year-level feature).
+    # The meta-selector uses team1 - team2 diff for context features.
+    # Since chalk_signal is the same for both teams, the diff is always 0.
+    # Instead, assign +signal to team1 and -signal to team2 so the feature
+    # captures the year's chalk level as a constant offset the model can use.
+    # In practice: assign the signal to ALL teams. The diff (t1 - t2) = 0,
+    # but the raw value is available if using absolute features.
+    try:
+        from src.data.features.custom_ratings import compute_field_chalk_signal
+
+        chalk_sig = compute_field_chalk_signal(year, seeds, data_root)
+        context["field_chalk_signal"] = {t: chalk_sig for t in seeds}
+    except Exception:
+        context["field_chalk_signal"] = {}
+
+    # Injury BPR deduction (#13): sum of injured players' BPR × severity factor.
+    # Deterministic, not stochastic noise. Requires roster JSON with player-level
+    # box_plus_minus and injury_status. Falls back to empty dict when unavailable
+    # (most historical years lack injury data → feature is 0 during LOYO training).
+    try:
+        import glob as _glob
+
+        roster_paths = sorted(_glob.glob(str(data_root / "raw" / f"rosters_{year}.json")))
+        if not roster_paths:
+            roster_paths = sorted(_glob.glob(str(data_root / f"rosters_{year}.json")))
+        if roster_paths:
+            import json as _rjson
+
+            with open(roster_paths[0]) as f:
+                roster_data = _rjson.load(f)
+
+            _INJURY_FACTORS = {
+                "season_ending": 1.00,
+                "out": 0.75,
+                "doubtful": 0.60,
+                "questionable": 0.50,
+                "day-to-day": 0.25,
+            }
+            from src.data.normalize import normalize_team_id
+
+            injury_deductions: Dict[str, float] = {}
+            for team_entry in roster_data:
+                team_name = team_entry.get("team_name", team_entry.get("team", ""))
+                if not team_name:
+                    continue
+                canonical = normalize_team_id(team_name)
+                if canonical not in seeds:
+                    continue
+                deduction = 0.0
+                for player in team_entry.get("players", []):
+                    status = str(player.get("injury_status", "healthy")).lower()
+                    factor = _INJURY_FACTORS.get(status, 0.0)
+                    if factor > 0:
+                        bpr = float(player.get("box_plus_minus", 0.0))
+                        deduction += abs(bpr) * factor
+                injury_deductions[canonical] = deduction
+            context["injury_bpr_deduction"] = injury_deductions
+        else:
+            context["injury_bpr_deduction"] = {}
+    except Exception:
+        context["injury_bpr_deduction"] = {}
+
     return context
+
+
+def load_meta_context(
+    year: int,
+    seeds: Dict[str, int],
+    data_root: Path = Path("data"),
+) -> Dict[str, Dict[str, float]]:
+    """Public wrapper for _load_context — use at inference time."""
+    return _load_context(year, seeds, data_root)
 
 
 def _extract_game_features_and_labels(
@@ -699,6 +1053,7 @@ def _extract_game_features_and_labels(
     pick_distribution: Optional[Dict[str, Dict[str, float]]],
     seeds: Dict[str, int],
     context: Dict[str, Dict[str, float]],
+    vegas_r1: Optional[Dict[Tuple[str, str], float]] = None,
 ) -> List[Tuple[np.ndarray, int, str, str, str]]:
     """Extract features and labels from actual tournament games.
 
@@ -747,6 +1102,7 @@ def _extract_game_features_and_labels(
                 pick_distribution,
                 seeds,
                 context,
+                vegas_r1=vegas_r1,
             )
             results.append((feat, label, round_name, t1, t2))
             next_round.append(winner)
@@ -787,6 +1143,33 @@ def train_meta_selector(
     )
     names = feature_names()
     model.fit(X, y, sample_weight=weights, feature_name=names)
+    return model
+
+
+def train_meta_selector_xgb(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    max_depth: int = 3,
+    n_estimators: int = 50,
+    learning_rate: float = 0.1,
+    random_state: int = 42,
+) -> Any:
+    """Train XGBoost classifier with same constraints as LightGBM variant (S7)."""
+    import xgboost as xgb
+
+    model = xgb.XGBClassifier(
+        max_depth=max_depth,
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        min_child_weight=20,
+        subsample=0.8,
+        random_state=random_state,
+        verbosity=0,
+        use_label_encoder=False,
+        eval_metric="logloss",
+    )
+    model.fit(X, y, sample_weight=weights)
     return model
 
 
@@ -862,6 +1245,336 @@ def tune_and_train_meta_selector(
     )
 
 
+def train_meta_selector_lr(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    C: float = 100.0,
+    random_state: int = 42,
+) -> Any:
+    """Train Logistic Regression meta-selector with explicit feature interactions.
+
+    Kaggle 3rd place (Brier 0.1160, #3/3485) found LR outperforms GBM on
+    tournament-sized data (~650 rows): LR CV Brier 0.124 vs XGB 0.157.
+
+    Adds pairwise interactions between high-signal features to give LR
+    non-linear capacity without GBM's overfitting risk on small data.
+
+    The trained model exposes .predict() compatible with build_trained_bracket().
+    """
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+
+    # Feature interaction indices — these are the high-signal features where
+    # pairwise interactions capture non-linear relationships LR can't learn.
+    # Inspired by Kaggle 3rd: seed×massey, seed×prob, consensus×disagreement.
+    names = feature_names()
+
+    pipeline = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "interactions",
+                PolynomialFeatures(
+                    degree=2,
+                    interaction_only=True,
+                    include_bias=False,
+                ),
+            ),
+            ("scaler", StandardScaler()),
+            (
+                "lr",
+                LogisticRegression(
+                    C=C,
+                    solver="lbfgs",
+                    max_iter=1000,
+                    random_state=random_state,
+                ),
+            ),
+        ]
+    )
+
+    pipeline.fit(X, y, lr__sample_weight=weights)
+    return pipeline
+
+
+class _MarginToClassifier:
+    """Wraps a margin regressor to expose .predict() returning 0/1 labels.
+
+    Trains on point differential (team1_score - team2_score) and converts
+    to binary picks via sign of predicted margin. Compatible with
+    build_trained_bracket() which calls model.predict().
+
+    Kaggle 10th place (2026) found that predicting margin instead of
+    binary win/loss produces a richer training signal — a 20-point
+    blowout teaches more than a 1-point squeaker.
+    """
+
+    def __init__(self, regressor: Any):
+        self.regressor = regressor
+
+    def predict(self, X) -> np.ndarray:
+        """Predict binary labels (1 = team1 wins) from margin predictions."""
+        margins = self.regressor.predict(X)
+        return (np.asarray(margins) > 0).astype(int)
+
+    def predict_margin(self, X) -> np.ndarray:
+        """Return raw margin predictions (for calibration/analysis)."""
+        return np.asarray(self.regressor.predict(X))
+
+
+def build_margin_training_data(
+    train_years: Sequence[int],
+    data_root: Path = Path("data"),
+    augment: bool = True,
+    drop_chalk: bool = True,
+    use_vegas_r1: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build (X, y_margin, weights) for margin regression training.
+
+    Same as build_training_data but y is the point differential
+    (team1_score - team2_score) instead of binary 0/1.
+
+    Weight = round_pts (ESPN scoring: 10/20/40/80/160/320).
+    """
+    import json
+
+    all_X, all_y, all_w = [], [], []
+
+    for year in train_years:
+        try:
+            brp, pick_dist, seeds, context, first_round, games = _load_year_data(year, data_root)
+        except (FileNotFoundError, KeyError, json.JSONDecodeError) as exc:
+            logger.debug("Skipping training year %d: %s", year, exc)
+            continue
+
+        vr1 = (load_vegas_r1(year, data_root) or {}) if use_vegas_r1 else None
+
+        # Build a score lookup from games
+        score_lookup: Dict[Tuple[str, str, str], Tuple[int, int]] = {}
+        for g in games:
+            t1 = g["team1_id"]
+            t2 = g["team2_id"]
+            rn = g.get("round_name", "")
+            s1 = g.get("team1_score", 0)
+            s2 = g.get("team2_score", 0)
+            if s1 and s2:
+                score_lookup[(t1, t2, rn)] = (s1, s2)
+                score_lookup[(t2, t1, rn)] = (s2, s1)
+
+        game_features_and_labels = _extract_game_features_and_labels(
+            games, first_round, brp, pick_dist, seeds, context, vegas_r1=vr1
+        )
+
+        for feat_vec, label, round_name, team1, team2 in game_features_and_labels:
+            pts = ESPN_SCORING.get(round_name, 10)
+
+            if drop_chalk and round_name == "R64":
+                s1 = seeds.get(team1, 8)
+                s2 = seeds.get(team2, 8)
+                if min(s1, s2) <= 2:
+                    continue
+
+            # Get margin (team1_score - team2_score)
+            scores = score_lookup.get((team1, team2, round_name))
+            if scores is None:
+                # Fallback: infer from label
+                margin = 5.0 if label == 1 else -5.0
+            else:
+                margin = float(scores[0] - scores[1])
+
+            weight = float(pts)
+            all_X.append(feat_vec)
+            all_y.append(margin)
+            all_w.append(weight)
+
+            if augment:
+                feat_swapped = _game_features(
+                    team2,
+                    team1,
+                    round_name,
+                    ROUND_NAMES.index(round_name),
+                    brp,
+                    pick_dist,
+                    seeds,
+                    context,
+                    vegas_r1=vr1,
+                )
+                all_X.append(feat_swapped)
+                all_y.append(-margin)
+                all_w.append(weight)
+
+    X = np.array(all_X, dtype=np.float64)
+    y = np.array(all_y, dtype=np.float64)
+    w = np.array(all_w, dtype=np.float64)
+    return X, y, w
+
+
+def train_meta_selector_margin(
+    X: np.ndarray,
+    y_margin: np.ndarray,
+    weights: np.ndarray,
+    max_depth: int = 3,
+    n_estimators: int = 100,
+    learning_rate: float = 0.05,
+    random_state: int = 42,
+) -> _MarginToClassifier:
+    """Train XGBoost regressor on point differential, return classifier wrapper.
+
+    Kaggle 10th place found regression on margin produces richer signal
+    than binary classification on the same ~650 rows. The wrapper's
+    .predict() returns 0/1 (compatible with build_trained_bracket).
+
+    Args:
+        y_margin: Point differential (team1_score - team2_score).
+    """
+    import xgboost as xgb
+
+    reg = xgb.XGBRegressor(
+        max_depth=max_depth,
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        min_child_weight=20,
+        subsample=0.8,
+        random_state=random_state,
+        verbosity=0,
+    )
+    reg.fit(X, y_margin, sample_weight=weights)
+    return _MarginToClassifier(reg)
+
+
+class _MultiSeedEnsemble:
+    """Ensemble of N models trained with different random seeds.
+
+    Kaggle 10th place ran 6 seeds, each with its own feature subset and model.
+    Here we keep features fixed but vary the random seed, providing diversity
+    in the stochastic aspects of boosting (subsampling, split selection).
+
+    .predict() returns majority vote across all models.
+    """
+
+    def __init__(self, models: List[Any]):
+        self.models = models
+
+    def predict(self, X) -> np.ndarray:
+        """Majority vote across all models."""
+        preds = np.array([m.predict(X) for m in self.models])
+        # Sum predictions (each is 0 or 1), threshold at N/2
+        return (preds.sum(axis=0) > len(self.models) / 2).astype(int)
+
+
+def train_multi_seed_ensemble(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    n_seeds: int = 6,
+    trainer_fn: Optional[Callable] = None,
+) -> _MultiSeedEnsemble:
+    """Train N models with different random seeds, return ensemble.
+
+    Args:
+        trainer_fn: Model training function with signature (X, y, w, random_state=int).
+            Defaults to train_meta_selector (LightGBM).
+        n_seeds: Number of seeds to use (default 6, matching Kaggle 10th place).
+    """
+    if trainer_fn is None:
+        trainer_fn = train_meta_selector
+
+    models = []
+    for i in range(n_seeds):
+        model = trainer_fn(X, y, weights, random_state=42 + i)
+        models.append(model)
+
+    return _MultiSeedEnsemble(models)
+
+
+class _FeatureMaskedModel:
+    """Wraps a model that was trained with some features zeroed.
+
+    At predict time, zeroes the same features so train/inference match.
+    """
+
+    def __init__(self, model: Any, keep_mask: np.ndarray):
+        self.model = model
+        self.keep_mask = keep_mask  # boolean, True = feature is active
+
+    def predict(self, X) -> np.ndarray:
+        import pandas as pd
+
+        if isinstance(X, pd.DataFrame):
+            X_masked = X.copy()
+            drop_cols = [c for i, c in enumerate(X.columns) if not self.keep_mask[i]]
+            X_masked[drop_cols] = 0.0
+        else:
+            X_masked = np.array(X, copy=True)
+            X_masked[:, ~self.keep_mask] = 0.0
+        return self.model.predict(X_masked)
+
+
+def train_meta_selector_backward_elim(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    random_state: int = 42,
+    keep_ratio: float = 0.5,
+) -> _FeatureMaskedModel:
+    """Importance-based feature elimination: train, drop low-importance, retrain.
+
+    Kaggle 3rd place found aggressive pruning was the single biggest Brier gain.
+    This uses LightGBM feature importance to identify and drop the bottom half
+    of features, then retrains on the reduced set. Fast (~2 model trains).
+
+    Returns a _FeatureMaskedModel that zeroes dropped features at inference.
+    """
+    names = feature_names()
+    n_feat = X.shape[1]
+
+    # Train initial model to get importance
+    scout = train_meta_selector(X, y, weights, random_state=random_state)
+    importances = scout.feature_importances_
+
+    # Keep top features by importance
+    n_keep = max(3, int(n_feat * keep_ratio))
+    threshold = np.sort(importances)[-n_keep]
+    keep = importances >= threshold
+    # Tie-break: if too many at threshold, keep exactly n_keep
+    if keep.sum() > n_keep:
+        at_thresh = np.where(importances == threshold)[0]
+        excess = int(keep.sum()) - n_keep
+        for idx in at_thresh[:excess]:
+            keep[idx] = False
+
+    # Retrain on selected features only
+    X_final = X.copy()
+    X_final[:, ~keep] = 0.0
+    final_model = train_meta_selector(X_final, y, weights, random_state=random_state)
+    return _FeatureMaskedModel(final_model, keep)
+
+
+def train_meta_selector_minimal(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    random_state: int = 42,
+) -> _FeatureMaskedModel:
+    """3-feature minimalism: keep only seed prob, SRS prob, and seed values.
+
+    Kaggle 1st place won with seed_diff + quality_wins_diff + custom_rating.
+    We approximate with: p_seed (seed win prob), p_srs (SRS rating prob),
+    seed_t1, seed_t2 (raw seeds for diff signal), and round_index.
+    """
+    names = feature_names()
+    keep_names = {"p_seed", "p_srs", "seed_t1", "seed_t2", "round_index"}
+    keep = np.array([n in keep_names for n in names], dtype=bool)
+
+    X_min = X.copy()
+    X_min[:, ~keep] = 0.0
+    model = train_meta_selector(X_min, y, weights, max_depth=2, n_estimators=30, random_state=random_state)
+    return _FeatureMaskedModel(model, keep)
+
+
 def build_trained_bracket(
     first_round_matchups: List[str],
     base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
@@ -869,6 +1582,7 @@ def build_trained_bracket(
     seeds: Dict[str, int],
     context: Optional[Dict[str, Dict[str, float]]],
     model: Any,
+    vegas_r1: Optional[Dict[Tuple[str, str], float]] = None,
 ) -> np.ndarray:
     """Build one deterministic bracket using the trained meta-selector.
 
@@ -878,7 +1592,7 @@ def build_trained_bracket(
     """
     import pandas as pd
 
-    _feat_names = feature_names()
+    _feat_names = feature_names(include_vegas_r1=vegas_r1 is not None)
     bracket = np.zeros(63, dtype=bool)
     current_teams = list(first_round_matchups)
     game_idx = 0
@@ -902,6 +1616,7 @@ def build_trained_bracket(
                 pick_distribution,
                 seeds,
                 context,
+                vegas_r1=vegas_r1,
             )
             feat_df = pd.DataFrame(feat.reshape(1, -1), columns=_feat_names)
             pred = model.predict(feat_df)[0]
@@ -914,6 +1629,74 @@ def build_trained_bracket(
         current_teams = next_round
 
     return bracket
+
+
+def build_gbm_round_probs(
+    first_round_matchups: List[str],
+    base_round_probs: Dict[str, Dict[str, Dict[str, float]]],
+    pick_distribution: Optional[Dict[str, Dict[str, float]]],
+    seeds: Dict[str, int],
+    context: Optional[Dict[str, Dict[str, float]]],
+    model: Any,
+    n_sims: int = 2000,
+    rng_seed: int = 42,
+) -> Dict[str, Dict[str, float]]:
+    """Monte Carlo simulation using GBM predict_proba → round probabilities.
+
+    Simulates the tournament n_sims times. For each game, uses the model's
+    predicted P(team1 wins) to sample the winner. Counts how often each
+    team reaches each round. Returns {team_id: {round_name: probability}}
+    in the same format as torvik round probs, compatible with construct_bracket.
+    """
+    import pandas as pd
+
+    rng = np.random.default_rng(rng_seed)
+    _feat_names = feature_names()
+    reach_counts: Dict[str, Dict[str, int]] = {}
+
+    for team in first_round_matchups:
+        reach_counts[team] = {rn: 0 for rn in ROUND_NAMES}
+
+    for _ in range(n_sims):
+        current_teams = list(first_round_matchups)
+        for round_idx in range(6):
+            round_name = ROUND_NAMES[round_idx]
+            next_round = []
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round.append(current_teams[g])
+                    continue
+                t1, t2 = current_teams[g], current_teams[g + 1]
+                feat = _game_features(
+                    t1,
+                    t2,
+                    round_name,
+                    round_idx,
+                    base_round_probs,
+                    pick_distribution,
+                    seeds,
+                    context,
+                )
+                feat_df = pd.DataFrame(feat.reshape(1, -1), columns=_feat_names)
+                try:
+                    proba = model.predict_proba(feat_df)[0]
+                    p_t1 = proba[1] if len(proba) > 1 else 0.5
+                except (AttributeError, IndexError):
+                    pred = model.predict(feat_df)[0]
+                    p_t1 = 0.7 if pred == 1 else 0.3
+                winner = t1 if rng.random() < p_t1 else t2
+                reach_counts[winner][round_name] = reach_counts.get(winner, {}).get(round_name, 0) + 1
+                next_round.append(winner)
+            current_teams = next_round
+
+    # Normalize to probabilities
+    round_probs: Dict[str, Dict[str, float]] = {}
+    for team in first_round_matchups:
+        round_probs[team] = {}
+        for rn in ROUND_NAMES:
+            round_probs[team][rn] = reach_counts[team][rn] / n_sims
+
+    return round_probs
 
 
 # ---------------------------------------------------------------------------

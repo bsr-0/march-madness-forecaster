@@ -163,6 +163,24 @@ LEGACY_MODE_MAP = {
     "meta_gbm_champ_first": ("meta", "gbm_champ_first"),  # S1: champion-first (sim-selected)
     "meta_gbm_champ_top1": ("meta", "gbm_champ_top1"),  # S1b: lock #1 consensus champion
     "meta_gbm_champ_leverage": ("meta", "gbm_champ_lev"),  # S1c: lock undervalued champion
+    "meta_gbm_upset": ("meta", "gbm_upset"),  # Rule-based upset overrides on v2 GBM
+    "meta_gbm_epap": ("meta", "gbm_epap"),  # S5: E[PAP] training weight
+    "meta_gbm_xgb": ("meta", "gbm_xgb"),  # S7: XGBoost instead of LightGBM
+    "meta_gbm_multiseed": ("meta", "gbm_multiseed"),  # #10: 6-seed majority vote ensemble
+    "meta_gbm_no9": ("meta", "gbm_no9"),  # #9 ablation: zero ncsos/close/elo_slope
+    "meta_gbm_lr": ("meta", "gbm_lr"),  # #2: Logistic Regression meta-selector
+    "meta_gbm_margin": ("meta", "gbm_margin"),  # #4: Margin regression meta-selector
+    "meta_gbm_vegas": ("meta", "gbm_vegas"),  # #3: GBM with Vegas R1 feature
+    "meta_sa": ("meta", "sa"),  # #1: Simulated annealing construction
+    "meta_exhaustive": ("meta", "exhaustive"),  # #5: Exhaustive 64-champion search
+    "meta_region": ("meta", "region"),  # #8: Region top-N construction
+    "meta_sa_chalk": ("meta", "sa_chalk"),  # #11: SA with chalk-adaptive risk
+    "meta_gbm_elim": ("meta", "gbm_elim"),  # #12: Backward feature elimination
+    "meta_gbm_minimal": ("meta", "gbm_minimal"),  # #14: 3-feature minimalism
+    "meta_sa_vol": ("meta", "sa_vol"),  # #11v2: SA with improved volatility signal
+    "meta_region_gbm": ("meta", "region_gbm"),  # Region top-N with GBM round probs
+    "meta_exhaustive_gbm": ("meta", "exhaustive_gbm"),  # Exhaustive champion with GBM round probs
+    "meta_exhaustive_margin": ("meta", "exhaustive_margin"),  # Exhaustive champion with margin probs
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -187,6 +205,24 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_gbm_champ_first",
     "meta_gbm_champ_top1",
     "meta_gbm_champ_leverage",
+    "meta_gbm_upset",
+    "meta_gbm_epap",
+    "meta_gbm_xgb",
+    "meta_gbm_multiseed",
+    "meta_gbm_no9",
+    "meta_gbm_lr",
+    "meta_gbm_margin",
+    "meta_gbm_vegas",
+    "meta_sa",
+    "meta_exhaustive",
+    "meta_region",
+    "meta_sa_chalk",
+    "meta_gbm_elim",
+    "meta_gbm_minimal",
+    "meta_sa_vol",
+    "meta_region_gbm",
+    "meta_exhaustive_gbm",
+    "meta_exhaustive_margin",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -2345,12 +2381,9 @@ def _run_one_year(
     _meta_modes_enabled = [m for m in hparams.enabled_modes if m.startswith("meta_")]
     _meta_context = None
     if _meta_modes_enabled:
-        _meta_context = {
-            "coach_experience": coach_experience,
-            "momentum": team_momentum,
-            "talent": team_talent,
-            "volatility": team_volatility,
-        }
+        from src.prediction.meta_selector import load_meta_context
+
+        _meta_context = load_meta_context(year, seeds, Path("data"))
 
     # opponent_strategy="shared" (Phase 2 default): year_rng drives
     # opponent generation + tournament simulation ONCE per repeat —
@@ -2458,9 +2491,17 @@ def _run_one_year(
         from src.prediction.meta_selector import (
             build_champion_first_brackets,
             build_leverage_bracket,
+            build_margin_training_data,
+            build_gbm_round_probs,
             build_trained_bracket,
             build_training_data,
+            feature_names as _meta_feature_names,
             train_meta_selector,
+            train_meta_selector_lr,
+            train_meta_selector_backward_elim,
+            train_meta_selector_margin,
+            train_meta_selector_minimal,
+            train_multi_seed_ensemble,
             tune_and_train_meta_selector,
         )
 
@@ -2509,6 +2550,48 @@ def _run_one_year(
                     _meta_context,
                     _meta_models[model_key],
                 )
+            elif meta_mode == "meta_gbm_xgb":
+                # S7: XGBoost instead of LightGBM, same features/config.
+                from src.prediction.meta_selector import train_meta_selector_xgb
+
+                _xgb_cache_key = "aug=False_chalk=False"
+                if _xgb_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_xgb_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_xgb, y_xgb, w_xgb = _meta_training_cache[_xgb_cache_key]
+                _xgb_model_key = "xgb_tune=False"
+                if _xgb_model_key not in _meta_models:
+                    _meta_models[_xgb_model_key] = train_meta_selector_xgb(X_xgb, y_xgb, w_xgb)
+
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_xgb_model_key],
+                )
+            elif meta_mode == "meta_gbm_epap":
+                # S5: E[PAP] training weight — same architecture, different weight.
+                _ep_cache_key = "epap=True"
+                if _ep_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_ep_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False, e_pap_weight=True
+                    )
+                X_ep, y_ep, w_ep = _meta_training_cache[_ep_cache_key]
+                _ep_model_key = f"{_ep_cache_key}_tune=False"
+                if _ep_model_key not in _meta_models:
+                    _meta_models[_ep_model_key] = train_meta_selector(X_ep, y_ep, w_ep)
+
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_ep_model_key],
+                )
             elif meta_mode in ("meta_gbm_champ_top1", "meta_gbm_champ_leverage"):
                 # S1b/c: Lock a single champion, no simulation.
                 # top1 = highest consensus P(champ)
@@ -2535,17 +2618,16 @@ def _run_one_year(
                     sel_method = "top-1 consensus"
                 else:
                     # Leverage: pick champion with highest P(champ) / public_champ_pct
+                    # pick_dist format: {team_id: {round_name: pct}}
                     best_lev = -1.0
                     top_champ = candidates[0][0]
                     for cid, cprob in candidates:
                         pub_pct = 0.5  # default if no pick data
-                        if pick_dist and "CHAMP" in (pick_dist or {}):
-                            pub_pct = pick_dist["CHAMP"].get(cid, 0.05)
-                        elif pick_dist:
-                            # Approximate from F4/E8 picks
+                        if pick_dist and cid in pick_dist:
+                            team_picks = pick_dist[cid]
                             for rnd in ("CHAMP", "F4", "E8"):
-                                if rnd in pick_dist and cid in pick_dist[rnd]:
-                                    pub_pct = pick_dist[rnd][cid]
+                                if rnd in team_picks:
+                                    pub_pct = team_picks[rnd]
                                     break
                         pub_pct = max(pub_pct, 0.01)  # avoid div by zero
                         lev = cprob / pub_pct
@@ -2635,6 +2717,309 @@ def _run_one_year(
                     f"champion={cand_champs[best_idx]} "
                     f"(best of {len(cand_champs)}, P1={best_p1:.3f})"
                 )
+            elif meta_mode == "meta_gbm_upset":
+                # Rule-based upset overrides on v2 GBM bracket.
+                from src.prediction.upset_detector import (
+                    apply_upset_overrides,
+                    compute_upset_scores,
+                )
+
+                # Build the base v2 GBM bracket first.
+                _ud_cache_key = "aug=False_chalk=False"
+                if _ud_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_ud_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_ud, y_ud, w_ud = _meta_training_cache[_ud_cache_key]
+                _ud_model_key = f"{_ud_cache_key}_tune=False"
+                if _ud_model_key not in _meta_models:
+                    _meta_models[_ud_model_key] = train_meta_selector(X_ud, y_ud, w_ud)
+
+                base_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_ud_model_key],
+                )
+
+                # Compute upset scores and apply overrides.
+                upset_scores = compute_upset_scores(year, first_round, seeds)
+                meta_bracket = apply_upset_overrides(
+                    base_bracket,
+                    first_round,
+                    seeds,
+                    upset_scores,
+                    override_threshold=0.45,
+                    min_round=2,
+                )
+                n_flips = int((base_bracket != meta_bracket).sum())
+                print(f"  {year}   {meta_mode:<20} flipped {n_flips} games via upset rules")
+            elif meta_mode == "meta_gbm_multiseed":
+                _ms_cache_key = "aug=False_chalk=False"
+                if _ms_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_ms_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_ms, y_ms, w_ms = _meta_training_cache[_ms_cache_key]
+                _ms_model_key = "multiseed_n=6"
+                if _ms_model_key not in _meta_models:
+                    _meta_models[_ms_model_key] = train_multi_seed_ensemble(X_ms, y_ms, w_ms, n_seeds=6)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_ms_model_key],
+                )
+            elif meta_mode == "meta_gbm_no9":
+                _n9_cache_key = "aug=False_chalk=False"
+                if _n9_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_n9_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_n9 = _meta_training_cache[_n9_cache_key][0].copy()
+                y_n9 = _meta_training_cache[_n9_cache_key][1]
+                w_n9 = _meta_training_cache[_n9_cache_key][2]
+                _names = _meta_feature_names()
+                _zero_idxs = [_names.index(f"ctx_{k}_diff") for k in ("ncsos", "close_game_pct", "elo_slope")]
+                for fi in _zero_idxs:
+                    X_n9[:, fi] = 0.0
+                _n9_model_key = "no9_ablation"
+                if _n9_model_key not in _meta_models:
+                    _meta_models[_n9_model_key] = train_meta_selector(X_n9, y_n9, w_n9)
+                ablated_ctx = dict(_meta_context) if _meta_context else {}
+                for k in ("ncsos", "close_game_pct", "elo_slope"):
+                    ablated_ctx[k] = {}
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    ablated_ctx,
+                    _meta_models[_n9_model_key],
+                )
+            elif meta_mode == "meta_gbm_lr":
+                # #2: Logistic Regression with polynomial interactions
+                _lr_cache_key = "aug=False_chalk=False"
+                if _lr_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_lr_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_lr, y_lr, w_lr = _meta_training_cache[_lr_cache_key]
+                _lr_model_key = "lr"
+                if _lr_model_key not in _meta_models:
+                    _meta_models[_lr_model_key] = train_meta_selector_lr(X_lr, y_lr, w_lr)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_lr_model_key],
+                )
+            elif meta_mode == "meta_gbm_margin":
+                # #4: Point-differential regression (XGBoost on margin)
+                _mg_cache_key = "margin_aug=True_chalk=True"
+                if _mg_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_mg_cache_key] = build_margin_training_data(
+                        train_years, augment=True, drop_chalk=True
+                    )
+                X_mg, y_mg, w_mg = _meta_training_cache[_mg_cache_key]
+                _mg_model_key = "margin"
+                if _mg_model_key not in _meta_models:
+                    _meta_models[_mg_model_key] = train_meta_selector_margin(X_mg, y_mg, w_mg)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_mg_model_key],
+                )
+            elif meta_mode == "meta_gbm_vegas":
+                # #3: GBM with Vegas R1 game-specific feature (27 features)
+                _vg_cache_key = "aug=False_chalk=False_vegas=True"
+                if _vg_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_vg_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False, use_vegas_r1=True
+                    )
+                X_vg, y_vg, w_vg = _meta_training_cache[_vg_cache_key]
+                _vg_model_key = "vegas_gbm"
+                if _vg_model_key not in _meta_models:
+                    _vg_names = _meta_feature_names(include_vegas_r1=True)
+                    import lightgbm as lgb
+
+                    _vg_model = lgb.LGBMClassifier(
+                        max_depth=3,
+                        n_estimators=50,
+                        learning_rate=0.1,
+                        min_child_samples=20,
+                        subsample=0.8,
+                        random_state=42,
+                        verbosity=-1,
+                    )
+                    _vg_model.fit(X_vg, y_vg, sample_weight=w_vg, feature_name=_vg_names)
+                    _meta_models[_vg_model_key] = _vg_model
+                # Vegas R1 data for inference year
+                from src.prediction.meta_selector import load_vegas_r1
+
+                _vr1 = load_vegas_r1(year) or {}
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_vg_model_key],
+                    vegas_r1=_vr1,
+                )
+            elif meta_mode in ("meta_sa", "meta_sa_chalk", "meta_sa_vol", "meta_exhaustive", "meta_region"):
+                # Construction-mode techniques (#1, #5, #8, #11)
+                from src.optimization.bracket_construction import construct_bracket
+
+                # Determine risk_level
+                if meta_mode == "meta_sa_chalk":
+                    # #11: chalk-adaptive risk — low risk in chalk years, high in upset years
+                    from src.data.features.custom_ratings import compute_field_chalk_signal
+
+                    try:
+                        chalk_sig = compute_field_chalk_signal(year, seeds, Path("data"))
+                    except Exception:
+                        chalk_sig = 0.5
+                    _risk = 1.0 - chalk_sig
+                    _construction_mode = "simulated_annealing"
+                elif meta_mode == "meta_sa_vol":
+                    # #11v2: improved volatility signal with 1v2 seed gap
+                    from src.data.features.custom_ratings import compute_field_volatility_signal
+
+                    try:
+                        vol_sig = compute_field_volatility_signal(year, seeds, Path("data"))
+                    except Exception:
+                        vol_sig = 0.5
+                    _risk = 1.0 - vol_sig
+                    _construction_mode = "simulated_annealing"
+                elif meta_mode == "meta_sa":
+                    _risk = 0.5
+                    _construction_mode = "simulated_annealing"
+                elif meta_mode == "meta_exhaustive":
+                    _risk = 0.5
+                    _construction_mode = "exhaustive_champion"
+                else:  # meta_region
+                    _risk = 0.5
+                    _construction_mode = "region_top_n"
+
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode=_construction_mode,
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=torvik_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=_risk,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+                if meta_mode == "meta_sa_chalk":
+                    print(f"  {year}   {meta_mode:<20} chalk={chalk_sig:.2f} risk={_risk:.2f} champ={_champ}")
+                elif meta_mode == "meta_sa_vol":
+                    print(f"  {year}   {meta_mode:<20} vol={vol_sig:.2f} risk={_risk:.2f} champ={_champ}")
+                else:
+                    print(f"  {year}   {meta_mode:<20} risk={_risk:.1f} champ={_champ}")
+            elif meta_mode == "meta_gbm_elim":
+                # #12: Aggressive backward feature elimination
+                _el_cache_key = "aug=False_chalk=False"
+                if _el_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_el_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_el, y_el, w_el = _meta_training_cache[_el_cache_key]
+                _el_model_key = "backward_elim"
+                if _el_model_key not in _meta_models:
+                    _meta_models[_el_model_key] = train_meta_selector_backward_elim(X_el, y_el, w_el)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_el_model_key],
+                )
+            elif meta_mode == "meta_gbm_minimal":
+                # #14: 3-feature minimalism (seed prob, SRS, seeds, round)
+                _mn_cache_key = "aug=False_chalk=False"
+                if _mn_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_mn_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_mn, y_mn, w_mn = _meta_training_cache[_mn_cache_key]
+                _mn_model_key = "minimal_3feat"
+                if _mn_model_key not in _meta_models:
+                    _meta_models[_mn_model_key] = train_meta_selector_minimal(X_mn, y_mn, w_mn)
+                meta_bracket = build_trained_bracket(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_mn_model_key],
+                )
+            elif meta_mode in ("meta_region_gbm", "meta_exhaustive_gbm", "meta_exhaustive_margin"):
+                # Hybrid: GBM/margin predicted round probs → smart construction
+                from src.optimization.bracket_construction import construct_bracket
+
+                # Train the appropriate model
+                _hy_cache_key = "aug=False_chalk=False"
+                if _hy_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_hy_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                if meta_mode == "meta_exhaustive_margin":
+                    _hy_mg_key = "margin_aug=True_chalk=True"
+                    if _hy_mg_key not in _meta_training_cache:
+                        _meta_training_cache[_hy_mg_key] = build_margin_training_data(
+                            train_years, augment=True, drop_chalk=True
+                        )
+                    X_hm, y_hm, w_hm = _meta_training_cache[_hy_mg_key]
+                    _hy_model_key = "margin"
+                    if _hy_model_key not in _meta_models:
+                        _meta_models[_hy_model_key] = train_meta_selector_margin(X_hm, y_hm, w_hm)
+                    _hy_model = _meta_models[_hy_model_key]
+                else:
+                    X_hg, y_hg, w_hg = _meta_training_cache[_hy_cache_key]
+                    _hy_gbm_key = "aug=False_chalk=False_tune=False"
+                    if _hy_gbm_key not in _meta_models:
+                        _meta_models[_hy_gbm_key] = train_meta_selector(X_hg, y_hg, w_hg)
+                    _hy_model = _meta_models[_hy_gbm_key]
+
+                # Build GBM-predicted round probs via MC simulation
+                gbm_rp = build_gbm_round_probs(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _hy_model,
+                    n_sims=2000,
+                    rng_seed=42 + year,
+                )
+
+                # Use smart construction with GBM round probs
+                _hy_construction = "region_top_n" if "region" in meta_mode else "exhaustive_champion"
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode=_hy_construction,
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=gbm_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=0.5,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+                print(f"  {year}   {meta_mode:<24} champ={_champ}")
             else:
                 print(f"  WARNING: unknown meta mode '{meta_mode}', skipping")
                 continue
@@ -2867,6 +3252,7 @@ def run_backtest(
     write_cache: bool = False,
     workers: int = 1,
     opponent_strategy: str = "shared",
+    eval_start_year: int = None,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -2991,8 +3377,13 @@ def run_backtest(
             print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
     # --- Aggregates ---
+    if eval_start_year:
+        results = [r for r in results if r["year"] >= eval_start_year]
+        eval_label = f"AGGREGATE (years >= {eval_start_year})"
+    else:
+        eval_label = "AGGREGATE"
     print(f"\n{'=' * 100}")
-    print("AGGREGATE")
+    print(eval_label)
     print(f"{'=' * 100}")
     print(
         f"\n  {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} {'P(1st)':>8} {'P(top5%)':>10} {'P(top25%)':>10} {'MeanScr':>8}"
@@ -3169,6 +3560,13 @@ def main():
         help=f"Explicit list of legacy modes to evaluate. Valid: {', '.join(ALL_MODES)}",
     )
     parser.add_argument(
+        "--eval-start-year",
+        type=int,
+        default=None,
+        help="Only include years >= this value in aggregate metrics and stat tests. "
+        "Training still uses all walk-forward years. Default: all years.",
+    )
+    parser.add_argument(
         "--bases",
         type=str,
         nargs="+",
@@ -3258,6 +3656,7 @@ def main():
             save_brackets=args.save_brackets,
             team_identity=args.team_identity,
             opponent_strategy=args.opponent_strategy,
+            eval_start_year=args.eval_start_year,
         )
     finally:
         if log_file is not None:
