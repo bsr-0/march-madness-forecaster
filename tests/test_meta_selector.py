@@ -572,6 +572,7 @@ class TestBacktestModeRegistration:
             "meta_region_gbm",
             "meta_exhaustive_gbm",
             "meta_exhaustive_margin",
+            "meta_region_blend",
         ],
     )
     def test_new_modes_registered(self, mode):
