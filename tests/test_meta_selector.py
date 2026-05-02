@@ -577,6 +577,7 @@ class TestBacktestModeRegistration:
             "meta_region_elo",
             "meta_region_massey",
             "meta_region_blend90",
+            "meta_region_poolaware",
         ],
     )
     def test_new_modes_registered(self, mode):
