@@ -98,6 +98,8 @@ def load_massey_avg_barthag(
 
     path = Path(data_root) / "raw" / f"external_massey_composite_{year}.json"
     if not path.exists():
+        path = Path(data_root) / "raw" / "historical" / f"external_massey_composite_{year}.json"
+    if not path.exists():
         return None
 
     raw = json.load(open(path))
