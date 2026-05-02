@@ -25,6 +25,7 @@ from src.prediction.meta_selector import (
     build_training_data,
     feature_names,
     leverage_pick,
+    load_meta_context,
     n_features,
 )
 
@@ -80,8 +81,8 @@ def simple_pick_dist(seeds_2025):
 
 class TestFeatureAssembly:
     def test_feature_count(self):
-        # bases + seeds(2) + picks(2) + leverage_diff + agreement + consensus + disagreement + matchup_type + round + context
-        expected = len(BASE_FEATURE_ORDER) + 2 + 2 + 1 + 1 + 1 + 1 + 1 + 1 + len(CONTEXT_KEYS)
+        # bases + seeds(2) + picks(2) + leverage_diff + agreement + consensus + disagreement + matchup_type + round + context + S4(3)
+        expected = len(BASE_FEATURE_ORDER) + 2 + 2 + 1 + 1 + 1 + 1 + 1 + 1 + len(CONTEXT_KEYS) + 3
         assert n_features() == expected
         assert len(feature_names()) == expected
 
@@ -392,6 +393,193 @@ class TestTrainedSelector:
         # This is a soft check — the model SHOULD pick some upsets
         assert chalk_count < 32, "Model picked all favorites — degenerated to argmax"
 
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021),
+        reason="Need training data",
+    )
+    def test_lr_model_trains_without_error(self):
+        from src.prediction.meta_selector import train_meta_selector_lr
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector_lr(X, y, w)
+        assert hasattr(model, "predict")
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_lr_bracket_is_valid(self):
+        from src.prediction.meta_selector import (
+            _load_year_data,
+            build_trained_bracket,
+            train_meta_selector_lr,
+        )
+        from src.simulation.pool_competition import picks_by_round
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector_lr(X, y, w)
+
+        brp, pick_dist, seeds, context, first_round, _ = _load_year_data(TEST_YEAR, DATA_ROOT)
+        bracket = build_trained_bracket(first_round, brp, pick_dist, seeds, context, model)
+
+        assert bracket.shape == (63,)
+        assert bracket.dtype == bool
+
+        picks = picks_by_round(bracket, first_round)
+        assert len(picks["CHAMP"]) == 1
+        assert picks["CHAMP"].issubset(picks["F4"])
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_lr_bracket_is_deterministic(self):
+        from src.prediction.meta_selector import (
+            _load_year_data,
+            build_trained_bracket,
+            train_meta_selector_lr,
+        )
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_meta_selector_lr(X, y, w)
+
+        brp, pick_dist, seeds, context, first_round, _ = _load_year_data(TEST_YEAR, DATA_ROOT)
+        b1 = build_trained_bracket(first_round, brp, pick_dist, seeds, context, model)
+        b2 = build_trained_bracket(first_round, brp, pick_dist, seeds, context, model)
+        np.testing.assert_array_equal(b1, b2)
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021),
+        reason="Need training data",
+    )
+    def test_margin_model_trains_without_error(self):
+        from src.prediction.meta_selector import (
+            build_margin_training_data,
+            train_meta_selector_margin,
+        )
+
+        X, y_margin, w = build_margin_training_data([2019, 2021])
+        assert y_margin.min() < 0, "Expected some negative margins"
+        assert y_margin.max() > 0, "Expected some positive margins"
+        model = train_meta_selector_margin(X, y_margin, w)
+        assert hasattr(model, "predict")
+        assert hasattr(model, "predict_margin")
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_margin_bracket_is_valid(self):
+        from src.prediction.meta_selector import (
+            _load_year_data,
+            build_margin_training_data,
+            build_trained_bracket,
+            train_meta_selector_margin,
+        )
+        from src.simulation.pool_competition import picks_by_round
+
+        X, y_margin, w = build_margin_training_data([2019, 2021])
+        model = train_meta_selector_margin(X, y_margin, w)
+
+        brp, pick_dist, seeds, context, first_round, _ = _load_year_data(TEST_YEAR, DATA_ROOT)
+        bracket = build_trained_bracket(first_round, brp, pick_dist, seeds, context, model)
+
+        assert bracket.shape == (63,)
+        assert bracket.dtype == bool
+
+        picks = picks_by_round(bracket, first_round)
+        assert len(picks["CHAMP"]) == 1
+        assert picks["CHAMP"].issubset(picks["F4"])
+
+    @pytest.mark.skipif(
+        not _has_year_data(2019) or not _has_year_data(2021) or not _has_year_data(TEST_YEAR),
+        reason="Need training + test data",
+    )
+    def test_multi_seed_ensemble_produces_valid_bracket(self):
+        from src.prediction.meta_selector import (
+            _load_year_data,
+            build_trained_bracket,
+            train_multi_seed_ensemble,
+        )
+        from src.simulation.pool_competition import picks_by_round
+
+        X, y, w = build_training_data([2019, 2021])
+        model = train_multi_seed_ensemble(X, y, w, n_seeds=3)
+        assert hasattr(model, "predict")
+        assert len(model.models) == 3
+
+        brp, pick_dist, seeds, context, first_round, _ = _load_year_data(TEST_YEAR, DATA_ROOT)
+        bracket = build_trained_bracket(first_round, brp, pick_dist, seeds, context, model)
+
+        assert bracket.shape == (63,)
+        assert bracket.dtype == bool
+
+        picks = picks_by_round(bracket, first_round)
+        assert len(picks["CHAMP"]) == 1
+        assert picks["CHAMP"].issubset(picks["F4"])
+
+
+# ---------------------------------------------------------------------------
+# Phase 0/1/2: Context skew fix, multiseed mode, #9 ablation mode
+# ---------------------------------------------------------------------------
+
+
+class TestLoadMetaContext:
+    """Verify load_meta_context returns all CONTEXT_KEYS."""
+
+    @pytest.mark.skipif(not _has_year_data(TEST_YEAR), reason="Need test year data")
+    def test_returns_all_context_keys(self):
+        seeds_path = HIST_DIR / f"tournament_seeds_{TEST_YEAR}.json"
+        if not seeds_path.exists():
+            pytest.skip("No seeds file")
+        import json as _json
+
+        with open(seeds_path) as f:
+            seeds = _json.load(f)
+        ctx = load_meta_context(TEST_YEAR, seeds, DATA_ROOT)
+        for key in CONTEXT_KEYS:
+            assert key in ctx, f"Missing context key: {key}"
+
+
+class TestBacktestModeRegistration:
+    """Verify new modes are registered in ALL_MODES and LEGACY_MODE_MAP."""
+
+    def test_multiseed_registered(self):
+        from scripts.mc_pool_backtest import ALL_MODES, LEGACY_MODE_MAP
+
+        assert "meta_gbm_multiseed" in ALL_MODES
+        assert "meta_gbm_multiseed" in LEGACY_MODE_MAP
+
+    def test_no9_ablation_registered(self):
+        from scripts.mc_pool_backtest import ALL_MODES, LEGACY_MODE_MAP
+
+        assert "meta_gbm_no9" in ALL_MODES
+        assert "meta_gbm_no9" in LEGACY_MODE_MAP
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "meta_gbm_lr",
+            "meta_gbm_margin",
+            "meta_gbm_vegas",
+            "meta_sa",
+            "meta_exhaustive",
+            "meta_region",
+            "meta_sa_chalk",
+            "meta_gbm_elim",
+            "meta_gbm_minimal",
+            "meta_sa_vol",
+            "meta_region_gbm",
+            "meta_exhaustive_gbm",
+            "meta_exhaustive_margin",
+        ],
+    )
+    def test_new_modes_registered(self, mode):
+        from scripts.mc_pool_backtest import ALL_MODES, LEGACY_MODE_MAP
+
+        assert mode in ALL_MODES, f"{mode} not in ALL_MODES"
+        assert mode in LEGACY_MODE_MAP, f"{mode} not in LEGACY_MODE_MAP"
+
 
 # ---------------------------------------------------------------------------
 # S1: Champion-First Construction Tests
@@ -558,3 +746,153 @@ class TestChampionFirst:
         assert brackets.shape[1] == 63
         assert brackets.shape[0] == len(champs)
         assert len(champs) <= 4
+
+
+class TestS2Features:
+    """Tests for S2 tournament-specific box score features."""
+
+    def test_feature_count_matches_base_order(self):
+        # bases(15) + seeds(2) + picks(2) + leverage_diff + agreement + consensus
+        # + disagreement + matchup_type + round + context(4) + S4(3) = 32
+        expected = len(BASE_FEATURE_ORDER) + 2 + 2 + 1 + 1 + 1 + 1 + 1 + 1 + len(CONTEXT_KEYS) + 3
+        assert n_features() == expected
+        assert len(feature_names()) == expected
+
+    def test_s4_feature_names_present(self):
+        names = feature_names()
+        for name in ("prob_variance", "prob_skewness", "market_model_gap"):
+            assert name in names
+
+    def test_four_factors_loading(self):
+        from src.prediction.tournament_features import load_four_factors
+
+        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
+        if not seeds_path.exists():
+            pytest.skip("No 2025 data")
+        seed_data = json.loads(seeds_path.read_text())
+        team_ids = [t["team_id"] for t in seed_data["teams"]]
+
+        ft_rate, to_margin = load_four_factors(2025, team_ids, Path("data"))
+        assert len(ft_rate) > 0
+        for v in ft_rate.values():
+            assert 0.1 < v < 0.6, f"ft_rate {v} out of range"
+        for v in to_margin.values():
+            assert -0.15 < v < 0.15, f"to_margin {v} out of range"
+
+    def test_conf_tourney_loading(self):
+        from src.prediction.tournament_features import load_conf_tourney_champ
+
+        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
+        if not seeds_path.exists():
+            pytest.skip("No 2025 data")
+        seed_data = json.loads(seeds_path.read_text())
+        team_ids = [t["team_id"] for t in seed_data["teams"]]
+
+        result = load_conf_tourney_champ(2025, team_ids, Path("data"))
+        assert len(result) > 0
+        for v in result.values():
+            assert v in (0.0, 1.0), f"conf_tourney value {v} not binary"
+        champions = [k for k, v in result.items() if v == 1.0]
+        assert len(champions) >= 10, f"Expected >=10 conf champs, got {len(champions)}"
+
+    def test_ranking_momentum_loading(self):
+        from src.prediction.tournament_features import load_ranking_momentum
+
+        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
+        if not seeds_path.exists():
+            pytest.skip("No 2025 data")
+        seed_data = json.loads(seeds_path.read_text())
+        team_ids = [t["team_id"] for t in seed_data["teams"]]
+
+        result = load_ranking_momentum(2025, team_ids, Path("data"))
+        assert len(result) > 0
+        nonzero = [v for v in result.values() if v != 0]
+        assert len(nonzero) > 0, "All momentum values are zero"
+
+    def test_missing_data_graceful(self):
+        from src.prediction.meta_selector import _load_context
+
+        seeds = {"fake_team_a": 1, "fake_team_b": 16}
+        context = _load_context(1990, seeds, Path("data"))
+        for key in CONTEXT_KEYS:
+            assert key in context
+
+
+class TestUpsetDetector:
+    """Tests for the rule-based upset detector."""
+
+    def _load_2025_field(self):
+        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
+        if not seeds_path.exists():
+            pytest.skip("No 2025 data")
+        seed_data = json.loads(seeds_path.read_text())
+        team_ids = [t["team_id"] for t in seed_data["teams"]]
+        seeds = {t["team_id"]: t["seed"] for t in seed_data["teams"]}
+        return team_ids, seeds
+
+    def test_upset_scores_range(self):
+        from src.prediction.upset_detector import clear_cache, compute_upset_scores
+
+        clear_cache()
+        team_ids, seeds = self._load_2025_field()
+        scores = compute_upset_scores(2025, team_ids, seeds)
+        assert len(scores) > 0
+        for tid, s in scores.items():
+            assert 0.0 <= s <= 1.0, f"{tid} score {s} out of [0,1]"
+
+    def test_upset_scores_differentiate(self):
+        """Scores should not all be identical."""
+        from src.prediction.upset_detector import clear_cache, compute_upset_scores
+
+        clear_cache()
+        team_ids, seeds = self._load_2025_field()
+        scores = compute_upset_scores(2025, team_ids, seeds)
+        unique_scores = set(round(s, 4) for s in scores.values())
+        assert len(unique_scores) >= 5, f"Only {len(unique_scores)} unique scores"
+
+    def test_torvik_gap_drives_variation(self):
+        """The Torvik gap signal should create meaningful spread between seeds."""
+        from src.prediction.upset_detector import clear_cache, compute_upset_scores
+
+        clear_cache()
+        team_ids, seeds = self._load_2025_field()
+        scores = compute_upset_scores(2025, team_ids, seeds)
+        # 16-seeds should generally have low scores (weak + high seed = no gap signal)
+        s16_scores = [scores[t] for t in team_ids if seeds.get(t, 16) == 16 and t in scores]
+        all_scores = list(scores.values())
+        if s16_scores and all_scores:
+            assert np.mean(s16_scores) < np.mean(all_scores), "16-seeds should be below average"
+
+    def test_apply_overrides_shape(self):
+        """Override output has same shape as input."""
+        from src.prediction.upset_detector import apply_upset_overrides
+
+        bracket = np.ones(63, dtype=bool)
+        matchups = [f"team_{i}" for i in range(64)]
+        seeds = {f"team_{i}": (i // 4) + 1 for i in range(64)}
+        scores = {f"team_{i}": 0.6 if i % 2 == 1 else 0.1 for i in range(64)}
+        result = apply_upset_overrides(bracket, matchups, seeds, scores, 0.45, 0)
+        assert result.shape == (63,)
+        assert result.dtype == bool
+
+    def test_overrides_produce_flips(self):
+        """With high upset scores, some games should flip."""
+        from src.prediction.upset_detector import apply_upset_overrides
+
+        bracket = np.ones(63, dtype=bool)  # all chalk
+        matchups = [f"team_{i}" for i in range(64)]
+        seeds = {f"team_{i}": 1 if i % 2 == 0 else 16 for i in range(64)}
+        scores = {f"team_{i}": 0.8 if i % 2 == 1 else 0.0 for i in range(64)}
+        result = apply_upset_overrides(bracket, matchups, seeds, scores, 0.45, 0)
+        flips = int((bracket != result).sum())
+        assert flips > 0, "Expected some upset overrides"
+
+    def test_missing_data_no_crash(self):
+        """Scores work with a nonexistent year."""
+        from src.prediction.upset_detector import clear_cache, compute_upset_scores
+
+        clear_cache()
+        scores = compute_upset_scores(1990, ["fake_a", "fake_b"], {"fake_a": 1, "fake_b": 16})
+        assert len(scores) == 2
+        for s in scores.values():
+            assert s == 0.0
