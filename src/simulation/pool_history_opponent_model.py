@@ -566,3 +566,201 @@ def load_pool_history_picks(
         laplace_alpha=laplace_alpha,
         strict=strict,
     )
+
+
+# ---------------------------------------------------------------------------
+# Cross-year pool behavioral model
+# ---------------------------------------------------------------------------
+
+# Seed matchups in R64 (higher seed listed first = "chalk" pick)
+_R64_MATCHUPS = [(1, 16), (2, 15), (3, 14), (4, 13), (5, 12), (6, 11), (7, 10), (8, 9)]
+
+
+def build_pool_behavioral_model(
+    path: str | Path,
+    seeds: Mapping[str, int],
+    exclude_year: Optional[int] = None,
+) -> Tuple[Dict[str, Dict[str, float]], float]:
+    """Build a seed-based pick distribution from cross-year pool behavior.
+
+    For years without direct pool bracket data, this learns the pool's
+    behavioral patterns (seed-specific upset tendencies per round, bracket
+    correlation) from all available pool history years and maps them onto the
+    target year's teams via their seeds.
+
+    Args:
+        path: Path to pool_hist_results.json.
+        seeds: team_id -> seed for the TARGET year.
+        exclude_year: Year to exclude (LOOY).  If None, uses all available.
+
+    Returns:
+        (pick_dist, chalk_noise_std):
+            pick_dist: team_id -> {round: probability} for each team in seeds.
+            chalk_noise_std: Estimated bracket-level correlation parameter.
+    """
+    path = Path(path)
+    with open(path) as f:
+        data = json.load(f)
+    years_data = data.get("years", {})
+
+    # Collect seed-based pick rates across all pool-history years.
+    # Key: (higher_seed, lower_seed, round) -> [chalk_count, total_count]
+    seed_matchup_counts: Dict[Tuple[int, int, str], List[int]] = defaultdict(lambda: [0, 0])
+    # Track per-bracket chalk fraction for correlation estimation
+    bracket_chalk_fractions: List[float] = []
+
+    for year_str, year_entry in years_data.items():
+        yr = int(year_str)
+        if exclude_year is not None and yr == exclude_year:
+            continue
+        brackets = year_entry.get("brackets", [])
+        if not brackets:
+            continue
+
+        # Load seeds for this historical year to map teams to seed matchups
+        try:
+            yr_seeds, yr_regions = _load_year_seeds(yr)
+        except (FileNotFoundError, KeyError):
+            continue
+        if not yr_seeds:
+            continue
+
+        # Build reverse map: team_id -> seed for this year
+        # Also build first_round to walk brackets properly
+        try:
+            from scripts.mc_pool_backtest import (
+                build_first_round_matchups,
+                derive_f4_region_pairing,
+                load_tournament_results,
+                resolve_first_four,
+            )
+
+            yr_games = load_tournament_results(yr)
+            if yr_games:
+                resolve_first_four(yr_games, yr_seeds, yr_regions)
+                try:
+                    yr_region_order = derive_f4_region_pairing(yr_games, yr_regions)
+                except ValueError:
+                    yr_region_order = None
+            else:
+                yr_region_order = None
+            yr_first_round = build_first_round_matchups(yr_seeds, yr_regions, region_order=yr_region_order)
+        except (ImportError, Exception):
+            continue
+
+        if len(yr_first_round) != 64:
+            continue
+
+        for bkt in brackets:
+            chalk_picks = 0
+            total_picks = 0
+            # Walk bracket round-by-round
+            current = list(yr_first_round)
+            for round_name in ROUNDS:
+                pool_key = {v: k for k, v in _POOL_ROUND_MAP.items()}[round_name]
+                raw_picks = bkt.get(pool_key)
+                if raw_picks is None:
+                    # Advance with higher seed default
+                    nxt = []
+                    for g in range(0, len(current), 2):
+                        t1, t2 = current[g], current[g + 1]
+                        s1 = yr_seeds.get(t1, 8)
+                        s2 = yr_seeds.get(t2, 8)
+                        nxt.append(t1 if s1 <= s2 else t2)
+                    current = nxt
+                    continue
+                if isinstance(raw_picks, str):
+                    raw_picks = [raw_picks]
+
+                pick_set: set = set()
+                for raw in raw_picks:
+                    if isinstance(raw, str):
+                        tid = resolve_abbrev(raw, yr_seeds)
+                        if tid is not None:
+                            pick_set.add(tid)
+
+                nxt = []
+                for g in range(0, len(current), 2):
+                    if g + 1 >= len(current):
+                        nxt.append(current[g])
+                        continue
+                    t1, t2 = current[g], current[g + 1]
+                    s1 = yr_seeds.get(t1, 8)
+                    s2 = yr_seeds.get(t2, 8)
+
+                    # Determine higher/lower seed
+                    if s1 <= s2:
+                        high_seed, low_seed = s1, s2
+                        chalk_team, upset_team = t1, t2
+                    else:
+                        high_seed, low_seed = s2, s1
+                        chalk_team, upset_team = t2, t1
+
+                    # Determine who was picked
+                    t1_in = t1 in pick_set
+                    t2_in = t2 in pick_set
+                    if t1_in:
+                        winner = t1
+                    elif t2_in:
+                        winner = t2
+                    else:
+                        winner = chalk_team  # default to chalk
+
+                    picked_chalk = winner == chalk_team
+                    seed_matchup_counts[(high_seed, low_seed, round_name)][1] += 1
+                    if picked_chalk:
+                        seed_matchup_counts[(high_seed, low_seed, round_name)][0] += 1
+                        chalk_picks += 1
+                    total_picks += 1
+
+                    nxt.append(winner)
+                current = nxt
+
+            if total_picks > 0:
+                bracket_chalk_fractions.append(chalk_picks / total_picks)
+
+    # Build pick_dist for the target year's teams using learned seed rates.
+    # Use Bayesian smoothing: blend empirical rate with a seed-based prior,
+    # weighted by observation count. This prevents wild estimates from sparse
+    # late-round bins (e.g., a 12-seed in F4 with N=2 observations).
+    PRIOR_WEIGHT = 10  # pseudocount for the seed prior
+    pick_dist: Dict[str, Dict[str, float]] = {}
+
+    for tid, seed in seeds.items():
+        row: Dict[str, float] = {}
+        seed_prior = max(0.05, 1.0 - seed / 17.0)
+        for round_name in ROUNDS:
+            # Collect all observations for this seed in this round
+            total_obs = 0
+            chalk_obs = 0
+            for (hs, ls, rn), (chalk_ct, total_ct) in seed_matchup_counts.items():
+                if rn != round_name or total_ct == 0:
+                    continue
+                if hs == seed:
+                    chalk_obs += chalk_ct
+                    total_obs += total_ct
+                elif ls == seed:
+                    chalk_obs += total_ct - chalk_ct  # upset picks
+                    total_obs += total_ct
+            if total_obs > 0:
+                # Bayesian blend: (empirical * N + prior * PRIOR_WEIGHT) / (N + PRIOR_WEIGHT)
+                empirical = chalk_obs / total_obs
+                row[round_name] = (empirical * total_obs + seed_prior * PRIOR_WEIGHT) / (total_obs + PRIOR_WEIGHT)
+            else:
+                row[round_name] = seed_prior
+        pick_dist[tid] = row
+
+    # Estimate chalk_noise_std from bracket-level variance
+    if len(bracket_chalk_fractions) >= 5:
+        chalk_noise_std = float(np.std(bracket_chalk_fractions))
+    else:
+        chalk_noise_std = 0.15  # conservative default
+
+    return pick_dist, chalk_noise_std
+
+
+def _load_year_seeds(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
+    """Load seeds and regions for a historical year (utility for behavioral model)."""
+    from scripts.mc_pool_backtest import load_seeds_and_regions
+
+    return load_seeds_and_regions(year)

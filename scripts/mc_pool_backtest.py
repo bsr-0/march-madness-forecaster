@@ -84,6 +84,7 @@ from src.simulation.pool_competition import (
 from src.simulation.pool_history_opponent_model import (
     load_pool_brackets,
     build_pool_pick_distribution,
+    build_pool_behavioral_model,
 )
 
 # ---------------------------------------------------------------------------
@@ -2038,19 +2039,29 @@ def _run_one_year(
     # espn: strict — missing archived picks raise FileNotFoundError.
     # seed: static SEED_PICK_RATES (year-agnostic fallback).
     year_n_opponents = n_opponents  # may be overridden below for pool mode
+    pool_chalk_noise_std = 0.0  # bracket-level correlation for synthetic opponents
     if opponent_source == "pool":
         try:
             pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
             pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
             year_n_opponents = group_size - 1  # pool size excludes model bracket
         except (FileNotFoundError, KeyError):
-            # No pool history for this year — fall back to ESPN silently.
+            # No pool history for this year — ESPN picks are year-specific
+            # (millions of entries, tournament-aware) so prefer them over our
+            # 105-bracket cross-year model. Behavioral model is last resort.
             try:
                 pick_dist = build_espn_pick_distribution(year, seeds)
                 year_n_opponents = n_opponents
-            except FileNotFoundError as exc:
-                print(f"  {year:<6} SKIP — {exc}")
-                return _empty_year_outcome(year, f"{exc}")
+            except FileNotFoundError:
+                # No ESPN data either — use cross-year behavioral model.
+                try:
+                    pick_dist, pool_chalk_noise_std = build_pool_behavioral_model(
+                        POOL_HIST_PATH, seeds, exclude_year=year
+                    )
+                    year_n_opponents = n_opponents
+                except Exception as exc:
+                    print(f"  {year:<6} SKIP — no opponent data: {exc}")
+                    return _empty_year_outcome(year, f"no opponent data: {exc}")
     elif opponent_source == "espn":
         try:
             pick_dist = build_espn_pick_distribution(year, seeds)
@@ -3192,6 +3203,7 @@ def _run_one_year(
                                 matchup_probs=seed_pw,
                                 seeds=seeds,
                                 rng=_pa_rng,
+                                chalk_noise_std=pool_chalk_noise_std,
                             )
                             _pa_out, _pa_br = simulate_tournament_outcomes(
                                 n_tournaments=1,
