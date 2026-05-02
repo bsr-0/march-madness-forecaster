@@ -6,7 +6,7 @@
 
 - **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
-- **Current baseline:** 8.0% P(1st) via `meta_region` (region top-N beam search on torvik probs), up from 4.6% meta_gbm. Recency-weighted: 9.3%. Last 4 years: 10.0%. Seed baseline: 3.1%.
+- **Current baseline:** 11.9% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 8.0% meta_region, 4.6% meta_gbm. Seed baseline: 3.1%. Permutation-validated: p=0.0076 after multiple comparison correction.
 - **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
@@ -23,7 +23,8 @@ The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + s
 
 | Mode | Algorithm | P(1st) | MeanRank | Yrs>Seed | Status |
 |------|-----------|:------:|:--------:|:--------:|--------|
-| **meta_region** | Region top-N beam search on torvik probs | **8.0%** | **12.3** | **11/14** | **PRODUCTION — p<0.001** |
+| **meta_region_poolaware** | ~25 candidates × pool-aware selection | **11.9%** | **10.4** | **14/14** | **PRODUCTION — p=0.008** |
+| **meta_region** | Region top-N beam search on torvik probs | **8.0%** | **12.3** | **11/14** | **STRONG — p<0.001** |
 | **meta_exhaustive** | Exhaustive 64-champion search on torvik probs | **7.7%** | **12.6** | **11/14** | **STRONG — p<0.001** |
 | meta_gbm_margin | XGB margin regression, per-game picks | 5.3% | 12.1 | 6/14 | Trending up (8.5% last 4 yrs) |
 | meta_gbm | LightGBM 39-feat, corrected context | 4.6% | 14.8 | 8/14 | Superseded by construction modes |
