@@ -181,6 +181,7 @@ LEGACY_MODE_MAP = {
     "meta_region_gbm": ("meta", "region_gbm"),  # Region top-N with GBM round probs
     "meta_exhaustive_gbm": ("meta", "exhaustive_gbm"),  # Exhaustive champion with GBM round probs
     "meta_exhaustive_margin": ("meta", "exhaustive_margin"),  # Exhaustive champion with margin probs
+    "meta_region_blend": ("meta", "region_blend"),  # Region top-N with 90% torvik + 10% GBM probs
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -223,6 +224,7 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_region_gbm",
     "meta_exhaustive_gbm",
     "meta_exhaustive_margin",
+    "meta_region_blend",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -2966,6 +2968,50 @@ def _run_one_year(
                     _meta_context,
                     _meta_models[_mn_model_key],
                 )
+            elif meta_mode == "meta_region_blend":
+                # Light blend: 90% torvik + 10% GBM round probs → region construction
+                from src.optimization.bracket_construction import construct_bracket
+
+                _bl_cache_key = "aug=False_chalk=False"
+                if _bl_cache_key not in _meta_training_cache:
+                    _meta_training_cache[_bl_cache_key] = build_training_data(
+                        train_years, augment=False, drop_chalk=False
+                    )
+                X_bl, y_bl, w_bl = _meta_training_cache[_bl_cache_key]
+                _bl_model_key = "aug=False_chalk=False_tune=False"
+                if _bl_model_key not in _meta_models:
+                    _meta_models[_bl_model_key] = train_meta_selector(X_bl, y_bl, w_bl)
+
+                gbm_rp = build_gbm_round_probs(
+                    first_round,
+                    base_round_probs,
+                    pick_dist,
+                    seeds,
+                    _meta_context,
+                    _meta_models[_bl_model_key],
+                    n_sims=2000,
+                    rng_seed=42 + year,
+                )
+                # Blend: 90% torvik + 10% GBM
+                blended_rp: Dict[str, Dict[str, float]] = {}
+                for tid in torvik_rp:
+                    blended_rp[tid] = {}
+                    for rn in torvik_rp[tid]:
+                        tv_val = torvik_rp[tid][rn]
+                        gbm_val = gbm_rp.get(tid, {}).get(rn, tv_val)
+                        blended_rp[tid][rn] = 0.9 * tv_val + 0.1 * gbm_val
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode="region_top_n",
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=blended_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=0.5,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+                print(f"  {year}   {meta_mode:<24} champ={_champ}")
             elif meta_mode in ("meta_region_gbm", "meta_exhaustive_gbm", "meta_exhaustive_margin"):
                 # Hybrid: GBM/margin predicted round probs → smart construction
                 from src.optimization.bracket_construction import construct_bracket

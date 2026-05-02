@@ -973,12 +973,9 @@ def _load_context(
         context["conf_tourney_depth"] = {}
 
     # Field chalk signal — same value for all teams (year-level feature).
-    # The meta-selector uses team1 - team2 diff for context features.
-    # Since chalk_signal is the same for both teams, the diff is always 0.
-    # Instead, assign +signal to team1 and -signal to team2 so the feature
-    # captures the year's chalk level as a constant offset the model can use.
-    # In practice: assign the signal to ALL teams. The diff (t1 - t2) = 0,
-    # but the raw value is available if using absolute features.
+    # The diff (t1 - t2) is always 0, making this a dead feature for the
+    # GBM. Kept for backward compatibility; seed-scaled volatility variant
+    # tested 2026-05-01 and regressed (4.4% vs 4.6% P(1st)), reverted.
     try:
         from src.data.features.custom_ratings import compute_field_chalk_signal
 
