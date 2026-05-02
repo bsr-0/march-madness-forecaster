@@ -573,6 +573,10 @@ class TestBacktestModeRegistration:
             "meta_exhaustive_gbm",
             "meta_exhaustive_margin",
             "meta_region_blend",
+            "meta_region_4champ",
+            "meta_region_elo",
+            "meta_region_massey",
+            "meta_region_blend90",
         ],
     )
     def test_new_modes_registered(self, mode):
