@@ -54,7 +54,7 @@ The optimizer is downstream-only. It consumes read-only probabilities from Phase
 |------|---------|
 | `src/optimization/pool_optimizer.py` | Orchestrator: PoolEnvironment, AssumptionsManifest, SensitivityReport, PoolResult |
 | `src/optimization/leverage.py` | EV-edge: `(model_prob − public_pct) × round_points` |
-| `src/optimization/bracket_construction.py` | 4 build modes: forward_greedy, champ_first, f4_first, e8_first |
+| `src/optimization/bracket_construction.py` | 8 build modes: forward_greedy, champ_first, f4_first, e8_first, simulated_annealing, exhaustive_champion, region_top_n, champ_first_chalkfade |
 | `src/optimization/bracket_search.py` | Search strategies for optimal brackets |
 | `src/optimization/bracket_portfolio.py` | Multi-bracket portfolio (Kaggle) |
 | `src/optimization/path_protection.py` | Protect high-value tournament paths |
@@ -112,8 +112,8 @@ Call `resolve_first_four()` before building any bracket. The seeds file includes
 ### 5. Region Order Is Per-Year
 Use `derive_f4_region_pairing()` for F4 region order — never the hardcoded `REGION_ORDER` constant. The hardcoded value is a fallback default; using it for ground-truth decoding produces wrong champions (e.g., Duke instead of Florida for 2025).
 
-### 6. Stochastic Brackets, Not Argmax
-The MC backtest samples stochastic brackets (path-consistent random draws). Argmax collapses calibrated probabilities into a single crowd-following bracket, destroying the leverage signal. Always use stochastic sampling.
+### 6. Deterministic Meta Modes Produce One Bracket
+Meta-selector modes (meta_gbm, meta_region, meta_region_poolaware, etc.) produce exactly ONE deterministic bracket per year. They bypass the stochastic sampler loop. Stochastic sampling is used for legacy modes only (seed, noseed, blend, torvik).
 
 ### 7. Sensitivity Stability
 If shifting public sentiment by ±5% changes the optimal champion or ≥2 Final Four picks, flag as `HIGH_STRATEGY_UNCERTAINTY`. This must propagate to all consumer output — never suppress silently.
@@ -203,16 +203,53 @@ def test_walk_forward_contract(self, test_year):
 | NUM_SIMULATIONS | 10,000 |
 | TOURNAMENT_SHRINKAGE | 0.06 |
 | MC_NOISE_STD | 0.16 |
-| ALL_MODES | seed, noseed, blend, torvik, champ_first_tv, f4_first_tv, e8_first_tv |
+| ALL_MODES | 25+ modes — see `ALL_MODES` tuple in `mc_pool_backtest.py` for full list |
+
+---
+
+## Current Production Strategy (2026-05-02)
+
+**`meta_region_poolaware` = 11.9% P(1st)** (14-year LOYO, N=30 pool, p=0.008 after multiple comparison correction).
+
+### How It Works
+1. Generate ~25 diverse candidate brackets per year:
+   - 5 risk levels (0.1, 0.3, 0.5, 0.7, 0.9)
+   - 5 probability bases (torvik, massey_avg, massey_best, blend, 80/20 torvik-massey)
+   - 2 construction modes (region_top_n, exhaustive_champion)
+   - 4 forced champions (one per 1-seed, region_top_n only)
+   - Deduped by bracket content
+2. For each candidate, simulate 200 tournaments × 30 opponents
+3. Select the candidate with highest P(1st) against the field
+
+### Key Insight
+Optimizing P(beat field) instead of E[points] is a fundamentally different objective that broke through the 8% E[points]-based ceiling. The GBM learned model (4.6%) is worse than raw probability-based construction (8.0%), which is worse than pool-aware selection over diverse candidates (11.9%).
+
+### Strategy Evolution
+```
+seed baseline          3.1%  → starting point
+meta_gbm               4.6%  → learned model (superseded)
+meta_region             8.0%  → construction > learned models
+meta_region_poolaware  11.9%  → opponent-aware selection (current best)
+```
 
 ---
 
 ## Anti-Patterns to Avoid
 
 1. **Mocking optimizer internals.** Use synthetic but structurally valid data (real seeds, real scoring rules).
-2. **Optimizing prediction when the edge is in strategy.** Seeds explain ~87% of outcomes; 63 games/year is not enough for ML to beat the seed baseline. The real edge is pool optimization.
-3. **Adding model features without LOYO evidence.** New features need BSS > 0 vs seed baseline across 16 LOYO folds.
+2. **Optimizing game prediction accuracy.** BSS=0 is the field-wide ceiling. 14 Kaggle/academic techniques tested — none beat raw probability-based construction. The edge is in construction + opponent modeling.
+3. **Feeding GBM probabilities into construction modes.** Proven to hurt — GBM probs are less calibrated than torvik. Don't combine them.
 4. **Fitting pool hyperparameters on all years.** Always walk-forward: fit on years < test_year.
-5. **Deterministic argmax brackets in backtests.** Always stochastic sampling.
-6. **Ignoring sensitivity flags.** `HIGH_STRATEGY_UNCERTAINTY` must surface to users.
-7. **Mutating probabilities inside the optimizer.** Adjustments belong in strategy space, not probability space.
+5. **SA construction.** Fundamentally broken at 1-2% P(1st). Do not revisit.
+6. **Champion pick optimization in isolation.** Proven irrelevant to P(1st) — construction quality in R64-E8 dominates. Champion is ~random among 1-seeds (correct 2/14).
+7. **Adding features to the GBM meta-selector.** Multi-seed (#10), Vegas R1 (#3), backward elimination (#12) all had zero effect on bracket picks.
+8. **Ignoring sensitivity flags.** `HIGH_STRATEGY_UNCERTAINTY` must surface to users.
+9. **Mutating probabilities inside the optimizer.** Adjustments belong in strategy space, not probability space.
+
+---
+
+## Next Steps (prioritized)
+
+1. **Improve opponent model** — use 105 real pool brackets (2023-2026) from `data/pool_history/pool_hist_results.json` as behavioral prior instead of generic ESPN picks
+2. **More candidate diversity** — more blend ratios, walk-forward Massey best-system selection
+3. **Upset specialist as poolaware candidate** — add upset-adjusted brackets to candidate pool (specialist alone was null, but as one of ~25 candidates it might be selected in specific years)
