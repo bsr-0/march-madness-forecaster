@@ -6,27 +6,36 @@
 
 - **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
-- **Current baseline:** 4.27% P(1st) per bracket (vs 3.23% random). Oracle best-of-50: ~9%. **Regime caveat:** the 9% oracle figure is a **stochastic-regime** ceiling (one strategy emits 50 brackets, ranker selects 1). It does **not** bound the post-pivot deterministic meta-learner regime (1 model → 1 bracket; no within-strategy selection step). The deterministic ceiling is unmeasured and theoretically much higher (a perfect-knowledge bracket finishes #1 with P(1st) ≈ 100%). Do NOT cite the 9% figure to argue meta-selector improvements have small expected effect size.
+- **Current baseline:** 8.0% P(1st) via `meta_region` (region top-N beam search on torvik probs), up from 4.6% meta_gbm. Recency-weighted: 9.3%. Last 4 years: 10.0%. Seed baseline: 3.1%.
 - **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
 - **Before proposing any new strategy:** Read `memory/project_strategies_tested.md` for what's been tried and killed.
 - **Before running `--tier budget` or any backtest pipeline:** Read `memory/run_policy.md`. Strategy-addition phases are **no-run by default** — `python -m scripts.run_experiment --tier budget` (and any `--tier 1|2|3|all` variant) requires **explicit human approval**. Adding new strategies, adjustments, or construction modes does NOT authorize a run. If the operator's signal is ambiguous, ask.
 
-## Architectural Direction: Learned Meta-Selector (2026-04-26)
+## Architectural Direction: Construction-First (2026-05-01)
 
-**READ BEFORE ANY BRACKET CONSTRUCTION WORK.** Full details in `memory/project_meta_selector_pivot.md`.
+**READ BEFORE ANY BRACKET CONSTRUCTION WORK.** Full details in `memory/project_meta_selector_pivot.md` and `docs/session-summaries/session-20260501-193935.md`.
 
-The stochastic coin-flip bracket generation approach has been **retired as the primary development path**. Convergence testing proved all stochastic modes converge to ~5% P(1st) regardless of probability base or anchor strategy — barely above random (3.2%). The D12 deterministic-argmax test killed only naive argmax, not learned deterministic models.
+The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + smart construction beats learned models + naive construction**. Region top-N beam search and exhaustive champion search using raw torvik round probabilities outperform the GBM meta-selector by 2x. GBM-predicted round probabilities fed into construction modes actually HURT — less calibrated than torvik.
 
-### All Deterministic Strategies Tested (4 total)
+### Top Strategies (14-year LOYO, team-identity scoring, N=30 pool)
 
-| Mode | Algorithm | P(1st) | MeanRank | MeanScr | vs Seed | Status |
-|------|-----------|:------:|:--------:|:-------:|:-------:|--------|
-| **meta_gbm v2** | LightGBM 26-feat, `weight=round_pts` | **2.71%** | **317** | **1062** | **11/14** | **ACTIVE — p=0.041** |
-| meta_gbm v1 | LightGBM 26-feat, `weight=pts×(1-pub%)` | 0.43% | 600 | 502 | 0/14 | KILLED — contrarian loss |
-| meta_leverage | `argmax(P(win) × (1-pub%))` | 0.29% | 661 | 316 | 0/14 | KILLED — too contrarian |
-| det_argmax (D12) | `argmax(probability)` per game | 0.00% | — | — | 0/14 | KILLED — pure chalk |
+| Mode | Algorithm | P(1st) | MeanRank | Yrs>Seed | Status |
+|------|-----------|:------:|:--------:|:--------:|--------|
+| **meta_region** | Region top-N beam search on torvik probs | **8.0%** | **12.3** | **11/14** | **PRODUCTION — p<0.001** |
+| **meta_exhaustive** | Exhaustive 64-champion search on torvik probs | **7.7%** | **12.6** | **11/14** | **STRONG — p<0.001** |
+| meta_gbm_margin | XGB margin regression, per-game picks | 5.3% | 12.1 | 6/14 | Trending up (8.5% last 4 yrs) |
+| meta_gbm | LightGBM 39-feat, corrected context | 4.6% | 14.8 | 8/14 | Superseded by construction modes |
+| seed baseline | Stochastic seed-probability sampling | 3.1% | 18.5 | — | BASELINE |
+| meta_sa / meta_sa_chalk | SA construction ± chalk signal | 1-2% | ~28 | 0-3/14 | KILLED |
+
+### Key Lessons from 14-Technique Bakeoff
+
+1. **Construction quality > model accuracy** for P(1st). Region/exhaustive win pools via correct early-round picks (R64-E8), not champion accuracy (2/14).
+2. **Champion pick is ~random among 1-seeds.** Actual champion is highest-barthag 1-seed only 2/14 times. No OOS model reliably picks which 1-seed wins.
+3. **GBM feature additions had zero effect.** Multi-seed (#10), Vegas R1 (#3), backward elimination (#12) all produced identical brackets to base meta_gbm.
+4. **SA construction is fundamentally broken** regardless of signal quality.
 
 Baselines: seed stochastic 1.76% P(1st) / MeanRank 403 / MeanScr 704. Random: 3.2% P(1st).
 
