@@ -187,6 +187,7 @@ LEGACY_MODE_MAP = {
     "meta_region_massey": ("meta", "region_massey"),  # Region top-N with massey_avg round probs
     "meta_region_blend90": ("meta", "region_blend90"),  # Region top-N with 90% torvik + 10% massey_avg
     "meta_region_poolaware": ("meta", "region_poolaware"),  # Region top-N × multi-candidate, pool-sim P(1st) selection
+    "meta_region_upset": ("meta", "region_upset"),  # Region top-N + upset specialist overrides on R64 coin-flips
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -235,6 +236,7 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_region_massey",
     "meta_region_blend90",
     "meta_region_poolaware",
+    "meta_region_upset",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -3069,69 +3071,87 @@ def _run_one_year(
                     )
             elif meta_mode == "meta_region_poolaware":
                 # Pool-aware candidate selection: generate diverse candidate
-                # brackets (varying champion, risk, prob base), then simulate
-                # each against the opponent field to pick highest P(1st).
+                # brackets (varying champion, risk, prob base, construction
+                # mode), then simulate each against the opponent field to
+                # pick highest P(1st).  Target: 15-25 unique candidates.
                 from src.optimization.bracket_construction import construct_bracket
 
                 one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
                 _pa_rng = np.random.default_rng(77777 + year)
 
-                # Build candidate brackets: 4 champions × default risk,
-                # plus risk sweeps and alternative prob bases.
                 _pa_candidates: list[tuple[np.ndarray, str]] = []  # (bracket, label)
+                _pa_pub = pick_dist if pick_dist else {}
+                _pa_scoring = dict(ESPN_SCORING)
 
-                # (a) One per 1-seed champion, standard torvik probs, risk=0.5
+                def _pa_try_add(label: str, **kwargs) -> None:
+                    """Build a bracket and append to candidates; swallow errors."""
+                    try:
+                        p, _ch, _, _, _ = construct_bracket(
+                            seeds=seeds,
+                            regions=regions,
+                            public_picks=_pa_pub,
+                            pool_size=n_opponents,
+                            scoring_system=_pa_scoring,
+                            **kwargs,
+                        )
+                        _pa_candidates.append((_picks_dict_to_bool_array(p, first_round), label))
+                    except Exception:
+                        pass
+
+                # --- Probability bases to sweep ---
+                _pa_prob_bases: list[tuple[str, dict]] = [("tv", torvik_rp)]
+                _alt_massey_avg = base_round_probs.get("massey_avg")
+                if _alt_massey_avg is not None:
+                    _pa_prob_bases.append(("mass_avg", _alt_massey_avg))
+                _alt_massey_best = base_round_probs.get("massey_best")
+                if _alt_massey_best is not None:
+                    _pa_prob_bases.append(("mass_best", _alt_massey_best))
+                _alt_blend = base_round_probs.get("blend")
+                if _alt_blend is not None:
+                    _pa_prob_bases.append(("blend", _alt_blend))
+
+                # 80/20 torvik/massey_avg blend (if massey_avg available)
+                if _alt_massey_avg is not None:
+                    _tv_mass_80_20: Dict[str, Dict[str, float]] = {}
+                    for tid in torvik_rp:
+                        _tv_mass_80_20[tid] = {}
+                        for rn in torvik_rp[tid]:
+                            tv_val = torvik_rp[tid][rn]
+                            ma_val = _alt_massey_avg.get(tid, {}).get(rn, tv_val)
+                            _tv_mass_80_20[tid][rn] = 0.8 * tv_val + 0.2 * ma_val
+                    _pa_prob_bases.append(("tv_mass80", _tv_mass_80_20))
+
+                _pa_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
+
+                # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
                 for forced in one_seed_teams:
-                    try:
-                        p_c, ch_c, _, _, _ = construct_bracket(
-                            mode="region_top_n",
-                            seeds=seeds,
-                            regions=regions,
-                            round_probs=torvik_rp,
-                            public_picks=pick_dist if pick_dist else {},
-                            risk_level=0.5,
-                            pool_size=n_opponents,
-                            scoring_system=dict(ESPN_SCORING),
-                            forced_champion=forced,
-                        )
-                        _pa_candidates.append((_picks_dict_to_bool_array(p_c, first_round), f"tv_champ={forced}"))
-                    except Exception:
-                        pass
+                    _pa_try_add(
+                        f"tv_champ={forced}",
+                        mode="region_top_n",
+                        round_probs=torvik_rp,
+                        risk_level=0.5,
+                        forced_champion=forced,
+                    )
 
-                # (b) Risk sweeps (no forced champion)
-                for _risk in (0.3, 0.7):
-                    try:
-                        p_r, ch_r, _, _, _ = construct_bracket(
+                # (b) Risk sweeps × prob bases × region_top_n (no forced champ)
+                for _risk in _pa_risk_levels:
+                    for _pb_name, _pb_rp in _pa_prob_bases:
+                        _pa_try_add(
+                            f"{_pb_name}_region_risk={_risk}",
                             mode="region_top_n",
-                            seeds=seeds,
-                            regions=regions,
-                            round_probs=torvik_rp,
-                            public_picks=pick_dist if pick_dist else {},
+                            round_probs=_pb_rp,
                             risk_level=_risk,
-                            pool_size=n_opponents,
-                            scoring_system=dict(ESPN_SCORING),
                         )
-                        _pa_candidates.append((_picks_dict_to_bool_array(p_r, first_round), f"tv_risk={_risk}"))
-                    except Exception:
-                        pass
 
-                # (c) Alternative probability base (massey_avg if available)
-                _alt_massey = base_round_probs.get("massey_avg")
-                if _alt_massey is not None:
-                    try:
-                        p_m, ch_m, _, _, _ = construct_bracket(
-                            mode="region_top_n",
-                            seeds=seeds,
-                            regions=regions,
-                            round_probs=_alt_massey,
-                            public_picks=pick_dist if pick_dist else {},
-                            risk_level=0.5,
-                            pool_size=n_opponents,
-                            scoring_system=dict(ESPN_SCORING),
+                # (c) Exhaustive champion search × prob bases × select risks
+                for _risk in (0.3, 0.5, 0.7):
+                    for _pb_name, _pb_rp in _pa_prob_bases:
+                        _pa_try_add(
+                            f"{_pb_name}_exhaust_risk={_risk}",
+                            mode="exhaustive_champion",
+                            round_probs=_pb_rp,
+                            risk_level=_risk,
                         )
-                        _pa_candidates.append((_picks_dict_to_bool_array(p_m, first_round), f"massey_risk=0.5"))
-                    except Exception:
-                        pass
 
                 # De-duplicate identical brackets (keeps first label)
                 _pa_seen: set[bytes] = set()
@@ -3150,10 +3170,10 @@ def _run_one_year(
                         seeds=seeds,
                         regions=regions,
                         round_probs=torvik_rp,
-                        public_picks=pick_dist if pick_dist else {},
+                        public_picks=_pa_pub,
                         risk_level=0.5,
                         pool_size=n_opponents,
-                        scoring_system=dict(ESPN_SCORING),
+                        scoring_system=_pa_scoring,
                     )
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
                     print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
@@ -3168,7 +3188,7 @@ def _run_one_year(
                             opp = generate_opponent_brackets(
                                 n_opponents=n_opponents,
                                 first_round_matchups=first_round,
-                                pick_distribution=pick_dist if pick_dist else {},
+                                pick_distribution=_pa_pub,
                                 matchup_probs=seed_pw,
                                 seeds=seeds,
                                 rng=_pa_rng,
@@ -3345,6 +3365,53 @@ def _run_one_year(
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 print(f"  {year}   {meta_mode:<24} champ={_champ}")
+            elif meta_mode == "meta_region_upset":
+                # Region top-N bracket + upset specialist overrides on R64 coin-flips.
+                from src.optimization.bracket_construction import construct_bracket
+                from src.prediction.upset_specialist import (
+                    apply_upset_overrides as apply_specialist_overrides,
+                    build_upset_training_data,
+                    get_upset_overrides,
+                    train_upset_specialist,
+                )
+
+                # 1. Build the base region bracket (same as meta_region)
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode="region_top_n",
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=torvik_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=0.5,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+
+                # 2. Train upset specialist on walk-forward data
+                _us_cache_key = f"upset_specialist_{tuple(train_years)}"
+                if _us_cache_key not in _meta_models:
+                    X_us, y_us = build_upset_training_data(train_years, Path("data"))
+                    _meta_models[_us_cache_key] = train_upset_specialist(X_us, y_us)
+                us_model = _meta_models[_us_cache_key]
+
+                # 3. Get overrides and apply
+                overrides = get_upset_overrides(
+                    year,
+                    first_round,
+                    seeds,
+                    us_model,
+                    data_root=Path("data"),
+                    threshold=0.55,
+                )
+                n_overrides = len(overrides)
+                meta_bracket = apply_specialist_overrides(
+                    meta_bracket,
+                    overrides,
+                    first_round,
+                    seeds,
+                )
+                print(f"  {year}   {meta_mode:<24} champ={_champ} overrides={n_overrides}")
             else:
                 print(f"  WARNING: unknown meta mode '{meta_mode}', skipping")
                 continue
