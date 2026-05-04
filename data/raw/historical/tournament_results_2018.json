@@ -451,11 +451,11 @@
       "region": "East",
       "team1_id": "wichita_state",
       "team1_seed": 4,
-      "team1_score": 75,
+      "team1_score": 68,
       "team2_id": "marshall",
       "team2_seed": 13,
-      "team2_score": 68,
-      "team1_won": true
+      "team2_score": 75,
+      "team1_won": false
     },
     {
       "year": 2018,

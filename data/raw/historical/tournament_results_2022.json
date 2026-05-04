@@ -103,11 +103,11 @@
       "region": "West",
       "team1_id": "alabama",
       "team1_seed": 6,
-      "team1_score": 78,
+      "team1_score": 64,
       "team2_id": "notre_dame",
       "team2_seed": 11,
-      "team2_score": 64,
-      "team1_won": true
+      "team2_score": 78,
+      "team1_won": false
     },
     {
       "year": 2022,
@@ -643,11 +643,11 @@
       "region": "Midwest",
       "team1_id": "louisiana_state",
       "team1_seed": 6,
-      "team1_score": 76,
+      "team1_score": 60,
       "team2_id": "iowa_state",
       "team2_seed": 11,
-      "team2_score": 60,
-      "team1_won": true
+      "team2_score": 76,
+      "team1_won": false
     },
     {
       "year": 2022,

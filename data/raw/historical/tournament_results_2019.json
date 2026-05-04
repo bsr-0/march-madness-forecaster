@@ -307,11 +307,11 @@
       "region": "West",
       "team1_id": "nevada",
       "team1_seed": 7,
-      "team1_score": 68,
+      "team1_score": 63,
       "team2_id": "florida",
       "team2_seed": 10,
-      "team2_score": 63,
-      "team1_won": true
+      "team2_score": 68,
+      "team1_won": false
     },
     {
       "year": 2019,
@@ -427,11 +427,11 @@
       "region": "East",
       "team1_id": "virginia_commonwealth",
       "team1_seed": 8,
-      "team1_score": 73,
+      "team1_score": 58,
       "team2_id": "ucf",
       "team2_seed": 9,
-      "team2_score": 58,
-      "team1_won": true
+      "team2_score": 73,
+      "team1_won": false
     },
     {
       "year": 2019,
@@ -439,11 +439,11 @@
       "region": "East",
       "team1_id": "mississippi_state",
       "team1_seed": 5,
-      "team1_score": 76,
+      "team1_score": 73,
       "team2_id": "liberty",
       "team2_seed": 12,
-      "team2_score": 73,
-      "team1_won": true
+      "team2_score": 76,
+      "team1_won": false
     },
     {
       "year": 2019,
@@ -643,11 +643,11 @@
       "region": "Midwest",
       "team1_id": "iowa_state",
       "team1_seed": 6,
-      "team1_score": 63,
+      "team1_score": 62,
       "team2_id": "ohio_state",
       "team2_seed": 11,
-      "team2_score": 62,
-      "team1_won": true
+      "team2_score": 63,
+      "team1_won": false
     },
     {
       "year": 2019,

@@ -139,11 +139,11 @@
       "region": "South",
       "team1_id": "arizona",
       "team1_seed": 2,
-      "team1_score": 98,
+      "team1_score": 59,
       "team2_id": "princeton",
       "team2_seed": 15,
-      "team2_score": 59,
-      "team1_won": true
+      "team2_score": 98,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -235,11 +235,11 @@
       "region": "East",
       "team1_id": "purdue",
       "team1_seed": 1,
-      "team1_score": 82,
+      "team1_score": 68,
       "team2_id": "fairleigh_dickinson",
       "team2_seed": 16,
-      "team2_score": 68,
-      "team1_won": true
+      "team2_score": 82,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -247,11 +247,11 @@
       "region": "East",
       "team1_id": "memphis",
       "team1_seed": 8,
-      "team1_score": 72,
+      "team1_score": 66,
       "team2_id": "florida_atlantic",
       "team2_seed": 9,
-      "team2_score": 66,
-      "team1_won": true
+      "team2_score": 72,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -283,11 +283,11 @@
       "region": "East",
       "team1_id": "kentucky",
       "team1_seed": 6,
-      "team1_score": 56,
+      "team1_score": 61,
       "team2_id": "providence",
       "team2_seed": 11,
-      "team2_score": 61,
-      "team1_won": false
+      "team2_score": 56,
+      "team1_won": true
     },
     {
       "year": 2023,
@@ -427,11 +427,11 @@
       "region": "Midwest",
       "team1_id": "iowa",
       "team1_seed": 8,
-      "team1_score": 83,
+      "team1_score": 75,
       "team2_id": "auburn",
       "team2_seed": 9,
-      "team2_score": 75,
-      "team1_won": true
+      "team2_score": 83,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -451,11 +451,11 @@
       "region": "Midwest",
       "team1_id": "indiana",
       "team1_seed": 4,
-      "team1_score": 61,
+      "team1_score": 71,
       "team2_id": "kent_state",
       "team2_seed": 13,
-      "team2_score": 71,
-      "team1_won": false
+      "team2_score": 61,
+      "team1_won": true
     },
     {
       "year": 2023,
@@ -463,11 +463,11 @@
       "region": "Midwest",
       "team1_id": "iowa_state",
       "team1_seed": 6,
-      "team1_score": 59,
+      "team1_score": 41,
       "team2_id": "pittsburgh",
       "team2_seed": 11,
-      "team2_score": 41,
-      "team1_won": true
+      "team2_score": 59,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -487,11 +487,11 @@
       "region": "Midwest",
       "team1_id": "texas_a_m",
       "team1_seed": 7,
-      "team1_score": 56,
+      "team1_score": 54,
       "team2_id": "penn_state",
       "team2_seed": 10,
-      "team2_score": 54,
-      "team1_won": true
+      "team2_score": 56,
+      "team1_won": false
     },
     {
       "year": 2023,

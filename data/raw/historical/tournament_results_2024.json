@@ -439,11 +439,11 @@
       "region": "South",
       "team1_id": "wisconsin",
       "team1_seed": 5,
-      "team1_score": 87,
+      "team1_score": 69,
       "team2_id": "james_madison",
       "team2_seed": 12,
-      "team2_score": 69,
-      "team1_won": true
+      "team2_score": 87,
+      "team1_won": false
     },
     {
       "year": 2024,
@@ -487,11 +487,11 @@
       "region": "South",
       "team1_id": "florida",
       "team1_seed": 7,
-      "team1_score": 87,
-      "team2_id": "boise_state",
+      "team1_score": 56,
+      "team2_id": "colorado",
       "team2_seed": 10,
-      "team2_score": 68,
-      "team1_won": true
+      "team2_score": 67,
+      "team1_won": false
     },
     {
       "year": 2024,
