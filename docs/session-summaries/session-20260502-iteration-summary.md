@@ -14,6 +14,7 @@ The system generates ~25 diverse candidate brackets per year (varying constructi
 - 14 Kaggle/academic techniques — none beat region construction
 - Champion pick optimization — irrelevant to P(1st) (proven by experiment)
 - Upset specialist classifier — null result (7.9%, can't beat beam search on coin-flip games)
+- Upset detector as poolaware candidate (2026-05-03) — calibrated probs + merged 8-feature model + R32 boost added ~18 candidates. A/B: 10.93% WITH vs 11.20% WITHOUT. Selected 1/15 years, hurt P(1st). Extra candidates add noise.
 - Volatility-adapted risk signal — regressed GBM, killed
 
 ## How meta_region_poolaware Works

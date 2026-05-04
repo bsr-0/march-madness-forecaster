@@ -37,6 +37,7 @@ FEATURE_NAMES = (
     "close_game_pct_diff",
     "ncsos_diff",
     "conf_tourney_depth_diff",
+    "detector_upset_score",
 )
 
 
@@ -133,11 +134,13 @@ def _game_to_features(
     lower_seed: int,
     barthag: Dict[str, float],
     custom: Dict[str, Dict[str, float]],
+    detector_scores: Optional[Dict[str, float]] = None,
 ) -> np.ndarray:
     """Build feature vector for a single upset-eligible game.
 
     Convention: higher_seed is the favored team (lower seed number).
     Features measure higher_seed - lower_seed (positive = favored team is stronger).
+    The 8th feature is the underdog's rule-based detector upset score (0-1).
     """
     b_high = barthag.get(higher_seed_id, 0.5)
     b_low = barthag.get(lower_seed_id, 0.5)
@@ -152,8 +155,27 @@ def _game_to_features(
         custom.get("ncsos", {}).get(higher_seed_id, 0.0) - custom.get("ncsos", {}).get(lower_seed_id, 0.0),
         custom.get("conf_tourney_depth", {}).get(higher_seed_id, 0.0)
         - custom.get("conf_tourney_depth", {}).get(lower_seed_id, 0.0),
+        (detector_scores or {}).get(lower_seed_id, 0.0),  # underdog's detector score
     ]
     return np.array(feats, dtype=np.float64)
+
+
+def _get_detector_scores(
+    year: int,
+    seeds: Dict[str, int],
+    data_root: Path = Path("data"),
+) -> Dict[str, float]:
+    """Compute rule-based detector upset scores for all tournament teams.
+
+    Returns {team_id: upset_score} or empty dict if detector unavailable.
+    """
+    try:
+        from src.prediction.upset_detector import compute_upset_scores
+
+        canonical_ids = list(seeds.keys())
+        return compute_upset_scores(year, canonical_ids, seeds, data_root)
+    except Exception:
+        return {}
 
 
 def build_upset_training_data(
@@ -165,7 +187,7 @@ def build_upset_training_data(
     Only includes 5v12, 6v11, 7v10, 8v9 matchups.
     y = 1 if the lower-seeded team (upset) won, 0 if the higher seed won.
 
-    Returns (X, y) where X has shape (n_games, 7) and y has shape (n_games,).
+    Returns (X, y) where X has shape (n_games, 8) and y has shape (n_games,).
     """
     all_X = []
     all_y = []
@@ -179,6 +201,7 @@ def build_upset_training_data(
 
         barthag = _load_torvik_barthag_map(year, data_root)
         custom = _load_custom_ratings_canonical(year, data_root)
+        detector_scores = _get_detector_scores(year, seeds, data_root)
 
         for game in r64_games:
             s1 = game["team1_seed"]
@@ -211,6 +234,7 @@ def build_upset_training_data(
                 lower_seed,
                 barthag,
                 custom,
+                detector_scores,
             )
             all_X.append(feats)
             all_y.append(1 if upset else 0)
@@ -251,40 +275,27 @@ def train_upset_specialist(
     return model
 
 
-def get_upset_overrides(
+def _predict_upset_eligible_games(
     year: int,
     first_round: Sequence[str],
     seeds: Dict[str, int],
     model: Any,
     data_root: Path = Path("data"),
-    threshold: float = 0.55,
-) -> Dict[int, str]:
-    """Predict upset probabilities for upset-eligible R64 games.
+) -> List[Tuple[int, str, str, int, int, float]]:
+    """Shared logic: predict P(upset) for all upset-eligible R64 games.
 
-    For each upset-eligible game, if the specialist's P(upset) > threshold,
-    return an override indicating the lower seed should win.
-
-    Args:
-        year: Tournament year.
-        first_round: List of 64 team IDs in bracket order (pairs of opponents).
-        seeds: {team_id: seed_number} for all tournament teams.
-        model: Fitted upset specialist model (from train_upset_specialist).
-        data_root: Path to data directory.
-        threshold: Minimum P(upset) to trigger an override.
-
-    Returns:
-        Dict mapping R64 game index (0-31) to the predicted winner team_id.
-        Only includes games where the specialist recommends flipping to the upset.
+    Returns list of (game_idx, higher_seed_id, lower_seed_id,
+    higher_seed, lower_seed, p_upset).
     """
     if model is None:
-        return {}
+        return []
 
     barthag = _load_torvik_barthag_map(year, data_root)
     custom = _load_custom_ratings_canonical(year, data_root)
+    detector_scores = _get_detector_scores(year, seeds, data_root)
 
-    overrides: Dict[int, str] = {}
-
-    for game_idx in range(32):  # 32 R64 games
+    results = []
+    for game_idx in range(32):
         t1 = first_round[game_idx * 2]
         t2 = first_round[game_idx * 2 + 1]
 
@@ -295,7 +306,6 @@ def get_upset_overrides(
         if seed_pair not in UPSET_ELIGIBLE_MATCHUPS:
             continue
 
-        # Determine higher seed (favored) and lower seed
         if s1 <= s2:
             higher_seed_id, lower_seed_id = t1, t2
             higher_seed, lower_seed = s1, s2
@@ -310,32 +320,84 @@ def get_upset_overrides(
             lower_seed,
             barthag,
             custom,
+            detector_scores,
         )
         X = np.nan_to_num(feats.reshape(1, -1), nan=0.0)
         proba = model.predict_proba(X)[0]
-
-        # proba[1] = P(upset), proba[0] = P(chalk)
         p_upset = proba[1]
 
+        results.append((game_idx, higher_seed_id, lower_seed_id, higher_seed, lower_seed, p_upset))
+
+    return results
+
+
+def get_upset_overrides(
+    year: int,
+    first_round: Sequence[str],
+    seeds: Dict[str, int],
+    model: Any,
+    data_root: Path = Path("data"),
+    threshold: float = 0.55,
+) -> Dict[int, str]:
+    """Predict upset probabilities for upset-eligible R64 games.
+
+    For each upset-eligible game, if the specialist's P(upset) > threshold,
+    return an override indicating the lower seed should win.
+
+    Returns:
+        Dict mapping R64 game index (0-31) to the predicted winner team_id.
+    """
+    predictions = _predict_upset_eligible_games(
+        year,
+        first_round,
+        seeds,
+        model,
+        data_root,
+    )
+
+    overrides: Dict[int, str] = {}
+    for game_idx, higher_id, lower_id, hs, ls, p_upset in predictions:
         if p_upset > threshold:
-            overrides[game_idx] = lower_seed_id
+            overrides[game_idx] = lower_id
             logger.info(
                 "Year %d game %d: %s(%d) vs %s(%d) -> upset P=%.3f > %.2f, picking %s",
                 year,
                 game_idx,
-                higher_seed_id,
-                higher_seed,
-                lower_seed_id,
-                lower_seed,
+                higher_id,
+                hs,
+                lower_id,
+                ls,
                 p_upset,
                 threshold,
-                lower_seed_id,
+                lower_id,
             )
         elif p_upset < (1.0 - threshold):
-            # Specialist is confident in the chalk pick
-            overrides[game_idx] = higher_seed_id
+            overrides[game_idx] = higher_id
 
     return overrides
+
+
+def get_upset_probabilities(
+    year: int,
+    first_round: Sequence[str],
+    seeds: Dict[str, int],
+    model: Any,
+    data_root: Path = Path("data"),
+) -> Dict[int, Tuple[str, str, float]]:
+    """Return calibrated P(upset) for all upset-eligible R64 games.
+
+    Returns:
+        {game_idx: (higher_seed_id, lower_seed_id, p_upset)} for every
+        upset-eligible game (5v12, 6v11, 7v10, 8v9).
+    """
+    predictions = _predict_upset_eligible_games(
+        year,
+        first_round,
+        seeds,
+        model,
+        data_root,
+    )
+    return {game_idx: (higher_id, lower_id, p_upset) for game_idx, higher_id, lower_id, _, _, p_upset in predictions}
 
 
 def apply_upset_overrides(
