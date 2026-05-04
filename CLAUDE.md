@@ -37,6 +37,7 @@ The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + s
 2. **Champion pick is ~random among 1-seeds.** Actual champion is highest-barthag 1-seed only 2/14 times. No OOS model reliably picks which 1-seed wins.
 3. **GBM feature additions had zero effect.** Multi-seed (#10), Vegas R1 (#3), backward elimination (#12) all produced identical brackets to base meta_gbm.
 4. **SA construction is fundamentally broken** regardless of signal quality.
+5. **Upset detector as poolaware candidate: KILLED (2026-05-03).** Calibrated upset probability adjustments (merged detector+specialist signals, 8-feature model, R32 boost) added ~18 upset-flavored candidates to poolaware. A/B result: 10.93% WITH vs 11.20% WITHOUT. Upset candidate selected 1/15 years, hurt P(1st) by 2pp. Extra candidates add selection noise without producing structurally different brackets.
 
 Baselines: seed stochastic 1.76% P(1st) / MeanRank 403 / MeanScr 704. Random: 3.2% P(1st).
 
