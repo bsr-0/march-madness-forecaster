@@ -127,6 +127,7 @@ PROBABILITY_BASES: Tuple[str, ...] = (
     "massey_best",  # A6: walk-forward Brier-selected single Massey system
     "ap_strength",  # A8: final-pre-tournament AP poll → barthag (rank/votes/seed-fallback)
     "stacked",  # B5: Ridge meta-learner blending all Category-A bases (walk-forward)
+    "knn",  # B8: K-nearest-neighbor matchup similarity (walk-forward)
 )
 
 CONSTRUCTION_MODES: Tuple[str, ...] = (
@@ -189,6 +190,8 @@ LEGACY_MODE_MAP = {
     "meta_region_blend90": ("meta", "region_blend90"),  # Region top-N with 90% torvik + 10% massey_avg
     "meta_region_poolaware": ("meta", "region_poolaware"),  # Region top-N × multi-candidate, pool-sim P(1st) selection
     "meta_region_upset": ("meta", "region_upset"),  # Region top-N + upset specialist overrides on R64 coin-flips
+    "knn": ("knn", "forward"),  # B8: KNN matchup similarity, forward construction
+    "meta_region_knn": ("meta", "region_knn"),  # Region top-N with KNN round probs
 }
 
 # ALL_MODES kept for backward compatibility with existing CLI invocations,
@@ -238,6 +241,8 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_region_blend90",
     "meta_region_poolaware",
     "meta_region_upset",
+    "knn",
+    "meta_region_knn",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -1534,8 +1539,7 @@ def build_actual_outcome(first_round_matchups, games):
     raise. Callers in ``run_backtest`` derive the region order per year
     before calling this function.
     """
-    # Index games by team pair for lookup. Both orientations are stored so
-    # the lookup doesn't care which team is listed first in the raw data.
+    # Primary index: exact team-pair lookup (both orientations).
     game_results = {}
     for g in games:
         if g.get("round_name") == "FF":
@@ -1544,12 +1548,28 @@ def build_actual_outcome(first_round_matchups, games):
         game_results[(t1, t2)] = g["team1_won"]
         game_results[(t2, t1)] = not g["team1_won"]
 
+    # Secondary index: per-round team results.  Handles cases where the
+    # bracket walk projects a matchup that doesn't match the game data's
+    # team pair (e.g., R32 data has grand_canyon vs saint_mary but the
+    # walk expects alabama vs saint_mary after an R64 fix).
+    # round_team_won[round_name][team_id] = True if team won, False if lost.
+    round_team_won: dict[str, dict[str, bool]] = {}
+    for g in games:
+        rn = g.get("round_name")
+        if rn == "FF":
+            continue
+        t1, t2 = g["team1_id"], g["team2_id"]
+        rd = round_team_won.setdefault(rn, {})
+        rd[t1] = g["team1_won"]
+        rd[t2] = not g["team1_won"]
+
     outcome = np.zeros(63, dtype=bool)
     current_teams = list(first_round_matchups)
     game_idx = 0
 
     for round_idx in range(6):
         round_name = ROUND_NAMES[round_idx]
+        team_results = round_team_won.get(round_name, {})
         next_round = []
         for g in range(0, len(current_teams), 2):
             if g + 1 >= len(current_teams):
@@ -1559,25 +1579,33 @@ def build_actual_outcome(first_round_matchups, games):
 
             t1_won = game_results.get((t1, t2))
             if t1_won is None:
-                # Missing lookup: the walk projected a matchup that doesn't
-                # appear in the game data. Two root causes:
-                #   - R64–E8: team-name mismatch (play-in names, data
-                #     errors in earlier rounds that cascade wrong teams
-                #     into later matchups).
-                #   - F4/CHAMP: region order mismatch (the first_round
-                #     layout pairs regions differently from reality) OR
-                #     cascaded data errors from earlier rounds.
-                # Fall back to t1_won=True (higher-seeded team wins).
-                # The caller should verify the decoded champion against
-                # a known ground truth to catch systemic corruption.
-                logger.warning(
-                    "build_actual_outcome: no game found for %s matchup %r vs %r, defaulting to %r winning",
-                    round_name,
-                    t1,
-                    t2,
-                    t1,
-                )
-                t1_won = True
+                # Exact pair lookup failed.  Fall back to individual
+                # per-team round results.  Covers two cases:
+                #  1. Only one team appears in this round's data (the
+                #     other was eliminated earlier but advanced in the
+                #     walk due to an upstream data mismatch).
+                #  2. Both teams played in this round but in different
+                #     games (projected matchup doesn't match reality).
+                #     Use each team's actual win/loss from their real game.
+                t1_result = team_results.get(t1)
+                t2_result = team_results.get(t2)
+                if t1_result is True and t2_result is not True:
+                    t1_won = True
+                elif t2_result is True and t1_result is not True:
+                    t1_won = False
+                elif t1_result is not None:
+                    t1_won = t1_result
+                elif t2_result is not None:
+                    t1_won = not t2_result
+                else:
+                    logger.warning(
+                        "build_actual_outcome: no game found for %s matchup %r vs %r, defaulting to %r winning",
+                        round_name,
+                        t1,
+                        t2,
+                        t1,
+                    )
+                    t1_won = True
 
             outcome[game_idx] = t1_won
             winner = t1 if t1_won else t2
@@ -2158,6 +2186,15 @@ def _run_one_year(
 
     stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
 
+    # --- KNN matchup similarity base (B8) ---
+    from src.prediction.knn_probabilities import load_knn_barthag
+
+    knn_barthag = load_knn_barthag(year, seeds, Path("data"))
+    if knn_barthag is not None:
+        knn_rp = build_torvik_round_probabilities(seeds, regions, knn_barthag)
+    else:
+        knn_rp = None
+
     # Probability base registry: base_name → round_probs
     base_round_probs = {
         "seed": seed_rp,
@@ -2180,6 +2217,8 @@ def _run_one_year(
         base_round_probs["ap_strength"] = ap_strength_rp
     if stacked_rp is not None:
         base_round_probs["stacked"] = stacked_rp
+    if knn_rp is not None:
+        base_round_probs["knn"] = knn_rp
 
     # --- Contrarian and pool-wisdom bases (B6, B7) ---
     from src.prediction.contrarian_probabilities import (
@@ -3164,6 +3203,15 @@ def _run_one_year(
                             risk_level=_risk,
                         )
 
+                # (d) Upset-aware candidates — REMOVED 2026-05-03.
+                # A/B tested: calibrated upset probability adjustments
+                # (merged detector+specialist signals, 2 boost modes × 3 bases
+                # × 3 risks = ~18 candidates) vs no upset candidates.
+                # Result: 10.93% P(1st) WITH upset vs 11.20% WITHOUT.
+                # Upset candidate selected in only 1/15 years (2011) and HURT
+                # P(1st) by 2pp. Extra candidates add selection noise.
+                # The "killed" label from meta_region_upset (7.9%) stands.
+
                 # De-duplicate identical brackets (keeps first label)
                 _pa_seen: set[bytes] = set()
                 _pa_unique: list[tuple[np.ndarray, str]] = []
@@ -3275,6 +3323,27 @@ def _run_one_year(
                     seeds=seeds,
                     regions=regions,
                     round_probs=blended_rp,
+                    public_picks=pick_dist if pick_dist else {},
+                    risk_level=0.5,
+                    pool_size=n_opponents,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+                meta_bracket = _picks_dict_to_bool_array(picks, first_round)
+                print(f"  {year}   {meta_mode:<24} champ={_champ}")
+            elif meta_mode == "meta_region_knn":
+                # Region construction with KNN probability base
+                from src.optimization.bracket_construction import construct_bracket
+
+                _alt_rp = base_round_probs.get("knn")
+                if _alt_rp is None:
+                    print(f"  {year}   {meta_mode:<24} SKIP (no knn data)")
+                    continue
+
+                picks, _champ, _f4, _ev, _var = construct_bracket(
+                    mode="region_top_n",
+                    seeds=seeds,
+                    regions=regions,
+                    round_probs=_alt_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
                     pool_size=n_opponents,
