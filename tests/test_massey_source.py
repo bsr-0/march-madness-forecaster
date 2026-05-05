@@ -90,11 +90,11 @@ def test_load_massey_avg_1_seeds_rank_high():
 
 
 def test_load_massey_avg_returns_none_for_missing_year():
-    """2026 composite file doesn't exist yet — loader must return None, not crash."""
+    """Years without composite file must return None, not crash."""
     seeds = {"duke": 1, "kansas": 2}
     # Any year without the file should return None
-    assert load_massey_avg_barthag(2026, seeds, DATA_ROOT) is None
     assert load_massey_avg_barthag(1999, seeds, DATA_ROOT) is None
+    assert load_massey_avg_barthag(2050, seeds, DATA_ROOT) is None
 
 
 def test_load_massey_avg_clip_bounds():
