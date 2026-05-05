@@ -199,11 +199,11 @@
       "region": "South",
       "team1_id": "alabama",
       "team1_seed": 1,
-      "team1_score": 73,
+      "team1_score": 64,
       "team2_id": "san_diego_state",
       "team2_seed": 5,
       "team2_score": 71,
-      "team1_won": true
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -211,11 +211,11 @@
       "region": "South",
       "team1_id": "creighton",
       "team1_seed": 6,
-      "team1_score": 55,
+      "team1_score": 86,
       "team2_id": "princeton",
       "team2_seed": 15,
-      "team2_score": 60,
-      "team1_won": false
+      "team2_score": 75,
+      "team1_won": true
     },
     {
       "year": 2023,
@@ -559,11 +559,11 @@
       "region": "Midwest",
       "team1_id": "houston",
       "team1_seed": 1,
-      "team1_score": 56,
+      "team1_score": 75,
       "team2_id": "miami__fl",
       "team2_seed": 5,
-      "team2_score": 55,
-      "team1_won": true
+      "team2_score": 89,
+      "team1_won": false
     },
     {
       "year": 2023,
@@ -574,19 +574,19 @@
       "team1_score": 83,
       "team2_id": "xavier",
       "team2_seed": 3,
-      "team2_score": 77,
+      "team2_score": 71,
       "team1_won": true
     },
     {
       "year": 2023,
       "round_name": "E8",
       "region": "Midwest",
-      "team1_id": "houston",
+      "team1_id": "miami__fl",
       "team1_seed": 1,
-      "team1_score": 59,
-      "team2_id": "miami__fl",
+      "team1_score": 88,
+      "team2_id": "texas",
       "team2_seed": 5,
-      "team2_score": 47,
+      "team2_score": 81,
       "team1_won": true
     },
     {
@@ -751,11 +751,11 @@
       "region": "West",
       "team1_id": "gonzaga",
       "team1_seed": 3,
-      "team1_score": 73,
+      "team1_score": 79,
       "team2_id": "ucla",
       "team2_seed": 2,
-      "team2_score": 79,
-      "team1_won": false
+      "team2_score": 76,
+      "team1_won": true
     },
     {
       "year": 2023,

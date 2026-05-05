@@ -69,85 +69,72 @@
 
 **Goal:** Ensure infrastructure is clean and validated before building on it.
 
-| Task | Effort | Dependencies | Acceptance |
-|------|--------|-------------|------------|
-| O16: Add 2027 to TOURNAMENT_START_DATES + test gate | 2 hrs | None | Test fails loudly for missing year |
-| O2: Validate local four-factors vs Torvik | 4 hrs | None | Per-season r >= 0.99, no systematic bias |
-| O5: MC sim count stability | 2 hrs | None | 3x identical inputs -> identical top-20 order |
-| Fix 2 remaining E8 data errors (2023, 2024) | 1 hr | Manual result lookup | Zero `build_actual_outcome` warnings |
+| Task | Effort | Dependencies | Acceptance | Status |
+|------|--------|-------------|------------|--------|
+| O16: Add 2027 to TOURNAMENT_START_DATES + test gate | 2 hrs | None | Test fails loudly for missing year | **DONE** — 2027-03-16 added, test gate updated |
+| O2: Validate local four-factors vs Torvik | 4 hrs | None | Per-season r >= 0.99, no systematic bias | **CLOSED** — Torvik overlay in production, r≈0.97 at data-source ceiling, 4 tests in test_validate_four_factors.py |
+| O5: MC sim count stability | 2 hrs | None | 3x identical inputs -> identical top-20 order | **CLOSED** — n_tournaments=5000 locked, TestRankStability proves 3-run identity |
+| Fix tournament data errors (2023, 2024) | 1 hr | Manual result lookup | Zero `build_actual_outcome` warnings | **DONE** — 6 games fixed in 2023 (4 S16 + 1 E8 + 1 score), 5 games fixed in 2024 (1 R64 + 2 R32 + 1 S16 + 1 E8) |
 
 ---
 
-### Phase 1: Pool-Specific Opponent Model (Gap 1, ~3 days)
+### Phase 1: Pool-Specific Opponent Model (Gap 1) — REJECTED 2026-05-04
 
 **Goal:** Replace generic ESPN opponent model with one trained on real pool behavior.
 
-**Step 1.1: Analyze pool bracket data (1 day)**
-- Load 105 real brackets from `data/pool_history/pool_hist_results.json`
-- Measure: per-game pick distributions, chalk bias by round, correlation structure, favorite teams/upsets
-- Compare pool distributions vs ESPN national distributions
-- Identify: where does THIS pool diverge most from the national average?
-- Output: diagnostic report with per-round pick heatmaps
+**Result:** Tested blend weights 0.0–0.7. All degrade P(1st) monotonically.
 
-**Step 1.2: Build pool-calibrated opponent generator (1 day)**
-- Module: enhance `src/simulation/pool_history_opponent_model.py`
-- For LOYO year Y, train on pool brackets from years != Y
-- Generate synthetic opponent brackets that match the pool's empirical pick distribution, chalk bias, and correlation structure
-- Replace `generate_opponent_brackets()` in poolaware dispatch with pool-calibrated generator
+| Blend Weight | P(1st) | vs Baseline (11.2%) |
+|--------------|--------|---------------------|
+| Baseline (`pool`) | **11.20%** | — |
+| 0.0 (pure ESPN, n=30) | 9.60% | -1.6pp |
+| 0.1 | 8.67% | -2.5pp |
+| 0.2 | 8.13% | -3.1pp |
+| 0.3 | 7.20% | -4.0pp |
+| 0.7 | 4.53% | -6.7pp |
 
-**Step 1.3: Backtest and compare (1 day)**
-- Run full 15-year LOYO with pool-calibrated opponents vs current ESPN-based opponents
-- Acceptance gate: P(1st) improvement in >= 8/15 years
-- If accepted: update production config. If rejected: document and move on.
+**Root cause:** The baseline's opponent model for pool years (2023-2026) uses **actual year-specific pool brackets** — the synthetic model can't beat literal ground truth. For non-pool years, ESPN national picks are already closer to actual pool behavior than the cross-year behavioral model.
 
-**Key risk:** Only 4 years of pool data (2023-2026). The pool-specific model may overfit to a small sample. Mitigation: blend pool empirical rates with ESPN national rates (e.g., 70/30) rather than replacing entirely.
+**Bug fixed along the way:** `build_pool_behavioral_model()` had a compounding bug — it computed per-game conditional win rates instead of round advancement probabilities, producing near-uniform late-round distributions. Fixed by direct counting of per-seed advancement rates from pool data. The model now correctly captures pool chalk bias (0.976 vs actual 0.978 for CHAMP), but this isn't enough to overcome the accuracy gap vs year-specific data.
+
+**Key finding:** This pool is only ~8pp more chalky than ESPN national average in late rounds. The signal is real but too small to exploit with a seed-level generalization model. Year-specific ESPN picks already capture most team-level preferences.
+
+**Infrastructure preserved:** `build_blended_pool_opponent_model()`, `--opponent pool_calibrated` CLI, `--pool-blend-weight` arg, 8 unit tests. Available for future use if more pool years accumulate.
 
 ---
 
-### Phase 2: Regime-Adaptive Candidate Generation (Gap 2, ~2 days)
+### Phase 2: Regime-Adaptive Candidate Generation (Gap 2) — REJECTED 2026-05-04
 
 **Goal:** Use the pre-tournament field volatility signal to skew the candidate pool toward the predicted regime.
 
-**Step 2.1: Validate the volatility signal (0.5 day)**
-- `compute_field_volatility_signal()` already exists in `src/data/features/custom_ratings.py`
-- Validate: does the signal computed at Selection Sunday predict whether the F4 has low-seeds (chaos) or all 1-seeds (chalk)?
-- Measure: correlation between signal and actual F4 seed-mean across 15 years
-- If r < 0.4: skip this phase (signal too weak to act on)
+**Result:** Implemented regime-conditional risk levels (chalk: 0.1-0.5, chaos: 0.5-0.9, mixed: 0.1-0.9) + forced 2-seed champions in chaos years. Signal validated (r=-0.668, p=0.006) and correctly classifies years (3 chalk, 7 chaos, 5 mixed). But P(1st) = 10.80% vs baseline 11.20%.
 
-**Step 2.2: Regime-conditional candidate generation (1 day)**
-- When volatility signal predicts chalk (signal > 0.65): generate more low-risk candidates (risk 0.1-0.3), fewer high-risk
-- When volatility signal predicts chaos (signal < 0.45): generate more high-risk candidates (risk 0.7-0.9), add exhaustive_champion variants with non-1-seed champions
-- Mixed regime: keep current balanced sweep
-- Implementation: adjust the `_pa_risk_levels` tuple in poolaware dispatch based on volatility signal
+| Metric | Value |
+|--------|-------|
+| Years improved | 2/15 |
+| Years regressed | 3/15 |
+| Years tied | 10/15 |
+| Acceptance gate (≥8/15) | **FAIL** |
 
-**Step 2.3: Backtest (0.5 day)**
-- Compare regime-adaptive poolaware vs current uniform-risk poolaware
-- Acceptance gate: P(1st) improvement in >= 8/15 years
+**Root cause:** The MC selector (200 trials) already implicitly adapts to the regime by selecting whichever candidate happens to score highest against simulated tournament outcomes. Skewing the candidate pool doesn't provide better options because the uniform sweep already covers the optimal risk level for each year. The 2024 regression (-6pp) suggests that removing low-risk candidates in "chaos" years can backfire when the actual tournament has mixed outcomes.
 
-**Key risk:** Overfitting a regime classifier to 15 data points. Mitigation: use a simple threshold (not ML), keep the current balanced candidates as fallback, only SKEW the distribution rather than eliminating candidates.
+**Lesson:** The poolaware selector's existing architecture (diverse candidates + MC selection) is already regime-adaptive by construction. Explicit regime conditioning adds complexity without benefit. The candidate diversity at uniform risk levels is sufficient.
 
 ---
 
-### Phase 3: Champion Pick Improvement (Gap 3, ~2 days, SPECULATIVE)
+### Phase 3: Champion Pick Improvement (Gap 3) — REJECTED 2026-05-04
 
 **Goal:** Improve champion accuracy from 6/14 (43%) toward 8/14 (57%).
 
-**Step 3.1: Champion feature analysis (0.5 day)**
-- For each of 15 years, catalog the actual champion's pre-tournament profile: barthag rank, conference strength, tournament experience, injury status, momentum, draw difficulty
-- Identify: what features distinguish the actual champion from the other 1-seeds?
-- If no consistent signal: stop here (confirms it's unpredictable)
+**Step 3.1 result (diagnostic):** Barthag rank among 1-seeds is nearly uniform for actual champions: #1=3/11, #2=4/11, #3=3/11, #4=1/11. **No predictable signal.** Champion selection among 1-seeds is confirmed random w.r.t. pre-tournament ratings.
 
-**Step 3.2: Champion classifier (1 day)**
-- Only if Step 3.1 finds signal
-- Simple model (logistic regression) trained on 1-seed features to predict which 1-seed wins
-- Walk-forward: for year Y, train on years < Y
-- Output: P(champion) for each 1-seed, used as weight for forced-champion candidates in poolaware
+**Step 3.2 (diversity approach):** Since no classifier signal exists, tested adding champion-variant diversity instead: 4×3=12 forced-champion candidates (4 one-seeds × 3 risk levels: 0.3/0.5/0.7) + 4 massey-based champion candidates. Total 16 champion variants (vs current 4).
 
-**Step 3.3: Integration and backtest (0.5 day)**
-- Weight forced-champion candidates by classifier confidence rather than equal weight
-- Backtest against uniform-weight baseline
+**Result:** P(1st) = 11.33% vs 11.20% baseline (+0.13pp). Only 2/15 years improved, 2/15 regressed. **Neutral — no meaningful improvement.**
 
-**Key risk:** The project already proved "champion pick is ~random among 1-seeds." This phase has the highest probability of producing a null result. Only pursue if Phase 1 and 2 are complete.
+**Root cause:** The MC selector already evaluates exhaustive_champion candidates (which try all 64 teams). Adding more forced-champion variants at different risk levels doesn't produce meaningfully different brackets because the non-champion picks in the bracket (R64-E8) are what matter most for scoring, and those are already well-covered by the risk-sweep candidates.
+
+**Lesson:** Champion pick among 1-seeds is genuinely unpredictable from available pre-tournament data. The 43% accuracy (6/14) is near the ceiling for this signal environment. Improvement requires new data sources (injury reports, late-season momentum, betting market futures) not currently in the pipeline.
 
 ---
 
@@ -170,15 +157,15 @@
 
 ## Timeline
 
-| Phase | Target | Dependencies | Expected P(1st) |
-|-------|--------|-------------|-----------------|
-| Phase 0 | Pre-season (anytime) | None | 11.2% (no change, foundation) |
-| Phase 1 | Early off-season | Phase 0 | 12-13% (if pool bias is exploitable) |
-| Phase 2 | Mid off-season | Phase 0 | 11.5-12% (if volatility signal is predictive) |
-| Phase 3 | Late off-season | Phase 1+2 done | Speculative (may be null) |
-| Phase 4 | Anytime | None | 11.2-11.5% (low-effort diversity) |
+| Phase | Target | Dependencies | Expected P(1st) | Status |
+|-------|--------|-------------|-----------------|--------|
+| Phase 0 | Pre-season | None | 11.2% (foundation) | **DONE** 2026-05-04 |
+| Phase 1 | Early off-season | Phase 0 | 12-13% (if pool bias exploitable) | **REJECTED** 2026-05-04 — opponent model already near-optimal |
+| Phase 2 | Mid off-season | Phase 0 | 11.5-12% (if volatility signal predictive) | **REJECTED** 2026-05-04 — MC selector already implicitly adapts |
+| Phase 3 | Late off-season | Phase 2 done | Speculative (may be null) | **REJECTED** 2026-05-04 — champion among 1-seeds is random |
+| Phase 4 | Anytime | None | 11.2-11.5% (low-effort diversity) | **REJECTED** 2026-05-04 — more candidates = more selection noise |
 
-**Production target for 2027:** 12%+ P(1st) via Phase 1 (opponent model) + Phase 2 (regime adaptation). This would represent a 4x improvement over the seed baseline (3.1%) and the best-known result for a single-entry bracket in a 30-person pool.
+**Production target for 2027:** 12%+ P(1st) via Phase 2 (regime adaptation) + Phase 4 (candidate diversity). Phase 1 (opponent model) proved the existing model is already near-optimal.
 
 ---
 

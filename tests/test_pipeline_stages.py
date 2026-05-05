@@ -229,3 +229,4 @@ class TestGameUtils:
     def test_tournament_start_dates_coverage(self):
         assert 2025 in TOURNAMENT_START_DATES
         assert 2026 in TOURNAMENT_START_DATES
+        assert 2027 in TOURNAMENT_START_DATES
