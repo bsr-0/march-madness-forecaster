@@ -19,7 +19,7 @@ from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 from ..normalize import normalize_team_id
-from .betting_markets import american_to_probability
+from .betting_markets import american_to_probability, spread_to_implied_probability, spread_to_moneyline
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,46 @@ def normalize_from_sbr(raw: dict) -> UnifiedGameOdds:
 
 
 # ------------------------------------------------------------------
+# Spread-to-moneyline synthesis for games missing ML data
+# ------------------------------------------------------------------
+
+
+def fill_missing_moneylines(game: UnifiedGameOdds) -> UnifiedGameOdds:
+    """Synthesize moneylines and implied probs from spreads when missing.
+
+    If a game has a non-zero spread but moneylines are 0.0, derives
+    approximate American moneylines and no-vig implied probabilities
+    using the logistic spread model (k=7.5, calibrated for NCAAB).
+
+    Modifies the game in-place and returns it.
+    """
+    has_spread = game.spread != 0.0
+    has_ml = game.moneyline_home != 0.0 or game.moneyline_away != 0.0
+
+    if has_spread and not has_ml:
+        ml_home, ml_away = spread_to_moneyline(game.spread)
+        game.moneyline_home = round(ml_home, 0)
+        game.moneyline_away = round(ml_away, 0)
+
+    # Also fill implied probs if they're at default 0.5 but we have real data
+    if has_spread and game.implied_prob_home == 0.5 and game.implied_prob_away == 0.5:
+        if has_ml:
+            # Derive from actual moneylines (more accurate)
+            p_home = american_to_probability(game.moneyline_home)
+            p_away = american_to_probability(game.moneyline_away)
+            total = p_home + p_away
+            if total > 0:
+                game.implied_prob_home = round(p_home / total, 4)
+                game.implied_prob_away = round(p_away / total, 4)
+        else:
+            # Derive from spread (already no-vig)
+            game.implied_prob_home = round(spread_to_implied_probability(game.spread), 4)
+            game.implied_prob_away = round(1.0 - game.implied_prob_home, 4)
+
+    return game
+
+
+# ------------------------------------------------------------------
 # Loaders
 # ------------------------------------------------------------------
 
@@ -125,7 +165,11 @@ def load_unified_odds(season: int, data_dir: str = PROCESSED_DIR) -> List[Unifie
     with open(path) as f:
         data = json.load(f)
 
-    return [UnifiedGameOdds(**g) for g in data.get("games", [])]
+    games = [UnifiedGameOdds(**g) for g in data.get("games", [])]
+    # Synthesize moneylines/implied probs from spreads where missing
+    for g in games:
+        fill_missing_moneylines(g)
+    return games
 
 
 def load_unified_odds_by_team(season: int, data_dir: str = PROCESSED_DIR) -> Dict[str, List[UnifiedGameOdds]]:

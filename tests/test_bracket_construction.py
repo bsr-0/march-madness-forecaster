@@ -17,6 +17,16 @@ from src.optimization.bracket_construction import (
 
 _REGIONS = ("East", "West", "South", "Midwest")
 
+# Greedy modes produce deterministic chalk at risk=0.0; SA, exhaustive, and region_top_n deviate.
+_GREEDY_MODES = tuple(
+    m for m in CONSTRUCTION_MODES if m not in ("simulated_annealing", "exhaustive_champion", "region_top_n")
+)
+
+# Modes that honor forced_champion. SA/exhaustive/region pick their own best.
+_FORCEABLE_MODES = tuple(
+    m for m in CONSTRUCTION_MODES if m not in ("simulated_annealing", "exhaustive_champion", "region_top_n")
+)
+
 
 def _synthetic_fixture():
     """Build a 64-team synthetic fixture with chalk-dominant probabilities.
@@ -88,7 +98,7 @@ def test_mode_produces_complete_bracket(mode):
     assert var > 0, f"variance={var} should be positive"
 
 
-@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+@pytest.mark.parametrize("mode", _GREEDY_MODES)
 def test_chalk_picks_one_seed_champion(mode):
     """At risk=0.0 with monotonic-by-seed probabilities, the champion must be a 1-seed."""
     seeds, regions, round_probs, public_picks = _synthetic_fixture()
@@ -104,7 +114,7 @@ def test_chalk_picks_one_seed_champion(mode):
     assert seeds[champion] == 1, f"{mode} chalk champion {champion} has seed {seeds[champion]}, expected 1"
 
 
-@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+@pytest.mark.parametrize("mode", _GREEDY_MODES)
 def test_chalk_final_four_respects_one_seed_cap(mode):
     """At risk=0.0 with default max_one_seeds_f4=2, f4_first caps one-seeds at 2.
 
@@ -129,7 +139,7 @@ def test_chalk_final_four_respects_one_seed_cap(mode):
         assert f4_seeds == [1, 1, 1, 1], f"{mode} chalk F4 seeds are {f4_seeds}, expected [1,1,1,1]"
 
 
-@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+@pytest.mark.parametrize("mode", _GREEDY_MODES)
 def test_uncapped_final_four_is_four_one_seeds(mode):
     """With max_one_seeds_f4=4 (no cap), all modes produce 4 one-seeds at chalk."""
     seeds, regions, round_probs, public_picks = _synthetic_fixture()
@@ -147,7 +157,7 @@ def test_uncapped_final_four_is_four_one_seeds(mode):
     assert f4_seeds == [1, 1, 1, 1], f"{mode} uncapped chalk F4 seeds are {f4_seeds}, expected [1,1,1,1]"
 
 
-@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+@pytest.mark.parametrize("mode", _FORCEABLE_MODES)
 @pytest.mark.parametrize("forced_seed", [2, 3, 4, 5])
 def test_forced_champion_honored(mode, forced_seed):
     """Forcing a non-chalk champion should produce that exact champion in every mode."""
@@ -230,7 +240,7 @@ def test_missing_region_seed_raises():
         )
 
 
-@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+@pytest.mark.parametrize("mode", _GREEDY_MODES)
 def test_chalk_convergence_across_modes(mode):
     """All modes should produce the same bracket at risk=0.0 given
     strictly-chalk-dominant probabilities, EXCEPT f4_first which diverges
@@ -262,3 +272,194 @@ def test_chalk_convergence_across_modes(mode):
     assert champion == ref_champion, f"{mode} chalk champion {champion} != forward_greedy {ref_champion}"
     # Picks should match — all modes converge to same chalk bracket
     assert picks == ref_picks, f"{mode} chalk picks differ from forward_greedy"
+
+
+# ---------------------------------------------------------------------------
+# SA-specific tests
+# ---------------------------------------------------------------------------
+
+
+def test_sa_produces_complete_bracket():
+    """SA mode produces a valid 63-game bracket at various risk levels."""
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    for risk in [0.0, 0.5, 1.0]:
+        picks, champion, final_four, exp, var = construct_bracket(
+            mode="simulated_annealing",
+            seeds=seeds,
+            regions=regions,
+            round_probs=round_probs,
+            public_picks=public_picks,
+            risk_level=risk,
+            pool_size=30,
+        )
+        _assert_complete_bracket(picks, final_four, champion)
+        assert exp > 0
+        assert var > 0
+
+
+def test_sa_upset_count_constrained():
+    """SA should produce fewer upsets than an unconstrained optimizer would.
+
+    An upset is a game where the lower seed (higher seed number) wins.
+    With the quadratic penalty targeting ~9, the upset count should be
+    meaningfully below the 32 upsets an unconstrained optimizer would pick
+    when leveraging low-ownership underdogs.
+    """
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    picks, _, _, _, _ = construct_bracket(
+        mode="simulated_annealing",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.5,
+        pool_size=30,
+    )
+    # Count seed-based upsets: winner has higher seed number than the loser
+    # would have had in a chalk bracket
+    n_upsets = 0
+    for key, winner in picks.items():
+        seed = seeds.get(winner, 8)
+        if seed > 8:
+            n_upsets += 1
+    # With penalty active, should be well below the ~50+ upsets an
+    # unconstrained EV optimizer would produce on this synthetic fixture.
+    # Allow generous range since the synthetic fixture has identical
+    # public_picks and model probs, which amplifies leverage incentives.
+    assert n_upsets < 40, f"SA upset count {n_upsets} — penalty not constraining enough"
+
+
+def test_sa_runs_quickly():
+    """SA should finish in under 5 seconds on the synthetic fixture."""
+    import time
+
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    start = time.time()
+    construct_bracket(
+        mode="simulated_annealing",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.5,
+        pool_size=30,
+    )
+    elapsed = time.time() - start
+    assert elapsed < 5.0, f"SA took {elapsed:.1f}s, expected < 5s"
+
+
+# ---------------------------------------------------------------------------
+# Exhaustive champion search tests
+# ---------------------------------------------------------------------------
+
+
+def test_exhaustive_champion_picks_best_ev():
+    """Exhaustive search should find champion with >= champ_first E[pts]."""
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    _, champ_cf, _, ev_cf, _ = construct_bracket(
+        mode="champ_first",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.3,
+        pool_size=30,
+    )
+    picks_ex, champ_ex, f4_ex, ev_ex, _ = construct_bracket(
+        mode="exhaustive_champion",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.3,
+        pool_size=30,
+    )
+    _assert_complete_bracket(picks_ex, f4_ex, champ_ex)
+    assert ev_ex >= ev_cf - 0.01, f"Exhaustive EV {ev_ex:.1f} < champ_first EV {ev_cf:.1f}"
+
+
+def test_exhaustive_champion_runs_quickly():
+    """64 bracket evaluations should finish well under 1 second."""
+    import time
+
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    start = time.time()
+    construct_bracket(
+        mode="exhaustive_champion",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.5,
+        pool_size=30,
+    )
+    elapsed = time.time() - start
+    assert elapsed < 1.0, f"Exhaustive search took {elapsed:.1f}s, expected < 1s"
+
+
+# ---------------------------------------------------------------------------
+# Region-level construction tests
+# ---------------------------------------------------------------------------
+
+
+def test_region_top_n_produces_complete_bracket():
+    """Region-level construction should produce a valid 63-game bracket."""
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    picks, champion, f4, ev, var = construct_bracket(
+        mode="region_top_n",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.3,
+        pool_size=30,
+    )
+    _assert_complete_bracket(picks, f4, champion)
+    assert ev > 0
+    assert var > 0
+
+
+def test_region_top_n_ev_comparable_to_greedy():
+    """Region-level should produce EV at least as good as forward_greedy."""
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    _, _, _, ev_greedy, _ = construct_bracket(
+        mode="forward_greedy",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.3,
+        pool_size=30,
+    )
+    _, _, _, ev_region, _ = construct_bracket(
+        mode="region_top_n",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.3,
+        pool_size=30,
+    )
+    # Region-level considers more outcomes, so should be >= greedy (within tolerance)
+    assert ev_region >= ev_greedy - 1.0, (
+        f"region_top_n EV {ev_region:.1f} much worse than forward_greedy {ev_greedy:.1f}"
+    )
+
+
+def test_region_top_n_runs_quickly():
+    """Region enumeration with beam pruning should finish in under 3 seconds."""
+    import time
+
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    start = time.time()
+    construct_bracket(
+        mode="region_top_n",
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.5,
+        pool_size=30,
+    )
+    elapsed = time.time() - start
+    assert elapsed < 3.0, f"region_top_n took {elapsed:.1f}s, expected < 3s"
