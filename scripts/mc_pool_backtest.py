@@ -565,8 +565,8 @@ def resolve_first_four(games, seeds, regions) -> int:
     before ``build_first_round_matchups`` and ``build_actual_outcome``.
 
     Returns:
-        Number of replacements made (typically 4: two seed-16 slots and
-        two seed-11 slots, matching the four First Four games).
+        Number of replacements made (typically 4 for 2011-2026, or 12
+        for 2027+ under the 76-team expansion).
     """
     ff_games = [g for g in games if g.get("round_name") == "FF"]
     n_replaced = 0
