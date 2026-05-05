@@ -85,6 +85,7 @@ from src.simulation.pool_history_opponent_model import (
     load_pool_brackets,
     build_pool_pick_distribution,
     build_pool_behavioral_model,
+    build_blended_pool_opponent_model,
 )
 
 # ---------------------------------------------------------------------------
@@ -1737,6 +1738,14 @@ def build_espn_pick_distribution(year, seeds):
     return picks
 
 
+def _try_load_espn(year, seeds):
+    """Load ESPN picks for *year*, returning ``None`` on failure."""
+    try:
+        return build_espn_pick_distribution(year, seeds)
+    except FileNotFoundError:
+        return None
+
+
 def bracket_config_to_bool_array(bracket_config, first_round_matchups):
     """Convert BracketConfiguration.picks to (63,) boolean vector.
 
@@ -1969,6 +1978,7 @@ def _run_one_year(
     write_cache,
     scoring_vector,
     opponent_strategy="shared",
+    pool_blend_weight=0.7,
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -2090,6 +2100,20 @@ def _run_one_year(
                 except Exception as exc:
                     print(f"  {year:<6} SKIP — no opponent data: {exc}")
                     return _empty_year_outcome(year, f"no opponent data: {exc}")
+    elif opponent_source == "pool_calibrated":
+        # Phase 1: pool behavioral model blended with ESPN for all years.
+        espn = _try_load_espn(year, seeds)
+        try:
+            pick_dist, pool_chalk_noise_std = build_blended_pool_opponent_model(
+                pool_history_path=POOL_HIST_PATH,
+                seeds=seeds,
+                year=year,
+                espn_pick_dist=espn,
+                pool_weight=pool_blend_weight,
+            )
+        except Exception as exc:
+            print(f"  {year:<6} SKIP — pool_calibrated failed: {exc}")
+            return _empty_year_outcome(year, f"pool_calibrated failed: {exc}")
     elif opponent_source == "espn":
         try:
             pick_dist = build_espn_pick_distribution(year, seeds)
@@ -3726,6 +3750,7 @@ def run_backtest(
     workers: int = 1,
     opponent_strategy: str = "shared",
     eval_start_year: int = None,
+    pool_blend_weight: float = 0.7,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -3800,6 +3825,7 @@ def run_backtest(
         write_cache,
         scoring_vector,
         opponent_strategy,
+        pool_blend_weight,
     )
 
     def _absorb(outcome: dict) -> None:
@@ -3977,11 +4003,19 @@ def main():
     parser.add_argument("--n-model", type=int, default=N_MODEL_BRACKETS, help="Stochastic brackets per mode")
     parser.add_argument(
         "--opponent",
-        choices=["seed", "espn", "pool"],
+        choices=["seed", "espn", "pool", "pool_calibrated"],
         default="pool",
         help="Opponent pick distribution source: pool (empirical from pool_hist_results.json, "
-        "falls back to espn if year unavailable — DEFAULT), espn (real archived ESPN picks, "
+        "falls back to espn if year unavailable — DEFAULT), pool_calibrated (cross-year "
+        "behavioral model blended with ESPN — Phase 1), espn (real archived ESPN picks, "
         "strict — fails if missing), or seed (SEED_PICK_RATES fallback).",
+    )
+    parser.add_argument(
+        "--pool-blend-weight",
+        type=float,
+        default=0.7,
+        help="Blend weight for pool_calibrated opponent source: 0.0 = pure ESPN, "
+        "1.0 = pure pool behavioral (default: 0.7).",
     )
     parser.add_argument(
         "--save-brackets",
@@ -4130,6 +4164,7 @@ def main():
             team_identity=args.team_identity,
             opponent_strategy=args.opponent_strategy,
             eval_start_year=args.eval_start_year,
+            pool_blend_weight=args.pool_blend_weight,
         )
     finally:
         if log_file is not None:

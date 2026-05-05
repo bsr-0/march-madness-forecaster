@@ -584,9 +584,15 @@ def build_pool_behavioral_model(
     """Build a seed-based pick distribution from cross-year pool behavior.
 
     For years without direct pool bracket data, this learns the pool's
-    behavioral patterns (seed-specific upset tendencies per round, bracket
+    behavioral patterns (per-seed round advancement rates, bracket
     correlation) from all available pool history years and maps them onto the
     target year's teams via their seeds.
+
+    The model directly counts how many brackets pick teams of each seed to
+    advance to each round, then divides by (n_brackets × 4) to get
+    per-team advancement rates.  This produces the correct cumulative
+    quantity — P(team picked to reach round R) — rather than per-game
+    conditional win rates which don't compound properly.
 
     Args:
         path: Path to pool_hist_results.json.
@@ -603,9 +609,11 @@ def build_pool_behavioral_model(
         data = json.load(f)
     years_data = data.get("years", {})
 
-    # Collect seed-based pick rates across all pool-history years.
-    # Key: (higher_seed, lower_seed, round) -> [chalk_count, total_count]
-    seed_matchup_counts: Dict[Tuple[int, int, str], List[int]] = defaultdict(lambda: [0, 0])
+    # Count per-seed, per-round advancement picks across all brackets.
+    # seed_round_counts[seed][round] = total teams of that seed picked
+    # to advance to that round, summed across all brackets and years.
+    seed_round_counts: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    n_brackets = 0
     # Track per-bracket chalk fraction for correlation estimation
     bracket_chalk_fractions: List[float] = []
 
@@ -617,138 +625,78 @@ def build_pool_behavioral_model(
         if not brackets:
             continue
 
-        # Load seeds for this historical year to map teams to seed matchups
+        # Load seeds for this historical year to map abbreviations to seeds
         try:
-            yr_seeds, yr_regions = _load_year_seeds(yr)
+            yr_seeds, _yr_regions = _load_year_seeds(yr)
         except (FileNotFoundError, KeyError):
             continue
         if not yr_seeds:
             continue
 
-        # Build reverse map: team_id -> seed for this year
-        # Also build first_round to walk brackets properly
-        try:
-            from scripts.mc_pool_backtest import (
-                build_first_round_matchups,
-                derive_f4_region_pairing,
-                load_tournament_results,
-                resolve_first_four,
-            )
-
-            yr_games = load_tournament_results(yr)
-            if yr_games:
-                resolve_first_four(yr_games, yr_seeds, yr_regions)
-                try:
-                    yr_region_order = derive_f4_region_pairing(yr_games, yr_regions)
-                except ValueError:
-                    yr_region_order = None
-            else:
-                yr_region_order = None
-            yr_first_round = build_first_round_matchups(yr_seeds, yr_regions, region_order=yr_region_order)
-        except (ImportError, Exception):
-            continue
-
-        if len(yr_first_round) != 64:
-            continue
-
         for bkt in brackets:
             chalk_picks = 0
             total_picks = 0
-            # Walk bracket round-by-round
-            current = list(yr_first_round)
+
             for round_name in ROUNDS:
                 pool_key = {v: k for k, v in _POOL_ROUND_MAP.items()}[round_name]
                 raw_picks = bkt.get(pool_key)
                 if raw_picks is None:
-                    # Advance with higher seed default
-                    nxt = []
-                    for g in range(0, len(current), 2):
-                        t1, t2 = current[g], current[g + 1]
-                        s1 = yr_seeds.get(t1, 8)
-                        s2 = yr_seeds.get(t2, 8)
-                        nxt.append(t1 if s1 <= s2 else t2)
-                    current = nxt
                     continue
                 if isinstance(raw_picks, str):
                     raw_picks = [raw_picks]
 
-                pick_set: set = set()
                 for raw in raw_picks:
-                    if isinstance(raw, str):
-                        tid = resolve_abbrev(raw, yr_seeds)
-                        if tid is not None:
-                            pick_set.add(tid)
-
-                nxt = []
-                for g in range(0, len(current), 2):
-                    if g + 1 >= len(current):
-                        nxt.append(current[g])
+                    if not isinstance(raw, str):
                         continue
-                    t1, t2 = current[g], current[g + 1]
-                    s1 = yr_seeds.get(t1, 8)
-                    s2 = yr_seeds.get(t2, 8)
-
-                    # Determine higher/lower seed
-                    if s1 <= s2:
-                        high_seed, low_seed = s1, s2
-                        chalk_team, upset_team = t1, t2
-                    else:
-                        high_seed, low_seed = s2, s1
-                        chalk_team, upset_team = t2, t1
-
-                    # Determine who was picked
-                    t1_in = t1 in pick_set
-                    t2_in = t2 in pick_set
-                    if t1_in:
-                        winner = t1
-                    elif t2_in:
-                        winner = t2
-                    else:
-                        winner = chalk_team  # default to chalk
-
-                    picked_chalk = winner == chalk_team
-                    seed_matchup_counts[(high_seed, low_seed, round_name)][1] += 1
-                    if picked_chalk:
-                        seed_matchup_counts[(high_seed, low_seed, round_name)][0] += 1
-                        chalk_picks += 1
+                    tid = resolve_abbrev(raw, yr_seeds)
+                    if tid is None:
+                        continue
+                    team_seed = yr_seeds.get(tid)
+                    if team_seed is None:
+                        continue
+                    seed_round_counts[team_seed][round_name] += 1
                     total_picks += 1
+                    if team_seed <= 4:
+                        chalk_picks += 1
 
-                    nxt.append(winner)
-                current = nxt
-
+            n_brackets += 1
             if total_picks > 0:
                 bracket_chalk_fractions.append(chalk_picks / total_picks)
 
-    # Build pick_dist for the target year's teams using learned seed rates.
-    # Use Bayesian smoothing: blend empirical rate with a seed-based prior,
-    # weighted by observation count. This prevents wild estimates from sparse
-    # late-round bins (e.g., a 12-seed in F4 with N=2 observations).
-    PRIOR_WEIGHT = 10  # pseudocount for the seed prior
+    # Build pick_dist for the target year's teams.
+    # P(specific team of seed S advances to round R) =
+    #   seed_round_counts[S][R] / (n_brackets * 4)
+    # where 4 = number of teams of each seed (one per region).
+    #
+    # Use Bayesian smoothing with historical NCAA advancement rates as
+    # prior (from _SEED_ADVANCEMENT_RATES). PRIOR_WEIGHT acts as a
+    # pseudocount in equivalent-brackets.
+    PRIOR_WEIGHT = 5  # pseudocount (in equivalent-bracket units)
+    TEAMS_PER_SEED = 4
     pick_dist: Dict[str, Dict[str, float]] = {}
 
     for tid, seed in seeds.items():
         row: Dict[str, float] = {}
-        seed_prior = max(0.05, 1.0 - seed / 17.0)
+        prior_rates = _SEED_ADVANCEMENT_RATES.get(seed, _SEED_ADVANCEMENT_RATES[8])
         for round_name in ROUNDS:
-            # Collect all observations for this seed in this round
-            total_obs = 0
-            chalk_obs = 0
-            for (hs, ls, rn), (chalk_ct, total_ct) in seed_matchup_counts.items():
-                if rn != round_name or total_ct == 0:
-                    continue
-                if hs == seed:
-                    chalk_obs += chalk_ct
-                    total_obs += total_ct
-                elif ls == seed:
-                    chalk_obs += total_ct - chalk_ct  # upset picks
-                    total_obs += total_ct
-            if total_obs > 0:
-                # Bayesian blend: (empirical * N + prior * PRIOR_WEIGHT) / (N + PRIOR_WEIGHT)
-                empirical = chalk_obs / total_obs
-                row[round_name] = (empirical * total_obs + seed_prior * PRIOR_WEIGHT) / (total_obs + PRIOR_WEIGHT)
+            observed = seed_round_counts.get(seed, {}).get(round_name, 0)
+            # observed is total picks across all brackets (NOT per-team).
+            # Convert to per-team rate: observed / (n_brackets * TEAMS_PER_SEED)
+            if n_brackets > 0:
+                empirical = observed / (n_brackets * TEAMS_PER_SEED)
             else:
-                row[round_name] = seed_prior
+                empirical = 0.0
+            prior_val = prior_rates.get(round_name, 0.01)
+            # Bayesian blend in per-team-rate space
+            n_eff = n_brackets  # effective observation count
+            row[round_name] = (empirical * n_eff + prior_val * PRIOR_WEIGHT) / (n_eff + PRIOR_WEIGHT)
         pick_dist[tid] = row
+
+    # Normalize CHAMP probabilities to sum to ~1.0
+    champ_total = sum(pick_dist[tid].get("CHAMP", 0.0) for tid in pick_dist)
+    if champ_total > 0:
+        for tid in pick_dist:
+            pick_dist[tid]["CHAMP"] = pick_dist[tid].get("CHAMP", 0.0) / champ_total
 
     # Estimate chalk_noise_std from bracket-level variance
     if len(bracket_chalk_fractions) >= 5:
@@ -764,3 +712,105 @@ def _load_year_seeds(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
     from scripts.mc_pool_backtest import load_seeds_and_regions
 
     return load_seeds_and_regions(year)
+
+
+# ---------------------------------------------------------------------------
+# Blended pool-calibrated opponent model (Phase 1)
+# ---------------------------------------------------------------------------
+
+# Seed-based advancement rates used as fallback when ESPN picks are
+# unavailable. Duplicated from mc_pool_backtest.SEED_PICK_RATES to avoid
+# a circular import.  These are ESPN national pick rates aggregated by
+# seed (2012-2024 average).
+_SEED_ADVANCEMENT_RATES: Dict[int, Dict[str, float]] = {
+    1: {"R64": 0.99, "R32": 0.85, "S16": 0.60, "E8": 0.37, "F4": 0.20, "CHAMP": 0.10},
+    2: {"R64": 0.94, "R32": 0.67, "S16": 0.38, "E8": 0.20, "F4": 0.09, "CHAMP": 0.04},
+    3: {"R64": 0.85, "R32": 0.52, "S16": 0.26, "E8": 0.12, "F4": 0.05, "CHAMP": 0.02},
+    4: {"R64": 0.79, "R32": 0.43, "S16": 0.20, "E8": 0.09, "F4": 0.04, "CHAMP": 0.015},
+    5: {"R64": 0.64, "R32": 0.30, "S16": 0.13, "E8": 0.05, "F4": 0.02, "CHAMP": 0.007},
+    6: {"R64": 0.63, "R32": 0.28, "S16": 0.12, "E8": 0.05, "F4": 0.02, "CHAMP": 0.006},
+    7: {"R64": 0.60, "R32": 0.23, "S16": 0.09, "E8": 0.03, "F4": 0.01, "CHAMP": 0.004},
+    8: {"R64": 0.50, "R32": 0.17, "S16": 0.06, "E8": 0.02, "F4": 0.007, "CHAMP": 0.003},
+    9: {"R64": 0.50, "R32": 0.17, "S16": 0.06, "E8": 0.02, "F4": 0.007, "CHAMP": 0.002},
+    10: {"R64": 0.40, "R32": 0.13, "S16": 0.04, "E8": 0.015, "F4": 0.005, "CHAMP": 0.001},
+    11: {"R64": 0.37, "R32": 0.11, "S16": 0.04, "E8": 0.01, "F4": 0.004, "CHAMP": 0.001},
+    12: {"R64": 0.36, "R32": 0.10, "S16": 0.03, "E8": 0.008, "F4": 0.003, "CHAMP": 0.0005},
+    13: {"R64": 0.21, "R32": 0.04, "S16": 0.01, "E8": 0.002, "F4": 0.0005, "CHAMP": 0.0001},
+    14: {"R64": 0.15, "R32": 0.03, "S16": 0.005, "E8": 0.001, "F4": 0.0003, "CHAMP": 0.0001},
+    15: {"R64": 0.06, "R32": 0.01, "S16": 0.002, "E8": 0.0005, "F4": 0.0001, "CHAMP": 0.00005},
+    16: {"R64": 0.01, "R32": 0.002, "S16": 0.0003, "E8": 0.0001, "F4": 0.00002, "CHAMP": 0.00001},
+}
+
+
+def _seed_pick_distribution(
+    seeds: Mapping[str, int],
+) -> Dict[str, Dict[str, float]]:
+    """Build opponent pick distribution from seed advancement rates."""
+    return {tid: dict(_SEED_ADVANCEMENT_RATES.get(seed, _SEED_ADVANCEMENT_RATES[8])) for tid, seed in seeds.items()}
+
+
+def build_blended_pool_opponent_model(
+    pool_history_path: str | Path,
+    seeds: Mapping[str, int],
+    year: int,
+    espn_pick_dist: Optional[Dict[str, Dict[str, float]]] = None,
+    pool_weight: float = 0.7,
+) -> Tuple[Dict[str, Dict[str, float]], float]:
+    """Build a pool-calibrated opponent pick distribution blended with ESPN.
+
+    For every backtest year Y, this produces an opponent model that combines:
+      - **Pool behavioral component** (70% default): seed-level pick patterns
+        learned from cross-year pool brackets (LOOY, excluding year Y).
+      - **ESPN component** (30% default): year-specific national pick rates.
+        Falls back to seed-based rates if ESPN data is unavailable.
+
+    This mirrors the production scenario for 2027 where we have pool
+    behavioral data from 2023-2026 and ESPN picks for 2027.
+
+    Args:
+        pool_history_path: Path to ``pool_hist_results.json``.
+        seeds: Team-ID → seed mapping for the target year.
+        year: Target year (passed as ``exclude_year`` to behavioral model).
+        espn_pick_dist: Pre-loaded ESPN national pick distribution for the
+            target year.  ``None`` triggers fallback to seed-based rates.
+        pool_weight: Blend weight for pool behavioral component (0.0 = pure
+            ESPN, 1.0 = pure pool behavioral).  Default 0.7.
+
+    Returns:
+        ``(pick_dist, chalk_noise_std)`` where ``pick_dist`` is
+        ``Dict[team_id, Dict[round_name, probability]]`` and
+        ``chalk_noise_std`` is the bracket-level chalk correlation
+        estimated from the pool behavioral model.
+    """
+    # 1. Pool behavioral component (LOOY safe)
+    behavioral_dist, chalk_noise_std = build_pool_behavioral_model(
+        pool_history_path,
+        seeds,
+        exclude_year=year,
+    )
+
+    # 2. ESPN component (or seed-based fallback)
+    if espn_pick_dist is not None:
+        espn_dist = espn_pick_dist
+    else:
+        espn_dist = _seed_pick_distribution(seeds)
+
+    # 3. Blend per team, per round
+    blended: Dict[str, Dict[str, float]] = {}
+    for tid in seeds:
+        beh_row = behavioral_dist.get(tid, {})
+        espn_row = espn_dist.get(tid, {})
+        row: Dict[str, float] = {}
+        for rnd in ROUNDS:
+            beh_val = beh_row.get(rnd, 0.0)
+            espn_val = espn_row.get(rnd, 0.0)
+            row[rnd] = pool_weight * beh_val + (1.0 - pool_weight) * espn_val
+        blended[tid] = row
+
+    # 4. Normalize CHAMP probabilities to sum to ~1.0
+    champ_total = sum(blended[tid].get("CHAMP", 0.0) for tid in blended)
+    if champ_total > 0:
+        for tid in blended:
+            blended[tid]["CHAMP"] = blended[tid].get("CHAMP", 0.0) / champ_total
+
+    return blended, chalk_noise_std
