@@ -95,6 +95,9 @@ CONSTRUCTION_MODES: Tuple[str, ...] = (
     "e8_first",
     "forward_greedy",
     "champ_first_chalkfade",
+    "simulated_annealing",
+    "exhaustive_champion",
+    "region_top_n",
 )
 
 
@@ -598,6 +601,515 @@ def _pick_s16_teams(
 
 
 # ---------------------------------------------------------------------------
+# Simulated annealing construction
+# ---------------------------------------------------------------------------
+
+
+def _build_chalk_search_bracket(
+    by_region: Dict[str, Dict[int, str]],
+    round_probs: Dict[str, Dict[str, float]],
+    seeds: Dict[str, int],
+) -> "SearchBracket":
+    """Build a path-consistent chalk bracket as a SearchBracket.
+
+    Every game goes to the higher seed (lower seed number wins).
+    The result is a valid starting point for SA optimization.
+    """
+    from .bracket_search import BracketPick, SearchBracket
+
+    picks_list: List["BracketPick"] = []
+
+    def _get_prob(t1: str, t2: str, round_name: str) -> float:
+        """P(t1 wins round game). Uses round_probs if available, else seed heuristic."""
+        p = round_probs.get(t1, {}).get(round_name, 0.0)
+        if p > 0:
+            return p
+        # Fallback: higher seed (lower number) gets 0.6 default
+        s1 = seeds.get(t1, 8)
+        s2 = seeds.get(t2, 8)
+        return 0.6 if s1 <= s2 else 0.4
+
+    def _chalk_winner(t1: str, t2: str) -> str:
+        s1 = seeds.get(t1, 8)
+        s2 = seeds.get(t2, 8)
+        if s1 != s2:
+            return t1 if s1 < s2 else t2
+        return t1 if t1 < t2 else t2
+
+    round_idx = {"R64": 0, "R32": 1, "S16": 2, "E8": 3, "F4": 4, "CHAMP": 5}
+    game_counter = 0
+
+    # R64
+    r64_winners: Dict[str, List[str]] = {}
+    for region in _REGION_ORDER:
+        winners = []
+        for high_seed, low_seed in _SEED_MATCHUP_ORDER:
+            t1 = by_region[region][high_seed]
+            t2 = by_region[region][low_seed]
+            winner = _chalk_winner(t1, t2)
+            loser = t2 if winner == t1 else t1
+            picks_list.append(
+                BracketPick(
+                    round_num=0,
+                    game_idx=game_counter,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=_get_prob(winner, loser, "R64"),
+                )
+            )
+            winners.append(winner)
+            game_counter += 1
+        r64_winners[region] = winners
+
+    # R32
+    r32_winners: Dict[str, List[str]] = {}
+    for region in _REGION_ORDER:
+        winners = []
+        rw = r64_winners[region]
+        for idx in range(0, 8, 2):
+            t1, t2 = rw[idx], rw[idx + 1]
+            winner = _chalk_winner(t1, t2)
+            loser = t2 if winner == t1 else t1
+            picks_list.append(
+                BracketPick(
+                    round_num=1,
+                    game_idx=game_counter,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=_get_prob(winner, loser, "R32"),
+                )
+            )
+            winners.append(winner)
+            game_counter += 1
+        r32_winners[region] = winners
+
+    # S16
+    s16_winners: Dict[str, List[str]] = {}
+    for region in _REGION_ORDER:
+        winners = []
+        rw = r32_winners[region]
+        for idx in range(0, 4, 2):
+            t1, t2 = rw[idx], rw[idx + 1]
+            winner = _chalk_winner(t1, t2)
+            loser = t2 if winner == t1 else t1
+            picks_list.append(
+                BracketPick(
+                    round_num=2,
+                    game_idx=game_counter,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=_get_prob(winner, loser, "S16"),
+                )
+            )
+            winners.append(winner)
+            game_counter += 1
+        s16_winners[region] = winners
+
+    # E8
+    e8_winners: Dict[str, str] = {}
+    for region in _REGION_ORDER:
+        t1, t2 = s16_winners[region]
+        winner = _chalk_winner(t1, t2)
+        loser = t2 if winner == t1 else t1
+        picks_list.append(
+            BracketPick(
+                round_num=3,
+                game_idx=game_counter,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=_get_prob(winner, loser, "E8"),
+            )
+        )
+        e8_winners[region] = winner
+        game_counter += 1
+
+    # F4
+    for r1, r2 in [("East", "West"), ("South", "Midwest")]:
+        t1, t2 = e8_winners[r1], e8_winners[r2]
+        winner = _chalk_winner(t1, t2)
+        loser = t2 if winner == t1 else t1
+        picks_list.append(
+            BracketPick(
+                round_num=4,
+                game_idx=game_counter,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=_get_prob(winner, loser, "F4"),
+            )
+        )
+        if r1 == "East":
+            f4_ew = winner
+        else:
+            f4_sm = winner
+        game_counter += 1
+
+    # CHAMP
+    winner = _chalk_winner(f4_ew, f4_sm)
+    loser = f4_sm if winner == f4_ew else f4_ew
+    picks_list.append(
+        BracketPick(
+            round_num=5,
+            game_idx=game_counter,
+            winner_id=winner,
+            loser_id=loser,
+            win_probability=_get_prob(winner, loser, "CHAMP"),
+        )
+    )
+
+    bracket = SearchBracket(
+        picks=picks_list,
+        champion=winner,
+    )
+    return bracket
+
+
+def _sa_bracket_to_picks(
+    bracket: "SearchBracket",
+    by_region: Dict[str, Dict[int, str]],
+) -> Tuple[Dict[str, str], str, List[str]]:
+    """Convert a SearchBracket back to the (picks_dict, champion, f4) format.
+
+    Reconstructs game keys by replaying the bracket structure using the
+    region/seed layout and matching winners from the SearchBracket picks list.
+    """
+    picks_dict: Dict[str, str] = {}
+    pick_iter = iter(bracket.picks)
+
+    # R64
+    r64_winners: Dict[str, List[str]] = {}
+    for region in _REGION_ORDER:
+        winners = []
+        for high_seed, low_seed in _SEED_MATCHUP_ORDER:
+            bp = next(pick_iter)
+            picks_dict[f"R64_{region}_{high_seed}v{low_seed}"] = bp.winner_id
+            winners.append(bp.winner_id)
+        r64_winners[region] = winners
+
+    # R32
+    r32_winners: Dict[str, List[str]] = {}
+    for region in _REGION_ORDER:
+        winners = []
+        for idx in range(0, 8, 2):
+            bp = next(pick_iter)
+            picks_dict[f"R32_{region}_{idx // 2 + 1}"] = bp.winner_id
+            winners.append(bp.winner_id)
+        r32_winners[region] = winners
+
+    # S16
+    for region in _REGION_ORDER:
+        for idx in range(0, 4, 2):
+            bp = next(pick_iter)
+            picks_dict[f"S16_{region}_{idx // 2 + 1}"] = bp.winner_id
+
+    # E8
+    e8_winners = {}
+    for region in _REGION_ORDER:
+        bp = next(pick_iter)
+        picks_dict[f"E8_{region}"] = bp.winner_id
+        e8_winners[region] = bp.winner_id
+
+    # F4
+    bp_ew = next(pick_iter)
+    picks_dict["F4_East_West"] = bp_ew.winner_id
+    bp_sm = next(pick_iter)
+    picks_dict["F4_South_Midwest"] = bp_sm.winner_id
+
+    # CHAMP
+    bp_champ = next(pick_iter)
+    picks_dict["CHAMP"] = bp_champ.winner_id
+
+    final_four = [e8_winners[r] for r in _REGION_ORDER]
+    return picks_dict, bp_champ.winner_id, final_four
+
+
+def _run_simulated_annealing(
+    by_region: Dict[str, Dict[int, str]],
+    seeds: Dict[str, int],
+    round_probs: Dict[str, Dict[str, float]],
+    public_picks: Dict[str, Dict[str, float]],
+    risk_level: float,
+    pool_size: int,
+    scoring_system: Dict[str, int],
+) -> Tuple[Dict[str, str], str, List[str]]:
+    """Run SA optimization from a chalk seed bracket.
+
+    Returns (picks, champion, final_four) in the standard format.
+    """
+    from .bracket_search import SAConfig, SimulatedAnnealingOptimizer
+
+    # Build chalk starting bracket
+    chalk = _build_chalk_search_bracket(by_region, round_probs, seeds)
+
+    # Build pairwise predict_fn from round_probs
+    def predict_fn(t1: str, t2: str) -> float:
+        """P(t1 beats t2) — average across available rounds."""
+        probs_t1 = round_probs.get(t1, {})
+        probs_t2 = round_probs.get(t2, {})
+        # Use the maximum round probability as a proxy for head-to-head
+        p1 = max(probs_t1.values()) if probs_t1 else 0.5
+        p2 = max(probs_t2.values()) if probs_t2 else 0.5
+        total = p1 + p2
+        if total > 0:
+            return p1 / total
+        return 0.5
+
+    # Scale SA temperature with risk_level: higher risk = hotter start = more exploration
+    initial_temp = 0.5 + risk_level * 1.5  # range [0.5, 2.0]
+
+    config = SAConfig(
+        max_iterations=3000,
+        max_no_improve=500,
+        random_seed=42,
+        ev_mode=True,
+        pool_size=pool_size,
+        initial_temperature=initial_temp,
+        cooling_rate=0.997,
+        min_temperature=0.005,
+        upset_target=9,
+        upset_penalty_weight=0.30,
+        variance_weight=0.05,
+        enable_path_protection=False,  # SA swap_pick handles path consistency via cascade
+    )
+
+    optimizer = SimulatedAnnealingOptimizer(
+        predict_fn=predict_fn,
+        config=config,
+        public_picks={tid: pp.get("CHAMP", 0.01) for tid, pp in public_picks.items()},
+        scoring_system=scoring_system,
+        round_public_picks=public_picks,
+        team_seeds=seeds,
+    )
+
+    optimized = optimizer.optimize(chalk, teams_by_round=None)
+
+    return _sa_bracket_to_picks(optimized, by_region)
+
+
+# ---------------------------------------------------------------------------
+# Region-level construction (MLR100, de Gruyter / JQAS)
+# ---------------------------------------------------------------------------
+
+
+def _enumerate_region_outcomes(
+    region: str,
+    region_seeds: Dict[int, str],
+    round_probs: Dict[str, Dict[str, float]],
+    scorer: Callable[[str, str], float],
+    max_outcomes: int = 100,
+) -> List[Tuple[Dict[str, str], str, float, float]]:
+    """Enumerate top region outcomes by EV, returning the best N.
+
+    Uses iterative beam search: at each round, keep the top max_outcomes*5
+    partial brackets by EV. This avoids exponential blowup while exploring
+    enough diversity to find high-EV outcomes.
+
+    Returns list of (picks_dict, regional_champion, log_prob, total_ev)
+    sorted by total_ev descending.
+    """
+    # Build initial team pairs from seed matchup order
+    initial_teams = []
+    seed_for_team: Dict[str, int] = {}
+    for high, low in _SEED_MATCHUP_ORDER:
+        initial_teams.extend([region_seeds[high], region_seeds[low]])
+        seed_for_team[region_seeds[high]] = high
+        seed_for_team[region_seeds[low]] = low
+
+    # State: (teams_advancing, picks_dict, log_prob, total_ev)
+    beam: List[Tuple[List[str], Dict[str, str], float, float]] = [(initial_teams, {}, 0.0, 0.0)]
+    beam_limit = max_outcomes * 5
+
+    for round_idx in range(4):  # R64, R32, S16, E8
+        round_name = _ROUND_NAMES[round_idx]
+        next_beam: List[Tuple[List[str], Dict[str, str], float, float]] = []
+
+        for teams, picks, log_prob, ev in beam:
+            # For this round, enumerate all 2^(n_games) outcomes
+            n_games = len(teams) // 2
+            # Iteratively expand game-by-game to keep it manageable
+            combos = [([], dict(picks), log_prob, ev)]
+
+            for g in range(n_games):
+                t1, t2 = teams[g * 2], teams[g * 2 + 1]
+                p1 = round_probs.get(t1, {}).get(round_name, 0.5)
+                p2 = round_probs.get(t2, {}).get(round_name, 0.5)
+                total = p1 + p2
+                p1_win = p1 / total if total > 1e-8 else 0.5
+
+                ev1 = scorer(t1, round_name)
+                ev2 = scorer(t2, round_name)
+
+                # Game key — must match _walk_bracket format exactly
+                if round_idx == 0:
+                    s1 = seed_for_team.get(t1, 0)
+                    s2 = seed_for_team.get(t2, 0)
+                    game_key = f"R64_{region}_{s1}v{s2}"
+                elif round_idx == 3:  # E8: one game, key is just "E8_{region}"
+                    game_key = f"E8_{region}"
+                else:
+                    game_key = f"{round_name}_{region}_{g + 1}"
+
+                new_combos = []
+                for adv, p, lp, e in combos:
+                    # t1 wins
+                    lp1 = lp + math.log(max(p1_win, 1e-10))
+                    p1c = dict(p)
+                    p1c[game_key] = t1
+                    new_combos.append((adv + [t1], p1c, lp1, e + ev1))
+                    # t2 wins
+                    lp2 = lp + math.log(max(1.0 - p1_win, 1e-10))
+                    p2c = dict(p)
+                    p2c[game_key] = t2
+                    new_combos.append((adv + [t2], p2c, lp2, e + ev2))
+
+                combos = new_combos
+                # Prune within the round to prevent exponential blowup
+                if len(combos) > beam_limit:
+                    combos.sort(key=lambda x: x[3], reverse=True)
+                    combos = combos[:beam_limit]
+
+            next_beam.extend(combos)
+
+        # Keep top outcomes across all parent beams
+        next_beam.sort(key=lambda x: x[3], reverse=True)
+        beam = next_beam[:beam_limit]
+
+    # Beam now contains complete region outcomes (1 team each)
+    results = []
+    for teams, picks, log_prob, ev in beam:
+        if teams:
+            results.append((picks, teams[0], log_prob, ev))
+
+    results.sort(key=lambda x: x[3], reverse=True)
+    return results[:max_outcomes]
+
+
+def _region_top_n_construction(
+    by_region: Dict[str, Dict[int, str]],
+    round_probs: Dict[str, Dict[str, float]],
+    public_picks: Dict[str, Dict[str, float]],
+    risk_level: float,
+    pool_size: int,
+    scoring_system: Dict[str, int],
+    max_outcomes: int = 100,
+) -> Tuple[Dict[str, str], str, List[str], float, float]:
+    """Pick the highest-EV complete-region outcome per region, then walk F4+CHAMP.
+
+    For each region: enumerate top N region outcomes, pick the one with
+    highest EV score. Then assemble the 4 regional champions and walk
+    F4 + CHAMP with greedy EV-score.
+    """
+    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
+
+    all_picks: Dict[str, str] = {}
+    e8_winners: Dict[str, str] = {}
+
+    for region in _REGION_ORDER:
+        outcomes = _enumerate_region_outcomes(region, by_region[region], round_probs, scorer, max_outcomes)
+        if not outcomes:
+            continue
+        best_picks, best_champ, _, _ = outcomes[0]
+        all_picks.update(best_picks)
+        e8_winners[region] = best_champ
+
+    # F4 + CHAMP via greedy
+    semi_ew = _decide_winner(
+        e8_winners.get("East", ""),
+        e8_winners.get("West", ""),
+        "F4",
+        set(),
+        None,
+        scorer,
+    )
+    semi_sm = _decide_winner(
+        e8_winners.get("South", ""),
+        e8_winners.get("Midwest", ""),
+        "F4",
+        set(),
+        None,
+        scorer,
+    )
+    all_picks["F4_East_West"] = semi_ew
+    all_picks["F4_South_Midwest"] = semi_sm
+
+    champion = _decide_winner(semi_ew, semi_sm, "CHAMP", set(), None, scorer)
+    all_picks["CHAMP"] = champion
+
+    final_four = [e8_winners.get(r, "") for r in _REGION_ORDER]
+    ev, var = _compute_expected_points(all_picks, round_probs, scoring_system)
+    return all_picks, champion, final_four, ev, var
+
+
+# ---------------------------------------------------------------------------
+# Exhaustive champion search (Kaplan-Garstka 2001)
+# ---------------------------------------------------------------------------
+
+
+def _exhaustive_champion_search(
+    by_region: Dict[str, Dict[int, str]],
+    round_probs: Dict[str, Dict[str, float]],
+    public_picks: Dict[str, Dict[str, float]],
+    risk_level: float,
+    pool_size: int,
+    scoring_system: Dict[str, int],
+) -> Tuple[Dict[str, str], str, List[str], float, float]:
+    """Build a bracket for each of 64 possible champions, pick the best by E[pts].
+
+    Kaplan & Garstka (Management Science 2001) showed this exhaustive search
+    outperforms greedy champion selection because it evaluates the full bracket
+    implications of each champion choice, not just the champion's EV score.
+
+    For each team: build a complete champ_first bracket with that team forced
+    as champion, compute E[points], keep the bracket with highest E[points].
+
+    64 bracket constructions × ~1ms each = ~64ms total.
+    """
+    all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
+
+    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
+
+    best_picks: Optional[Dict[str, str]] = None
+    best_champion = ""
+    best_f4: List[str] = []
+    best_ev = -1.0
+    best_var = 0.0
+
+    for candidate in all_teams:
+        # Skip teams with zero championship probability — can't win
+        champ_prob = round_probs.get(candidate, {}).get("CHAMP", 0.0)
+        if champ_prob <= 0.0:
+            continue
+
+        locked_teams: Set[str] = {candidate}
+        lock_through_round: Optional[str] = "CHAMP"
+
+        picks, champion, final_four = _walk_bracket(
+            by_region,
+            locked_teams,
+            lock_through_round,
+            scorer,
+            forced_champion=candidate,
+        )
+        ev, var = _compute_expected_points(picks, round_probs, scoring_system)
+
+        if ev > best_ev:
+            best_picks = picks
+            best_champion = champion
+            best_f4 = final_four
+            best_ev = ev
+            best_var = var
+
+    if best_picks is None:
+        # Fallback: use champ_first without forcing
+        champion = _pick_champion(scorer, all_teams, None)
+        locked_teams = {champion}
+        picks, champion, final_four = _walk_bracket(by_region, locked_teams, "CHAMP", scorer)
+        ev, var = _compute_expected_points(picks, round_probs, scoring_system)
+        return picks, champion, final_four, ev, var
+
+    return best_picks, best_champion, best_f4, best_ev, best_var
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -650,6 +1162,22 @@ def construct_bracket(
 
     by_region = _build_seed_map(seeds, regions)
     all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
+
+    # Simulated annealing has its own optimization loop — short-circuit here.
+    if mode == "simulated_annealing":
+        picks, champion, final_four = _run_simulated_annealing(
+            by_region, seeds, round_probs, public_picks, risk_level, pool_size, scoring_system
+        )
+        expected_points, variance = _compute_expected_points(picks, round_probs, scoring_system)
+        return picks, champion, final_four, expected_points, variance
+
+    # Exhaustive champion search: try all 64 teams, pick best E[pts].
+    if mode == "exhaustive_champion":
+        return _exhaustive_champion_search(by_region, round_probs, public_picks, risk_level, pool_size, scoring_system)
+
+    # Region-level construction: enumerate top outcomes per region.
+    if mode == "region_top_n":
+        return _region_top_n_construction(by_region, round_probs, public_picks, risk_level, pool_size, scoring_system)
 
     scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
 

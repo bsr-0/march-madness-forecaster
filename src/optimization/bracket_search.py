@@ -62,6 +62,16 @@ class SAConfig(BracketSearchConfig):
     cooling_rate: float = 0.995
     min_temperature: float = 0.01
 
+    # Upset count penalty: quadratic penalty on deviation from target.
+    # Historical average is ~9 upsets per tournament bracket.
+    upset_target: int = 9
+    upset_penalty_weight: float = 0.30
+
+    # Variance bonus: reward brackets with high-variance outcomes
+    # (high upside even if sometimes low). Captures the winner-take-all
+    # insight that you want to maximize P(1st), not E[score].
+    variance_weight: float = 0.05
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -252,8 +262,43 @@ class BracketSearchOptimizer(ABC):
         ev_score /= max(n_picks, 1)
         robustness_score /= max(n_picks, 1)
 
-        # EV mode: 85% EV, 15% robustness (prevent degenerate low-probability brackets)
-        fitness = 0.85 * ev_score + 0.15 * robustness_score
+        # Upset count penalty: soft quadratic targeting ~9 upsets.
+        # An "upset" is when the higher-seeded team (higher seed number) wins.
+        # Uses team_seeds to compare, not win_probability (which is joint
+        # P(reach AND win), not conditional — many chalk picks have P < 0.5).
+        n_upsets = 0
+        for p in bracket.picks:
+            w_seed = self.team_seeds.get(p.winner_id, 8)
+            l_seed = self.team_seeds.get(p.loser_id, 8)
+            if w_seed > l_seed:
+                n_upsets += 1
+        upset_penalty = 0.0
+        variance_bonus = 0.0
+        sa_cfg = self.config if isinstance(self.config, SAConfig) else None
+        if sa_cfg and sa_cfg.upset_penalty_weight > 0:
+            deviation = n_upsets - sa_cfg.upset_target
+            # Scale: (deviation/target)^2 produces 1.0 when deviation == target,
+            # making the penalty directly comparable to the EV score.
+            upset_penalty = (deviation / max(sa_cfg.upset_target, 1)) ** 2
+
+        # Variance bonus: reward high-variance brackets (winner-take-all pools
+        # benefit from upside, not consistency). Uses sum of P*(1-P)*pts^2.
+        if sa_cfg and sa_cfg.variance_weight > 0:
+            for pick in bracket.picks:
+                rn = ROUND_NAMES[pick.round_num] if pick.round_num < 6 else "CHAMP"
+                pts = self.scoring.get(rn, 10)
+                p = pick.win_probability
+                variance_bonus += p * (1.0 - p) * (pts**2)
+            variance_bonus /= max(n_picks, 1)
+            # Scale down to be comparable to ev_score
+            variance_bonus /= 1000.0
+
+        upset_w = sa_cfg.upset_penalty_weight if sa_cfg else 0.0
+        var_w = sa_cfg.variance_weight if sa_cfg else 0.0
+        ev_w = 1.0 - upset_w - var_w
+
+        # Composite: EV + variance bonus - upset penalty, with robustness floor
+        fitness = ev_w * (0.85 * ev_score + 0.15 * robustness_score) + var_w * variance_bonus - upset_w * upset_penalty
 
         # Path protection penalty (Protocol Section 4.4)
         if self._path_scorer is not None and bracket.picks:

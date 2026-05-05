@@ -21,17 +21,17 @@ Algorithm (catalog spec A8):
   - All values clipped to [0.10, 0.99].
 
 Bridge: canonical tournament IDs (e.g., ``duke_blue_devils``) → Kaggle
-``team_no`` integer via ``MTeamSpellings.csv``. Same cascade pattern
-as ``coach_adj_probabilities`` (deliberate inline duplication —
-revisit shared module if a third Kaggle source ships).
+``team_no`` integer via ``MTeamSpellings.csv``. Uses the shared cascade
+in ``kaggle_bridge`` (same bridge as ``coach_adj_probabilities``).
 """
 
 from __future__ import annotations
 
-import csv
 import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
+
+from src.prediction.kaggle_bridge import canonical_to_kaggle_id, normalize_kaggle_spellings
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 
@@ -39,66 +39,6 @@ ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 _RECEIVING_VOTES_BARTHAG = 0.45
 _BARTHAG_CLIP_MIN = 0.10
 _BARTHAG_CLIP_MAX = 0.99
-
-# Same alias table as coach_adj — canonical IDs that don't bridge via
-# the cascade alone. Keep this short; every entry should be auditable.
-_CANONICAL_TO_KAGGLE_ALIAS: Dict[str, str] = {
-    "maryland_baltimore_county": "umbc",
-    "st__john_s__ny": "st john's",
-}
-
-
-def _normalize_kaggle_spellings(data_root: Path) -> Dict[str, int]:
-    """Lowercase spelling → Kaggle TeamID lookup from MTeamSpellings.csv.
-
-    Inline-duplicated from ``coach_adj_probabilities._normalize_kaggle_spellings``.
-    Refactor if/when a third Kaggle-based source ships.
-    """
-    path = Path(data_root) / "kaggle" / "MTeamSpellings.csv"
-    out: Dict[str, int] = {}
-    with open(path, encoding="latin-1") as f:
-        for row in csv.DictReader(f):
-            out[row["TeamNameSpelling"].lower()] = int(row["TeamID"])
-    return out
-
-
-def _canonical_to_kaggle_id(
-    canonical_id: str,
-    spellings_map: Dict[str, int],
-) -> Optional[int]:
-    """Cascade-bridge canonical → Kaggle TeamID. See coach_adj for full notes."""
-    if canonical_id in _CANONICAL_TO_KAGGLE_ALIAS:
-        aliased = _CANONICAL_TO_KAGGLE_ALIAS[canonical_id]
-        if aliased in spellings_map:
-            return spellings_map[aliased]
-
-    candidates: List[str] = []
-
-    naive = canonical_id.replace("__", " ").replace("_", " ").strip().lower()
-    candidates.append(naive)
-
-    possessive = canonical_id.replace("_s__", "'s ").replace("__", " ").replace("_", " ").strip().lower()
-    candidates.append(possessive)
-
-    if "_a_m" in canonical_id:
-        am = canonical_id.replace("_a_m", " a&m").replace("__", " ").replace("_", " ").strip().lower()
-        candidates.append(am)
-
-    if canonical_id.startswith("saint_"):
-        st_form = (
-            canonical_id.replace("saint_", "st ", 1)
-            .replace("_s__", "'s ")
-            .replace("__", " ")
-            .replace("_", " ")
-            .strip()
-            .lower()
-        )
-        candidates.append(st_form)
-
-    for c in candidates:
-        if c in spellings_map:
-            return spellings_map[c]
-    return None
 
 
 def _load_ap_rows(data_root: Path) -> Optional[Dict]:
@@ -127,7 +67,7 @@ def _ap_entries_for_year(
     TeamID=1207 is "Georgetown"), so we ignore it and bridge via the
     AP ``team`` display name → MTeamSpellings → MTeams TeamID. The
     same MTeams TeamID is then used to look up canonical tournament
-    teams via ``_canonical_to_kaggle_id``.
+    teams via ``canonical_to_kaggle_id``.
     """
     cols: List[str] = raw["columns"]
     rows: List[List] = raw["data"]
@@ -214,7 +154,7 @@ def load_ap_strength_barthag(
     if raw is None:
         return None
 
-    spellings = _normalize_kaggle_spellings(data_root)
+    spellings = normalize_kaggle_spellings(data_root)
     final_week_entries = _ap_entries_for_year(raw, year, spellings)
     if final_week_entries is None:
         return None
@@ -223,7 +163,7 @@ def load_ap_strength_barthag(
     canonical_set = list(canonical_ids)
     for tid in canonical_set:
         seed = seeds.get(tid, 16)  # missing seed → conservative fallback
-        kag = _canonical_to_kaggle_id(tid, spellings)
+        kag = canonical_to_kaggle_id(tid, spellings)
         if kag is not None and kag in final_week_entries:
             result[tid] = _ap_entry_to_barthag(final_week_entries[kag], seed)
         else:

@@ -37,7 +37,9 @@ from __future__ import annotations
 import csv
 import math
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Iterable, Tuple
+
+from src.prediction.kaggle_bridge import build_bridge, normalize_kaggle_spellings
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 _TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
@@ -46,98 +48,6 @@ _TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 
 # log(1 + 19) ≈ 3, so the cap binds at ~19 prior tournament appearances.
 _LOG_SCALE = 0.01
 _LOG_CEILING = 3.0  # max bump = 3% per spec
-
-# Manual aliases for canonical IDs that don't bridge via name normalization.
-# Keep this list short — every entry should be auditable.
-_CANONICAL_TO_KAGGLE_ALIAS: Dict[str, str] = {
-    "maryland_baltimore_county": "umbc",
-    "st__john_s__ny": "st john's",  # the cascade misses this; (NY) suffix isn't standalone
-}
-
-
-def _normalize_kaggle_spellings(data_root: Path) -> Dict[str, int]:
-    """Lowercase spelling → Kaggle TeamID lookup from MTeamSpellings.csv."""
-    path = Path(data_root) / "kaggle" / "MTeamSpellings.csv"
-    out: Dict[str, int] = {}
-    with open(path, encoding="latin-1") as f:
-        for row in csv.DictReader(f):
-            out[row["TeamNameSpelling"].lower()] = int(row["TeamID"])
-    return out
-
-
-def _canonical_to_kaggle_id(
-    canonical_id: str,
-    spellings_map: Dict[str, int],
-) -> Optional[int]:
-    """Try a cascade of name normalizations to bridge canonical → Kaggle TeamID.
-
-    Order matters — earlier candidates take precedence. A direct underscore
-    -to-space match handles the common case (`duke` → `duke`,
-    `michigan_state` → `michigan state`). Special cases:
-
-    - ``_s__`` → ``'s `` resolves possessives (``saint_mary_s__ca`` → ``saint mary's ca``).
-    - ``_a_m`` → `` a&m`` resolves ``texas_a_m`` → ``texas a&m``.
-    - ``__`` → `` `` resolves the double-underscore separator from the
-      canonicalizer's ``,``/``.`` substitution (``miami__fl`` → ``miami fl``).
-    - ``saint_`` → ``st `` resolves the saint/st prefix difference.
-    - Manual aliases handle the residual misses (``maryland_baltimore_county`` → ``umbc``).
-    """
-    if canonical_id in _CANONICAL_TO_KAGGLE_ALIAS:
-        aliased = _CANONICAL_TO_KAGGLE_ALIAS[canonical_id]
-        if aliased in spellings_map:
-            return spellings_map[aliased]
-
-    # Build candidate spellings, in order of precedence.
-    candidates = []
-
-    naive = canonical_id.replace("__", " ").replace("_", " ").strip().lower()
-    candidates.append(naive)
-
-    # Possessive: replace `_s__` (e.g., 'st__john_s__ny') with `'s `.
-    possessive = canonical_id.replace("_s__", "'s ").replace("__", " ").replace("_", " ").strip().lower()
-    candidates.append(possessive)
-
-    # texas a&m
-    if "_a_m" in canonical_id:
-        am = canonical_id.replace("_a_m", " a&m").replace("__", " ").replace("_", " ").strip().lower()
-        candidates.append(am)
-
-    # saint → st prefix swap
-    if canonical_id.startswith("saint_"):
-        st_form = (
-            canonical_id.replace("saint_", "st ", 1)
-            .replace("_s__", "'s ")
-            .replace("__", " ")
-            .replace("_", " ")
-            .strip()
-            .lower()
-        )
-        candidates.append(st_form)
-
-    for c in candidates:
-        if c in spellings_map:
-            return spellings_map[c]
-    return None
-
-
-def _build_bridge(
-    canonical_ids: Iterable[str],
-    spellings_map: Dict[str, int],
-) -> Tuple[Dict[str, int], Dict[int, str]]:
-    """Map canonical_id ↔ Kaggle TeamID for the supplied tournament field.
-
-    Returns:
-        (canonical_to_kaggle, kaggle_to_canonical). Teams that don't bridge
-        are omitted from both dicts.
-    """
-    canon_to_kag: Dict[str, int] = {}
-    kag_to_canon: Dict[int, str] = {}
-    for tid in canonical_ids:
-        kag = _canonical_to_kaggle_id(tid, spellings_map)
-        if kag is not None:
-            canon_to_kag[tid] = kag
-            kag_to_canon[kag] = tid
-    return canon_to_kag, kag_to_canon
 
 
 def _load_season_coach_map(data_root: Path) -> Dict[Tuple[int, int], str]:
@@ -217,8 +127,8 @@ def load_coach_experience(
     if not canonical_set:
         return {}
 
-    spellings = _normalize_kaggle_spellings(data_root)
-    canon_to_kag, _ = _build_bridge(canonical_set, spellings)
+    spellings = normalize_kaggle_spellings(data_root)
+    canon_to_kag, _ = build_bridge(canonical_set, spellings)
     coach_map = _load_season_coach_map(data_root)
     tourney_teams_by_season = _load_tournament_season_teams(data_root)
 

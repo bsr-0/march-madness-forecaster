@@ -104,6 +104,66 @@ def decimal_to_probability(odds: float) -> float:
     return 1.0 / odds
 
 
+def spread_to_implied_probability(spread: float) -> float:
+    """Convert a point spread to an implied win probability for the home team.
+
+    Uses the logistic model calibrated to college basketball:
+        P(home wins) = 1 / (1 + 10^(spread / k))
+
+    where k ≈ 7.5 (empirically calibrated for NCAAB; a 7.5-point spread
+    corresponds to ~90% implied probability). The spread is from the home
+    team's perspective (negative = home favored).
+
+    Args:
+        spread: Closing spread from the home team's perspective.
+            Negative means home is favored (e.g., -5.5).
+            Positive means away is favored (e.g., +3.0).
+
+    Returns:
+        Implied win probability for the home team in [0.01, 0.99].
+    """
+    if spread == 0.0:
+        return 0.5
+    _K = 7.5
+    prob = 1.0 / (1.0 + 10.0 ** (spread / _K))
+    return max(0.01, min(0.99, prob))
+
+
+def spread_to_moneyline(spread: float) -> tuple[float, float]:
+    """Convert a point spread to approximate American moneylines.
+
+    Derives no-vig implied probabilities from the spread, then converts
+    to American odds format. Adds standard ~4.5% vig split evenly.
+
+    Args:
+        spread: Closing spread (negative = home favored).
+
+    Returns:
+        (moneyline_home, moneyline_away) in American odds format.
+    """
+    prob_home = spread_to_implied_probability(spread)
+    prob_away = 1.0 - prob_home
+
+    # Add ~2.25% vig to each side (total ~4.5% overround)
+    vig = 0.0225
+    prob_home_vig = min(0.99, prob_home + vig)
+    prob_away_vig = min(0.99, prob_away + vig)
+
+    ml_home = _probability_to_american(prob_home_vig)
+    ml_away = _probability_to_american(prob_away_vig)
+    return (ml_home, ml_away)
+
+
+def _probability_to_american(prob: float) -> float:
+    """Convert implied probability to American odds."""
+    if prob <= 0.0 or prob >= 1.0:
+        return 0.0
+    if prob >= 0.5:
+        return -100.0 * prob / (1.0 - prob)
+    else:
+        return 100.0 * (1.0 - prob) / prob
+
+
 def remove_vig(probabilities: Dict[str, float]) -> Dict[str, float]:
     """Remove bookmaker vig (overround) by normalizing to sum to 1.0.
 
