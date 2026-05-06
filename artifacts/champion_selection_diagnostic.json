@@ -1,0 +1,1042 @@
+{
+  "summary": [
+    {
+      "year": 2011,
+      "actual": "connecticut",
+      "top1": "ohio_state",
+      "top1_correct": false,
+      "leverage": "san_diego_state",
+      "lev_correct": false,
+      "cev": "ohio_state",
+      "cev_correct": false,
+      "bt_leverage": "ohio_state",
+      "bt_correct": false
+    },
+    {
+      "year": 2013,
+      "actual": "louisville",
+      "top1": "indiana",
+      "top1_correct": false,
+      "leverage": "gonzaga",
+      "lev_correct": false,
+      "cev": "indiana",
+      "cev_correct": false,
+      "bt_leverage": "indiana",
+      "bt_correct": false
+    },
+    {
+      "year": 2014,
+      "actual": "connecticut",
+      "top1": "wichita_state",
+      "top1_correct": false,
+      "leverage": "villanova",
+      "lev_correct": false,
+      "cev": "wichita_state",
+      "cev_correct": false,
+      "bt_leverage": "wichita_state",
+      "bt_correct": false
+    },
+    {
+      "year": 2015,
+      "actual": "duke",
+      "top1": "kentucky",
+      "top1_correct": false,
+      "leverage": "villanova",
+      "lev_correct": false,
+      "cev": "kentucky",
+      "cev_correct": false,
+      "bt_leverage": "kentucky",
+      "bt_correct": false
+    },
+    {
+      "year": 2016,
+      "actual": "villanova",
+      "top1": "north_carolina",
+      "top1_correct": false,
+      "leverage": "west_virginia",
+      "lev_correct": false,
+      "cev": "north_carolina",
+      "cev_correct": false,
+      "bt_leverage": "north_carolina",
+      "bt_correct": false
+    },
+    {
+      "year": 2017,
+      "actual": "north_carolina",
+      "top1": "north_carolina",
+      "top1_correct": true,
+      "leverage": "florida_state",
+      "lev_correct": false,
+      "cev": "north_carolina",
+      "cev_correct": true,
+      "bt_leverage": "north_carolina",
+      "bt_correct": true
+    },
+    {
+      "year": 2018,
+      "actual": "villanova",
+      "top1": "villanova",
+      "top1_correct": true,
+      "leverage": "north_carolina",
+      "lev_correct": false,
+      "cev": "villanova",
+      "cev_correct": true,
+      "bt_leverage": "villanova",
+      "bt_correct": true
+    },
+    {
+      "year": 2019,
+      "actual": "virginia",
+      "top1": "north_carolina",
+      "top1_correct": false,
+      "leverage": "michigan_state",
+      "lev_correct": false,
+      "cev": "north_carolina",
+      "cev_correct": false,
+      "bt_leverage": "north_carolina",
+      "bt_correct": false
+    },
+    {
+      "year": 2021,
+      "actual": "baylor",
+      "top1": "gonzaga",
+      "top1_correct": false,
+      "leverage": "ohio_state",
+      "lev_correct": false,
+      "cev": "ohio_state",
+      "cev_correct": false,
+      "bt_leverage": "gonzaga",
+      "bt_correct": false
+    },
+    {
+      "year": 2022,
+      "actual": "kansas",
+      "top1": "gonzaga",
+      "top1_correct": false,
+      "leverage": "texas_tech",
+      "lev_correct": false,
+      "cev": "gonzaga",
+      "cev_correct": false,
+      "bt_leverage": "gonzaga",
+      "bt_correct": false
+    },
+    {
+      "year": 2023,
+      "actual": "connecticut",
+      "top1": "houston",
+      "top1_correct": false,
+      "leverage": "houston",
+      "lev_correct": false,
+      "cev": "houston",
+      "cev_correct": false,
+      "bt_leverage": "houston",
+      "bt_correct": false
+    },
+    {
+      "year": 2024,
+      "actual": "connecticut",
+      "top1": "connecticut",
+      "top1_correct": true,
+      "leverage": "purdue",
+      "lev_correct": false,
+      "cev": "connecticut",
+      "cev_correct": true,
+      "bt_leverage": "connecticut",
+      "bt_correct": true
+    },
+    {
+      "year": 2025,
+      "actual": "florida",
+      "top1": "duke",
+      "top1_correct": false,
+      "leverage": "houston",
+      "lev_correct": false,
+      "cev": "houston",
+      "cev_correct": false,
+      "bt_leverage": "duke",
+      "bt_correct": false
+    },
+    {
+      "year": 2026,
+      "actual": "florida",
+      "top1": "duke",
+      "top1_correct": false,
+      "leverage": "connecticut",
+      "lev_correct": false,
+      "cev": "duke",
+      "cev_correct": false,
+      "bt_leverage": "duke",
+      "bt_correct": false
+    }
+  ],
+  "years": [
+    {
+      "year": 2011,
+      "n_bases": 6,
+      "has_espn": true,
+      "actual": "connecticut",
+      "selectors": {
+        "top1": "ohio_state",
+        "leverage": "san_diego_state",
+        "competitive_ev": "ohio_state",
+        "bt_leverage_actual": "ohio_state"
+      },
+      "candidates": [
+        {
+          "team_id": "ohio_state",
+          "seed": 1,
+          "mean_champ_prob": 0.294,
+          "public_pct": 0.259,
+          "leverage": 1.135,
+          "competitive_ev": 69.71
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.1025,
+          "public_pct": 0.237,
+          "leverage": 0.4327,
+          "competitive_ev": 25.04
+        },
+        {
+          "team_id": "san_diego_state",
+          "seed": 2,
+          "mean_champ_prob": 0.0834,
+          "public_pct": 0.018,
+          "leverage": 4.6313,
+          "competitive_ev": 26.2
+        },
+        {
+          "team_id": "duke",
+          "seed": 1,
+          "mean_champ_prob": 0.0786,
+          "public_pct": 0.16,
+          "leverage": 0.4915,
+          "competitive_ev": 21.14
+        },
+        {
+          "team_id": "notre_dame",
+          "seed": 2,
+          "mean_champ_prob": 0.074,
+          "public_pct": 0.035,
+          "leverage": 2.1142,
+          "competitive_ev": 22.85
+        },
+        {
+          "team_id": "north_carolina",
+          "seed": 2,
+          "mean_champ_prob": 0.0654,
+          "public_pct": 0.04,
+          "leverage": 1.6358,
+          "competitive_ev": 20.1
+        }
+      ]
+    },
+    {
+      "year": 2013,
+      "n_bases": 7,
+      "has_espn": true,
+      "actual": "louisville",
+      "selectors": {
+        "top1": "indiana",
+        "leverage": "gonzaga",
+        "competitive_ev": "indiana",
+        "bt_leverage_actual": "indiana"
+      },
+      "candidates": [
+        {
+          "team_id": "indiana",
+          "seed": 1,
+          "mean_champ_prob": 0.2077,
+          "public_pct": 0.179,
+          "leverage": 1.1601,
+          "competitive_ev": 54.56
+        },
+        {
+          "team_id": "gonzaga",
+          "seed": 1,
+          "mean_champ_prob": 0.1507,
+          "public_pct": 0.056,
+          "leverage": 2.6914,
+          "competitive_ev": 45.53
+        },
+        {
+          "team_id": "louisville",
+          "seed": 1,
+          "mean_champ_prob": 0.1035,
+          "public_pct": 0.219,
+          "leverage": 0.4728,
+          "competitive_ev": 25.88
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.0702,
+          "public_pct": 0.083,
+          "leverage": 0.8455,
+          "competitive_ev": 20.59
+        },
+        {
+          "team_id": "miami__fl",
+          "seed": 2,
+          "mean_champ_prob": 0.0674,
+          "public_pct": 0.107,
+          "leverage": 0.6302,
+          "competitive_ev": 19.27
+        },
+        {
+          "team_id": "florida",
+          "seed": 3,
+          "mean_champ_prob": 0.0621,
+          "public_pct": 0.031,
+          "leverage": 2.0021,
+          "competitive_ev": 19.25
+        }
+      ]
+    },
+    {
+      "year": 2014,
+      "n_bases": 7,
+      "has_espn": true,
+      "actual": "connecticut",
+      "selectors": {
+        "top1": "wichita_state",
+        "leverage": "villanova",
+        "competitive_ev": "wichita_state",
+        "bt_leverage_actual": "wichita_state"
+      },
+      "candidates": [
+        {
+          "team_id": "wichita_state",
+          "seed": 1,
+          "mean_champ_prob": 0.227,
+          "public_pct": 0.059,
+          "leverage": 3.8471,
+          "competitive_ev": 68.35
+        },
+        {
+          "team_id": "florida",
+          "seed": 1,
+          "mean_champ_prob": 0.1742,
+          "public_pct": 0.271,
+          "leverage": 0.6429,
+          "competitive_ev": 40.65
+        },
+        {
+          "team_id": "arizona",
+          "seed": 1,
+          "mean_champ_prob": 0.0949,
+          "public_pct": 0.079,
+          "leverage": 1.2012,
+          "competitive_ev": 27.97
+        },
+        {
+          "team_id": "virginia",
+          "seed": 1,
+          "mean_champ_prob": 0.0557,
+          "public_pct": 0.038,
+          "leverage": 1.4663,
+          "competitive_ev": 17.15
+        },
+        {
+          "team_id": "louisville",
+          "seed": 4,
+          "mean_champ_prob": 0.0531,
+          "public_pct": 0.094,
+          "leverage": 0.5645,
+          "competitive_ev": 15.38
+        },
+        {
+          "team_id": "villanova",
+          "seed": 2,
+          "mean_champ_prob": 0.0479,
+          "public_pct": 0.012,
+          "leverage": 3.9903,
+          "competitive_ev": 15.14
+        }
+      ]
+    },
+    {
+      "year": 2015,
+      "n_bases": 8,
+      "has_espn": true,
+      "actual": "duke",
+      "selectors": {
+        "top1": "kentucky",
+        "leverage": "villanova",
+        "competitive_ev": "kentucky",
+        "bt_leverage_actual": "kentucky"
+      },
+      "candidates": [
+        {
+          "team_id": "kentucky",
+          "seed": 1,
+          "mean_champ_prob": 0.2217,
+          "public_pct": 0.48,
+          "leverage": 0.4618,
+          "competitive_ev": 36.89
+        },
+        {
+          "team_id": "wisconsin",
+          "seed": 1,
+          "mean_champ_prob": 0.106,
+          "public_pct": 0.099,
+          "leverage": 1.0705,
+          "competitive_ev": 30.56
+        },
+        {
+          "team_id": "villanova",
+          "seed": 1,
+          "mean_champ_prob": 0.1024,
+          "public_pct": 0.035,
+          "leverage": 2.9255,
+          "competitive_ev": 31.62
+        },
+        {
+          "team_id": "duke",
+          "seed": 1,
+          "mean_champ_prob": 0.083,
+          "public_pct": 0.093,
+          "leverage": 0.8927,
+          "competitive_ev": 24.1
+        },
+        {
+          "team_id": "arizona",
+          "seed": 2,
+          "mean_champ_prob": 0.0752,
+          "public_pct": 0.072,
+          "leverage": 1.0448,
+          "competitive_ev": 22.34
+        },
+        {
+          "team_id": "virginia",
+          "seed": 2,
+          "mean_champ_prob": 0.055,
+          "public_pct": 0.034,
+          "leverage": 1.6183,
+          "competitive_ev": 17.01
+        }
+      ]
+    },
+    {
+      "year": 2016,
+      "n_bases": 8,
+      "has_espn": true,
+      "actual": "villanova",
+      "selectors": {
+        "top1": "north_carolina",
+        "leverage": "west_virginia",
+        "competitive_ev": "north_carolina",
+        "bt_leverage_actual": "north_carolina"
+      },
+      "candidates": [
+        {
+          "team_id": "north_carolina",
+          "seed": 1,
+          "mean_champ_prob": 0.1886,
+          "public_pct": 0.079,
+          "leverage": 2.3871,
+          "competitive_ev": 55.58
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.1646,
+          "public_pct": 0.271,
+          "leverage": 0.6073,
+          "competitive_ev": 38.39
+        },
+        {
+          "team_id": "michigan_state",
+          "seed": 2,
+          "mean_champ_prob": 0.1242,
+          "public_pct": 0.037,
+          "leverage": 3.3574,
+          "competitive_ev": 38.28
+        },
+        {
+          "team_id": "villanova",
+          "seed": 2,
+          "mean_champ_prob": 0.0818,
+          "public_pct": 0.055,
+          "leverage": 1.487,
+          "competitive_ev": 24.73
+        },
+        {
+          "team_id": "virginia",
+          "seed": 1,
+          "mean_champ_prob": 0.0694,
+          "public_pct": 0.059,
+          "leverage": 1.1768,
+          "competitive_ev": 20.91
+        },
+        {
+          "team_id": "west_virginia",
+          "seed": 3,
+          "mean_champ_prob": 0.0435,
+          "public_pct": 0.012,
+          "leverage": 3.6235,
+          "competitive_ev": 13.75
+        }
+      ]
+    },
+    {
+      "year": 2017,
+      "n_bases": 8,
+      "has_espn": true,
+      "actual": "north_carolina",
+      "selectors": {
+        "top1": "north_carolina",
+        "leverage": "florida_state",
+        "competitive_ev": "north_carolina",
+        "bt_leverage_actual": "north_carolina"
+      },
+      "candidates": [
+        {
+          "team_id": "north_carolina",
+          "seed": 1,
+          "mean_champ_prob": 0.2063,
+          "public_pct": 0.148,
+          "leverage": 1.3937,
+          "competitive_ev": 56.24
+        },
+        {
+          "team_id": "villanova",
+          "seed": 1,
+          "mean_champ_prob": 0.164,
+          "public_pct": 0.132,
+          "leverage": 1.2421,
+          "competitive_ev": 45.54
+        },
+        {
+          "team_id": "gonzaga",
+          "seed": 1,
+          "mean_champ_prob": 0.1444,
+          "public_pct": 0.084,
+          "leverage": 1.719,
+          "competitive_ev": 42.32
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.0788,
+          "public_pct": 0.115,
+          "leverage": 0.6849,
+          "competitive_ev": 22.31
+        },
+        {
+          "team_id": "kentucky",
+          "seed": 2,
+          "mean_champ_prob": 0.053,
+          "public_pct": 0.074,
+          "leverage": 0.7159,
+          "competitive_ev": 15.7
+        },
+        {
+          "team_id": "florida_state",
+          "seed": 3,
+          "mean_champ_prob": 0.0369,
+          "public_pct": 0.007,
+          "leverage": 5.2665,
+          "competitive_ev": 11.71
+        }
+      ]
+    },
+    {
+      "year": 2018,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "villanova",
+      "selectors": {
+        "top1": "villanova",
+        "leverage": "north_carolina",
+        "competitive_ev": "villanova",
+        "bt_leverage_actual": "villanova"
+      },
+      "candidates": [
+        {
+          "team_id": "villanova",
+          "seed": 1,
+          "mean_champ_prob": 0.1615,
+          "public_pct": 0.163,
+          "leverage": 0.9906,
+          "competitive_ev": 43.25
+        },
+        {
+          "team_id": "virginia",
+          "seed": 1,
+          "mean_champ_prob": 0.153,
+          "public_pct": 0.188,
+          "leverage": 0.8138,
+          "competitive_ev": 39.75
+        },
+        {
+          "team_id": "north_carolina",
+          "seed": 2,
+          "mean_champ_prob": 0.1379,
+          "public_pct": 0.069,
+          "leverage": 1.998,
+          "competitive_ev": 41.07
+        },
+        {
+          "team_id": "michigan_state",
+          "seed": 3,
+          "mean_champ_prob": 0.0694,
+          "public_pct": 0.086,
+          "leverage": 0.8074,
+          "competitive_ev": 20.31
+        },
+        {
+          "team_id": "duke",
+          "seed": 2,
+          "mean_champ_prob": 0.0589,
+          "public_pct": 0.098,
+          "leverage": 0.601,
+          "competitive_ev": 17.0
+        },
+        {
+          "team_id": "purdue",
+          "seed": 2,
+          "mean_champ_prob": 0.0549,
+          "public_pct": 0.033,
+          "leverage": 1.6622,
+          "competitive_ev": 16.97
+        }
+      ]
+    },
+    {
+      "year": 2019,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "virginia",
+      "selectors": {
+        "top1": "north_carolina",
+        "leverage": "michigan_state",
+        "competitive_ev": "north_carolina",
+        "bt_leverage_actual": "north_carolina"
+      },
+      "candidates": [
+        {
+          "team_id": "north_carolina",
+          "seed": 1,
+          "mean_champ_prob": 0.234,
+          "public_pct": 0.156,
+          "leverage": 1.5002,
+          "competitive_ev": 63.21
+        },
+        {
+          "team_id": "duke",
+          "seed": 1,
+          "mean_champ_prob": 0.1581,
+          "public_pct": 0.375,
+          "leverage": 0.4217,
+          "competitive_ev": 31.63
+        },
+        {
+          "team_id": "virginia",
+          "seed": 1,
+          "mean_champ_prob": 0.1233,
+          "public_pct": 0.08,
+          "leverage": 1.5412,
+          "competitive_ev": 36.3
+        },
+        {
+          "team_id": "gonzaga",
+          "seed": 1,
+          "mean_champ_prob": 0.1048,
+          "public_pct": 0.087,
+          "leverage": 1.205,
+          "competitive_ev": 30.63
+        },
+        {
+          "team_id": "michigan_state",
+          "seed": 2,
+          "mean_champ_prob": 0.0872,
+          "public_pct": 0.051,
+          "leverage": 1.71,
+          "competitive_ev": 26.48
+        },
+        {
+          "team_id": "tennessee",
+          "seed": 2,
+          "mean_champ_prob": 0.0331,
+          "public_pct": 0.044,
+          "leverage": 0.7522,
+          "competitive_ev": 10.13
+        }
+      ]
+    },
+    {
+      "year": 2021,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "baylor",
+      "selectors": {
+        "top1": "gonzaga",
+        "leverage": "ohio_state",
+        "competitive_ev": "ohio_state",
+        "bt_leverage_actual": "gonzaga"
+      },
+      "candidates": [
+        {
+          "team_id": "gonzaga",
+          "seed": 1,
+          "mean_champ_prob": 0.1789,
+          "public_pct": 0.37,
+          "leverage": 0.4836,
+          "competitive_ev": 36.08
+        },
+        {
+          "team_id": "ohio_state",
+          "seed": 2,
+          "mean_champ_prob": 0.1737,
+          "public_pct": 0.034,
+          "leverage": 5.1101,
+          "competitive_ev": 53.71
+        },
+        {
+          "team_id": "baylor",
+          "seed": 1,
+          "mean_champ_prob": 0.0934,
+          "public_pct": 0.098,
+          "leverage": 0.9534,
+          "competitive_ev": 26.97
+        },
+        {
+          "team_id": "illinois",
+          "seed": 1,
+          "mean_champ_prob": 0.0878,
+          "public_pct": 0.149,
+          "leverage": 0.5893,
+          "competitive_ev": 23.91
+        },
+        {
+          "team_id": "houston",
+          "seed": 2,
+          "mean_champ_prob": 0.0804,
+          "public_pct": 0.025,
+          "leverage": 3.2146,
+          "competitive_ev": 25.07
+        },
+        {
+          "team_id": "michigan",
+          "seed": 1,
+          "mean_champ_prob": 0.0725,
+          "public_pct": 0.081,
+          "leverage": 0.8954,
+          "competitive_ev": 21.33
+        }
+      ]
+    },
+    {
+      "year": 2022,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "kansas",
+      "selectors": {
+        "top1": "gonzaga",
+        "leverage": "texas_tech",
+        "competitive_ev": "gonzaga",
+        "bt_leverage_actual": "gonzaga"
+      },
+      "candidates": [
+        {
+          "team_id": "gonzaga",
+          "seed": 1,
+          "mean_champ_prob": 0.2198,
+          "public_pct": 0.271,
+          "leverage": 0.8111,
+          "competitive_ev": 51.28
+        },
+        {
+          "team_id": "arizona",
+          "seed": 1,
+          "mean_champ_prob": 0.1297,
+          "public_pct": 0.134,
+          "leverage": 0.9683,
+          "competitive_ev": 35.96
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.0973,
+          "public_pct": 0.083,
+          "leverage": 1.1726,
+          "competitive_ev": 28.56
+        },
+        {
+          "team_id": "baylor",
+          "seed": 1,
+          "mean_champ_prob": 0.0701,
+          "public_pct": 0.054,
+          "leverage": 1.2976,
+          "competitive_ev": 21.21
+        },
+        {
+          "team_id": "texas_tech",
+          "seed": 3,
+          "mean_champ_prob": 0.066,
+          "public_pct": 0.02,
+          "leverage": 3.3014,
+          "competitive_ev": 20.71
+        },
+        {
+          "team_id": "kentucky",
+          "seed": 2,
+          "mean_champ_prob": 0.0443,
+          "public_pct": 0.069,
+          "leverage": 0.6414,
+          "competitive_ev": 13.18
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "connecticut",
+      "selectors": {
+        "top1": "houston",
+        "leverage": "houston",
+        "competitive_ev": "houston",
+        "bt_leverage_actual": "houston"
+      },
+      "candidates": [
+        {
+          "team_id": "houston",
+          "seed": 1,
+          "mean_champ_prob": 0.286,
+          "public_pct": 0.142,
+          "leverage": 2.014,
+          "competitive_ev": 78.52
+        },
+        {
+          "team_id": "alabama",
+          "seed": 1,
+          "mean_champ_prob": 0.1538,
+          "public_pct": 0.203,
+          "leverage": 0.7578,
+          "competitive_ev": 39.23
+        },
+        {
+          "team_id": "ucla",
+          "seed": 2,
+          "mean_champ_prob": 0.0773,
+          "public_pct": 0.061,
+          "leverage": 1.2677,
+          "competitive_ev": 23.24
+        },
+        {
+          "team_id": "purdue",
+          "seed": 1,
+          "mean_champ_prob": 0.069,
+          "public_pct": 0.084,
+          "leverage": 0.822,
+          "competitive_ev": 20.24
+        },
+        {
+          "team_id": "texas",
+          "seed": 2,
+          "mean_champ_prob": 0.0425,
+          "public_pct": 0.063,
+          "leverage": 0.6748,
+          "competitive_ev": 12.75
+        },
+        {
+          "team_id": "kansas",
+          "seed": 1,
+          "mean_champ_prob": 0.0357,
+          "public_pct": 0.11,
+          "leverage": 0.3242,
+          "competitive_ev": 10.16
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "connecticut",
+      "selectors": {
+        "top1": "connecticut",
+        "leverage": "purdue",
+        "competitive_ev": "connecticut",
+        "bt_leverage_actual": "connecticut"
+      },
+      "candidates": [
+        {
+          "team_id": "connecticut",
+          "seed": 1,
+          "mean_champ_prob": 0.2622,
+          "public_pct": 0.2471,
+          "leverage": 1.0613,
+          "competitive_ev": 63.18
+        },
+        {
+          "team_id": "purdue",
+          "seed": 1,
+          "mean_champ_prob": 0.1462,
+          "public_pct": 0.101,
+          "leverage": 1.4474,
+          "competitive_ev": 42.05
+        },
+        {
+          "team_id": "houston",
+          "seed": 1,
+          "mean_champ_prob": 0.1376,
+          "public_pct": 0.1365,
+          "leverage": 1.008,
+          "competitive_ev": 38.02
+        },
+        {
+          "team_id": "arizona",
+          "seed": 2,
+          "mean_champ_prob": 0.0563,
+          "public_pct": 0.0562,
+          "leverage": 1.0017,
+          "competitive_ev": 17.0
+        },
+        {
+          "team_id": "tennessee",
+          "seed": 2,
+          "mean_champ_prob": 0.0356,
+          "public_pct": 0.0441,
+          "leverage": 0.807,
+          "competitive_ev": 10.89
+        },
+        {
+          "team_id": "auburn",
+          "seed": 4,
+          "mean_champ_prob": 0.035,
+          "public_pct": 0.0308,
+          "leverage": 1.1373,
+          "competitive_ev": 10.86
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "n_bases": 9,
+      "has_espn": true,
+      "actual": "florida",
+      "selectors": {
+        "top1": "duke",
+        "leverage": "houston",
+        "competitive_ev": "houston",
+        "bt_leverage_actual": "duke"
+      },
+      "candidates": [
+        {
+          "team_id": "duke",
+          "seed": 1,
+          "mean_champ_prob": 0.1867,
+          "public_pct": 0.2503,
+          "leverage": 0.7458,
+          "competitive_ev": 44.78
+        },
+        {
+          "team_id": "houston",
+          "seed": 1,
+          "mean_champ_prob": 0.1756,
+          "public_pct": 0.0892,
+          "leverage": 1.9692,
+          "competitive_ev": 51.19
+        },
+        {
+          "team_id": "florida",
+          "seed": 1,
+          "mean_champ_prob": 0.1505,
+          "public_pct": 0.2128,
+          "leverage": 0.7073,
+          "competitive_ev": 37.92
+        },
+        {
+          "team_id": "auburn",
+          "seed": 1,
+          "mean_champ_prob": 0.1084,
+          "public_pct": 0.1057,
+          "leverage": 1.0258,
+          "competitive_ev": 31.03
+        },
+        {
+          "team_id": "alabama",
+          "seed": 2,
+          "mean_champ_prob": 0.0556,
+          "public_pct": 0.0375,
+          "leverage": 1.4838,
+          "competitive_ev": 17.14
+        },
+        {
+          "team_id": "tennessee",
+          "seed": 2,
+          "mean_champ_prob": 0.0459,
+          "public_pct": 0.0422,
+          "leverage": 1.0884,
+          "competitive_ev": 14.08
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "n_bases": 7,
+      "has_espn": true,
+      "actual": "florida",
+      "selectors": {
+        "top1": "duke",
+        "leverage": "connecticut",
+        "competitive_ev": "duke",
+        "bt_leverage_actual": "duke"
+      },
+      "candidates": [
+        {
+          "team_id": "duke",
+          "seed": 1,
+          "mean_champ_prob": 0.191,
+          "public_pct": 0.2837,
+          "leverage": 0.6734,
+          "competitive_ev": 43.79
+        },
+        {
+          "team_id": "arizona",
+          "seed": 1,
+          "mean_champ_prob": 0.1232,
+          "public_pct": 0.2192,
+          "leverage": 0.5623,
+          "competitive_ev": 30.79
+        },
+        {
+          "team_id": "michigan",
+          "seed": 1,
+          "mean_champ_prob": 0.115,
+          "public_pct": 0.1429,
+          "leverage": 0.8048,
+          "competitive_ev": 31.54
+        },
+        {
+          "team_id": "houston",
+          "seed": 2,
+          "mean_champ_prob": 0.0698,
+          "public_pct": 0.0574,
+          "leverage": 1.2167,
+          "competitive_ev": 21.07
+        },
+        {
+          "team_id": "connecticut",
+          "seed": 2,
+          "mean_champ_prob": 0.0655,
+          "public_pct": 0.0353,
+          "leverage": 1.8563,
+          "competitive_ev": 20.23
+        },
+        {
+          "team_id": "florida",
+          "seed": 1,
+          "mean_champ_prob": 0.0603,
+          "public_pct": 0.0628,
+          "leverage": 0.9601,
+          "competitive_ev": 18.08
+        }
+      ]
+    }
+  ]
+}
