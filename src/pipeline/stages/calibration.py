@@ -526,10 +526,13 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             )
 
     # Pass 2 calibration enforcement:
-    # In non-production profiles, only isotonic/platt are permitted.
-    # Keep production-profile behavior unchanged (locked production path
-    # currently uses temperature scaling by design).
-    if pipeline.config.probability_profile != "production":
+    # When calibration_method is "auto", non-production profiles are
+    # restricted to isotonic/platt (higher-variance methods that benefit
+    # from larger calibration pools available in experimental mode).
+    # When the config EXPLICITLY specifies a method (e.g. "temperature"),
+    # respect it regardless of profile — the user made a deliberate choice.
+    _config_was_auto = pipeline.config.calibration_method == "auto"
+    if pipeline.config.probability_profile != "production" and _config_was_auto:
         allowed_methods = {"isotonic", "platt"}
         if effective_calibration_method not in allowed_methods:
             # Isotonic is preferred when enough data is available.
@@ -543,7 +546,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 }
             )
             logger.info(
-                "Calibration enforcement: requested '%s' is not permitted in "
+                "Calibration enforcement: auto-selected '%s' is not permitted in "
                 "non-production profile. Using '%s' instead.",
                 effective_calibration_method,
                 fallback_method,
