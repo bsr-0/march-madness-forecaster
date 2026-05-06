@@ -70,11 +70,12 @@ class BacktestResult:
     regression_gate: Optional[RegressionGateResult] = None
     per_year_brier: Dict[int, float] = field(default_factory=dict)
     per_year_calibration_ece: Dict[int, float] = field(default_factory=dict)
+    per_year_games: Dict[int, List[Dict[str, Any]]] = field(default_factory=dict)
     timestamp: str = ""
     elapsed_seconds: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "timestamp": self.timestamp,
             "elapsed_seconds": self.elapsed_seconds,
             "aggregate_report": self.aggregate_report.to_dict(),
@@ -83,6 +84,9 @@ class BacktestResult:
             "per_year_brier": {str(k): v for k, v in self.per_year_brier.items()},
             "per_year_calibration_ece": {str(k): v for k, v in self.per_year_calibration_ece.items()},
         }
+        if self.per_year_games:
+            result["per_year_games"] = {str(k): v for k, v in self.per_year_games.items()}
+        return result
 
     def summary(self) -> str:
         lines = [
@@ -190,6 +194,7 @@ class BacktestHarness:
         year_reports: List[EvaluationReport] = []
         year_briers: Dict[int, float] = {}
         year_ece: Dict[int, float] = {}
+        year_games: Dict[int, List[Dict[str, Any]]] = {}
 
         for held_out_year in years_to_eval:
             logger.info("=" * 60)
@@ -212,9 +217,23 @@ class BacktestHarness:
             bt_result = backtester.evaluate_predictions(predictions, actual_games, held_out_year)
             year_briers[held_out_year] = bt_result.brier_score
 
-            # Build structured EvaluationReport
-            eval_report = self._build_eval_report(held_out_year, predictions, actual_games, bt_result)
+            # Build structured EvaluationReport + capture per-game predictions
+            eval_report, eval_games = self._build_eval_report(held_out_year, predictions, actual_games, bt_result)
             year_reports.append(eval_report)
+
+            # Store per-game predictions for ensemble optimization
+            year_games[held_out_year] = [
+                {
+                    "team1": eg.team1_id,
+                    "team2": eg.team2_id,
+                    "seed1": eg.team1_seed,
+                    "seed2": eg.team2_seed,
+                    "round": eg.round_name,
+                    "outcome": int(eg.outcome),
+                    "pipeline": round(eg.prediction, 6),
+                }
+                for eg in eval_games
+            ]
 
             ece = eval_report.calibration_report.ece if eval_report.calibration_report else float("nan")
             year_ece[held_out_year] = ece
@@ -254,6 +273,7 @@ class BacktestHarness:
             regression_gate=gate,
             per_year_brier=year_briers,
             per_year_calibration_ece=year_ece,
+            per_year_games=year_games,
             timestamp=datetime.now(timezone.utc).isoformat(),
             elapsed_seconds=round(elapsed, 1),
         )
@@ -369,7 +389,9 @@ class BacktestHarness:
                 predictions[(t1, t2)] = 1.0 - hist_rate
         return predictions
 
-    def _build_eval_report(self, year: int, predictions: Dict, actual_games: List, bt_result) -> EvaluationReport:
+    def _build_eval_report(
+        self, year: int, predictions: Dict, actual_games: List, bt_result
+    ) -> Tuple[EvaluationReport, List]:
         """Build a structured EvaluationReport from raw predictions + outcomes."""
         # Convert to arrays for bootstrap metrics
         preds_arr = []
@@ -449,7 +471,7 @@ class BacktestHarness:
         # Training years = all LOYO years except the held-out one
         training_years = [y for y in self.years if y != year]
 
-        return EvaluationReport(
+        report = EvaluationReport(
             year=year,
             model_name="pipeline",
             global_metrics=global_metrics,
@@ -458,6 +480,7 @@ class BacktestHarness:
             training_years=training_years,
             reproducibility=ReproducibilityInfo.capture(random_seed=42),
         )
+        return report, eval_games
 
     def _build_aggregate(self, year_reports: List[EvaluationReport]) -> AggregateEvaluationReport:
         """Aggregate per-year reports into a single AggregateEvaluationReport."""
