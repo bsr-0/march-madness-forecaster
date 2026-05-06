@@ -1,0 +1,773 @@
+{
+  "season": 2026,
+  "timestamp": "2026-03-15T00:00:00Z",
+  "source": "kalshi_pre_tournament_from_kaggle_3rd_place_repo",
+  "n_teams": 85,
+  "teams": {
+    "Duke": {
+      "team": "Duke",
+      "mid_prob": 0.20500000000000002,
+      "yes_bid": 0.2,
+      "yes_ask": 0.21,
+      "last": 0.21,
+      "volume": 3391282.0,
+      "open_interest": 2217052.0
+    },
+    "Michigan": {
+      "team": "Michigan",
+      "mid_prob": 0.20500000000000002,
+      "yes_bid": 0.2,
+      "yes_ask": 0.21,
+      "last": 0.21,
+      "volume": 3077722.0,
+      "open_interest": 1995156.0
+    },
+    "Arizona": {
+      "team": "Arizona",
+      "mid_prob": 0.135,
+      "yes_bid": 0.13,
+      "yes_ask": 0.14,
+      "last": 0.14,
+      "volume": 3075090.0,
+      "open_interest": 1915109.0
+    },
+    "Florida": {
+      "team": "Florida",
+      "mid_prob": 0.11499999999999999,
+      "yes_bid": 0.11,
+      "yes_ask": 0.12,
+      "last": 0.11,
+      "volume": 3075992.0,
+      "open_interest": 2323014.0
+    },
+    "Houston": {
+      "team": "Houston",
+      "mid_prob": 0.065,
+      "yes_bid": 0.06,
+      "yes_ask": 0.07,
+      "last": 0.07,
+      "volume": 2300344.0,
+      "open_interest": 1724458.0
+    },
+    "UConn": {
+      "team": "UConn",
+      "mid_prob": 0.055,
+      "yes_bid": 0.05,
+      "yes_ask": 0.06,
+      "last": 0.05,
+      "volume": 2828951.0,
+      "open_interest": 2265403.0
+    },
+    "Illinois": {
+      "team": "Illinois",
+      "mid_prob": 0.045,
+      "yes_bid": 0.04,
+      "yes_ask": 0.05,
+      "last": 0.04,
+      "volume": 1843417.0,
+      "open_interest": 1563823.0
+    },
+    "Iowa St.": {
+      "team": "Iowa St.",
+      "mid_prob": 0.035,
+      "yes_bid": 0.03,
+      "yes_ask": 0.04,
+      "last": 0.04,
+      "volume": 1843335.0,
+      "open_interest": 1510077.0
+    },
+    "Purdue": {
+      "team": "Purdue",
+      "mid_prob": 0.025,
+      "yes_bid": 0.02,
+      "yes_ask": 0.03,
+      "last": 0.03,
+      "volume": 1163602.0,
+      "open_interest": 991641.0
+    },
+    "Michigan St.": {
+      "team": "Michigan St.",
+      "mid_prob": 0.02,
+      "yes_bid": 0.01,
+      "yes_ask": 0.03,
+      "last": 0.03,
+      "volume": 2252222.0,
+      "open_interest": 1890782.0
+    },
+    "Kansas": {
+      "team": "Kansas",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 1755098.0,
+      "open_interest": 1442885.0
+    },
+    "St. John's": {
+      "team": "St. John's",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 1325202.0,
+      "open_interest": 1201520.0
+    },
+    "BYU": {
+      "team": "BYU",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.01,
+      "volume": 2430367.0,
+      "open_interest": 2247269.0
+    },
+    "Vanderbilt": {
+      "team": "Vanderbilt",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 1941248.0,
+      "open_interest": 1787958.0
+    },
+    "Wisconsin": {
+      "team": "Wisconsin",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 2046023.0,
+      "open_interest": 1945618.0
+    },
+    "Arkansas": {
+      "team": "Arkansas",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 1236582.0,
+      "open_interest": 1098958.0
+    },
+    "Gonzaga": {
+      "team": "Gonzaga",
+      "mid_prob": 0.015,
+      "yes_bid": 0.01,
+      "yes_ask": 0.02,
+      "last": 0.02,
+      "volume": 1617320.0,
+      "open_interest": 1364083.0
+    },
+    "Saint Louis": {
+      "team": "Saint Louis",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 39034.0,
+      "open_interest": 39034.0
+    },
+    "UC San Diego": {
+      "team": "UC San Diego",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1113.0,
+      "open_interest": 1113.0
+    },
+    "USC": {
+      "team": "USC",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 31841.0,
+      "open_interest": 31841.0
+    },
+    "Presbyterian": {
+      "team": "Presbyterian",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 94.0,
+      "open_interest": 94.0
+    },
+    "VCU": {
+      "team": "VCU",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 17554.0,
+      "open_interest": 17554.0
+    },
+    "Seton Hall": {
+      "team": "Seton Hall",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 11938.0,
+      "open_interest": 11938.0
+    },
+    "Boise St.": {
+      "team": "Boise St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1385.0,
+      "open_interest": 1385.0
+    },
+    "Virginia Tech": {
+      "team": "Virginia Tech",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 55263.0,
+      "open_interest": 55158.0
+    },
+    "Missouri": {
+      "team": "Missouri",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 78242.0,
+      "open_interest": 78242.0
+    },
+    "Villanova": {
+      "team": "Villanova",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 66835.0,
+      "open_interest": 66835.0
+    },
+    "Boston College": {
+      "team": "Boston College",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 5165.0,
+      "open_interest": 5165.0
+    },
+    "UCF": {
+      "team": "UCF",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 19549.0,
+      "open_interest": 19549.0
+    },
+    "Baylor": {
+      "team": "Baylor",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 249402.0,
+      "open_interest": 246401.0
+    },
+    "Loyola Chicago": {
+      "team": "Loyola Chicago",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1054.0,
+      "open_interest": 1054.0
+    },
+    "Oregon": {
+      "team": "Oregon",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 39083.0,
+      "open_interest": 39083.0
+    },
+    "Pittsburgh": {
+      "team": "Pittsburgh",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 640.0,
+      "open_interest": 640.0
+    },
+    "Santa Clara": {
+      "team": "Santa Clara",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 17038.0,
+      "open_interest": 17038.0
+    },
+    "Colorado St.": {
+      "team": "Colorado St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1822.0,
+      "open_interest": 1822.0
+    },
+    "Texas": {
+      "team": "Texas",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 39815.0,
+      "open_interest": 39815.0
+    },
+    "Texas Tech": {
+      "team": "Texas Tech",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 2080922.0,
+      "open_interest": 1540464.0
+    },
+    "Louisville": {
+      "team": "Louisville",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 506571.0,
+      "open_interest": 421420.0
+    },
+    "Ohio St.": {
+      "team": "Ohio St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 63868.0,
+      "open_interest": 63868.0
+    },
+    "Florida St.": {
+      "team": "Florida St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 14917.0,
+      "open_interest": 14917.0
+    },
+    "St. Bonaventure": {
+      "team": "St. Bonaventure",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 386.0,
+      "open_interest": 386.0
+    },
+    "Syracuse": {
+      "team": "Syracuse",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 23719.0,
+      "open_interest": 23719.0
+    },
+    "Miami (FL)": {
+      "team": "Miami (FL)",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 192235.0,
+      "open_interest": 192130.0
+    },
+    "Notre Dame": {
+      "team": "Notre Dame",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 4692.0,
+      "open_interest": 4692.0
+    },
+    "Miami (OH)": {
+      "team": "Miami (OH)",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 295249.0,
+      "open_interest": 295249.0
+    },
+    "Longwood": {
+      "team": "Longwood",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 2.0,
+      "open_interest": 2.0
+    },
+    "Nevada": {
+      "team": "Nevada",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 8694.0,
+      "open_interest": 8694.0
+    },
+    "Charleston Southern": {
+      "team": "Charleston Southern",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 93.0,
+      "open_interest": 93.0
+    },
+    "San Diego St.": {
+      "team": "San Diego St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 74194.0,
+      "open_interest": 74089.0
+    },
+    "Creighton": {
+      "team": "Creighton",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 18066.0,
+      "open_interest": 18066.0
+    },
+    "Dayton": {
+      "team": "Dayton",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 3070.0,
+      "open_interest": 3070.0
+    },
+    "Oklahoma": {
+      "team": "Oklahoma",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 5019.0,
+      "open_interest": 5019.0
+    },
+    "North Carolina St.": {
+      "team": "North Carolina St.",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 603435.0,
+      "open_interest": 602042.0
+    },
+    "Tennessee": {
+      "team": "Tennessee",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1132513.0,
+      "open_interest": 1110986.0
+    },
+    "Mississippi State": {
+      "team": "Mississippi State",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 4180.0,
+      "open_interest": 4180.0
+    },
+    "Indiana": {
+      "team": "Indiana",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 192935.0,
+      "open_interest": 191430.0
+    },
+    "Ole Miss": {
+      "team": "Ole Miss",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 47832.0,
+      "open_interest": 47832.0
+    },
+    "Radford": {
+      "team": "Radford",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 2.0,
+      "open_interest": 2.0
+    },
+    "High Point": {
+      "team": "High Point",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 814.0,
+      "open_interest": 814.0
+    },
+    "Memphis": {
+      "team": "Memphis",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1481.0,
+      "open_interest": 1481.0
+    },
+    "Stanford": {
+      "team": "Stanford",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 2164.0,
+      "open_interest": 2164.0
+    },
+    "San Francisco": {
+      "team": "San Francisco",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 479.0,
+      "open_interest": 479.0
+    },
+    "Cincinnati": {
+      "team": "Cincinnati",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 5768.0,
+      "open_interest": 5768.0
+    },
+    "Xavier": {
+      "team": "Xavier",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1467.0,
+      "open_interest": 1467.0
+    },
+    "Kentucky": {
+      "team": "Kentucky",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 540699.0,
+      "open_interest": 397164.0
+    },
+    "Richmond": {
+      "team": "Richmond",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 497.0,
+      "open_interest": 497.0
+    },
+    "Texas A&M": {
+      "team": "Texas A&M",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 80761.0,
+      "open_interest": 80761.0
+    },
+    "Marquette": {
+      "team": "Marquette",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 9783.0,
+      "open_interest": 9783.0
+    },
+    "Saint Mary's": {
+      "team": "Saint Mary's",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 26384.0,
+      "open_interest": 26384.0
+    },
+    "Georgetown": {
+      "team": "Georgetown",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 12416.0,
+      "open_interest": 12311.0
+    },
+    "UCLA": {
+      "team": "UCLA",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 362673.0,
+      "open_interest": 263850.0
+    },
+    "Iowa": {
+      "team": "Iowa",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 261895.0,
+      "open_interest": 261552.0
+    },
+    "SMU": {
+      "team": "SMU",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 45990.0,
+      "open_interest": 45990.0
+    },
+    "Wake Forest": {
+      "team": "Wake Forest",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 4541.0,
+      "open_interest": 4541.0
+    },
+    "Butler": {
+      "team": "Butler",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 19137.0,
+      "open_interest": 19137.0
+    },
+    "Providence": {
+      "team": "Providence",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1128.0,
+      "open_interest": 1128.0
+    },
+    "Auburn": {
+      "team": "Auburn",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 219929.0,
+      "open_interest": 207929.0
+    },
+    "North Carolina": {
+      "team": "North Carolina",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1319710.0,
+      "open_interest": 1094888.0
+    },
+    "Alabama": {
+      "team": "Alabama",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1842627.0,
+      "open_interest": 1751823.0
+    },
+    "Clemson": {
+      "team": "Clemson",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 142506.0,
+      "open_interest": 142506.0
+    },
+    "Gardner-Webb": {
+      "team": "Gardner-Webb",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 93.0,
+      "open_interest": 93.0
+    },
+    "UNC Asheville": {
+      "team": "UNC Asheville",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1.0,
+      "open_interest": 1.0
+    },
+    "Nebraska": {
+      "team": "Nebraska",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 1325013.0,
+      "open_interest": 1144691.0
+    },
+    "Virginia": {
+      "team": "Virginia",
+      "mid_prob": 0.01,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.01,
+      "volume": 846780.0,
+      "open_interest": 800943.0
+    },
+    "USC Upstate": {
+      "team": "USC Upstate",
+      "mid_prob": 0.0,
+      "yes_bid": 0.0,
+      "yes_ask": 0.01,
+      "last": 0.0,
+      "volume": 0.0,
+      "open_interest": 0.0
+    }
+  }
+}

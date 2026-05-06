@@ -1,0 +1,655 @@
+{
+  "season": 2027,
+  "timestamp": "2026-04-29T13:00:10.612856Z",
+  "n_teams": 72,
+  "teams": {
+    "nebraska": {
+      "team_id": "nebraska",
+      "kalshi_abbrev": "NEB",
+      "ticker": "KXMARMAD-27-NEB",
+      "championship_prob": 0.0,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "xavier": {
+      "team_id": "xavier",
+      "kalshi_abbrev": "XAV",
+      "ticker": "KXMARMAD-27-XAV",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "wis": {
+      "team_id": "wis",
+      "kalshi_abbrev": "WIS",
+      "ticker": "KXMARMAD-27-WIS",
+      "championship_prob": 0.006,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "wake_forest": {
+      "team_id": "wake_forest",
+      "kalshi_abbrev": "WAKE",
+      "ticker": "KXMARMAD-27-WAKE",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "virginia_tech": {
+      "team_id": "virginia_tech",
+      "kalshi_abbrev": "VT",
+      "ticker": "KXMARMAD-27-VT",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "vill": {
+      "team_id": "vill",
+      "kalshi_abbrev": "VILL",
+      "ticker": "KXMARMAD-27-VILL",
+      "championship_prob": 0.015,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "virginia_commonwealth": {
+      "team_id": "virginia_commonwealth",
+      "kalshi_abbrev": "VCU",
+      "ticker": "KXMARMAD-27-VCU",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "van": {
+      "team_id": "van",
+      "kalshi_abbrev": "VAN",
+      "ticker": "KXMARMAD-27-VAN",
+      "championship_prob": 0.012,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "uva": {
+      "team_id": "uva",
+      "kalshi_abbrev": "UVA",
+      "ticker": "KXMARMAD-27-UVA",
+      "championship_prob": 0.021,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "southern_california": {
+      "team_id": "southern_california",
+      "kalshi_abbrev": "USC",
+      "ticker": "KXMARMAD-27-USC",
+      "championship_prob": 0.026,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "north_carolina": {
+      "team_id": "north_carolina",
+      "kalshi_abbrev": "UNC",
+      "ticker": "KXMARMAD-27-UNC",
+      "championship_prob": 0.03,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "kentucky": {
+      "team_id": "kentucky",
+      "kalshi_abbrev": "UK",
+      "ticker": "KXMARMAD-27-UK",
+      "championship_prob": 0.023,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ucla": {
+      "team_id": "ucla",
+      "kalshi_abbrev": "UCLA",
+      "ticker": "KXMARMAD-27-UCLA",
+      "championship_prob": 0.01,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "txam": {
+      "team_id": "txam",
+      "kalshi_abbrev": "TXAM",
+      "ticker": "KXMARMAD-27-TXAM",
+      "championship_prob": 0.012,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ttu": {
+      "team_id": "ttu",
+      "kalshi_abbrev": "TTU",
+      "ticker": "KXMARMAD-27-TTU",
+      "championship_prob": 0.022,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "tex": {
+      "team_id": "tex",
+      "kalshi_abbrev": "TEX",
+      "ticker": "KXMARMAD-27-TEX",
+      "championship_prob": 0.044,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "tenn": {
+      "team_id": "tenn",
+      "kalshi_abbrev": "TENN",
+      "ticker": "KXMARMAD-27-TENN",
+      "championship_prob": 0.039,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "syr": {
+      "team_id": "syr",
+      "kalshi_abbrev": "SYR",
+      "ticker": "KXMARMAD-27-SYR",
+      "championship_prob": 0.003,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "stan": {
+      "team_id": "stan",
+      "kalshi_abbrev": "STAN",
+      "ticker": "KXMARMAD-27-STAN",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "southern_methodist": {
+      "team_id": "southern_methodist",
+      "kalshi_abbrev": "SMU",
+      "ticker": "KXMARMAD-27-SMU",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "smc": {
+      "team_id": "smc",
+      "kalshi_abbrev": "SMC",
+      "ticker": "KXMARMAD-27-SMC",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "st_john_s": {
+      "team_id": "st_john_s",
+      "kalshi_abbrev": "SJU",
+      "ticker": "KXMARMAD-27-SJU",
+      "championship_prob": 0.035,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "sf": {
+      "team_id": "sf",
+      "kalshi_abbrev": "SF",
+      "ticker": "KXMARMAD-27-SF",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "sdsu": {
+      "team_id": "sdsu",
+      "kalshi_abbrev": "SDSU",
+      "ticker": "KXMARMAD-27-SDSU",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "sbon": {
+      "team_id": "sbon",
+      "kalshi_abbrev": "SBON",
+      "ticker": "KXMARMAD-27-SBON",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "rich": {
+      "team_id": "rich",
+      "kalshi_abbrev": "RICH",
+      "ticker": "KXMARMAD-27-RICH",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "pur": {
+      "team_id": "pur",
+      "kalshi_abbrev": "PUR",
+      "ticker": "KXMARMAD-27-PUR",
+      "championship_prob": 0.022,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "prov": {
+      "team_id": "prov",
+      "kalshi_abbrev": "PROV",
+      "ticker": "KXMARMAD-27-PROV",
+      "championship_prob": 0.008,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "pittsburgh": {
+      "team_id": "pittsburgh",
+      "kalshi_abbrev": "PITT",
+      "ticker": "KXMARMAD-27-PITT",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ohio_state": {
+      "team_id": "ohio_state",
+      "kalshi_abbrev": "OSU",
+      "ticker": "KXMARMAD-27-OSU",
+      "championship_prob": 0.005,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "oregon": {
+      "team_id": "oregon",
+      "kalshi_abbrev": "ORE",
+      "ticker": "KXMARMAD-27-ORE",
+      "championship_prob": 0.003,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "okla": {
+      "team_id": "okla",
+      "kalshi_abbrev": "OKLA",
+      "ticker": "KXMARMAD-27-OKLA",
+      "championship_prob": 0.003,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "nev": {
+      "team_id": "nev",
+      "kalshi_abbrev": "NEV",
+      "ticker": "KXMARMAD-27-NEV",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "nd": {
+      "team_id": "nd",
+      "kalshi_abbrev": "ND",
+      "ticker": "KXMARMAD-27-ND",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ncst": {
+      "team_id": "ncst",
+      "kalshi_abbrev": "NCST",
+      "ticker": "KXMARMAD-27-NCST",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "michigan_state": {
+      "team_id": "michigan_state",
+      "kalshi_abbrev": "MSU",
+      "ticker": "KXMARMAD-27-MSU",
+      "championship_prob": 0.058,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "msst": {
+      "team_id": "msst",
+      "kalshi_abbrev": "MSST",
+      "ticker": "KXMARMAD-27-MSST",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "mizz": {
+      "team_id": "mizz",
+      "kalshi_abbrev": "MIZZ",
+      "ticker": "KXMARMAD-27-MIZZ",
+      "championship_prob": 0.011,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "mississippi": {
+      "team_id": "mississippi",
+      "kalshi_abbrev": "MISS",
+      "ticker": "KXMARMAD-27-MISS",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "michigan": {
+      "team_id": "michigan",
+      "kalshi_abbrev": "MICH",
+      "ticker": "KXMARMAD-27-MICH",
+      "championship_prob": 0.13,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "mia": {
+      "team_id": "mia",
+      "kalshi_abbrev": "MIA",
+      "ticker": "KXMARMAD-27-MIA",
+      "championship_prob": 0.012,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "mem": {
+      "team_id": "mem",
+      "kalshi_abbrev": "MEM",
+      "ticker": "KXMARMAD-27-MEM",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "marquette": {
+      "team_id": "marquette",
+      "kalshi_abbrev": "MARQ",
+      "ticker": "KXMARMAD-27-MARQ",
+      "championship_prob": 0.006,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "lou": {
+      "team_id": "lou",
+      "kalshi_abbrev": "LOU",
+      "ticker": "KXMARMAD-27-LOU",
+      "championship_prob": 0.035,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "l_il": {
+      "team_id": "l_il",
+      "kalshi_abbrev": "L-IL",
+      "ticker": "KXMARMAD-27-L-IL",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "kansas": {
+      "team_id": "kansas",
+      "kalshi_abbrev": "KU",
+      "ticker": "KXMARMAD-27-KU",
+      "championship_prob": 0.036,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "iowa_state": {
+      "team_id": "iowa_state",
+      "kalshi_abbrev": "ISU",
+      "ticker": "KXMARMAD-27-ISU",
+      "championship_prob": 0.021,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "iowa": {
+      "team_id": "iowa",
+      "kalshi_abbrev": "IOWA",
+      "ticker": "KXMARMAD-27-IOWA",
+      "championship_prob": 0.014,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ind": {
+      "team_id": "ind",
+      "kalshi_abbrev": "IND",
+      "ticker": "KXMARMAD-27-IND",
+      "championship_prob": 0.017,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ill": {
+      "team_id": "ill",
+      "kalshi_abbrev": "ILL",
+      "ticker": "KXMARMAD-27-ILL",
+      "championship_prob": 0.085,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "hou": {
+      "team_id": "hou",
+      "kalshi_abbrev": "HOU",
+      "ticker": "KXMARMAD-27-HOU",
+      "championship_prob": 0.041,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "hall": {
+      "team_id": "hall",
+      "kalshi_abbrev": "HALL",
+      "ticker": "KXMARMAD-27-HALL",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "gtwn": {
+      "team_id": "gtwn",
+      "kalshi_abbrev": "GTWN",
+      "ticker": "KXMARMAD-27-GTWN",
+      "championship_prob": 0.003,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "gonz": {
+      "team_id": "gonz",
+      "kalshi_abbrev": "GONZ",
+      "ticker": "KXMARMAD-27-GONZ",
+      "championship_prob": 0.049,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "fsu": {
+      "team_id": "fsu",
+      "kalshi_abbrev": "FSU",
+      "ticker": "KXMARMAD-27-FSU",
+      "championship_prob": 0.017,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "fla": {
+      "team_id": "fla",
+      "kalshi_abbrev": "FLA",
+      "ticker": "KXMARMAD-27-FLA",
+      "championship_prob": 0.12,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "duke": {
+      "team_id": "duke",
+      "kalshi_abbrev": "DUKE",
+      "ticker": "KXMARMAD-27-DUKE",
+      "championship_prob": 0.11,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "day": {
+      "team_id": "day",
+      "kalshi_abbrev": "DAY",
+      "ticker": "KXMARMAD-27-DAY",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "csu": {
+      "team_id": "csu",
+      "kalshi_abbrev": "CSU",
+      "ticker": "KXMARMAD-27-CSU",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "crei": {
+      "team_id": "crei",
+      "kalshi_abbrev": "CREI",
+      "ticker": "KXMARMAD-27-CREI",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "connecticut": {
+      "team_id": "connecticut",
+      "kalshi_abbrev": "CONN",
+      "ticker": "KXMARMAD-27-CONN",
+      "championship_prob": 0.089,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "clem": {
+      "team_id": "clem",
+      "kalshi_abbrev": "CLEM",
+      "ticker": "KXMARMAD-27-CLEM",
+      "championship_prob": 0.003,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "cin": {
+      "team_id": "cin",
+      "kalshi_abbrev": "CIN",
+      "ticker": "KXMARMAD-27-CIN",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "brigham_young": {
+      "team_id": "brigham_young",
+      "kalshi_abbrev": "BYU",
+      "ticker": "KXMARMAD-27-BYU",
+      "championship_prob": 0.014,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "but": {
+      "team_id": "but",
+      "kalshi_abbrev": "BUT",
+      "ticker": "KXMARMAD-27-BUT",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "bsu": {
+      "team_id": "bsu",
+      "kalshi_abbrev": "BSU",
+      "ticker": "KXMARMAD-27-BSU",
+      "championship_prob": 0.001,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "bc": {
+      "team_id": "bc",
+      "kalshi_abbrev": "BC",
+      "ticker": "KXMARMAD-27-BC",
+      "championship_prob": 0.002,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "bay": {
+      "team_id": "bay",
+      "kalshi_abbrev": "BAY",
+      "ticker": "KXMARMAD-27-BAY",
+      "championship_prob": 0.011,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "aub": {
+      "team_id": "aub",
+      "kalshi_abbrev": "AUB",
+      "ticker": "KXMARMAD-27-AUB",
+      "championship_prob": 0.014,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ark": {
+      "team_id": "ark",
+      "kalshi_abbrev": "ARK",
+      "ticker": "KXMARMAD-27-ARK",
+      "championship_prob": 0.068,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ariz": {
+      "team_id": "ariz",
+      "kalshi_abbrev": "ARIZ",
+      "ticker": "KXMARMAD-27-ARIZ",
+      "championship_prob": 0.055,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    },
+    "ala": {
+      "team_id": "ala",
+      "kalshi_abbrev": "ALA",
+      "ticker": "KXMARMAD-27-ALA",
+      "championship_prob": 0.022,
+      "status": "active",
+      "result": "",
+      "close_time": "2027-04-27T14:00:00Z"
+    }
+  }
+}

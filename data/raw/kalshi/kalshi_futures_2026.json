@@ -1,0 +1,1015 @@
+{
+  "season": 2026,
+  "timestamp": "2026-04-29T13:00:10.544247Z",
+  "n_teams": 112,
+  "teams": {
+    "georgia": {
+      "team_id": "georgia",
+      "kalshi_abbrev": "UGA",
+      "ticker": "KXMARMAD-26-UGA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T04:32:31Z"
+    },
+    "tcu": {
+      "team_id": "tcu",
+      "kalshi_abbrev": "TCU",
+      "ticker": "KXMARMAD-26-TCU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T23:47:34Z"
+    },
+    "usu": {
+      "team_id": "usu",
+      "kalshi_abbrev": "USU",
+      "ticker": "KXMARMAD-26-USU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-23T02:44:44Z"
+    },
+    "california_baptist": {
+      "team_id": "california_baptist",
+      "kalshi_abbrev": "CBU",
+      "ticker": "KXMARMAD-26-CBU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T04:17:33Z"
+    },
+    "kennesaw_state": {
+      "team_id": "kennesaw_state",
+      "kalshi_abbrev": "KENN",
+      "ticker": "KXMARMAD-26-KENN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T04:44:47Z"
+    },
+    "south_florida": {
+      "team_id": "south_florida",
+      "kalshi_abbrev": "USF",
+      "ticker": "KXMARMAD-26-USF",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T20:40:35Z"
+    },
+    "wichita_state": {
+      "team_id": "wichita_state",
+      "kalshi_abbrev": "WICH",
+      "ticker": "KXMARMAD-26-WICH",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:23:10Z"
+    },
+    "yale": {
+      "team_id": "yale",
+      "kalshi_abbrev": "YALE",
+      "ticker": "KXMARMAD-26-YALE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:23:00Z"
+    },
+    "pennsylvania": {
+      "team_id": "pennsylvania",
+      "kalshi_abbrev": "PENN",
+      "ticker": "KXMARMAD-26-PENN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T03:50:36Z"
+    },
+    "prairie_view": {
+      "team_id": "prairie_view",
+      "kalshi_abbrev": "PV",
+      "ticker": "KXMARMAD-26-PV",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T04:01:50Z"
+    },
+    "uni": {
+      "team_id": "uni",
+      "kalshi_abbrev": "UNI",
+      "ticker": "KXMARMAD-26-UNI",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T01:44:49Z"
+    },
+    "akron": {
+      "team_id": "akron",
+      "kalshi_abbrev": "AKR",
+      "ticker": "KXMARMAD-26-AKR",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T18:56:31Z"
+    },
+    "hawaii": {
+      "team_id": "hawaii",
+      "kalshi_abbrev": "HAW",
+      "ticker": "KXMARMAD-26-HAW",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T22:40:39Z"
+    },
+    "troy": {
+      "team_id": "troy",
+      "kalshi_abbrev": "TROY",
+      "ticker": "KXMARMAD-26-TROY",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T20:40:34Z"
+    },
+    "ndsu": {
+      "team_id": "ndsu",
+      "kalshi_abbrev": "NDSU",
+      "ticker": "KXMARMAD-26-NDSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T22:40:39Z"
+    },
+    "mcns": {
+      "team_id": "mcns",
+      "kalshi_abbrev": "MCNS",
+      "ticker": "KXMARMAD-26-MCNS",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T22:20:25Z"
+    },
+    "fur": {
+      "team_id": "fur",
+      "kalshi_abbrev": "FUR",
+      "ticker": "KXMARMAD-26-FUR",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T04:53:36Z"
+    },
+    "leh": {
+      "team_id": "leh",
+      "kalshi_abbrev": "LEH",
+      "ticker": "KXMARMAD-26-LEH",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T02:20:06Z"
+    },
+    "tnst": {
+      "team_id": "tnst",
+      "kalshi_abbrev": "TNST",
+      "ticker": "KXMARMAD-26-TNST",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T21:35:37Z"
+    },
+    "long_island_university": {
+      "team_id": "long_island_university",
+      "kalshi_abbrev": "LIU",
+      "ticker": "KXMARMAD-26-LIU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T19:56:36Z"
+    },
+    "how": {
+      "team_id": "how",
+      "kalshi_abbrev": "HOW",
+      "ticker": "KXMARMAD-26-HOW",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T01:47:33Z"
+    },
+    "sie": {
+      "team_id": "sie",
+      "kalshi_abbrev": "SIE",
+      "ticker": "KXMARMAD-26-SIE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T21:30:33Z"
+    },
+    "wrst": {
+      "team_id": "wrst",
+      "kalshi_abbrev": "WRST",
+      "ticker": "KXMARMAD-26-WRST",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T20:05:41Z"
+    },
+    "hof": {
+      "team_id": "hof",
+      "kalshi_abbrev": "HOF",
+      "ticker": "KXMARMAD-26-HOF",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T21:35:37Z"
+    },
+    "idho": {
+      "team_id": "idho",
+      "kalshi_abbrev": "IDHO",
+      "ticker": "KXMARMAD-26-IDHO",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T04:32:31Z"
+    },
+    "maryland_baltimore_county": {
+      "team_id": "maryland_baltimore_county",
+      "kalshi_abbrev": "UMBC",
+      "ticker": "KXMARMAD-26-UMBC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-18T02:00:35Z"
+    },
+    "quc": {
+      "team_id": "quc",
+      "kalshi_abbrev": "QUC",
+      "ticker": "KXMARMAD-26-QUC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T01:44:49Z"
+    },
+    "long": {
+      "team_id": "long",
+      "kalshi_abbrev": "LONG",
+      "ticker": "KXMARMAD-26-LONG",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:22:17Z"
+    },
+    "unca": {
+      "team_id": "unca",
+      "kalshi_abbrev": "UNCA",
+      "ticker": "KXMARMAD-26-UNCA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:22:06Z"
+    },
+    "hpu": {
+      "team_id": "hpu",
+      "kalshi_abbrev": "HPU",
+      "ticker": "KXMARMAD-26-HPU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T04:05:36Z"
+    },
+    "pre": {
+      "team_id": "pre",
+      "kalshi_abbrev": "PRE",
+      "ticker": "KXMARMAD-26-PRE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:21:52Z"
+    },
+    "rad": {
+      "team_id": "rad",
+      "kalshi_abbrev": "RAD",
+      "ticker": "KXMARMAD-26-RAD",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:21:41Z"
+    },
+    "chso": {
+      "team_id": "chso",
+      "kalshi_abbrev": "CHSO",
+      "ticker": "KXMARMAD-26-CHSO",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:21:27Z"
+    },
+    "webb": {
+      "team_id": "webb",
+      "kalshi_abbrev": "WEBB",
+      "ticker": "KXMARMAD-26-WEBB",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:21:16Z"
+    },
+    "scus": {
+      "team_id": "scus",
+      "kalshi_abbrev": "SCUS",
+      "ticker": "KXMARMAD-26-SCUS",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:21:06Z"
+    },
+    "slu": {
+      "team_id": "slu",
+      "kalshi_abbrev": "SLU",
+      "ticker": "KXMARMAD-26-SLU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T18:44:46Z"
+    },
+    "scu": {
+      "team_id": "scu",
+      "kalshi_abbrev": "SCU",
+      "ticker": "KXMARMAD-26-SCU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T18:38:36Z"
+    },
+    "ucsd": {
+      "team_id": "ucsd",
+      "kalshi_abbrev": "UCSD",
+      "ticker": "KXMARMAD-26-UCSD",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:20:46Z"
+    },
+    "moh": {
+      "team_id": "moh",
+      "kalshi_abbrev": "MOH",
+      "ticker": "KXMARMAD-26-MOH",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T22:38:37Z"
+    },
+    "nebraska": {
+      "team_id": "nebraska",
+      "kalshi_abbrev": "NEB",
+      "ticker": "KXMARMAD-26-NEB",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-27T01:35:33Z"
+    },
+    "ucf": {
+      "team_id": "ucf",
+      "kalshi_abbrev": "UCF",
+      "ticker": "KXMARMAD-26-UCF",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T02:05:35Z"
+    },
+    "xavier": {
+      "team_id": "xavier",
+      "kalshi_abbrev": "XAV",
+      "ticker": "KXMARMAD-26-XAV",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:11:53Z"
+    },
+    "wis": {
+      "team_id": "wis",
+      "kalshi_abbrev": "WIS",
+      "ticker": "KXMARMAD-26-WIS",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T21:00:52Z"
+    },
+    "wake_forest": {
+      "team_id": "wake_forest",
+      "kalshi_abbrev": "WAKE",
+      "ticker": "KXMARMAD-26-WAKE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:14:45Z"
+    },
+    "virginia_tech": {
+      "team_id": "virginia_tech",
+      "kalshi_abbrev": "VT",
+      "ticker": "KXMARMAD-26-VT",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:15:35Z"
+    },
+    "vill": {
+      "team_id": "vill",
+      "kalshi_abbrev": "VILL",
+      "ticker": "KXMARMAD-26-VILL",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T22:38:37Z"
+    },
+    "virginia_commonwealth": {
+      "team_id": "virginia_commonwealth",
+      "kalshi_abbrev": "VCU",
+      "ticker": "KXMARMAD-26-VCU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T02:26:32Z"
+    },
+    "van": {
+      "team_id": "van",
+      "kalshi_abbrev": "VAN",
+      "ticker": "KXMARMAD-26-VAN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T03:17:30Z"
+    },
+    "uva": {
+      "team_id": "uva",
+      "kalshi_abbrev": "UVA",
+      "ticker": "KXMARMAD-26-UVA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-23T00:47:34Z"
+    },
+    "southern_california": {
+      "team_id": "southern_california",
+      "kalshi_abbrev": "USC",
+      "ticker": "KXMARMAD-26-USC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:17:28Z"
+    },
+    "north_carolina": {
+      "team_id": "north_carolina",
+      "kalshi_abbrev": "UNC",
+      "ticker": "KXMARMAD-26-UNC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T01:26:34Z"
+    },
+    "kentucky": {
+      "team_id": "kentucky",
+      "kalshi_abbrev": "UK",
+      "ticker": "KXMARMAD-26-UK",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T21:00:08Z"
+    },
+    "ucla": {
+      "team_id": "ucla",
+      "kalshi_abbrev": "UCLA",
+      "ticker": "KXMARMAD-26-UCLA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-23T03:35:32Z"
+    },
+    "txam": {
+      "team_id": "txam",
+      "kalshi_abbrev": "TXAM",
+      "ticker": "KXMARMAD-26-TXAM",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T00:32:29Z"
+    },
+    "ttu": {
+      "team_id": "ttu",
+      "kalshi_abbrev": "TTU",
+      "ticker": "KXMARMAD-26-TTU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-23T04:26:42Z"
+    },
+    "tex": {
+      "team_id": "tex",
+      "kalshi_abbrev": "TEX",
+      "ticker": "KXMARMAD-26-TEX",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-27T01:35:32Z"
+    },
+    "tenn": {
+      "team_id": "tenn",
+      "kalshi_abbrev": "TENN",
+      "ticker": "KXMARMAD-26-TENN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-29T20:44:40Z"
+    },
+    "syr": {
+      "team_id": "syr",
+      "kalshi_abbrev": "SYR",
+      "ticker": "KXMARMAD-26-SYR",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:15:16Z"
+    },
+    "stan": {
+      "team_id": "stan",
+      "kalshi_abbrev": "STAN",
+      "ticker": "KXMARMAD-26-STAN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:13:23Z"
+    },
+    "southern_methodist": {
+      "team_id": "southern_methodist",
+      "kalshi_abbrev": "SMU",
+      "ticker": "KXMARMAD-26-SMU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T04:30:25Z"
+    },
+    "smc": {
+      "team_id": "smc",
+      "kalshi_abbrev": "SMC",
+      "ticker": "KXMARMAD-26-SMC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T01:47:32Z"
+    },
+    "st_john_s": {
+      "team_id": "st_john_s",
+      "kalshi_abbrev": "SJU",
+      "ticker": "KXMARMAD-26-SJU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-28T01:30:10Z"
+    },
+    "sf": {
+      "team_id": "sf",
+      "kalshi_abbrev": "SF",
+      "ticker": "KXMARMAD-26-SF",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:19:14Z"
+    },
+    "sdsu": {
+      "team_id": "sdsu",
+      "kalshi_abbrev": "SDSU",
+      "ticker": "KXMARMAD-26-SDSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:18:57Z"
+    },
+    "sbon": {
+      "team_id": "sbon",
+      "kalshi_abbrev": "SBON",
+      "ticker": "KXMARMAD-26-SBON",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:12:37Z"
+    },
+    "rich": {
+      "team_id": "rich",
+      "kalshi_abbrev": "RICH",
+      "ticker": "KXMARMAD-26-RICH",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:12:19Z"
+    },
+    "pur": {
+      "team_id": "pur",
+      "kalshi_abbrev": "PUR",
+      "ticker": "KXMARMAD-26-PUR",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-29T03:08:34Z"
+    },
+    "prov": {
+      "team_id": "prov",
+      "kalshi_abbrev": "PROV",
+      "ticker": "KXMARMAD-26-PROV",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:11:28Z"
+    },
+    "pittsburgh": {
+      "team_id": "pittsburgh",
+      "kalshi_abbrev": "PITT",
+      "ticker": "KXMARMAD-26-PITT",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:13:54Z"
+    },
+    "ohio_state": {
+      "team_id": "ohio_state",
+      "kalshi_abbrev": "OSU",
+      "ticker": "KXMARMAD-26-OSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-19T19:30:29Z"
+    },
+    "oregon": {
+      "team_id": "oregon",
+      "kalshi_abbrev": "ORE",
+      "ticker": "KXMARMAD-26-ORE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:17:37Z"
+    },
+    "okla": {
+      "team_id": "okla",
+      "kalshi_abbrev": "OKLA",
+      "ticker": "KXMARMAD-26-OKLA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:20:26Z"
+    },
+    "nev": {
+      "team_id": "nev",
+      "kalshi_abbrev": "NEV",
+      "ticker": "KXMARMAD-26-NEV",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:18:28Z"
+    },
+    "nd": {
+      "team_id": "nd",
+      "kalshi_abbrev": "ND",
+      "ticker": "KXMARMAD-26-ND",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:13:38Z"
+    },
+    "ncst": {
+      "team_id": "ncst",
+      "kalshi_abbrev": "NCST",
+      "ticker": "KXMARMAD-26-NCST",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-18T04:43:50Z"
+    },
+    "michigan_state": {
+      "team_id": "michigan_state",
+      "kalshi_abbrev": "MSU",
+      "ticker": "KXMARMAD-26-MSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-28T04:53:29Z"
+    },
+    "msst": {
+      "team_id": "msst",
+      "kalshi_abbrev": "MSST",
+      "ticker": "KXMARMAD-26-MSST",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:20:09Z"
+    },
+    "mizz": {
+      "team_id": "mizz",
+      "kalshi_abbrev": "MIZZ",
+      "ticker": "KXMARMAD-26-MIZZ",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T04:38:34Z"
+    },
+    "mississippi": {
+      "team_id": "mississippi",
+      "kalshi_abbrev": "MISS",
+      "ticker": "KXMARMAD-26-MISS",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:19:55Z"
+    },
+    "michigan": {
+      "team_id": "michigan",
+      "kalshi_abbrev": "MICH",
+      "ticker": "KXMARMAD-26-MICH",
+      "championship_prob": 0.99,
+      "status": "finalized",
+      "result": "yes",
+      "close_time": "2026-04-07T03:21:17Z"
+    },
+    "mia": {
+      "team_id": "mia",
+      "kalshi_abbrev": "MIA",
+      "ticker": "KXMARMAD-26-MIA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T18:26:32Z"
+    },
+    "mem": {
+      "team_id": "mem",
+      "kalshi_abbrev": "MEM",
+      "ticker": "KXMARMAD-26-MEM",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:12:08Z"
+    },
+    "marquette": {
+      "team_id": "marquette",
+      "kalshi_abbrev": "MARQ",
+      "ticker": "KXMARMAD-26-MARQ",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:11:00Z"
+    },
+    "lou": {
+      "team_id": "lou",
+      "kalshi_abbrev": "LOU",
+      "ticker": "KXMARMAD-26-LOU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T21:11:31Z"
+    },
+    "l_il": {
+      "team_id": "l_il",
+      "kalshi_abbrev": "L-IL",
+      "ticker": "KXMARMAD-26-L-IL",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:13:05Z"
+    },
+    "kansas": {
+      "team_id": "kansas",
+      "kalshi_abbrev": "KU",
+      "ticker": "KXMARMAD-26-KU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T23:47:35Z"
+    },
+    "iowa_state": {
+      "team_id": "iowa_state",
+      "kalshi_abbrev": "ISU",
+      "ticker": "KXMARMAD-26-ISU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-28T04:53:29Z"
+    },
+    "iowa": {
+      "team_id": "iowa",
+      "kalshi_abbrev": "IOWA",
+      "ticker": "KXMARMAD-26-IOWA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-29T00:35:33Z"
+    },
+    "ind": {
+      "team_id": "ind",
+      "kalshi_abbrev": "IND",
+      "ticker": "KXMARMAD-26-IND",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:17:58Z"
+    },
+    "ill": {
+      "team_id": "ill",
+      "kalshi_abbrev": "ILL",
+      "ticker": "KXMARMAD-26-ILL",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-04-05T00:32:33Z"
+    },
+    "hou": {
+      "team_id": "hou",
+      "kalshi_abbrev": "HOU",
+      "ticker": "KXMARMAD-26-HOU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-27T04:23:34Z"
+    },
+    "hall": {
+      "team_id": "hall",
+      "kalshi_abbrev": "HALL",
+      "ticker": "KXMARMAD-26-HALL",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:11:14Z"
+    },
+    "gtwn": {
+      "team_id": "gtwn",
+      "kalshi_abbrev": "GTWN",
+      "ticker": "KXMARMAD-26-GTWN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:10:42Z"
+    },
+    "gonz": {
+      "team_id": "gonz",
+      "kalshi_abbrev": "GONZ",
+      "ticker": "KXMARMAD-26-GONZ",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-22T01:41:31Z"
+    },
+    "fsu": {
+      "team_id": "fsu",
+      "kalshi_abbrev": "FSU",
+      "ticker": "KXMARMAD-26-FSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:15:49Z"
+    },
+    "fla": {
+      "team_id": "fla",
+      "kalshi_abbrev": "FLA",
+      "ticker": "KXMARMAD-26-FLA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-23T01:38:32Z"
+    },
+    "duke": {
+      "team_id": "duke",
+      "kalshi_abbrev": "DUKE",
+      "ticker": "KXMARMAD-26-DUKE",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-29T23:30:19Z"
+    },
+    "day": {
+      "team_id": "day",
+      "kalshi_abbrev": "DAY",
+      "ticker": "KXMARMAD-26-DAY",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:12:53Z"
+    },
+    "csu": {
+      "team_id": "csu",
+      "kalshi_abbrev": "CSU",
+      "ticker": "KXMARMAD-26-CSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:18:08Z"
+    },
+    "crei": {
+      "team_id": "crei",
+      "kalshi_abbrev": "CREI",
+      "ticker": "KXMARMAD-26-CREI",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:10:29Z"
+    },
+    "connecticut": {
+      "team_id": "connecticut",
+      "kalshi_abbrev": "CONN",
+      "ticker": "KXMARMAD-26-CONN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-04-07T03:21:17Z"
+    },
+    "clem": {
+      "team_id": "clem",
+      "kalshi_abbrev": "CLEM",
+      "ticker": "KXMARMAD-26-CLEM",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-21T01:14:59Z"
+    },
+    "cin": {
+      "team_id": "cin",
+      "kalshi_abbrev": "CIN",
+      "ticker": "KXMARMAD-26-CIN",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:16:22Z"
+    },
+    "brigham_young": {
+      "team_id": "brigham_young",
+      "kalshi_abbrev": "BYU",
+      "ticker": "KXMARMAD-26-BYU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-20T02:20:41Z"
+    },
+    "but": {
+      "team_id": "but",
+      "kalshi_abbrev": "BUT",
+      "ticker": "KXMARMAD-26-BUT",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:10:09Z"
+    },
+    "bsu": {
+      "team_id": "bsu",
+      "kalshi_abbrev": "BSU",
+      "ticker": "KXMARMAD-26-BSU",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:18:42Z"
+    },
+    "bc": {
+      "team_id": "bc",
+      "kalshi_abbrev": "BC",
+      "ticker": "KXMARMAD-26-BC",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:15:01Z"
+    },
+    "bay": {
+      "team_id": "bay",
+      "kalshi_abbrev": "BAY",
+      "ticker": "KXMARMAD-26-BAY",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:16:09Z"
+    },
+    "aub": {
+      "team_id": "aub",
+      "kalshi_abbrev": "AUB",
+      "ticker": "KXMARMAD-26-AUB",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-15T23:19:44Z"
+    },
+    "ark": {
+      "team_id": "ark",
+      "kalshi_abbrev": "ARK",
+      "ticker": "KXMARMAD-26-ARK",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-27T04:30:04Z"
+    },
+    "ariz": {
+      "team_id": "ariz",
+      "kalshi_abbrev": "ARIZ",
+      "ticker": "KXMARMAD-26-ARIZ",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-04-05T03:38:33Z"
+    },
+    "ala": {
+      "team_id": "ala",
+      "kalshi_abbrev": "ALA",
+      "ticker": "KXMARMAD-26-ALA",
+      "championship_prob": 0.01,
+      "status": "finalized",
+      "result": "no",
+      "close_time": "2026-03-28T02:08:32Z"
+    }
+  }
+}
