@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate per-game LOYO predictions for torvik + seed baselines.
+"""Generate per-game LOYO predictions from all available probability sources.
 
 Produces a JSON artifact with per-game predictions across all tournament
-years, enabling Brier score evaluation and ensemble optimization.
+years, enabling multi-source ensemble optimization and Brier evaluation.
 
 Usage:
     python scripts/loyo_pergame_predictions.py
-    python scripts/loyo_pergame_predictions.py --years 2018-2026
+    python scripts/loyo_pergame_predictions.py --years 2008-2026
     python scripts/loyo_pergame_predictions.py --verify
 """
 
@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import math
 import sys
 from pathlib import Path
 
@@ -25,7 +27,94 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.eval_brier_postprocessing import seed_implied_prob
 from src.prediction.torvik_kaggle import TarvikKagglePredictor
 
+logger = logging.getLogger(__name__)
+
 ARTIFACT_PATH = REPO_ROOT / "artifacts" / "loyo_pergame_predictions.json"
+DATA_ROOT = REPO_ROOT / "data"
+
+
+def _log5(ba: float, bb: float) -> float:
+    """Log5 pairwise probability from barthag values."""
+    num = ba * (1.0 - bb)
+    denom = ba * (1.0 - bb) + bb * (1.0 - ba)
+    if denom < 1e-12:
+        return 0.5
+    return num / denom
+
+
+def _load_all_barthag_sources(
+    year: int,
+    seeds: dict[str, int],
+    team_ids: list[str],
+) -> dict[str, dict[str, float] | None]:
+    """Load barthag ratings from all available probability sources."""
+    sources: dict[str, dict[str, float] | None] = {}
+
+    # Odds (market Bradley-Terry)
+    try:
+        from src.prediction.market_probabilities import load_market_ratings
+
+        sources["odds"] = load_market_ratings(year, seeds)
+    except Exception:
+        sources["odds"] = None
+
+    # Spread power
+    try:
+        from src.prediction.market_probabilities import load_spread_power_ratings
+
+        sources["spread"] = load_spread_power_ratings(year, seeds)
+    except Exception:
+        sources["spread"] = None
+
+    # Elo
+    try:
+        from src.prediction.elo_probabilities import load_elo_barthag
+
+        sources["elo"] = load_elo_barthag(year, seeds, DATA_ROOT)
+    except Exception:
+        sources["elo"] = None
+
+    # Massey average composite
+    try:
+        from src.prediction.massey_probabilities import load_massey_avg_barthag
+
+        sources["massey_avg"] = load_massey_avg_barthag(year, seeds, DATA_ROOT)
+    except Exception:
+        sources["massey_avg"] = None
+
+    # Massey best (walk-forward selected)
+    try:
+        from src.prediction.massey_best_probabilities import load_massey_best_barthag
+
+        sources["massey_best"] = load_massey_best_barthag(year, DATA_ROOT)
+    except Exception:
+        sources["massey_best"] = None
+
+    # AP strength
+    try:
+        from src.prediction.ap_probabilities import load_ap_strength_barthag
+
+        sources["ap"] = load_ap_strength_barthag(year, seeds, team_ids, DATA_ROOT)
+    except Exception:
+        sources["ap"] = None
+
+    # Stacked Ridge (meta-blend of 8 Category-A bases)
+    try:
+        from src.prediction.stacked_probabilities import load_stacked_barthag
+
+        sources["stacked"] = load_stacked_barthag(year, seeds, DATA_ROOT)
+    except Exception:
+        sources["stacked"] = None
+
+    # KNN matchup similarity
+    try:
+        from src.prediction.knn_probabilities import load_knn_barthag
+
+        sources["knn"] = load_knn_barthag(year, seeds, DATA_ROOT)
+    except Exception:
+        sources["knn"] = None
+
+    return sources
 
 
 def load_tournament_games(year: int) -> list[dict]:
@@ -39,18 +128,42 @@ def load_tournament_games(year: int) -> list[dict]:
     return [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 
 
-def generate_year(year: int) -> list[dict]:
-    """Generate per-game predictions for a single year."""
+def generate_year(year: int) -> tuple[list[dict], dict[str, bool]]:
+    """Generate per-game predictions for a single year.
+
+    Returns (records, availability) where availability maps source name -> present.
+    """
     games = load_tournament_games(year)
     if not games:
-        return []
+        return [], {}
 
     seeds = {}
     for g in games:
         seeds[g["team1_id"]] = g.get("team1_seed", 8)
         seeds[g["team2_id"]] = g.get("team2_seed", 8)
 
+    team_ids = list(seeds.keys())
     predictor = TarvikKagglePredictor.from_year(year, seeds=seeds)
+
+    # Load all barthag sources
+    all_barthag = _load_all_barthag_sources(year, seeds, team_ids)
+    availability = {name: (b is not None) for name, b in all_barthag.items()}
+
+    # Merge pipeline predictions from backtest artifact
+    pipeline_lookup: dict[str, float] = {}
+    bt_path = REPO_ROOT / "artifacts" / "backtest_result_temperature.json"
+    if bt_path.exists():
+        try:
+            with open(bt_path) as f:
+                bt_data = json.load(f)
+            pipe_games = bt_data.get("per_year_games", {}).get(str(year), [])
+            for pg in pipe_games:
+                pipeline_lookup[(pg["team1"], pg["team2"])] = pg["pipeline"]
+            availability["pipeline"] = bool(pipeline_lookup)
+        except Exception:
+            availability["pipeline"] = False
+    else:
+        availability["pipeline"] = False
 
     records = []
     for g in games:
@@ -58,29 +171,63 @@ def generate_year(year: int) -> list[dict]:
         s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
         outcome = 1 if g["team1_won"] else 0
 
-        records.append(
-            {
-                "team1": t1,
-                "team2": t2,
-                "seed1": s1,
-                "seed2": s2,
-                "round": g.get("round_name", ""),
-                "outcome": outcome,
-                "torvik": round(predictor.predict(t1, t2), 6),
-                "seed": round(seed_implied_prob(s1, s2), 6),
-            }
-        )
-    return records
+        record = {
+            "team1": t1,
+            "team2": t2,
+            "seed1": s1,
+            "seed2": s2,
+            "round": g.get("round_name", ""),
+            "outcome": outcome,
+            "torvik": round(predictor.predict(t1, t2), 6),
+            "seed": round(seed_implied_prob(s1, s2), 6),
+        }
+
+        # Add predictions from each available source
+        for source_name, barthag_dict in all_barthag.items():
+            if barthag_dict is not None:
+                b1 = barthag_dict.get(t1, 0.5)
+                b2 = barthag_dict.get(t2, 0.5)
+                record[source_name] = round(_log5(b1, b2), 6)
+
+        # Add pipeline prediction
+        key = (t1, t2)
+        rev = (t2, t1)
+        if key in pipeline_lookup:
+            record["pipeline"] = round(pipeline_lookup[key], 6)
+        elif rev in pipeline_lookup:
+            record["pipeline"] = round(1.0 - pipeline_lookup[rev], 6)
+
+        records.append(record)
+    return records, availability
 
 
 def generate_all(years: list[int]) -> dict[str, list[dict]]:
     """Generate per-game predictions for all years."""
     result = {}
+    all_availability: dict[int, dict[str, bool]] = {}
     for year in years:
-        games = generate_year(year)
+        games, avail = generate_year(year)
         if games:
             result[str(year)] = games
-            print(f"  {year}: {len(games)} games")
+            all_availability[year] = avail
+            sources_ok = sum(1 for v in avail.values() if v)
+            print(f"  {year}: {len(games)} games, {sources_ok} extra sources")
+
+    # Print source availability matrix
+    if all_availability:
+        all_sources = sorted({s for a in all_availability.values() for s in a})
+        print(f"\n  Source availability matrix:")
+        header = f"  {'Year':<6}"
+        for s in all_sources:
+            header += f" {s[:6]:>6}"
+        print(header)
+        print(f"  {'-' * (6 + 7 * len(all_sources))}")
+        for year in sorted(all_availability):
+            row = f"  {year:<6}"
+            for s in all_sources:
+                row += f" {'  ✓' if all_availability[year].get(s, False) else '  ✗':>6}"
+            print(row)
+
     return result
 
 
