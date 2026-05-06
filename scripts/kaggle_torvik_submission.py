@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.ml.calibration.post_processing import PostProcessingPipeline
-from src.prediction.torvik_kaggle import TarvikKagglePredictor
+from src.prediction.torvik_kaggle import EnsembleKagglePredictor, TarvikKagglePredictor
 
 
 def load_tournament_seeds(year: int) -> dict[str, int]:
@@ -291,6 +291,111 @@ def run_multi_year_backtest(
         print(f"\n  BSS > 0 in {years_better}/{len(all_brier)} years")
 
 
+def _load_pipeline_lookup(year: int) -> dict[str, float] | None:
+    """Load per-game pipeline predictions for a year from backtest artifact."""
+    bt_path = REPO_ROOT / "artifacts" / "backtest_result_temperature.json"
+    if not bt_path.exists():
+        return None
+    with open(bt_path) as f:
+        data = json.load(f)
+    games = data.get("per_year_games", {}).get(str(year), [])
+    if not games:
+        return None
+    lookup = {}
+    for g in games:
+        t1, t2 = g["team1"], g["team2"]
+        lookup[f"{t1}_{t2}"] = g["pipeline"]
+    return lookup
+
+
+def run_ensemble_backtest(
+    years: list[int],
+    clip_lo: float,
+    clip_hi: float,
+    pp: PostProcessingPipeline | None = None,
+) -> None:
+    """Run ensemble (torvik+pipeline) backtest with walk-forward alpha."""
+    from scripts.eval_brier_postprocessing import seed_implied_prob
+
+    print(f"\n{'=' * 85}")
+    print(f"ENSEMBLE (TORVIK+PIPELINE) WALK-FORWARD BACKTEST ({len(years)} years)")
+    print(f"{'=' * 85}")
+    print(f"\n  {'Year':<6} {'Alpha':>6} {'Ensemble':>10} {'Torvik':>10} {'Pipeline':>10} {'Seed':>10}")
+    print(f"  {'-' * 58}")
+
+    all_ens, all_torv, all_pipe, all_seed = [], [], [], []
+
+    for year in years:
+        results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
+        if not results_path.exists():
+            continue
+        with open(results_path) as f:
+            data = json.load(f)
+        games = data.get("games", data) if isinstance(data, dict) else data
+        games = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
+
+        seeds = load_tournament_seeds(year)
+        torvik = TarvikKagglePredictor.from_year(year, seeds=seeds, clip_lo=clip_lo, clip_hi=clip_hi)
+
+        pipe_lookup = _load_pipeline_lookup(year)
+        if pipe_lookup is None:
+            continue
+
+        def pipe_predict(t1, t2, _lookup=pipe_lookup):
+            key1, key2 = f"{t1}_{t2}", f"{t2}_{t1}"
+            if key1 in _lookup:
+                return _lookup[key1]
+            if key2 in _lookup:
+                return 1.0 - _lookup[key2]
+            return 0.5
+
+        ensemble = EnsembleKagglePredictor.from_walk_forward(
+            torvik,
+            pipe_predict,
+            year,
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+        )
+
+        ens_errors, torv_errors, pipe_errors, seed_errors = [], [], [], []
+        for g in games:
+            t1, t2 = g["team1_id"], g["team2_id"]
+            s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
+            outcome = 1.0 if g["team1_won"] else 0.0
+
+            e_pred = _maybe_postprocess(ensemble.predict(t1, t2), s1, s2, pp)
+            t_pred = torvik.predict(t1, t2)
+            p_pred = pipe_predict(t1, t2)
+
+            ens_errors.append((e_pred - outcome) ** 2)
+            torv_errors.append((t_pred - outcome) ** 2)
+            pipe_errors.append((p_pred - outcome) ** 2)
+            seed_errors.append((seed_implied_prob(s1, s2) - outcome) ** 2)
+
+        ens_b = float(np.mean(ens_errors))
+        torv_b = float(np.mean(torv_errors))
+        pipe_b = float(np.mean(pipe_errors))
+        seed_b = float(np.mean(seed_errors))
+
+        all_ens.append(ens_b)
+        all_torv.append(torv_b)
+        all_pipe.append(pipe_b)
+        all_seed.append(seed_b)
+
+        print(f"  {year:<6} {ensemble.alpha:>6.2f} {ens_b:>10.4f} {torv_b:>10.4f} {pipe_b:>10.4f} {seed_b:>10.4f}")
+
+    if all_ens:
+        print(f"  {'-' * 58}")
+        me, mt, mp, ms = np.mean(all_ens), np.mean(all_torv), np.mean(all_pipe), np.mean(all_seed)
+        print(f"  {'Mean':<6} {'':>6} {me:>10.4f} {mt:>10.4f} {mp:>10.4f} {ms:>10.4f}")
+        print(f"\n  BSS vs seed:")
+        print(f"    Ensemble: {1.0 - me / ms:+.4f}")
+        print(f"    Torvik:   {1.0 - mt / ms:+.4f}")
+        print(f"    Pipeline: {1.0 - mp / ms:+.4f}")
+        ens_best = sum(1 for e, t, p in zip(all_ens, all_torv, all_pipe) if e <= t and e <= p)
+        print(f"\n  Ensemble best-or-tied in {ens_best}/{len(all_ens)} years")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Torvik-based Kaggle submission")
     parser.add_argument("--year", type=int, required=True, help="Tournament year")
@@ -298,6 +403,12 @@ def main():
     parser.add_argument("--output", "-o", default="kaggle_torvik_submission.csv", help="Output CSV")
     parser.add_argument("--backtest", action="store_true", help="Score against actual results")
     parser.add_argument("--multi-year-backtest", action="store_true", help="Run backtest across all available years")
+    parser.add_argument(
+        "--mode",
+        choices=["torvik", "ensemble"],
+        default="torvik",
+        help="Prediction mode: torvik (pure log5) or ensemble (torvik+pipeline blend)",
+    )
     parser.add_argument("--clip-lo", type=float, default=0.01, help="Lower probability clip")
     parser.add_argument("--clip-hi", type=float, default=0.99, help="Upper probability clip")
     parser.add_argument("--flb-threshold", type=float, default=None, help="FLB correction threshold (e.g. 0.85)")
@@ -317,7 +428,10 @@ def main():
     if args.multi_year_backtest:
         years = list(range(2008, 2027))
         years = [y for y in years if y != 2020]
-        run_multi_year_backtest(years, args.clip_lo, args.clip_hi, pp)
+        if args.mode == "ensemble":
+            run_ensemble_backtest(years, args.clip_lo, args.clip_hi, pp)
+        else:
+            run_multi_year_backtest(years, args.clip_lo, args.clip_hi, pp)
     elif args.backtest:
         run_backtest(args.year, args.clip_lo, args.clip_hi, pp)
     elif args.sample_submission:

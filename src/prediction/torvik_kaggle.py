@@ -193,6 +193,78 @@ class EnsembleKagglePredictor:
         self.clip_lo = clip_lo
         self.clip_hi = clip_hi
 
+    @classmethod
+    def from_walk_forward(
+        cls,
+        torvik: TarvikKagglePredictor,
+        pipeline_predict_fn,
+        year: int,
+        pergame_path: Optional[str] = None,
+        backtest_path: Optional[str] = None,
+        clip_lo: float = 0.01,
+        clip_hi: float = 0.99,
+    ) -> "EnsembleKagglePredictor":
+        """Build with walk-forward optimized alpha for a target year.
+
+        Fits optimal alpha on all years < target_year from the per-game
+        predictions artifact + backtest pipeline predictions.
+
+        Falls back to alpha=0.60 if artifacts are unavailable.
+        """
+        alpha = 0.60  # default
+
+        try:
+            repo_root = Path(__file__).resolve().parent.parent.parent
+            pg_path = Path(pergame_path) if pergame_path else repo_root / "artifacts" / "loyo_pergame_predictions.json"
+            bt_path = (
+                Path(backtest_path) if backtest_path else repo_root / "artifacts" / "backtest_result_temperature.json"
+            )
+
+            if pg_path.exists() and bt_path.exists():
+                with open(pg_path) as f:
+                    pergame = json.load(f)
+                with open(bt_path) as f:
+                    bt_data = json.load(f)
+
+                pipe_games = bt_data.get("per_year_games", {})
+
+                # Build merged training data for years < target
+                import numpy as np
+
+                train_records = []
+                for yr_str, records in pergame.items():
+                    if int(yr_str) >= year:
+                        continue
+                    pg_list = pipe_games.get(yr_str, [])
+                    pipe_lookup = {(g["team1"], g["team2"]): g["pipeline"] for g in pg_list}
+                    for r in records:
+                        key = (r["team1"], r["team2"])
+                        rev = (r["team2"], r["team1"])
+                        p = pipe_lookup.get(key)
+                        if p is None and rev in pipe_lookup:
+                            p = round(1.0 - pipe_lookup[rev], 6)
+                        if p is not None:
+                            train_records.append({**r, "pipeline": p})
+
+                if len(train_records) >= 60:
+                    best_alpha, best_brier = 0.60, float("inf")
+                    for a in np.arange(0.0, 1.01, 0.05):
+                        errors = []
+                        for rec in train_records:
+                            pred = a * rec["torvik"] + (1.0 - a) * rec["pipeline"]
+                            errors.append((max(0.01, min(0.99, pred)) - rec["outcome"]) ** 2)
+                        brier = float(np.mean(errors))
+                        if brier < best_brier:
+                            best_alpha, best_brier = float(a), brier
+                    alpha = best_alpha
+                    logger.info(
+                        "Walk-forward alpha for %d: %.2f (trained on %d games)", year, alpha, len(train_records)
+                    )
+        except Exception as e:
+            logger.warning("Walk-forward alpha failed (%s), using default 0.60", e)
+
+        return cls(torvik, pipeline_predict_fn, alpha=alpha, clip_lo=clip_lo, clip_hi=clip_hi)
+
     def predict(self, team1_id: str, team2_id: str) -> float:
         """Blended prediction: alpha * torvik + (1-alpha) * pipeline."""
         t_pred = self.torvik.predict(team1_id, team2_id)
