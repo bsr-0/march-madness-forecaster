@@ -26,6 +26,7 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.ml.calibration.post_processing import PostProcessingPipeline
 from src.prediction.torvik_kaggle import TarvikKagglePredictor
 
 
@@ -80,7 +81,19 @@ def load_kaggle_id_mapping() -> dict[int, str]:
     return id_map
 
 
-def run_backtest(year: int, clip_lo: float, clip_hi: float) -> None:
+def _maybe_postprocess(
+    pred: float,
+    seed1: int,
+    seed2: int,
+    pp: PostProcessingPipeline | None,
+) -> float:
+    """Apply post-processing if configured."""
+    if pp is None:
+        return pred
+    return pp.process(pred, seed1, seed2)
+
+
+def run_backtest(year: int, clip_lo: float, clip_hi: float, pp: PostProcessingPipeline | None = None) -> None:
     """Score torvik predictions against actual tournament results."""
     results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
     if not results_path.exists():
@@ -122,7 +135,8 @@ def run_backtest(year: int, clip_lo: float, clip_hi: float) -> None:
         outcome = 1.0 if g["team1_won"] else 0.0
         rnd = g.get("round_name", "")
 
-        pred = predictor.predict(t1, t2)
+        s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
+        pred = _maybe_postprocess(predictor.predict(t1, t2), s1, s2, pp)
         se = (pred - outcome) ** 2
         errors.append(se)
         rw = ROUND_WEIGHTS.get(rnd, 1.0)
@@ -131,9 +145,6 @@ def run_backtest(year: int, clip_lo: float, clip_hi: float) -> None:
         if (pred >= 0.5) == g["team1_won"]:
             correct += 1
         per_round.setdefault(rnd, []).append(se)
-
-        # Seed baseline
-        s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
         seed_p = seed_implied_prob(s1, s2)
         seed_errors.append((seed_p - outcome) ** 2)
 
@@ -159,6 +170,7 @@ def run_submission(
     output: str,
     clip_lo: float,
     clip_hi: float,
+    pp: PostProcessingPipeline | None = None,
 ) -> None:
     """Generate a Kaggle submission CSV."""
     seeds = load_tournament_seeds(year)
@@ -196,6 +208,10 @@ def run_submission(
             continue
 
         prob = predictor.predict(t1_canon, t2_canon)
+        # Post-process with FLB if configured (need seeds for the teams)
+        s1 = seeds.get(t1_canon, 8)
+        s2 = seeds.get(t2_canon, 8)
+        prob = _maybe_postprocess(prob, s1, s2, pp)
         preds.append(prob)
         mapped += 1
 
@@ -206,7 +222,9 @@ def run_submission(
     print(f"  Predictor: {predictor.stats()}")
 
 
-def run_multi_year_backtest(years: list[int], clip_lo: float, clip_hi: float) -> None:
+def run_multi_year_backtest(
+    years: list[int], clip_lo: float, clip_hi: float, pp: PostProcessingPipeline | None = None
+) -> None:
     """Run backtest across multiple years and print summary."""
     from scripts.eval_brier_postprocessing import seed_implied_prob
 
@@ -245,12 +263,12 @@ def run_multi_year_backtest(years: list[int], clip_lo: float, clip_hi: float) ->
             t1, t2 = g["team1_id"], g["team2_id"]
             outcome = 1.0 if g["team1_won"] else 0.0
 
-            pred = predictor.predict(t1, t2)
+            s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
+            pred = _maybe_postprocess(predictor.predict(t1, t2), s1, s2, pp)
             errors.append((pred - outcome) ** 2)
             if (pred >= 0.5) == g["team1_won"]:
                 correct += 1
 
-            s1, s2 = g.get("team1_seed", 8), g.get("team2_seed", 8)
             seed_errors.append((seed_implied_prob(s1, s2) - outcome) ** 2)
 
         brier = float(np.mean(errors))
@@ -282,16 +300,28 @@ def main():
     parser.add_argument("--multi-year-backtest", action="store_true", help="Run backtest across all available years")
     parser.add_argument("--clip-lo", type=float, default=0.01, help="Lower probability clip")
     parser.add_argument("--clip-hi", type=float, default=0.99, help="Upper probability clip")
+    parser.add_argument("--flb-threshold", type=float, default=None, help="FLB correction threshold (e.g. 0.85)")
+    parser.add_argument("--flb-regression", type=float, default=0.20, help="FLB regression strength (default 0.20)")
     args = parser.parse_args()
+
+    # Build post-processor if FLB enabled
+    pp = None
+    if args.flb_threshold is not None:
+        pp = PostProcessingPipeline(
+            flb_threshold=args.flb_threshold,
+            flb_regression=args.flb_regression,
+            clip_lo=args.clip_lo,
+            clip_hi=args.clip_hi,
+        )
 
     if args.multi_year_backtest:
         years = list(range(2008, 2027))
         years = [y for y in years if y != 2020]
-        run_multi_year_backtest(years, args.clip_lo, args.clip_hi)
+        run_multi_year_backtest(years, args.clip_lo, args.clip_hi, pp)
     elif args.backtest:
-        run_backtest(args.year, args.clip_lo, args.clip_hi)
+        run_backtest(args.year, args.clip_lo, args.clip_hi, pp)
     elif args.sample_submission:
-        run_submission(args.year, args.sample_submission, args.output, args.clip_lo, args.clip_hi)
+        run_submission(args.year, args.sample_submission, args.output, args.clip_lo, args.clip_hi, pp)
     else:
         print("Specify --backtest, --multi-year-backtest, or --sample-submission")
         sys.exit(1)
