@@ -19,6 +19,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,15 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.data.team_name_resolver import TeamNameResolver
+from src.exports.kaggle import (
+    build_team_id_map_with_spellings,
+    generate_predictions,
+    is_womens_team,
+    load_kaggle_spellings,
+    load_kaggle_teams,
+    load_kaggle_womens_teams,
+)
 from src.ml.calibration.post_processing import PostProcessingPipeline
 from src.prediction.torvik_kaggle import EnsembleKagglePredictor, TarvikKagglePredictor
 
@@ -55,30 +65,18 @@ def load_tournament_seeds(year: int) -> dict[str, int]:
 
 def load_kaggle_id_mapping() -> dict[int, str]:
     """Load Kaggle TeamID -> canonical_id mapping."""
-    mapping_path = REPO_ROOT / "data/kaggle/team_id_mapping.json"
-    if not mapping_path.exists():
-        print(f"ERROR: {mapping_path} not found")
+    teams_path = REPO_ROOT / "data/kaggle/MTeams.csv"
+    spellings_path = REPO_ROOT / "data/kaggle/MTeamSpellings.csv"
+    if not teams_path.exists():
+        print(f"ERROR: {teams_path} not found")
+        sys.exit(1)
+    if not spellings_path.exists():
+        print(f"ERROR: {spellings_path} not found")
         sys.exit(1)
 
-    with open(mapping_path) as f:
-        data = json.load(f)
-
-    # Build reverse mapping: kaggle_team_id (int) -> canonical_id
-    id_map = {}
-    by_bt = data.get("by_barttorvik_id", {})
-    for bt_id, info in by_bt.items():
-        canonical = info.get("canonical_id")
-        if canonical:
-            id_map[int(bt_id)] = canonical
-
-    # Also try by_canonical_id for any additional mappings
-    by_canon = data.get("by_canonical_id", {})
-    for canon_id, info in by_canon.items():
-        bt_id = info.get("barttorvik_id")
-        if bt_id is not None:
-            id_map[int(bt_id)] = canon_id
-
-    return id_map
+    team_map = load_kaggle_teams(str(teams_path))
+    spellings = load_kaggle_spellings(str(spellings_path))
+    return build_team_id_map_with_spellings(team_map, TeamNameResolver(), spellings)
 
 
 def _maybe_postprocess(
@@ -91,6 +89,133 @@ def _maybe_postprocess(
     if pp is None:
         return pred
     return pp.process(pred, seed1, seed2)
+
+
+def _build_submission_predict_fn(
+    year: int,
+    mode: str,
+    clip_lo: float,
+    clip_hi: float,
+    pp: PostProcessingPipeline | None = None,
+) -> tuple[Callable[[str, str], float], dict[str, object]]:
+    """Build the prediction function used by Kaggle submission export."""
+    seeds = load_tournament_seeds(year)
+    torvik = TarvikKagglePredictor.from_year(year, seeds=seeds, clip_lo=clip_lo, clip_hi=clip_hi)
+
+    if mode == "ensemble":
+        pipe_lookup = _load_pipeline_lookup(year)
+        if pipe_lookup is None:
+            raise RuntimeError(
+                f"No per-game pipeline predictions available for {year}; "
+                "ensemble submission mode requires artifacts/backtest_result_temperature.json"
+            )
+
+        def pipe_predict(t1, t2, _lookup=pipe_lookup):
+            key1, key2 = f"{t1}_{t2}", f"{t2}_{t1}"
+            if key1 in _lookup:
+                return _lookup[key1]
+            if key2 in _lookup:
+                return 1.0 - _lookup[key2]
+            return 0.5
+
+        ensemble = EnsembleKagglePredictor.from_walk_forward(
+            torvik,
+            pipe_predict,
+            year,
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+        )
+
+        def predict_fn(t1: str, t2: str, _ensemble=ensemble) -> float:
+            return _maybe_postprocess(_ensemble.predict(t1, t2), seeds.get(t1, 8), seeds.get(t2, 8), pp)
+
+        return predict_fn, {
+            "mode": "ensemble",
+            "alpha": round(float(ensemble.alpha), 4),
+            "torvik_stats": torvik.stats(),
+        }
+
+    def predict_fn(t1: str, t2: str, _torvik=torvik) -> float:
+        return _maybe_postprocess(_torvik.predict(t1, t2), seeds.get(t1, 8), seeds.get(t2, 8), pp)
+
+    return predict_fn, {
+        "mode": "torvik",
+        "torvik_stats": torvik.stats(),
+    }
+
+
+def _load_kaggle_seed_numbers(csv_path: Path, year: int) -> dict[int, int]:
+    """Load Kaggle tournament seeds as TeamID -> numeric seed for one season."""
+    if not csv_path.exists():
+        return {}
+
+    import csv
+
+    seeds: dict[int, int] = {}
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                if int(row.get("Season", "0")) != year:
+                    continue
+                kaggle_id = int(row.get("TeamID", "0"))
+            except (TypeError, ValueError):
+                continue
+            seed_str = (row.get("Seed") or "").strip()
+            seed_num = int("".join(ch for ch in seed_str[1:] if ch.isdigit()) or "8")
+            seeds[kaggle_id] = seed_num
+    return seeds
+
+
+def _build_womens_submission_support(sample_df: pd.DataFrame, year: int) -> tuple[dict[int, str] | None, Callable[[str, str], float] | None]:
+    """Build women's TeamID mapping and predictor for combined Kaggle samples."""
+    women_teams_path = REPO_ROOT / "data/kaggle/WTeams.csv"
+    women_spellings_path = REPO_ROOT / "data/kaggle/WTeamSpellings.csv"
+    women_seeds_path = REPO_ROOT / "data/kaggle/WNCAATourneySeeds.csv"
+    if not women_teams_path.exists() or not women_spellings_path.exists():
+        return None, None
+
+    from src.pipeline.womens import WomensPipeline, WomensPipelineConfig
+
+    women_team_map = load_kaggle_womens_teams(str(women_teams_path))
+    women_spellings = load_kaggle_spellings(str(women_spellings_path))
+    women_id_map = build_team_id_map_with_spellings(women_team_map, TeamNameResolver(), women_spellings)
+
+    pipeline = WomensPipeline(
+        WomensPipelineConfig(
+            year=year,
+            cache_dir=str(REPO_ROOT / "data/raw"),
+        )
+    )
+    pipeline.run()
+
+    women_team_ids = set()
+    for raw_id in sample_df["ID"].astype(str):
+        parts = raw_id.split("_")
+        if len(parts) != 3:
+            continue
+        for tid_str in parts[1:]:
+            try:
+                tid = int(tid_str)
+            except ValueError:
+                continue
+            if is_womens_team(tid):
+                women_team_ids.add(tid)
+
+    women_seed_lookup = _load_kaggle_seed_numbers(women_seeds_path, year)
+    seed_backfill = {}
+    for team_id in women_team_ids:
+        canonical = women_id_map.get(team_id)
+        if canonical is None:
+            canonical = f"w_team_{team_id}"
+            women_id_map[team_id] = canonical
+        if canonical not in pipeline.feature_engineer.team_features:
+            seed_backfill[canonical] = women_seed_lookup.get(team_id, 8)
+
+    if seed_backfill:
+        pipeline.set_team_seeds(seed_backfill)
+
+    return women_id_map, pipeline.predict_probability
 
 
 def run_backtest(year: int, clip_lo: float, clip_hi: float, pp: PostProcessingPipeline | None = None) -> None:
@@ -168,58 +293,37 @@ def run_submission(
     year: int,
     sample_path: str,
     output: str,
+    mode: str,
     clip_lo: float,
     clip_hi: float,
     pp: PostProcessingPipeline | None = None,
 ) -> None:
     """Generate a Kaggle submission CSV."""
-    seeds = load_tournament_seeds(year)
-    predictor = TarvikKagglePredictor.from_year(year, seeds=seeds, clip_lo=clip_lo, clip_hi=clip_hi)
     id_map = load_kaggle_id_mapping()
+    predict_fn, predictor_info = _build_submission_predict_fn(year, mode, clip_lo, clip_hi, pp)
 
-    # Reverse map: canonical_id -> list of kaggle IDs
-    canon_to_kaggle: dict[str, list[int]] = {}
-    for kid, cid in id_map.items():
-        canon_to_kaggle.setdefault(cid, []).append(kid)
-
-    # Load sample submission
     sample_df = pd.read_csv(sample_path)
     print(f"Sample submission: {len(sample_df)} rows")
+    womens_id_map, womens_predict_fn = _build_womens_submission_support(sample_df, year)
+    out_df = generate_predictions(
+        sample_df,
+        id_map=id_map,
+        predict_fn=predict_fn,
+        season_filter=year,
+        womens_id_map=womens_id_map,
+        womens_predict_fn=womens_predict_fn,
+    )
+    out_df.to_csv(output, index=False)
 
-    preds = []
-    mapped, unmapped = 0, 0
-    for raw_id in sample_df["ID"].astype(str):
-        parts = raw_id.split("_")
-        if len(parts) != 3:
-            preds.append(0.5)
-            unmapped += 1
-            continue
-
-        season, t1_kid, t2_kid = int(parts[0]), int(parts[1]), int(parts[2])
-        if season != year:
-            preds.append(0.5)
-            continue
-
-        t1_canon = id_map.get(t1_kid)
-        t2_canon = id_map.get(t2_kid)
-        if not t1_canon or not t2_canon:
-            preds.append(0.5)
-            unmapped += 1
-            continue
-
-        prob = predictor.predict(t1_canon, t2_canon)
-        # Post-process with FLB if configured (need seeds for the teams)
-        s1 = seeds.get(t1_canon, 8)
-        s2 = seeds.get(t2_canon, 8)
-        prob = _maybe_postprocess(prob, s1, s2, pp)
-        preds.append(prob)
-        mapped += 1
-
-    sample_df["Pred"] = preds
-    sample_df.to_csv(output, index=False)
+    stats = out_df.attrs.get("kaggle_export_stats", {})
     print(f"\nSubmission written to {output}")
-    print(f"  Mapped: {mapped}, Unmapped: {unmapped}")
-    print(f"  Predictor: {predictor.stats()}")
+    print(f"  Mode: {predictor_info['mode']}")
+    print(f"  Mapped: {stats.get('mapped_rows', 0)}, Unmapped: {stats.get('unmapped_rows', 0)}")
+    if stats.get("womens_rows", 0):
+        print(f"  Women's mapped: {stats.get('womens_mapped', 0)}/{stats.get('womens_rows', 0)}")
+    if "alpha" in predictor_info:
+        print(f"  Ensemble alpha: {predictor_info['alpha']:.2f}")
+    print(f"  Predictor: {predictor_info['torvik_stats']}")
 
 
 def run_multi_year_backtest(
@@ -435,7 +539,7 @@ def main():
     elif args.backtest:
         run_backtest(args.year, args.clip_lo, args.clip_hi, pp)
     elif args.sample_submission:
-        run_submission(args.year, args.sample_submission, args.output, args.clip_lo, args.clip_hi, pp)
+        run_submission(args.year, args.sample_submission, args.output, args.mode, args.clip_lo, args.clip_hi, pp)
     else:
         print("Specify --backtest, --multi-year-backtest, or --sample-submission")
         sys.exit(1)

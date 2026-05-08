@@ -9,10 +9,12 @@ import csv
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from ..data.normalize import normalize_team_id
 from ..data.team_name_resolver import TeamNameResolver
 
 logger = logging.getLogger(__name__)
@@ -101,6 +103,57 @@ def build_team_id_map(
         if result.confidence < 0.80:
             continue
         mapping[int(team_id)] = result.canonical_id
+    return mapping
+
+
+def load_kaggle_spellings(path: str) -> Dict[str, int]:
+    """Load Kaggle TeamSpellings CSV into spelling -> TeamID mapping."""
+    spellings: Dict[str, int] = {}
+    with open(path, "r", newline="", encoding="latin-1") as f:
+        reader = csv.DictReader(f)
+        if "TeamNameSpelling" not in reader.fieldnames or "TeamID" not in reader.fieldnames:
+            raise ValueError("TeamSpellings CSV must contain TeamNameSpelling and TeamID columns")
+        for row in reader:
+            name = (row.get("TeamNameSpelling") or "").strip().lower()
+            if not name:
+                continue
+            try:
+                team_id = int(row.get("TeamID", "").strip())
+            except (TypeError, ValueError):
+                continue
+            spellings[name] = team_id
+    return spellings
+
+
+def build_team_id_map_with_spellings(
+    team_id_to_name: Dict[int, str],
+    resolver: TeamNameResolver,
+    spellings: Dict[str, int],
+) -> Dict[int, str]:
+    """Build TeamID -> canonical mapping using display names plus Kaggle spellings.
+
+    The base ``*Teams.csv`` files use abbreviated names like ``CS Sacramento``.
+    ``*TeamSpellings.csv`` contains richer aliases that usually resolve at much
+    higher confidence, so prefer the best spelling per TeamID and then fall back
+    to normalized display names for anything still unresolved.
+    """
+    mapping = build_team_id_map(team_id_to_name, resolver)
+    best_by_team_id: Dict[int, Tuple[str, float]] = {}
+
+    for spelling, team_id in spellings.items():
+        result = resolver.resolve(spelling)
+        if not result.canonical_id or result.confidence < 0.80:
+            continue
+        prev = best_by_team_id.get(team_id)
+        if prev is None or result.confidence > prev[1]:
+            best_by_team_id[team_id] = (result.canonical_id, result.confidence)
+
+    for team_id, (canonical_id, _confidence) in best_by_team_id.items():
+        mapping[int(team_id)] = canonical_id
+
+    for team_id, team_name in team_id_to_name.items():
+        mapping.setdefault(int(team_id), normalize_team_id(team_name))
+
     return mapping
 
 

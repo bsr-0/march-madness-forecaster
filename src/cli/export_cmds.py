@@ -1,6 +1,8 @@
 """Export subcommands: kaggle-export, espn-bracket-export."""
 
+import csv
 import json
+from pathlib import Path
 
 from ._helpers import (
     _build_pipeline_config,
@@ -18,10 +20,11 @@ def run_kaggle_export(args):
     """Generate a Kaggle submission CSV using the SOTA pipeline."""
     from ..pipeline.womens import WomensPipeline, WomensPipelineConfig
     from ..exports.kaggle import (
+        build_team_id_map_with_spellings,
         load_kaggle_womens_teams,
         is_womens_team,
-        build_team_id_map,
         generate_predictions,
+        load_kaggle_spellings,
         load_kaggle_teams,
     )
     from ..ml.evaluation.kaggle_backtest import validate_submission
@@ -48,7 +51,9 @@ def run_kaggle_export(args):
 
     team_id_to_name = load_kaggle_teams(args.kaggle_teams)
     resolver = TeamNameResolver()
-    id_map = build_team_id_map(team_id_to_name, resolver)
+    mens_spellings_csv = str(Path(args.kaggle_teams).with_name("MTeamSpellings.csv"))
+    mens_spellings = load_kaggle_spellings(mens_spellings_csv)
+    id_map = build_team_id_map_with_spellings(team_id_to_name, resolver, mens_spellings)
     allowed = set(pipeline.feature_engineer.team_features.keys())
     id_map = {k: v for k, v in id_map.items() if v in allowed}
 
@@ -57,11 +62,30 @@ def run_kaggle_export(args):
     womens_predict_fn = None
     womens_teams_csv = getattr(args, "womens_teams", None)
 
+    def _load_tourney_seeds_csv(path: Path, season: int) -> dict[int, int]:
+        if not path.exists():
+            return {}
+        seeds: dict[int, int] = {}
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    if int(row.get("Season", "0")) != season:
+                        continue
+                    kaggle_id = int(row.get("TeamID", "0"))
+                except (TypeError, ValueError):
+                    continue
+                seed_str = (row.get("Seed") or "").strip()
+                seed_num = int("".join(ch for ch in seed_str[1:] if ch.isdigit()) or "8")
+                seeds[kaggle_id] = seed_num
+        return seeds
+
     if womens_teams_csv:
         print("Running women's tournament pipeline...")
         w_config = WomensPipelineConfig(
             year=year,
             cache_dir=config.womens_cache_dir or config.data_cache_dir,
+            seed_only_mode=config.womens_seed_only_mode,
         )
         womens_pipeline = WomensPipeline(w_config)
         try:
@@ -72,7 +96,10 @@ def run_kaggle_export(args):
 
         womens_team_id_to_name = load_kaggle_womens_teams(womens_teams_csv)
         womens_resolver = TeamNameResolver()
-        womens_id_map = build_team_id_map(womens_team_id_to_name, womens_resolver)
+        womens_spellings_csv = str(Path(womens_teams_csv).with_name("WTeamSpellings.csv"))
+        womens_spellings = load_kaggle_spellings(womens_spellings_csv)
+        womens_id_map = build_team_id_map_with_spellings(womens_team_id_to_name, womens_resolver, womens_spellings)
+        womens_seed_lookup = _load_tourney_seeds_csv(Path(womens_teams_csv).with_name("WNCAATourneySeeds.csv"), year)
 
         import pandas as pd
 
@@ -89,12 +116,18 @@ def run_kaggle_export(args):
                     except ValueError:
                         pass
 
+        seed_backfill = {}
         for wtid in womens_team_ids:
+            seed = womens_seed_lookup.get(wtid, 8)
             if wtid not in womens_id_map:
                 canonical = f"w_team_{wtid}"
                 womens_id_map[wtid] = canonical
-                if canonical not in womens_pipeline.feature_engineer.team_features:
-                    womens_pipeline.set_team_seeds({canonical: 8})
+            canonical = womens_id_map[wtid]
+            if canonical not in womens_pipeline.feature_engineer.team_features:
+                seed_backfill[canonical] = seed
+
+        if seed_backfill:
+            womens_pipeline.set_team_seeds(seed_backfill)
 
         womens_predict_fn = womens_pipeline.predict_probability
         print(f"  Women's teams mapped: {len(womens_id_map)}")
