@@ -103,6 +103,96 @@ def test_script_kaggle_mapping_covers_all_mens_ids_in_sample_submission():
     assert not missing
 
 
+def test_womens_id_mapping_covers_all_womens_ids_in_sample_submission():
+    """Every women's TeamID in the sample submission must be mappable."""
+    women_teams_path = REPO_ROOT / "data/kaggle/WTeams.csv"
+    women_spellings_path = REPO_ROOT / "data/kaggle/WTeamSpellings.csv"
+    if not women_teams_path.exists():
+        pytest.skip("WTeams.csv not found")
+
+    from src.exports.kaggle import load_kaggle_womens_teams
+
+    women_team_map = load_kaggle_womens_teams(str(women_teams_path))
+    women_spellings = load_kaggle_spellings(str(women_spellings_path))
+    resolver = TeamNameResolver()
+    women_id_map = build_team_id_map_with_spellings(women_team_map, resolver, women_spellings)
+
+    sample_df = pd.read_csv(REPO_ROOT / "data/kaggle/SampleSubmissionStage2.csv")
+    missing = set()
+    for raw_id in sample_df["ID"].astype(str):
+        _season, team1, team2 = parse_kaggle_id(raw_id)
+        if is_womens_team(team1):
+            if team1 not in women_id_map:
+                missing.add(team1)
+            if team2 not in women_id_map:
+                missing.add(team2)
+
+    assert not missing, f"Unmapped women's TeamIDs: {missing}"
+
+
+def test_womens_kaggle_end_to_end_seed_only_predictions():
+    """Full pipeline: build women's ID map, backfill seeds, verify predictions vary by seed."""
+    women_teams_path = REPO_ROOT / "data/kaggle/WTeams.csv"
+    women_spellings_path = REPO_ROOT / "data/kaggle/WTeamSpellings.csv"
+    if not women_teams_path.exists():
+        pytest.skip("WTeams.csv not found")
+
+    from src.exports.kaggle import load_kaggle_womens_teams
+    from src.pipeline.womens import WomensPipeline, WomensPipelineConfig
+
+    # Build women's ID map from real Kaggle data
+    women_team_map = load_kaggle_womens_teams(str(women_teams_path))
+    women_spellings = load_kaggle_spellings(str(women_spellings_path))
+    resolver = TeamNameResolver()
+    women_id_map = build_team_id_map_with_spellings(women_team_map, resolver, women_spellings)
+
+    # At least ~350 women's teams should be mapped
+    assert len(women_id_map) >= 350, f"Only {len(women_id_map)} women's teams mapped"
+
+    # Run pipeline in seed-only mode (no cached stats)
+    pipeline = WomensPipeline(WomensPipelineConfig(seed_only_mode=True))
+    pipeline.run()
+
+    # Use 2025 seeded teams (known seed data) to build test matchups
+    # W01=3376 (1-seed), W16=3399 (16-seed), W08=3428 (8-seed)
+    seed_1_id = women_id_map.get(3376, "w_team_3376")
+    seed_16_id = women_id_map.get(3399, "w_team_3399")
+    seed_8_id = women_id_map.get(3428, "w_team_3428")
+
+    pipeline.set_team_seeds({seed_1_id: 1, seed_16_id: 16, seed_8_id: 8})
+
+    # Construct sample rows with these teams
+    sample_df = pd.DataFrame(
+        {
+            "ID": ["2025_3376_3399", "2025_3376_3428", "2025_3399_3428"],
+            "Pred": [0.0, 0.0, 0.0],
+        }
+    )
+
+    out_df = generate_predictions(
+        sample_df,
+        id_map={},
+        predict_fn=lambda t1, t2: 0.5,
+        season_filter=2025,
+        womens_id_map=women_id_map,
+        womens_predict_fn=pipeline.predict_probability,
+    )
+
+    stats = out_df.attrs.get("kaggle_export_stats", {})
+    preds = out_df["Pred"].tolist()
+
+    assert stats.get("womens_mapped", 0) == 3, f"Expected 3 mapped, got {stats.get('womens_mapped')}"
+    assert stats.get("predict_failures", 0) == 0
+
+    # 1-seed vs 16-seed should heavily favor the 1-seed
+    assert preds[0] > 0.80, f"1v16 prediction {preds[0]:.3f} should be > 0.80"
+    # 1-seed vs 8-seed should still favor the 1-seed
+    assert preds[1] > 0.55, f"1v8 prediction {preds[1]:.3f} should be > 0.55"
+    # All bounded
+    for p in preds:
+        assert 0.005 <= p <= 0.995
+
+
 def test_run_submission_honors_requested_mode(monkeypatch, tmp_path):
     module = _load_kaggle_submission_module()
 
