@@ -3876,95 +3876,136 @@ def run_backtest(
             print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
     # --- Aggregates ---
-    if eval_start_year:
-        results = [r for r in results if r["year"] >= eval_start_year]
-        eval_label = f"AGGREGATE (years >= {eval_start_year})"
-    else:
-        eval_label = "AGGREGATE"
-    print(f"\n{'=' * 100}")
-    print(eval_label)
-    print(f"{'=' * 100}")
-    print(
-        f"\n  {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} {'P(1st)':>8} {'P(top5%)':>10} {'P(top25%)':>10} {'MeanScr':>8}"
-    )
-    print(f"  {'-' * 65}")
+    def _print_aggregate_block(subset, label):
+        """Print the aggregate table + paired statistical tests for a result subset."""
+        print(f"\n{'=' * 100}")
+        print(label)
+        print(f"{'=' * 100}")
+        if not subset:
+            print("  (no results in this window)")
+            return
 
-    unique_modes = list(dict.fromkeys(r["mode"] for r in results))
-    for mode in unique_modes:
-        mode_results = [r for r in results if r["mode"] == mode]
-        if not mode_results:
-            continue
         print(
-            f"  {mode:<8} "
-            f"{np.mean([r['best_rank'] for r in mode_results]):8.1f} "
-            f"{np.mean([r['mean_rank'] for r in mode_results]):8.1f} "
-            f"{np.mean([r['p_first'] for r in mode_results]):8.4f} "
-            f"{np.mean([r['p_top5'] for r in mode_results]):10.4f} "
-            f"{np.mean([r['p_top25'] for r in mode_results]):10.4f} "
-            f"{np.mean([r['mean_score'] for r in mode_results]):8.0f}"
+            f"\n  {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} {'P(1st)':>8} {'P(top5%)':>10} {'P(top25%)':>10} {'MeanScr':>8}"
+        )
+        print(f"  {'-' * 65}")
+
+        unique_modes = list(dict.fromkeys(r["mode"] for r in subset))
+        for mode in unique_modes:
+            mode_results = [r for r in subset if r["mode"] == mode]
+            if not mode_results:
+                continue
+            print(
+                f"  {mode:<8} "
+                f"{np.mean([r['best_rank'] for r in mode_results]):8.1f} "
+                f"{np.mean([r['mean_rank'] for r in mode_results]):8.1f} "
+                f"{np.mean([r['p_first'] for r in mode_results]):8.4f} "
+                f"{np.mean([r['p_top5'] for r in mode_results]):10.4f} "
+                f"{np.mean([r['p_top25'] for r in mode_results]):10.4f} "
+                f"{np.mean([r['mean_score'] for r in mode_results]):8.0f}"
+            )
+
+        # Collect per-year ranks by mode
+        mode_ranks = {}
+        mode_best = {}
+        for r in subset:
+            m = r["mode"]
+            if m not in mode_ranks:
+                mode_ranks[m] = {}
+                mode_best[m] = {}
+            mode_ranks[m][r["year"]] = r["mean_rank"]
+            mode_best[m][r["year"]] = r["best_rank"]
+
+        baseline_key = "seed_forward" if "seed_forward" in mode_ranks else ("seed" if "seed" in mode_ranks else None)
+        if baseline_key is None:
+            print("    No seed baseline found, skipping statistical tests.")
+            return
+
+        comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in mode_ranks if m != baseline_key]
+        n_comparisons = len(comparison_modes)
+        if n_comparisons == 0:
+            return
+        bonferroni_alpha = 0.05 / n_comparisons
+
+        print(f"\n  Statistical Tests — Mean Rank (paired across years):")
+        print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
+        for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+            shared_years = sorted(set(mode_ranks[baseline_key].keys()) & set(cmp_ranks.keys()))
+            if len(shared_years) < 5:
+                wins = (
+                    np.sum(
+                        np.array([cmp_ranks[y] for y in shared_years])
+                        < np.array([mode_ranks[baseline_key][y] for y in shared_years])
+                    )
+                    if shared_years
+                    else 0
+                )
+                print(
+                    f"    MeanRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
+                )
+                continue
+            seed_arr = np.array([mode_ranks[baseline_key][y] for y in shared_years])
+            cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
+            t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
+            p_adj = min(p * n_comparisons, 1.0)
+            sig = "*" if p < bonferroni_alpha else ""
+            improvement = np.mean(seed_arr - cmp_arr)
+            wins = np.sum(cmp_arr < seed_arr)
+            print(
+                f"    MeanRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+                f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
+            )
+
+        print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
+        print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
+        for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+            shared_years = sorted(set(mode_best[baseline_key].keys()) & set(cmp_best.keys()))
+            if len(shared_years) < 5:
+                wins = (
+                    np.sum(
+                        np.array([cmp_best[y] for y in shared_years])
+                        < np.array([mode_best[baseline_key][y] for y in shared_years])
+                    )
+                    if shared_years
+                    else 0
+                )
+                print(
+                    f"    BestRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
+                )
+                continue
+            sb = np.array([mode_best[baseline_key][y] for y in shared_years])
+            cb = np.array([cmp_best[y] for y in shared_years])
+            t, p = sp_stats.ttest_rel(sb, cb)
+            p_adj = min(p * n_comparisons, 1.0)
+            sig = "*" if p < bonferroni_alpha else ""
+            improvement = np.mean(sb - cb)
+            wins = np.sum(cb < sb)
+            print(
+                f"    BestRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+                f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
+            )
+
+    # Full-window aggregate (always shown)
+    all_years = sorted({r["year"] for r in results})
+    _print_aggregate_block(results, f"AGGREGATE ALL YEARS ({min(all_years)}–{max(all_years)}, n={len(all_years)})")
+
+    # 2021+ secondary lens (always shown alongside full window)
+    recent_cutoff = 2021
+    recent_results = [r for r in results if r["year"] >= recent_cutoff]
+    recent_years = sorted({r["year"] for r in recent_results})
+    if recent_results and recent_years != all_years:
+        _print_aggregate_block(
+            recent_results,
+            f"AGGREGATE {recent_cutoff}+ (recent window, n={len(recent_years)} — diagnostic only, low power)",
         )
 
-    # --- Statistical tests (on mean_rank for fair comparison) ---
-    print(f"\n  Statistical Tests — Mean Rank (paired across years):")
-
-    # Collect per-year ranks by mode (handles both legacy and new strategy names)
-    mode_ranks = {}
-    mode_best = {}
-    for r in results:
-        m = r["mode"]
-        if m not in mode_ranks:
-            mode_ranks[m] = {}
-            mode_best[m] = {}
-        mode_ranks[m][r["year"]] = r["mean_rank"]
-        mode_best[m][r["year"]] = r["best_rank"]
-
-    # Determine baseline: prefer "seed_forward" (new), fall back to "seed" (legacy)
-    baseline_key = "seed_forward" if "seed_forward" in mode_ranks else ("seed" if "seed" in mode_ranks else None)
-    if baseline_key is None:
-        print("    No seed baseline found, skipping statistical tests.")
-        return results
-
-    # For each non-baseline mode, run paired tests vs seed
-    comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in mode_ranks if m != baseline_key]
-
-    n_comparisons = len(comparison_modes)
-    bonferroni_alpha = 0.05 / n_comparisons
-    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
-
-    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-        shared_years = sorted(set(mode_ranks[baseline_key].keys()) & set(cmp_ranks.keys()))
-        if len(shared_years) < 5:
-            continue
-        seed_arr = np.array([mode_ranks[baseline_key][y] for y in shared_years])
-        cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
-        t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
-        p_adj = min(p * n_comparisons, 1.0)
-        sig = "*" if p < bonferroni_alpha else ""
-        improvement = np.mean(seed_arr - cmp_arr)
-        wins = np.sum(cmp_arr < seed_arr)
-        print(
-            f"    MeanRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
-            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
-        )
-
-    # --- Best-bracket stats (pool optimizer view) ---
-    print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
-    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
-
-    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-        shared_years = sorted(set(mode_best[baseline_key].keys()) & set(cmp_best.keys()))
-        if len(shared_years) < 5:
-            continue
-        sb = np.array([mode_best[baseline_key][y] for y in shared_years])
-        cb = np.array([cmp_best[y] for y in shared_years])
-        t, p = sp_stats.ttest_rel(sb, cb)
-        p_adj = min(p * n_comparisons, 1.0)
-        sig = "*" if p < bonferroni_alpha else ""
-        improvement = np.mean(sb - cb)
-        wins = np.sum(cb < sb)
-        print(
-            f"    BestRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
-            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
+    # Optional custom eval_start_year window (only if different from both above)
+    if eval_start_year and eval_start_year != recent_cutoff:
+        custom_results = [r for r in results if r["year"] >= eval_start_year]
+        custom_years = sorted({r["year"] for r in custom_results})
+        _print_aggregate_block(
+            custom_results,
+            f"AGGREGATE years >= {eval_start_year} (n={len(custom_years)})",
         )
 
     print(f"\n{'=' * 100}")
