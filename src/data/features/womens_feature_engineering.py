@@ -241,6 +241,7 @@ class WomensTeamFeatures:
             free_throw_pct=stats.free_throw_pct,
             three_pt_pct=stats.three_pt_pct,
             three_pt_variance=stats.three_pt_variance,
+            net_rating=getattr(stats, "net_rating", 50.0),
         )
 
 

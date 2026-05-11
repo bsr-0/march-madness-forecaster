@@ -51,3 +51,18 @@ def test_womens_pipeline_backfills_missing_feature_rows_from_seeds():
 
     assert "w_team_3101" in pipeline.feature_engineer.team_features
     assert "w_team_3481" in pipeline.feature_engineer.team_features
+
+
+def test_womens_pipeline_loads_kaggle_regular_season_fallback():
+    pipeline = WomensPipeline(WomensPipelineConfig(year=2026, seed_only_mode=True))
+    report = pipeline.run()
+
+    assert report["status"] == "ready"
+    assert report["kaggle_teams_loaded"] >= 300
+    assert report["features_built"] >= 300
+
+    ranked = sorted(pipeline.team_stats.values(), key=lambda stats: stats.adj_efficiency_margin, reverse=True)
+    assert ranked[0].seed <= ranked[-1].seed
+
+    prob = pipeline.predict_probability(ranked[0].team_id, ranked[-1].team_id)
+    assert prob > 0.70
