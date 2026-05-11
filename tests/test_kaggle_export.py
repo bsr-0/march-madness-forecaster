@@ -600,7 +600,7 @@ def test_build_submission_predict_fn_supports_recent5_conservative_preset(monkey
     assert captured["year"] == 2026
     assert captured["kwargs"]["recent_year_count"] == 5
     assert captured["kwargs"]["recent_total_ratio"] == 1.0
-    assert captured["kwargs"]["correction_ridge"] == 5.0
+    assert captured["kwargs"]["correction_ridge"] == 20.0
     assert captured["kwargs"]["max_correction"] == 0.06
     assert predict_fn("duke", "kentucky") == 0.64
     assert info["mode"] == module.TORVIK_CORRECTED_RECENT5_CONSERVATIVE

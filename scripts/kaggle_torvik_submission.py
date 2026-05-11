@@ -121,6 +121,9 @@ def _resolve_mens_kaggle_mode_config(
     }
 
     if mode == TORVIK_CORRECTED_RECENT5_CONSERVATIVE:
+        # Admitted 2026-05-10: 8-feature model (market + elo + round).
+        # ridge=20.0 selected by admission gate over {5,10,20,40}; beats
+        # ensemble incumbent by +0.0071 Brier on final holdout, 3/4 years.
         config.update(
             {
                 "base_mode": "torvik_corrected",
@@ -128,7 +131,7 @@ def _resolve_mens_kaggle_mode_config(
                 "recent_year_weight": 1.0,
                 "recent_year_count": 5,
                 "recent_total_ratio": 1.0,
-                "correction_ridge": 5.0,
+                "correction_ridge": 20.0,
                 "max_correction": 0.06,
             }
         )
