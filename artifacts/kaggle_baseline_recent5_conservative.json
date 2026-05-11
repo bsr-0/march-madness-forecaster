@@ -1,0 +1,192 @@
+{
+  "generated_at": "2026-05-10T04:48:57.716408+00:00",
+  "incumbent": {
+    "mean_brier": 0.16230102619532003,
+    "mean_bss": 0.07011681013158122,
+    "mean_ece": 0.1335741746031746,
+    "mean_seed_brier": 0.174539154986,
+    "per_year": [
+      {
+        "brier": 0.1970282623415321,
+        "bss": 0.0580785633879054,
+        "ece": 0.16996771111111117,
+        "metadata": {
+          "alpha": 0.6000000000000001,
+          "alpha_training_info": {
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighted_brier": 0.18036737292071514,
+            "weighted_brier_ratio": 0.9333950621909294,
+            "weighting_mode": "recent_block"
+          }
+        },
+        "seed_brier": 0.20917695965196825,
+        "year": 2023
+      },
+      {
+        "brier": 0.1770007153490286,
+        "bss": 0.05795601767654501,
+        "ece": 0.08608370793650791,
+        "metadata": {
+          "alpha": 0.6000000000000001,
+          "alpha_training_info": {
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighted_brier": 0.18036737292071514,
+            "weighted_brier_ratio": 0.9333950621909294,
+            "weighting_mode": "recent_block"
+          }
+        },
+        "seed_brier": 0.18789007590969845,
+        "year": 2024
+      },
+      {
+        "brier": 0.1269963898595708,
+        "bss": 0.07829532383715876,
+        "ece": 0.17726594920634917,
+        "metadata": {
+          "alpha": 0.6000000000000001,
+          "alpha_training_info": {
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighted_brier": 0.18191402991607009,
+            "weighted_brier_ratio": 0.9338418213787915,
+            "weighting_mode": "recent_block"
+          }
+        },
+        "seed_brier": 0.13778425253115872,
+        "year": 2025
+      },
+      {
+        "brier": 0.14817873723114858,
+        "bss": 0.09262768366810858,
+        "ece": 0.10097933015873022,
+        "metadata": {
+          "alpha": 0.6000000000000001,
+          "alpha_training_info": {
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighted_brier": 0.18191402991607009,
+            "weighted_brier_ratio": 0.9338418213787915,
+            "weighting_mode": "recent_block"
+          }
+        },
+        "seed_brier": 0.16330533185117468,
+        "year": 2026
+      }
+    ],
+    "spec": {
+      "mode": "ensemble",
+      "name": "ensemble__recent_total_ratio=1.0__recent_year_count=5",
+      "params": {
+        "recent_total_ratio": 1.0,
+        "recent_year_count": 5
+      }
+    }
+  },
+  "split": {
+    "dev_years": [
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022
+    ],
+    "final_years": [
+      2025,
+      2026
+    ],
+    "shadow_years": [
+      2023,
+      2024
+    ]
+  }
+}
