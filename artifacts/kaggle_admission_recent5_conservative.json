@@ -1,0 +1,2473 @@
+{
+  "admission_gate": {
+    "checks": {
+      "calibration_degradation": {
+        "passed": true,
+        "threshold": 0.01,
+        "value": -0.02236256281583361
+      },
+      "coefficient_stability": {
+        "details": {
+          "available": true,
+          "min_consistency": 1.0,
+          "per_feature": [
+            {
+              "consistency": 1.0,
+              "dominant_sign": -1,
+              "feature_index": 1
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": 1,
+              "feature_index": 2
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": -1,
+              "feature_index": 3
+            }
+          ]
+        },
+        "passed": true,
+        "threshold": 0.75
+      },
+      "holdout_win_rate": {
+        "n_years": 4,
+        "passed": true,
+        "threshold": 0.75,
+        "value": 0.75,
+        "wins": 3
+      },
+      "mean_improvement": {
+        "passed": true,
+        "threshold": 0.002,
+        "value": 0.0074802307564270365
+      },
+      "per_year_regression": {
+        "passed": true,
+        "per_year": [
+          {
+            "candidate_bss": 0.20064181401531167,
+            "delta": -0.016857419699007545,
+            "year": 2025
+          },
+          {
+            "candidate_bss": 0.08101166253364744,
+            "delta": 0.0018969581861534301,
+            "year": 2026
+          }
+        ],
+        "threshold": 0.003
+      },
+      "positive_final_bss": {
+        "passed": true,
+        "per_year": [
+          {
+            "candidate_bss": 0.20064181401531167,
+            "year": 2025
+          },
+          {
+            "candidate_bss": 0.08101166253364744,
+            "year": 2026
+          }
+        ]
+      },
+      "regression_tolerance": {
+        "delta": -0.0074802307564270365,
+        "passed": true,
+        "tolerance": 0.03638159685562206
+      }
+    },
+    "mean_improvement": 0.0074802307564270365,
+    "passed": true
+  },
+  "candidate_search": {
+    "n_experiments": 17,
+    "selected_spec": {
+      "mode": "torvik_corrected",
+      "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+      "params": {
+        "correction_ridge": 5.0,
+        "max_correction": 0.06,
+        "recent_total_ratio": 1.0,
+        "recent_year_count": 5
+      }
+    },
+    "shadow_ranked": [
+      {
+        "mean_brier": 0.18223156517787126,
+        "mean_bss": 0.0821118407872985,
+        "mean_ece": 0.12913636568788234,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19171359886796116,
+            "bss": 0.08348606277222359,
+            "ece": 0.1803357205195844,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17274953148778138,
+            "bss": 0.08058192721787893,
+            "ece": 0.07793701085618025,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1822455495752805,
+        "mean_bss": 0.08204140231642687,
+        "mean_ece": 0.12929206981842076,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.1917570849767431,
+            "bss": 0.08327817128716564,
+            "ece": 0.18043407205759934,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17273401417381787,
+            "bss": 0.08066451441088729,
+            "ece": 0.07815006757924217,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=10.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 10.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1823118474836295,
+        "mean_bss": 0.08170746420315478,
+        "mean_ece": 0.1297928355361532,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19192908043429907,
+            "bss": 0.08245592270949187,
+            "ece": 0.18089245100965687,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17269461453295992,
+            "bss": 0.08087420957795344,
+            "ece": 0.07869322006264955,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18251300560495953,
+        "mean_bss": 0.08069424425128702,
+        "mean_ece": 0.13098682312758353,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19240719032302964,
+            "bss": 0.08017025085764895,
+            "ece": 0.18215367619535142,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1726188208868894,
+            "bss": 0.08127760313508281,
+            "ece": 0.07981997005981563,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=40.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 40.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18354876898739508,
+        "mean_bss": 0.07547717363261719,
+        "mean_ece": 0.1493149420537031,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19421608172510396,
+            "bss": 0.07152259002022221,
+            "ece": 0.20741750817186097,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17288145624968618,
+            "bss": 0.07987978921901939,
+            "ece": 0.09121237593554525,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.05__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 5.0,
+            "max_correction": 0.05,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18356275338480427,
+        "mean_bss": 0.0754067351617459,
+        "mean_ece": 0.14947470794554651,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19425956783388593,
+            "bss": 0.07131469853516426,
+            "ece": 0.20752398323248583,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1728659389357226,
+            "bss": 0.07996237641202808,
+            "ece": 0.09142543265860718,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=10.0__max_correction=0.05__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 10.0,
+            "max_correction": 0.05,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1836290512931533,
+        "mean_bss": 0.0750727970484737,
+        "mean_ece": 0.1499312158900877,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.1944315632914419,
+            "bss": 0.07049244995749038,
+            "ece": 0.20789384663816085,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1728265392948647,
+            "bss": 0.080172071579094,
+            "ece": 0.09196858514201457,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=20.0__max_correction=0.05__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 20.0,
+            "max_correction": 0.05,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1838302094144833,
+        "mean_bss": 0.07405957709660604,
+        "mean_ece": 0.15097562538123377,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19490967318017247,
+            "bss": 0.06820677810564757,
+            "ece": 0.208855915623287,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17275074564879417,
+            "bss": 0.08057546513622338,
+            "ece": 0.09309533513918056,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.05,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=40.0__max_correction=0.05__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 40.0,
+            "max_correction": 0.05,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18504057597152207,
+        "mean_bss": 0.06796304200989622,
+        "mean_ece": 0.11164989443465548,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19689316775685006,
+            "bss": 0.05872440213088548,
+            "ece": 0.1804846510290038,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1731879841861941,
+            "bss": 0.07824836757514686,
+            "ece": 0.04281513784030715,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.04__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 5.0,
+            "max_correction": 0.04,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18505456036893128,
+        "mean_bss": 0.06789260353902482,
+        "mean_ece": 0.11180966032649889,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19693665386563203,
+            "bss": 0.058516510645827524,
+            "ece": 0.18059112608962868,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17317246687223053,
+            "bss": 0.07833095476815555,
+            "ece": 0.04302819456336908,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=10.0__max_correction=0.04__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 10.0,
+            "max_correction": 0.04,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18512085827728025,
+        "mean_bss": 0.06755866542575284,
+        "mean_ece": 0.1122661682710401,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19710864932318795,
+            "bss": 0.05769426206815387,
+            "ece": 0.1809609894953037,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1731330672313726,
+            "bss": 0.0785406499352217,
+            "ece": 0.043571347046776496,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=20.0__max_correction=0.04__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 20.0,
+            "max_correction": 0.04,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18532413827169933,
+        "mean_bss": 0.06653475774159312,
+        "mean_ece": 0.11332016076234513,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19759100295809656,
+            "bss": 0.05538830238831549,
+            "ece": 0.18194222448074776,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1730572735853021,
+            "bss": 0.07894404349235096,
+            "ece": 0.044698097043942495,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.04,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=40.0__max_correction=0.04__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 40.0,
+            "max_correction": 0.04,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18670698613025222,
+        "mean_bss": 0.05956944591913571,
+        "mean_ece": 0.1355225293552904,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19974485696319927,
+            "bss": 0.04509149910421428,
+            "ece": 0.1947337938861467,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1736691152973052,
+            "bss": 0.07568766228626123,
+            "ece": 0.07631126482443414,
+            "metadata": {
+              "coef": [
+                0.3201297150932294,
+                -0.4505817737689534,
+                0.16344489125815695,
+                -0.060263476734439776
+              ],
+              "correction_ridge": 5.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.03__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 5.0,
+            "max_correction": 0.03,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18672097052766146,
+        "mean_bss": 0.059499007448264085,
+        "mean_ece": 0.13568229524713382,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19978834307198123,
+            "bss": 0.04488360761915622,
+            "ece": 0.1948402689467716,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17365359798334168,
+            "bss": 0.07577024947926969,
+            "ece": 0.07652432154749607,
+            "metadata": {
+              "coef": [
+                0.32381899001672965,
+                -0.42800551533059616,
+                0.125947101369863,
+                -0.04737677058970653
+              ],
+              "correction_ridge": 10.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=10.0__max_correction=0.03__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 10.0,
+            "max_correction": 0.03,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1867906785527491,
+        "mean_bss": 0.05914789280592647,
+        "mean_ece": 0.136152962221057,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19996715876301446,
+            "bss": 0.044028753952047084,
+            "ece": 0.1952384504112105,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17361419834248373,
+            "bss": 0.07597994464633573,
+            "ece": 0.07706747403090351,
+            "metadata": {
+              "coef": [
+                0.3287433881762263,
+                -0.3915596512375984,
+                0.07937286140127002,
+                -0.037852775777177744
+              ],
+              "correction_ridge": 20.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=20.0__max_correction=0.03__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 20.0,
+            "max_correction": 0.03,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1868966489031699,
+        "mean_bss": 0.05861412726545101,
+        "mean_ece": 0.13699346169024246,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.20023707134698882,
+            "bss": 0.04273839872160756,
+            "ece": 0.1960105295993814,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17355622645935098,
+            "bss": 0.07628848613184036,
+            "ece": 0.07797639378110355,
+            "metadata": {
+              "coef": [
+                0.3327476261518996,
+                -0.3392415903345419,
+                0.03212321671479309,
+                -0.03638074226489384
+              ],
+              "correction_ridge": 40.0,
+              "max_correction": 0.03,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "torvik_corrected",
+          "name": "torvik_corrected__correction_ridge=40.0__max_correction=0.03__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "correction_ridge": 40.0,
+            "max_correction": 0.03,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18701448884528032,
+        "mean_bss": 0.05802057538853056,
+        "mean_ece": 0.12802570952380954,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.1970282623415321,
+            "bss": 0.0580785633879054,
+            "ece": 0.16996771111111117,
+            "metadata": {
+              "alpha": 0.6000000000000001,
+              "alpha_training_info": {
+                "older_years": [
+                  2009,
+                  2010,
+                  2011,
+                  2012,
+                  2013,
+                  2014,
+                  2015,
+                  2016
+                ],
+                "recent_total_ratio": 1.0,
+                "recent_year_count": 5,
+                "recent_year_start": 2017,
+                "recent_year_weight": 1.6,
+                "recent_years": [
+                  2017,
+                  2018,
+                  2019,
+                  2021,
+                  2022
+                ],
+                "weighted_brier": 0.18036737292071514,
+                "weighted_brier_ratio": 0.9333950621909294,
+                "weighting_mode": "recent_block"
+              }
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1770007153490286,
+            "bss": 0.05795601767654501,
+            "ece": 0.08608370793650791,
+            "metadata": {
+              "alpha": 0.6000000000000001,
+              "alpha_training_info": {
+                "older_years": [
+                  2009,
+                  2010,
+                  2011,
+                  2012,
+                  2013,
+                  2014,
+                  2015,
+                  2016
+                ],
+                "recent_total_ratio": 1.0,
+                "recent_year_count": 5,
+                "recent_year_start": 2017,
+                "recent_year_weight": 1.6,
+                "recent_years": [
+                  2017,
+                  2018,
+                  2019,
+                  2021,
+                  2022
+                ],
+                "weighted_brier": 0.18036737292071514,
+                "weighted_brier_ratio": 0.9333950621909294,
+                "weighting_mode": "recent_block"
+              }
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "ensemble",
+          "name": "ensemble__clip_hi=0.99__clip_lo=0.01__recent_total_ratio=1.0__recent_year_count=5",
+          "params": {
+            "clip_hi": 0.99,
+            "clip_lo": 0.01,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5
+          }
+        }
+      }
+    ]
+  },
+  "candidate_selected": {
+    "final": {
+      "mean_brier": 0.13010733278893263,
+      "mean_bss": 0.1357566681966781,
+      "mean_ece": 0.11676007686670607,
+      "mean_seed_brier": 0.1505447921911667,
+      "per_year": [
+        {
+          "brier": 0.11013897016056325,
+          "bss": 0.20064181401531167,
+          "ece": 0.1205349825990772,
+          "metadata": {
+            "coef": [
+              0.28472980600155534,
+              -0.4754729805970194,
+              0.23211689845932038,
+              -0.08288190609064545
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.150075695417302,
+          "bss": 0.08101166253364744,
+          "ece": 0.11298517113433494,
+          "metadata": {
+            "coef": [
+              0.28472980600155534,
+              -0.4754729805970194,
+              0.23211689845932038,
+              -0.08288190609064545
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    },
+    "holdout": {
+      "mean_brier": 0.15616944898340193,
+      "mean_bss": 0.10524690579641871,
+      "mean_ece": 0.1229482212772942,
+      "mean_seed_brier": 0.174539154986,
+      "per_year": [
+        {
+          "brier": 0.19171359886796116,
+          "bss": 0.08348606277222359,
+          "ece": 0.1803357205195844,
+          "metadata": {
+            "coef": [
+              0.3201297150932294,
+              -0.4505817737689534,
+              0.16344489125815695,
+              -0.060263476734439776
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.17274953148778138,
+          "bss": 0.08058192721787893,
+          "ece": 0.07793701085618025,
+          "metadata": {
+            "coef": [
+              0.3201297150932294,
+              -0.4505817737689534,
+              0.16344489125815695,
+              -0.060263476734439776
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        },
+        {
+          "brier": 0.11013897016056325,
+          "bss": 0.20064181401531167,
+          "ece": 0.1205349825990772,
+          "metadata": {
+            "coef": [
+              0.28472980600155534,
+              -0.4754729805970194,
+              0.23211689845932038,
+              -0.08288190609064545
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.150075695417302,
+          "bss": 0.08101166253364744,
+          "ece": 0.11298517113433494,
+          "metadata": {
+            "coef": [
+              0.28472980600155534,
+              -0.4754729805970194,
+              0.23211689845932038,
+              -0.08288190609064545
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    },
+    "shadow": {
+      "mean_brier": 0.18223156517787126,
+      "mean_bss": 0.0821118407872985,
+      "mean_ece": 0.12913636568788234,
+      "mean_seed_brier": 0.19853351778083334,
+      "per_year": [
+        {
+          "brier": 0.19171359886796116,
+          "bss": 0.08348606277222359,
+          "ece": 0.1803357205195844,
+          "metadata": {
+            "coef": [
+              0.3201297150932294,
+              -0.4505817737689534,
+              0.16344489125815695,
+              -0.060263476734439776
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.17274953148778138,
+          "bss": 0.08058192721787893,
+          "ece": 0.07793701085618025,
+          "metadata": {
+            "coef": [
+              0.3201297150932294,
+              -0.4505817737689534,
+              0.16344489125815695,
+              -0.060263476734439776
+            ],
+            "correction_ridge": 5.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    }
+  },
+  "generated_at": "2026-05-10T04:48:57.716557+00:00",
+  "incumbent": {
+    "final": {
+      "mean_brier": 0.13758756354535967,
+      "mean_bss": 0.08606892644518394,
+      "mean_ece": 0.13912263968253968,
+      "mean_seed_brier": 0.1505447921911667,
+      "per_year": [
+        {
+          "brier": 0.1269963898595708,
+          "bss": 0.07829532383715876,
+          "ece": 0.17726594920634917,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016,
+                2017,
+                2018
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2019,
+              "recent_year_weight": 2.0,
+              "recent_years": [
+                2019,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "weighted_brier": 0.18191402991607009,
+              "weighted_brier_ratio": 0.9338418213787915,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.14817873723114858,
+          "bss": 0.09262768366810858,
+          "ece": 0.10097933015873022,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016,
+                2017,
+                2018
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2019,
+              "recent_year_weight": 2.0,
+              "recent_years": [
+                2019,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "weighted_brier": 0.18191402991607009,
+              "weighted_brier_ratio": 0.9338418213787915,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "ensemble",
+        "name": "ensemble__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    },
+    "holdout": {
+      "mean_brier": 0.16230102619532003,
+      "mean_bss": 0.07011681013158122,
+      "mean_ece": 0.1335741746031746,
+      "mean_seed_brier": 0.174539154986,
+      "per_year": [
+        {
+          "brier": 0.1970282623415321,
+          "bss": 0.0580785633879054,
+          "ece": 0.16996771111111117,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighted_brier": 0.18036737292071514,
+              "weighted_brier_ratio": 0.9333950621909294,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.1770007153490286,
+          "bss": 0.05795601767654501,
+          "ece": 0.08608370793650791,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighted_brier": 0.18036737292071514,
+              "weighted_brier_ratio": 0.9333950621909294,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        },
+        {
+          "brier": 0.1269963898595708,
+          "bss": 0.07829532383715876,
+          "ece": 0.17726594920634917,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016,
+                2017,
+                2018
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2019,
+              "recent_year_weight": 2.0,
+              "recent_years": [
+                2019,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "weighted_brier": 0.18191402991607009,
+              "weighted_brier_ratio": 0.9338418213787915,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.14817873723114858,
+          "bss": 0.09262768366810858,
+          "ece": 0.10097933015873022,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016,
+                2017,
+                2018
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2019,
+              "recent_year_weight": 2.0,
+              "recent_years": [
+                2019,
+                2021,
+                2022,
+                2023,
+                2024
+              ],
+              "weighted_brier": 0.18191402991607009,
+              "weighted_brier_ratio": 0.9338418213787915,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "ensemble",
+        "name": "ensemble__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    },
+    "shadow": {
+      "mean_brier": 0.18701448884528032,
+      "mean_bss": 0.05802057538853056,
+      "mean_ece": 0.12802570952380954,
+      "mean_seed_brier": 0.19853351778083334,
+      "per_year": [
+        {
+          "brier": 0.1970282623415321,
+          "bss": 0.0580785633879054,
+          "ece": 0.16996771111111117,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighted_brier": 0.18036737292071514,
+              "weighted_brier_ratio": 0.9333950621909294,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.1770007153490286,
+          "bss": 0.05795601767654501,
+          "ece": 0.08608370793650791,
+          "metadata": {
+            "alpha": 0.6000000000000001,
+            "alpha_training_info": {
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighted_brier": 0.18036737292071514,
+              "weighted_brier_ratio": 0.9333950621909294,
+              "weighting_mode": "recent_block"
+            }
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        }
+      ],
+      "spec": {
+        "mode": "ensemble",
+        "name": "ensemble__recent_total_ratio=1.0__recent_year_count=5",
+        "params": {
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5
+        }
+      }
+    }
+  },
+  "split": {
+    "dev_years": [
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022
+    ],
+    "final_years": [
+      2025,
+      2026
+    ],
+    "shadow_years": [
+      2023,
+      2024
+    ]
+  }
+}

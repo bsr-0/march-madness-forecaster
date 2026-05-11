@@ -1,0 +1,80 @@
+{
+  "step": 0.02,
+  "weights_by_year": {
+    "2010": {
+      "model_weight": 0.55,
+      "seed_weight": 0.45,
+      "train_brier": NaN
+    },
+    "2011": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.13882374744122813
+    },
+    "2012": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.1257698795875986
+    },
+    "2013": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.12083524842186961
+    },
+    "2014": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.12732301755980313
+    },
+    "2015": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.12903175880667517
+    },
+    "2016": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.12717733375488874
+    },
+    "2017": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.1307021780760876
+    },
+    "2018": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.1313553477788702
+    },
+    "2019": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.1343527203370095
+    },
+    "2021": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.13291476951034212
+    },
+    "2022": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.13447047881650415
+    },
+    "2023": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.13557031528905772
+    },
+    "2024": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.138165201036379
+    },
+    "2025": {
+      "model_weight": 1.0,
+      "seed_weight": 0.0,
+      "train_brier": 0.13730365136321648
+    }
+  }
+}
