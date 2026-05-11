@@ -3,6 +3,7 @@
 Living index of settled decisions, dead-ends, and current baselines.
 **Read this before proposing model changes, new features, or new experiments.**
 If a claim here contradicts your instinct, cite MEMORY.md and ask — do not re-litigate.
+For a blunt external-review-style summary of the repo's current strengths, weaknesses, and roadmap across both objectives, see [docs/skeptical-statistician-review.md](/Users/benrosen/march-madness-forecaster/docs/skeptical-statistician-review.md).
 
 - **v1 scope:** three sections only (Locked Decisions, Dead-End Ledger, Baseline Registry).
 - **Update rule:** when a council session or backtest produces a new settled verdict, add one row here with date + source file. Do not edit old rows; append a superseding row and mark the old one `[SUPERSEDED YYYY-MM-DD]`.
@@ -37,6 +38,14 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Holdout enforcement | `YearSplitPolicy.assert_dev_only` raises `HoldoutContaminationError`; wired at the three ensemble fit entry points + every Optuna tuner call. Closes §2 O20. | `src/ml/evaluation/evaluation_integrity.py:75-160`; `src/pipeline/stages/baseline_training/_ensemble.py:530,770`; `src/ml/optimization/hyperparameter_tuning.py:60`; `tests/test_holdout_enforcement.py` |
 | Researcher-DoF (tuning provenance) | Frozen inventory of every Optuna search-space bound, tuning budget (`optuna_n_trials=15`, `enable_stacking=False`, `temporal_cv_splits=5`), and temporal-CV policy. Code-level containment = O20 gate (`YearSplitPolicy.assert_dev_artifact_years`) invoked from every `tune()` call. Drift guard = lock test. Pre-2026-04-07 history not reconstructible (big-bang import commit); documented as residual risk. Closes §2 O17. | `artifacts/o17_researcher_dof_audit_2026-04-14.md`; `tests/test_researcher_dof_audit.py`; `src/ml/optimization/hyperparameter_tuning.py:51-63` (enforcement gate); `src/pipeline/config.py:469,486` (OOS-FIX reductions) |
 | Production Four Factors source | Torvik trank.php monthly snapshots overlay onto local `ProprietaryTeamMetrics` via `TorVikFFLookup.overlay_metrics`. Local box-score `_four_factors` is a fallback only; tripwire `mean r ≥ 0.85` vs Torvik catches catastrophic regressions (e.g., the 2026-04-13 resolver-collision at mean r 0.45). Same precedent as barthag per §3 row 22; closes §2 O2 / O2a. | `src/data/features/torvik_ff_lookup.py`; overlay call sites `src/pipeline/stages/baseline_training/_orchestrator.py:469`, `sample_loading.py:453`, `src/evaluation/seed_baseline_loyo.py:286`, `src/ml/evaluation/rdof_audit.py:1517,1661`; tests `tests/test_validate_four_factors.py` |
+
+### Kaggle secondary path
+| Decision | Value | Source |
+|---|---|---|
+| Kaggle optimization target | Held-out tournament `Brier` is the optimization metric; `BSS` is a guardrail, not the primary ranking target. | `docs/kaggle-objective-policy.md`; `scripts/admit_kaggle_candidate.py` |
+| Kaggle recency policy | Most recent 5 observed tournaments count about as much as all older observed tournaments combined (`recent_year_count=5`, `recent_total_ratio=1.0`). Older years remain in-fit for shrinkage/stability. | `docs/kaggle-objective-policy.md`; `src/prediction/kaggle_recency.py` |
+| Current Kaggle baseline | `torvik_corrected_recent5_conservative` is the current secondary-path baseline. It is the admitted recent-5 conservative torvik-correction candidate: `ridge=5.0`, `max_correction=0.06`, recent-block weighting as above. Submission command: `python scripts/kaggle_torvik_submission.py --year 2026 --mode torvik_corrected_recent5_conservative --sample-submission data/kaggle/SampleSubmissionStage2.csv --output /private/tmp/kaggle_torvik_corrected_recent5_2026.csv` | `artifacts/kaggle_admission_recent5_conservative.json`; `artifacts/kaggle_baseline_recent5_conservative.json`; `scripts/kaggle_torvik_submission.py` |
+| Kaggle admission status of current baseline | **PASS** under the strict historical gate. Final holdout mean Brier: incumbent ensemble `0.1376`, admitted candidate `0.1301`. Final-holdout mean BSS: incumbent `+0.0861`, admitted candidate `+0.1358`. `2026` regression is only `+0.0019`, inside the `0.003` cap. | `artifacts/kaggle_admission_recent5_conservative.json`; `scripts/admit_kaggle_candidate.py` |
 
 ### Pool strategy
 | Decision | Value | Source |
@@ -143,9 +152,26 @@ Source: `artifacts/backtest_runs/mc_pool_backtest_20260418_225840.txt` (O27 clos
 | Test functions | ~5,931 across ~211 files | `tests/` grep |
 | Coverage threshold | 20% | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
 
+### Kaggle checkpoint (secondary path)
+| Metric | Value | Scope | Source |
+|---|---|---|---|
+| Current admitted Kaggle mode | `torvik_corrected_recent5_conservative` | CLI preset for secondary-path submissions | `scripts/kaggle_torvik_submission.py` |
+| Final-holdout mean Brier | **0.1301** | Strict gate final years vs ensemble incumbent `0.1376` | `artifacts/kaggle_admission_recent5_conservative.json` |
+| Final-holdout mean BSS | **+0.1358** | Strict gate final years vs ensemble incumbent `+0.0861` | `artifacts/kaggle_admission_recent5_conservative.json` |
+| Holdout mean Brier | **0.1562** | Shadow + final holdout block vs ensemble incumbent `0.1623` | `artifacts/kaggle_admission_recent5_conservative.json` |
+| Holdout mean BSS | **+0.1052** | Shadow + final holdout block vs ensemble incumbent `+0.0701` | `artifacts/kaggle_admission_recent5_conservative.json` |
+| Historical walk-forward mean Brier | **0.1572** | 18-year torvik-correction backtest under recent-5 conservative preset | `scripts/kaggle_torvik_submission.py --multi-year-backtest`; validated 2026-05-10 |
+| Historical walk-forward BSS | **+0.1680** | Same 18-year preset backtest | `scripts/kaggle_torvik_submission.py --multi-year-backtest`; validated 2026-05-10 |
+
 ### Known open diagnostic (for context — not a TODO)
 - Independence assumption in opponent model has been empirically tested (2026-04-13, 4 years × 93 brackets). **Independence holds** — pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals. The council's "validity threat" framing was misdiagnosed: error is in the opponent-model marginals (using ESPN-national instead of pool-specific; 5pp mean absolute divergence, up to 18pp on individual teams), not in correlation. **Pool-history marginal blending tested and rejected** — O21 (2026-04-13) found blending pool-specific marginals into the opponent model does NOT change bracket rankings (Spearman ρ invariant across blend weights 0–1.0 on n=2 usable years; Δρ=0 for 2024, Δρ=−0.07 for 2025). O26-G2a (2026-04-17) retested under team-identity scoring and found modest signal (argmax-best weight=0.25, Δρ=+0.058 vs ESPN-only) but insufficient to justify a production change on n=3 years. Keep locked weights at 60/30/10 ESPN/Massey/seed. Sources: `ANALYSIS_O4_OPPONENT_CORRELATION.md`, `ANALYSIS_O21_MARGINAL_BLEND.md`, `COUNCIL_LESSONS.md §2 O4 [closed] / O21 [closed — negative verdict]`.
 - Council 64 action #3 (irreducible noise floor) closed 2026-04-25 — opposite-side companion to council 71's selection-noise finding. Across 4 years (2023-2026) × 3 modes (torvik / f4_first_tv / e8_first_tv), the gap between the MC ranker's pick and the oracle best-of-50 (perfect outcome knowledge) is **mean 8.08 rank positions** when inserted into the actual pool field. Council 64's `<3 → kill opponent-calibration track` gate does NOT trigger, but the n=4-year 95% CI lower bound is ~0.4 (gate boundary), and council 71's D18/D19 already showed every practical selection criterion tested captures ~none of this 8-position theoretical ceiling. Net: the formal kill does not fire, but no method has demonstrated ability to convert opponent-model improvements into rank gains — council 67's "lock + 1-2 week focused investigation, then wait" remains operative. Sources: `scripts/noise_floor_ceiling.py`, `artifacts/noise_floor_ceiling_2026-04-25.json`, `COUNCIL_LESSONS.md §3 row 72`. **Regime applicability (added 2026-04-27):** The 8.08-rank gap is a stochastic-regime measurement — it bounds the gap between an MC ranker's pick and the best of its own 50-bracket portfolio. After the meta-learner pivot (CLAUDE.md §"Architectural Direction"), the primary path emits ONE deterministic bracket per model with no within-strategy selection step. This ceiling does NOT apply to the deterministic meta-learner regime; the deterministic-regime equivalent is unmeasured. Do not cite this row to bound expected effect size of a successor to meta_gbm v2.
+
+### Future exploration topics (only if work resumes)
+- More conservative Kaggle correction sweeps are still fair game, but only if they beat the current admitted baseline on the same strict admission gate. Default search neighborhood: stronger shrinkage and smaller `max_correction`, not more complexity.
+- A simpler torvik-correction family is still worth testing if resumed later: fewer features, same recent-5 policy, same Brier-first gate.
+- Women’s Kaggle path likely has more headroom than the men’s path. If secondary-path work resumes, women’s-specific admission gating is a high-upside direction.
+- Do not reopen broad blend-complexity work by default. Global alpha tuning and multi-bucket blending already looked close to exhausted.
 
 ---
 
