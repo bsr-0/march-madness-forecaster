@@ -17,6 +17,7 @@ from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,
     _resolve_market,
     fit_torvik_correction_from_year_records,
+    fit_torvik_isotonic_from_year_records,
 )
 from src.prediction.torvik_kaggle import _select_weighted_alpha
 
@@ -71,6 +72,12 @@ def walk_forward_backtest(
             recent_year_start=recent_year_start,
             recent_year_weight=recent_year_weight,
         )
+        isotonic = fit_torvik_isotonic_from_year_records(
+            train_by_year,
+            config=config,
+            recent_year_start=recent_year_start,
+            recent_year_weight=recent_year_weight,
+        )
         alpha = _fit_blend_alpha(
             train_by_year,
             config.clip_lo,
@@ -92,9 +99,11 @@ def walk_forward_backtest(
         rounds = np.asarray([round_to_num(r.get("round")) for r in test_rows], dtype=float)
 
         corrected = correction.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
+        iso_pred = isotonic.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
         blend = np.clip(alpha * torvik + (1.0 - alpha) * pipeline, config.clip_lo, config.clip_hi)
 
         corrected_brier = float(np.mean((corrected - outcomes) ** 2))
+        iso_brier = float(np.mean((iso_pred - outcomes) ** 2))
         blend_brier = float(np.mean((blend - outcomes) ** 2))
         torvik_brier = float(np.mean((torvik - outcomes) ** 2))
         seed_brier = float(np.mean((seed - outcomes) ** 2))
@@ -104,10 +113,12 @@ def walk_forward_backtest(
                 "year": test_year,
                 "alpha": alpha,
                 "correction_brier": corrected_brier,
+                "isotonic_brier": iso_brier,
                 "blend_brier": blend_brier,
                 "torvik_brier": torvik_brier,
                 "seed_brier": seed_brier,
                 "correction_bss": 1.0 - corrected_brier / seed_brier,
+                "isotonic_bss": 1.0 - iso_brier / seed_brier,
                 "blend_bss": 1.0 - blend_brier / seed_brier,
                 "torvik_bss": 1.0 - torvik_brier / seed_brier,
                 "coef": correction.coef_.tolist() if correction.coef_ is not None else None,
@@ -120,10 +131,12 @@ def walk_forward_backtest(
 def _print_summary(rows: list[dict], label: str) -> None:
     mean_seed = float(np.mean([r["seed_brier"] for r in rows]))
     mean_corr = float(np.mean([r["correction_brier"] for r in rows]))
+    mean_iso = float(np.mean([r["isotonic_brier"] for r in rows]))
     mean_blend = float(np.mean([r["blend_brier"] for r in rows]))
     mean_torv = float(np.mean([r["torvik_brier"] for r in rows]))
     print(
-        f"  {label:<6} correction={mean_corr:.4f} bss={1.0 - mean_corr / mean_seed:+.4f}"
+        f"  {label:<6} linear={mean_corr:.4f} bss={1.0 - mean_corr / mean_seed:+.4f}"
+        f"  isotonic={mean_iso:.4f} bss={1.0 - mean_iso / mean_seed:+.4f}"
         f"  blend={mean_blend:.4f} bss={1.0 - mean_blend / mean_seed:+.4f}"
         f"  torvik={mean_torv:.4f} bss={1.0 - mean_torv / mean_seed:+.4f}"
     )
@@ -135,31 +148,47 @@ def print_results(results: dict, recent_start_year: int) -> None:
         print("No results")
         return
 
-    print("\n" + "=" * 92)
+    print("\n" + "=" * 110)
     print("TORVIK CORRECTION BACKTEST")
-    print("=" * 92)
+    print("=" * 110)
     print(
-        f"\n  {'Year':<6} {'Correct':>9} {'Blend':>9} {'Torvik':>9} {'Seed':>9} {'BSS-C':>9} {'BSS-B':>9} {'BSS-T':>9}"
+        f"\n  {'Year':<6} {'Linear':>9} {'Isotonic':>9} {'Blend':>9} {'Torvik':>9} {'Seed':>9}"
+        f" {'BSS-L':>8} {'BSS-I':>8} {'BSS-B':>8} {'BSS-T':>8}"
     )
-    print(f"  {'-' * 76}")
+    print(f"  {'-' * 96}")
 
     for row in rows:
         print(
-            f"  {row['year']:<6} {row['correction_brier']:>9.4f} {row['blend_brier']:>9.4f}"
-            f" {row['torvik_brier']:>9.4f} {row['seed_brier']:>9.4f}"
-            f" {row['correction_bss']:>+9.4f} {row['blend_bss']:>+9.4f} {row['torvik_bss']:>+9.4f}"
+            f"  {row['year']:<6} {row['correction_brier']:>9.4f} {row['isotonic_brier']:>9.4f}"
+            f" {row['blend_brier']:>9.4f} {row['torvik_brier']:>9.4f} {row['seed_brier']:>9.4f}"
+            f" {row['correction_bss']:>+8.4f} {row['isotonic_bss']:>+8.4f}"
+            f" {row['blend_bss']:>+8.4f} {row['torvik_bss']:>+8.4f}"
         )
 
-    print(f"  {'-' * 76}")
+    print(f"  {'-' * 96}")
     _print_summary(rows, "all")
     recent_rows = [row for row in rows if row["year"] >= recent_start_year]
     if recent_rows:
         _print_summary(recent_rows, "recent")
 
-    correction_wins = sum(1 for row in rows if row["correction_brier"] < min(row["blend_brier"], row["torvik_brier"]))
-    blend_wins = sum(1 for row in rows if row["blend_brier"] < min(row["correction_brier"], row["torvik_brier"]))
-    print(f"\n  Correction best in {correction_wins}/{len(rows)} years")
-    print(f"  Blend best in {blend_wins}/{len(rows)} years")
+    correction_wins = sum(
+        1
+        for row in rows
+        if row["correction_brier"] < min(row["isotonic_brier"], row["blend_brier"], row["torvik_brier"])
+    )
+    isotonic_wins = sum(
+        1
+        for row in rows
+        if row["isotonic_brier"] < min(row["correction_brier"], row["blend_brier"], row["torvik_brier"])
+    )
+    blend_wins = sum(
+        1
+        for row in rows
+        if row["blend_brier"] < min(row["correction_brier"], row["isotonic_brier"], row["torvik_brier"])
+    )
+    print(f"\n  Linear best in    {correction_wins}/{len(rows)} years")
+    print(f"  Isotonic best in  {isotonic_wins}/{len(rows)} years")
+    print(f"  Blend best in     {blend_wins}/{len(rows)} years")
 
 
 def main() -> None:

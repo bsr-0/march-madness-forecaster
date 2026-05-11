@@ -3,6 +3,8 @@ import numpy as np
 from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,
     TorvikCorrectionModel,
+    TorvikIsotonicCalibrator,
+    fit_torvik_isotonic_from_year_records,
     round_to_num,
 )
 
@@ -142,3 +144,94 @@ def test_market_and_elo_coverage_logged_in_training_info():
     # Only 2015 row has real odds/elo → coverage = 1/3
     assert abs(model.training_info_["market_coverage"] - 1 / 3) < 1e-9
     assert abs(model.training_info_["elo_coverage"] - 1 / 3) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# TorvikIsotonicCalibrator tests
+# ---------------------------------------------------------------------------
+
+
+def test_isotonic_calibrator_prediction_is_bounded():
+    torvik = np.asarray([0.70, 0.55, 0.80, 0.45], dtype=float)
+    seed1 = np.asarray([1, 5, 2, 11], dtype=float)
+    seed2 = np.asarray([16, 12, 15, 6], dtype=float)
+    outcomes = np.asarray([1.0, 1.0, 1.0, 0.0], dtype=float)
+
+    model = TorvikIsotonicCalibrator(TorvikCorrectionConfig(max_correction=0.10, clip_lo=0.01, clip_hi=0.99))
+    model.fit(torvik, seed1, seed2, outcomes)
+
+    pred = model.predict_one(0.80, 2, 15)
+    assert 0.01 <= pred <= 0.99
+
+
+def test_isotonic_calibrator_requires_fit_before_predict():
+    model = TorvikIsotonicCalibrator()
+
+    try:
+        model.predict_one(0.5, 8, 9)
+    except ValueError as exc:
+        assert "fit" in str(exc)
+    else:
+        raise AssertionError("predict_one should require fit() first")
+
+
+def test_isotonic_calibrator_preserves_favorite_ordering():
+    """A big favourite should still be predicted to win more often than the underdog."""
+    torvik = np.asarray([0.85, 0.85, 0.45, 0.45], dtype=float)
+    seed1 = np.asarray([1, 1, 13, 13], dtype=float)
+    seed2 = np.asarray([16, 16, 4, 4], dtype=float)
+    outcomes = np.asarray([1.0, 1.0, 0.0, 0.0], dtype=float)
+
+    model = TorvikIsotonicCalibrator(TorvikCorrectionConfig(ridge=1.0, max_correction=0.10))
+    model.fit(torvik, seed1, seed2, outcomes)
+
+    fav = model.predict_one(0.85, 1, 16)
+    dog = model.predict_one(0.45, 13, 4)
+    assert fav > 0.5
+    assert dog < 0.5
+
+
+def test_isotonic_calibrator_missing_signals_fall_back_gracefully():
+    torvik = np.asarray([0.70, 0.60], dtype=float)
+    seed1 = np.asarray([2, 3], dtype=float)
+    seed2 = np.asarray([15, 14], dtype=float)
+    outcomes = np.asarray([1.0, 1.0], dtype=float)
+
+    model = TorvikIsotonicCalibrator(TorvikCorrectionConfig(ridge=1.0, max_correction=0.10))
+    model.fit(torvik, seed1, seed2, outcomes)
+
+    pred_none = model.predict_one(0.70, 2, 15, market_prob=None)
+    pred_zero = model.predict_one(0.70, 2, 15, market_prob=0.0)
+    pred_no_arg = model.predict_one(0.70, 2, 15)
+
+    assert pred_none == pred_no_arg
+    assert pred_zero == pred_no_arg
+
+
+def test_isotonic_calibrator_coef_exposed():
+    """coef_ should mirror the Stage-2 linear correction coefficients (8 values)."""
+    torvik = np.asarray([0.70, 0.55, 0.40, 0.65], dtype=float)
+    seed1 = np.asarray([1, 5, 12, 3], dtype=float)
+    seed2 = np.asarray([16, 12, 5, 14], dtype=float)
+    outcomes = np.asarray([1.0, 1.0, 0.0, 1.0], dtype=float)
+
+    model = TorvikIsotonicCalibrator(TorvikCorrectionConfig(ridge=1.0))
+    model.fit(torvik, seed1, seed2, outcomes)
+
+    assert model.coef_ is not None
+    assert len(model.coef_) == 8  # intercept + 7 features
+
+
+def test_fit_isotonic_from_year_records_returns_calibrator():
+    year_records = {
+        2015: [{"torvik": 0.7, "seed1": 1, "seed2": 16, "outcome": 1.0, "odds": 0.75, "elo": 0.80, "round": "R64"}],
+        2016: [{"torvik": 0.6, "seed1": 2, "seed2": 15, "outcome": 1.0}],
+        2017: [{"torvik": 0.5, "seed1": 8, "seed2": 9, "outcome": 0.0}],
+    }
+
+    model = fit_torvik_isotonic_from_year_records(year_records, recent_year_start=None)
+
+    assert isinstance(model, TorvikIsotonicCalibrator)
+    assert "market_coverage" in model.training_info_
+    pred = model.predict_one(0.65, 3, 14)
+    assert 0.01 <= pred <= 0.99
