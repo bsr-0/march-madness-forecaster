@@ -25,6 +25,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderBacktest();
 });
 
+const CHART_COLORS = {
+  grid: 'rgba(92, 64, 41, 0.14)',
+  tick: '#7e7469',
+  axis: '#4f5c61',
+  legend: '#1e282f',
+  accent: '#bb4d2d',
+  accentFill: 'rgba(187, 77, 45, 0.14)',
+  gold: '#c89125',
+  goldFill: 'rgba(200, 145, 37, 0.16)',
+  green: '#2f7a63',
+  greenFill: 'rgba(47, 122, 99, 0.72)',
+  yellowFill: 'rgba(200, 145, 37, 0.72)',
+  redFill: 'rgba(187, 77, 45, 0.7)',
+  yellow: '#c89125',
+  red: '#bb4d2d',
+};
+
 // ── Tab Switching ──
 function switchTab(tab) {
   document.getElementById('section-predictions').classList.toggle('hidden', tab !== 'predictions');
@@ -137,14 +154,14 @@ function gameCardHTML(g) {
   return `
     <div class="game-card ${upsetClass}">
       <div class="game-team ${t1Class}">
-        <div class="flex items-center">
+        <div class="game-team-main">
           <span class="team-seed ${seedClass(g.team1_seed)}">${g.team1_seed}</span>
           <span class="team-name">${g.team1.replace(/^\(\d+\)\s*/, '')}</span>
         </div>
         <span class="win-prob ${t1ProbClass}">${t1Prob}%</span>
       </div>
       <div class="game-team ${t2Class}">
-        <div class="flex items-center">
+        <div class="game-team-main">
           <span class="team-seed ${seedClass(g.team2_seed)}">${g.team2_seed}</span>
           <span class="team-name">${g.team2.replace(/^\(\d+\)\s*/, '')}</span>
         </div>
@@ -174,7 +191,7 @@ function renderUpsetAlerts() {
     });
   });
   if (upsets.length === 0) {
-    container.innerHTML = '<p class="text-gray-500">No upsets predicted.</p>';
+    container.innerHTML = '<p class="empty-state">No upsets predicted.</p>';
     return;
   }
   container.innerHTML = upsets.map(g => gameCardHTML(g)).join('');
@@ -201,17 +218,17 @@ function renderHeadlineMetrics() {
   const bt = dashboardData.backtest;
 
   const metrics = [
-    { value: (o.accuracy * 100).toFixed(1) + '%', label: 'Overall Accuracy', color: 'text-green-400' },
-    { value: o.brier_score.toFixed(4), label: 'Brier Score', color: 'text-blue-400' },
-    { value: o.log_loss.toFixed(4), label: 'Log Loss', color: 'text-purple-400' },
-    { value: o.n_games, label: 'Games Tested', color: 'text-indigo-400' },
-    { value: bt.kaggle?.estimated_rank || 'N/A', label: 'Est. Kaggle Rank', color: 'text-yellow-400' },
-    { value: bt.espn_pool ? '#' + bt.espn_pool.rank_position + '/' + bt.espn_pool.pool_size : 'N/A', label: 'ESPN Pool Rank', color: 'text-orange-400' },
+    { value: (o.accuracy * 100).toFixed(1) + '%', label: 'Overall Accuracy', tone: 'metric-tone-emerald' },
+    { value: o.brier_score.toFixed(4), label: 'Brier Score', tone: 'metric-tone-sky' },
+    { value: o.log_loss.toFixed(4), label: 'Log Loss', tone: 'metric-tone-ink' },
+    { value: o.n_games, label: 'Games Tested', tone: 'metric-tone-ink' },
+    { value: bt.kaggle?.estimated_rank || 'N/A', label: 'Est. Kaggle Rank', tone: 'metric-tone-amber' },
+    { value: bt.espn_pool ? '#' + bt.espn_pool.rank_position + '/' + bt.espn_pool.pool_size : 'N/A', label: 'ESPN Pool Rank', tone: 'metric-tone-brick' },
   ];
 
   container.innerHTML = metrics.map(m => `
     <div class="metric-card">
-      <div class="metric-value ${m.color}">${m.value}</div>
+      <div class="metric-value ${m.tone}">${m.value}</div>
       <div class="metric-label">${m.label}</div>
     </div>`).join('');
 }
@@ -220,7 +237,7 @@ function renderHeadlineMetrics() {
 function renderKaggleMetrics() {
   const container = document.getElementById('kaggle-metrics');
   const k = dashboardData.backtest.kaggle;
-  if (!k) { container.innerHTML = '<p class="text-gray-500">No Kaggle data available.</p>'; return; }
+  if (!k) { container.innerHTML = '<p class="empty-state">No Kaggle data available.</p>'; return; }
 
   const rows = [
     { label: 'Estimated Rank', value: k.estimated_rank, cls: 'great' },
@@ -240,7 +257,7 @@ function renderKaggleMetrics() {
 function renderESPNMetrics() {
   const container = document.getElementById('espn-metrics');
   const e = dashboardData.backtest.espn_pool;
-  if (!e) { container.innerHTML = '<p class="text-gray-500">No ESPN pool data available.</p>'; return; }
+  if (!e) { container.innerHTML = '<p class="empty-state">No ESPN pool data available.</p>'; return; }
 
   const percentile = ((1 - e.rank_position / e.pool_size) * 100).toFixed(0);
   const rows = [
@@ -274,7 +291,7 @@ function renderCalibrationChart() {
         {
           label: 'Perfect Calibration',
           data: labels,
-          borderColor: '#4b5563',
+          borderColor: CHART_COLORS.tick,
           borderDash: [6, 4],
           borderWidth: 1.5,
           pointRadius: 0,
@@ -283,21 +300,21 @@ function renderCalibrationChart() {
         {
           label: 'Predicted Avg',
           data: predicted,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.15)',
+          borderColor: CHART_COLORS.accent,
+          backgroundColor: CHART_COLORS.accentFill,
           borderWidth: 2,
           pointRadius: 4,
-          pointBackgroundColor: '#6366f1',
+          pointBackgroundColor: CHART_COLORS.accent,
           fill: false,
         },
         {
           label: 'Actual Win Rate',
           data: actual,
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245,158,11,0.15)',
+          borderColor: CHART_COLORS.gold,
+          backgroundColor: CHART_COLORS.goldFill,
           borderWidth: 2,
           pointRadius: 5,
-          pointBackgroundColor: '#f59e0b',
+          pointBackgroundColor: CHART_COLORS.gold,
           fill: false,
         },
       ],
@@ -306,19 +323,19 @@ function renderCalibrationChart() {
       responsive: true,
       scales: {
         x: {
-          title: { display: true, text: 'Predicted Probability Bin', color: '#9ca3af' },
-          ticks: { color: '#6b7280' },
-          grid: { color: '#1f2937' },
+          title: { display: true, text: 'Predicted Probability Bin', color: CHART_COLORS.axis },
+          ticks: { color: CHART_COLORS.tick },
+          grid: { color: CHART_COLORS.grid },
         },
         y: {
           min: 0, max: 1,
-          title: { display: true, text: 'Frequency / Probability', color: '#9ca3af' },
-          ticks: { color: '#6b7280', callback: v => (v * 100) + '%' },
-          grid: { color: '#1f2937' },
+          title: { display: true, text: 'Frequency / Probability', color: CHART_COLORS.axis },
+          ticks: { color: CHART_COLORS.tick, callback: v => (v * 100) + '%' },
+          grid: { color: CHART_COLORS.grid },
         },
       },
       plugins: {
-        legend: { labels: { color: '#d1d5db' } },
+        legend: { labels: { color: CHART_COLORS.legend } },
         tooltip: {
           callbacks: {
             afterLabel: function(ctx) {
@@ -339,16 +356,16 @@ function renderPerYearTable() {
   const years = validationData.per_year;
 
   tbody.innerHTML = years.map(y => {
-    const skillColor = y.skill_score >= 0 ? 'text-green-400' : 'text-red-400';
+    const skillColor = y.skill_score >= 0 ? 'table-positive' : 'table-negative';
     const skillSign = y.skill_score >= 0 ? '+' : '';
     return `
       <tr>
-        <td class="font-bold text-white">${y.year}</td>
+        <td class="year-cell">${y.year}</td>
         <td>${y.n_games}</td>
-        <td class="text-green-400 font-semibold">${(y.accuracy * 100).toFixed(1)}%</td>
+        <td class="table-positive">${(y.accuracy * 100).toFixed(1)}%</td>
         <td>${y.brier_score.toFixed(4)}</td>
-        <td class="text-gray-500">${y.seed_baseline_brier.toFixed(4)}</td>
-        <td class="${skillColor} font-semibold">${skillSign}${(y.skill_score * 100).toFixed(1)}%</td>
+        <td class="table-muted">${y.seed_baseline_brier.toFixed(4)}</td>
+        <td class="${skillColor}">${skillSign}${(y.skill_score * 100).toFixed(1)}%</td>
         <td>${y.upsets_correctly_predicted}/${y.upsets_actual}</td>
       </tr>`;
   }).join('');
@@ -378,7 +395,7 @@ function renderRoundAccuracyChart() {
 
   const labels = Object.keys(ra);
   if (labels.length === 0) {
-    canvas.parentElement.innerHTML = '<p class="text-gray-500 text-center py-8">No round-level accuracy data available yet. Run the backtest pipeline to generate this data.</p>';
+    canvas.parentElement.innerHTML = '<p class="empty-state">No round-level accuracy data available yet. Run the backtest pipeline to generate this data.</p>';
     return;
   }
   const accs = labels.map(l => ra[l].accuracy);
@@ -391,8 +408,8 @@ function renderRoundAccuracyChart() {
       datasets: [{
         label: 'Accuracy',
         data: accs,
-        backgroundColor: accs.map(a => a >= 0.75 ? 'rgba(52,211,153,0.7)' : a >= 0.65 ? 'rgba(251,191,36,0.7)' : 'rgba(248,113,113,0.7)'),
-        borderColor: accs.map(a => a >= 0.75 ? '#34d399' : a >= 0.65 ? '#fbbf24' : '#f87171'),
+        backgroundColor: accs.map(a => a >= 0.75 ? CHART_COLORS.greenFill : a >= 0.65 ? CHART_COLORS.yellowFill : CHART_COLORS.redFill),
+        borderColor: accs.map(a => a >= 0.75 ? CHART_COLORS.green : a >= 0.65 ? CHART_COLORS.yellow : CHART_COLORS.red),
         borderWidth: 1.5,
         borderRadius: 6,
       }],
@@ -402,12 +419,12 @@ function renderRoundAccuracyChart() {
       scales: {
         y: {
           min: 0, max: 1,
-          ticks: { color: '#6b7280', callback: v => (v * 100) + '%' },
-          grid: { color: '#1f2937' },
-          title: { display: true, text: 'Accuracy', color: '#9ca3af' },
+          ticks: { color: CHART_COLORS.tick, callback: v => (v * 100) + '%' },
+          grid: { color: CHART_COLORS.grid },
+          title: { display: true, text: 'Accuracy', color: CHART_COLORS.axis },
         },
         x: {
-          ticks: { color: '#d1d5db' },
+          ticks: { color: CHART_COLORS.legend },
           grid: { display: false },
         },
       },
@@ -433,7 +450,7 @@ function renderIntegrityNote() {
   if (integrity) {
     el.innerHTML = `
       <strong>Level ${integrity.level}:</strong> ${integrity.note}<br>
-      <span class="text-gray-500 text-xs mt-1 inline-block">Source: ${integrity.source}</span>
+      <span class="meta-note">Source: ${integrity.source}</span>
     `;
   } else {
     el.textContent = 'No integrity metadata available. Backtest results should be interpreted as retrospective.';
