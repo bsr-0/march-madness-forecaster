@@ -1127,20 +1127,80 @@ def train_meta_selector(
     - min_child_samples=20
     - subsample=0.8
     """
-    import lightgbm as lgb
-
-    model = lgb.LGBMClassifier(
+    return _train_native_lightgbm_classifier(
+        X,
+        y,
+        weights,
         max_depth=max_depth,
         n_estimators=n_estimators,
         learning_rate=learning_rate,
-        min_child_samples=20,
-        subsample=0.8,
         random_state=random_state,
-        verbosity=-1,
     )
-    names = feature_names()
-    model.fit(X, y, sample_weight=weights, feature_name=names)
-    return model
+
+
+class _NativeLightGBMClassifier:
+    """Thin wrapper around ``lightgbm.train`` with a sklearn-like API.
+
+    The local environment currently has a LightGBM/sklearn wrapper mismatch:
+    newer sklearn removed ``force_all_finite`` while the installed LightGBM
+    wrapper still passes it through. The native training API avoids that path
+    while preserving deterministic tree behavior for the meta-selector.
+    """
+
+    def __init__(self, booster: Any):
+        self.booster = booster
+        self.feature_importances_ = np.asarray(booster.feature_importance(importance_type="gain"), dtype=float)
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        probabilities = self.booster.predict(X)
+        return (np.asarray(probabilities) >= 0.5).astype(int)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        probabilities = np.clip(np.asarray(self.booster.predict(X), dtype=float), 1e-6, 1.0 - 1e-6)
+        return np.column_stack([1.0 - probabilities, probabilities])
+
+
+def _load_lightgbm_native() -> Any:
+    import contextlib
+    import importlib
+    import io
+
+    stderr_buffer = io.StringIO()
+    with contextlib.redirect_stderr(stderr_buffer):
+        return importlib.import_module("lightgbm")
+
+
+def _train_native_lightgbm_classifier(
+    X: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray,
+    *,
+    max_depth: int,
+    n_estimators: int,
+    learning_rate: float,
+    random_state: int,
+) -> _NativeLightGBMClassifier:
+    lgb = _load_lightgbm_native()
+
+    params = {
+        "objective": "binary",
+        "metric": "binary_logloss",
+        "max_depth": max_depth,
+        "num_leaves": min(2**max_depth, 16),
+        "learning_rate": learning_rate,
+        "min_child_samples": 20,
+        "subsample": 0.8,
+        "subsample_freq": 1,
+        "feature_fraction": 1.0,
+        "seed": random_state,
+        "feature_fraction_seed": random_state,
+        "bagging_seed": random_state,
+        "data_random_seed": random_state,
+        "verbosity": -1,
+    }
+    dataset = lgb.Dataset(X, label=y, weight=weights, feature_name=feature_names(), free_raw_data=False)
+    booster = lgb.train(params, dataset, num_boost_round=n_estimators)
+    return _NativeLightGBMClassifier(booster)
 
 
 def train_meta_selector_xgb(
@@ -1183,7 +1243,6 @@ def tune_and_train_meta_selector(
     best params. This is safe because the training data itself is already
     walk-forward (years < test_year only).
     """
-    import lightgbm as lgb
     from sklearn.model_selection import StratifiedKFold
 
     param_grid = [
@@ -1203,20 +1262,14 @@ def tune_and_train_meta_selector(
     for params in param_grid:
         scores = []
         for train_idx, val_idx in skf.split(X, y):
-            model = lgb.LGBMClassifier(
+            model = _train_native_lightgbm_classifier(
+                X[train_idx],
+                y[train_idx],
+                weights[train_idx],
                 max_depth=params["max_depth"],
                 n_estimators=params["n_estimators"],
                 learning_rate=params["learning_rate"],
-                min_child_samples=20,
-                subsample=0.8,
                 random_state=random_state,
-                verbosity=-1,
-            )
-            model.fit(
-                X[train_idx],
-                y[train_idx],
-                sample_weight=weights[train_idx],
-                feature_name=names,
             )
             # Score: weighted accuracy (same metric as training objective)
             preds = model.predict(X[val_idx])

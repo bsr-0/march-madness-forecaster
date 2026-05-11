@@ -308,6 +308,23 @@ class TestTrainingData:
 
 
 class TestTrainedSelector:
+    def test_native_lightgbm_wrapper_exposes_feature_importances(self):
+        from src.prediction.meta_selector import _NativeLightGBMClassifier
+
+        class DummyBooster:
+            def feature_importance(self, importance_type="split"):
+                assert importance_type == "gain"
+                return [3.0, 1.5, 0.0]
+
+            def predict(self, X):
+                return np.full(len(X), 0.7)
+
+        model = _NativeLightGBMClassifier(DummyBooster())
+
+        np.testing.assert_array_equal(model.feature_importances_, np.asarray([3.0, 1.5, 0.0]))
+        probs = model.predict_proba(np.asarray([[0.0], [1.0]]))
+        assert probs.shape == (2, 2)
+
     @pytest.mark.skipif(
         not _has_year_data(2019) or not _has_year_data(2021),
         reason="Need 2019+2021 data",
