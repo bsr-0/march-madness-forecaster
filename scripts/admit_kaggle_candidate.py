@@ -315,15 +315,17 @@ def _evaluate_torvik_corrected(
         recent_total_ratio=recent_total_ratio,
     )
 
-    from src.prediction.torvik_correction import _resolve_market
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
 
     torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
     seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
     seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
     outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
     seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
-    market = np.asarray([_resolve_market(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
-    preds = model.predict(torvik, seed1, seed2, market_probs=market)
+    market = np.asarray([_resolve_signal(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+    preds = model.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
     brier = float(np.mean((preds - outcomes) ** 2))
     seed_brier = float(np.mean((seed - outcomes) ** 2))
 
