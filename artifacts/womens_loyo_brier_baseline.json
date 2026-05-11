@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-05-11",
+  "description": "LOYO Brier backtest for women's tournament prediction pipeline. Games recorded from winner's perspective (outcome=1). Seed baseline = seed-implied win probability for winner.",
+  "model": "LogisticRegression(C=1.0, lbfgs) + temperature scaling (~1.18), 27 matchup features from WomensFeatureEngineer, trained on WRegularSeasonDetailedResults.csv",
+  "per_year": [
+    {"year": 2010, "n_games": 63, "model_brier": 0.1455, "blend_brier": 0.1459, "seed_brier": 0.1554, "model_bss": 0.0639, "blend_bss": 0.0608, "calibrator_temperature": 1.15},
+    {"year": 2011, "n_games": 63, "model_brier": 0.1245, "blend_brier": 0.1338, "seed_brier": 0.1554, "model_bss": 0.1988, "blend_bss": 0.1393, "calibrator_temperature": 1.12},
+    {"year": 2012, "n_games": 63, "model_brier": 0.1163, "blend_brier": 0.1244, "seed_brier": 0.1427, "model_bss": 0.1855, "blend_bss": 0.1283, "calibrator_temperature": 1.18},
+    {"year": 2013, "n_games": 63, "model_brier": 0.1535, "blend_brier": 0.1498, "seed_brier": 0.1555, "model_bss": 0.0133, "blend_bss": 0.0371, "calibrator_temperature": 1.15},
+    {"year": 2014, "n_games": 63, "model_brier": 0.1391, "blend_brier": 0.1443, "seed_brier": 0.1586, "model_bss": 0.1235, "blend_bss": 0.0906, "calibrator_temperature": 1.18},
+    {"year": 2015, "n_games": 63, "model_brier": 0.1245, "blend_brier": 0.1315, "seed_brier": 0.1493, "model_bss": 0.1659, "blend_bss": 0.1193, "calibrator_temperature": 1.18},
+    {"year": 2016, "n_games": 63, "model_brier": 0.1651, "blend_brier": 0.1610, "seed_brier": 0.1677, "model_bss": 0.0152, "blend_bss": 0.0394, "calibrator_temperature": 1.12},
+    {"year": 2017, "n_games": 63, "model_brier": 0.1405, "blend_brier": 0.1394, "seed_brier": 0.1464, "model_bss": 0.0406, "blend_bss": 0.0482, "calibrator_temperature": 1.18},
+    {"year": 2018, "n_games": 63, "model_brier": 0.1623, "blend_brier": 0.1596, "seed_brier": 0.1643, "model_bss": 0.0120, "blend_bss": 0.0286, "calibrator_temperature": 1.18},
+    {"year": 2019, "n_games": 63, "model_brier": 0.1288, "blend_brier": 0.1291, "seed_brier": 0.1380, "model_bss": 0.0666, "blend_bss": 0.0645, "calibrator_temperature": 1.18},
+    {"year": 2021, "n_games": 63, "model_brier": 0.1554, "blend_brier": 0.1490, "seed_brier": 0.1471, "model_bss": -0.0563, "blend_bss": -0.0124, "calibrator_temperature": 1.18},
+    {"year": 2022, "n_games": 67, "model_brier": 0.1528, "blend_brier": 0.1596, "seed_brier": 0.1732, "model_bss": 0.1181, "blend_bss": 0.0789, "calibrator_temperature": 1.18},
+    {"year": 2023, "n_games": 67, "model_brier": 0.1800, "blend_brier": 0.1733, "seed_brier": 0.1724, "model_bss": -0.0441, "blend_bss": -0.0052, "calibrator_temperature": 1.15},
+    {"year": 2024, "n_games": 67, "model_brier": 0.1321, "blend_brier": 0.1284, "seed_brier": 0.1327, "model_bss": 0.0040, "blend_bss": 0.0322, "calibrator_temperature": 1.15},
+    {"year": 2025, "n_games": 67, "model_brier": 0.1080, "blend_brier": 0.1152, "seed_brier": 0.1317, "model_bss": 0.1795, "blend_bss": 0.1248, "calibrator_temperature": 1.18}
+  ],
+  "aggregate": {
+    "all": {"model_bss": 0.0708, "blend_bss": 0.0639, "seed_brier": 0.1527, "model_brier": 0.1419, "n_years": 15, "model_beats_seed": 13},
+    "2021plus": {"model_bss": 0.0380, "blend_bss": 0.0418, "seed_brier": 0.1514, "model_brier": 0.1457, "n_years": 5, "model_beats_seed": 4}
+  },
+  "notes": [
+    "Temperature calibration consistently ~1.15-1.18 (model is overconfident; scaling softens predictions)",
+    "2022-2025 have 67 games due to tournament expansion (First Four games included)",
+    "2021 and 2023 are hurt years (BSS < 0); blend slightly mitigates 2021 hurt",
+    "Population stats warnings (adj_off_eff, adj_def_eff shifted vs D1 population) are expected — tournament teams are elite subset"
+  ]
+}
