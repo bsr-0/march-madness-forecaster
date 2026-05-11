@@ -1,0 +1,29 @@
+{
+  "incumbent": {
+    "mode": "ensemble",
+    "params": {
+      "recent_year_count": 5,
+      "recent_total_ratio": 1.0
+    }
+  },
+  "candidate_search_spaces": [
+    {
+      "modes": ["torvik_corrected"],
+      "params": {
+        "recent_year_count": [5],
+        "recent_total_ratio": [1.0],
+        "correction_ridge": [5.0, 10.0, 20.0, 40.0],
+        "max_correction": [0.03, 0.04, 0.05, 0.06]
+      }
+    },
+    {
+      "modes": ["ensemble"],
+      "params": {
+        "recent_year_count": [5],
+        "recent_total_ratio": [1.0],
+        "clip_lo": [0.01],
+        "clip_hi": [0.99]
+      }
+    }
+  ]
+}
