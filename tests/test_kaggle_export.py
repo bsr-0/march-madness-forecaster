@@ -510,7 +510,7 @@ def test_build_submission_predict_fn_supports_torvik_corrected(monkeypatch):
     class DummyCorrection:
         coef_ = [0.1, -0.2, 0.3, -0.4]
 
-        def predict_one(self, base_prob, seed1, seed2, market_prob=None):
+        def predict_one(self, base_prob, seed1, seed2, market_prob=None, elo_prob=None, round_num=0.0):
             assert base_prob == 0.6
             assert seed1 == 1
             assert seed2 == 2
@@ -533,6 +533,7 @@ def test_build_submission_predict_fn_supports_torvik_corrected(monkeypatch):
     monkeypatch.setattr(module.TarvikKagglePredictor, "from_year", fake_from_year)
     monkeypatch.setattr(module, "_build_torvik_correction_model", lambda *args, **kwargs: DummyCorrection())
     monkeypatch.setattr(module, "load_market_ratings", lambda *args, **kwargs: None)
+    monkeypatch.setattr(module, "load_elo_barthag", lambda *args, **kwargs: None)
 
     predict_fn, info = module._build_submission_predict_fn(
         2026,
@@ -563,7 +564,7 @@ def test_build_submission_predict_fn_supports_recent5_conservative_preset(monkey
             "recent_year_weight": 2.4,
         }
 
-        def predict_one(self, base_prob, seed1, seed2, market_prob=None):
+        def predict_one(self, base_prob, seed1, seed2, market_prob=None, elo_prob=None, round_num=0.0):
             assert base_prob == 0.6
             assert seed1 == 1
             assert seed2 == 2
@@ -587,6 +588,7 @@ def test_build_submission_predict_fn_supports_recent5_conservative_preset(monkey
 
     monkeypatch.setattr(module, "_build_torvik_correction_model", fake_build_torvik_correction_model)
     monkeypatch.setattr(module, "load_market_ratings", lambda *args, **kwargs: None)
+    monkeypatch.setattr(module, "load_elo_barthag", lambda *args, **kwargs: None)
 
     predict_fn, info = module._build_submission_predict_fn(
         2026,

@@ -86,8 +86,12 @@ def walk_forward_backtest(
         seed = np.asarray([float(r["seed"]) for r in test_rows], dtype=float)
         outcomes = np.asarray([float(r["outcome"]) for r in test_rows], dtype=float)
         market = np.asarray([_resolve_market(r.get("odds"), float(r["torvik"])) for r in test_rows], dtype=float)
+        elo = np.asarray([_resolve_market(r.get("elo"), float(r["torvik"])) for r in test_rows], dtype=float)
+        from src.prediction.torvik_correction import round_to_num
 
-        corrected = correction.predict(torvik, seed1, seed2, market_probs=market)
+        rounds = np.asarray([round_to_num(r.get("round")) for r in test_rows], dtype=float)
+
+        corrected = correction.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
         blend = np.clip(alpha * torvik + (1.0 - alpha) * pipeline, config.clip_lo, config.clip_hi)
 
         corrected_brier = float(np.mean((corrected - outcomes) ** 2))

@@ -39,6 +39,7 @@ from src.exports.kaggle import (
     load_kaggle_womens_teams,
 )
 from src.ml.calibration.post_processing import PostProcessingPipeline
+from src.prediction.elo_probabilities import load_elo_barthag
 from src.prediction.market_probabilities import load_market_ratings
 from src.prediction.torvik_correction import TorvikCorrectionConfig, fit_torvik_correction_from_year_records
 from src.prediction.torvik_kaggle import EnsembleKagglePredictor, TarvikKagglePredictor
@@ -214,13 +215,14 @@ def _build_submission_predict_fn(
             max_correction=float(mode_config["max_correction"]),
         )
 
-        # Load market ratings once; used to compute per-matchup market_prob.
-        # Returns None if odds data unavailable — correction degrades gracefully.
+        # Load market and elo ratings once per year (Log5 matchup prob at inference).
+        # Both return None when data is unavailable — correction degrades gracefully.
         _market_ratings = load_market_ratings(year, seeds) or {}
+        _elo_ratings = load_elo_barthag(year, seeds) or {}
 
-        def _market_matchup_prob(t1: str, t2: str, _ratings: dict = _market_ratings) -> float | None:
-            b1 = _ratings.get(t1)
-            b2 = _ratings.get(t2)
+        def _log5_matchup(ratings: dict, t1: str, t2: str) -> float | None:
+            b1 = ratings.get(t1)
+            b2 = ratings.get(t2)
             if not b1 or not b2:
                 return None
             num = b1 * (1.0 - b2)
@@ -230,8 +232,16 @@ def _build_submission_predict_fn(
         def predict_fn(t1: str, t2: str, _torvik=torvik, _correction=correction) -> float:
             base_prob = _torvik.predict(t1, t2)
             s1, s2 = seeds.get(t1, 8), seeds.get(t2, 8)
+            # round_num=0.0: Kaggle predicts all matchups without round context
             return _maybe_postprocess(
-                _correction.predict_one(base_prob, s1, s2, market_prob=_market_matchup_prob(t1, t2)),
+                _correction.predict_one(
+                    base_prob,
+                    s1,
+                    s2,
+                    market_prob=_log5_matchup(_market_ratings, t1, t2),
+                    elo_prob=_log5_matchup(_elo_ratings, t1, t2),
+                    round_num=0.0,
+                ),
                 s1,
                 s2,
                 pp,
