@@ -18,6 +18,8 @@ import math
 from pathlib import Path
 from typing import Dict, Optional
 
+from .kaggle_recency import resolve_recent_weighting, year_objective_weight
+
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -36,6 +38,106 @@ def _log5(barthag_a: float, barthag_b: float) -> float:
 def _seed_fallback_barthag(seed: int) -> float:
     """Rough barthag estimate from seed when torvik data is missing."""
     return max(0.10, 1.0 - seed * 0.04)
+
+
+def _weighted_mean(pairs: list[tuple[float, float]]) -> float:
+    """Weighted mean over (value, weight) pairs."""
+    if not pairs:
+        return float("inf")
+    total_weight = sum(weight for _, weight in pairs)
+    if total_weight <= 0:
+        return float("inf")
+    return sum(value * weight for value, weight in pairs) / total_weight
+
+
+def _select_weighted_alpha(
+    year_records: Dict[int, list[dict]],
+    clip_lo: float,
+    clip_hi: float,
+    recent_year_start: Optional[int],
+    recent_year_weight: float,
+    recent_year_count: Optional[int] = None,
+    recent_total_ratio: float = 1.0,
+) -> tuple[float, Dict[str, object]]:
+    """Choose alpha by minimizing weighted per-year Brier/seed-Brier ratio.
+
+    This directly targets BSS-like behavior and allows recent tournaments to
+    count more without discarding older years entirely.
+    """
+    import numpy as np
+
+    weighting = resolve_recent_weighting(
+        list(year_records),
+        recent_year_start=recent_year_start,
+        recent_year_weight=recent_year_weight,
+        recent_year_count=recent_year_count,
+        recent_total_ratio=recent_total_ratio,
+    )
+    resolved_recent_start = weighting["recent_year_start"]
+    resolved_recent_weight = float(weighting["recent_year_weight"])
+
+    best_alpha = 0.60
+    best_score = float("inf")
+    best_brier = float("inf")
+
+    for alpha in np.arange(0.0, 1.01, 0.05):
+        yearly_scores: list[tuple[float, float]] = []
+        yearly_briers: list[tuple[float, float]] = []
+        for train_year, records in sorted(year_records.items()):
+            if not records:
+                continue
+
+            blend_errors = []
+            seed_errors = []
+            for rec in records:
+                pred = alpha * float(rec["torvik"]) + (1.0 - alpha) * float(rec["pipeline"])
+                pred = max(clip_lo, min(clip_hi, pred))
+                outcome = float(rec["outcome"])
+                blend_errors.append((pred - outcome) ** 2)
+
+                seed_pred = rec.get("seed")
+                if seed_pred is not None:
+                    seed_errors.append((float(seed_pred) - outcome) ** 2)
+
+            if not blend_errors:
+                continue
+
+            blend_brier = float(np.mean(blend_errors))
+            objective = blend_brier
+            if seed_errors:
+                seed_brier = float(np.mean(seed_errors))
+                objective = blend_brier / max(seed_brier, 1e-12)
+
+            year_weight = year_objective_weight(train_year, resolved_recent_start, resolved_recent_weight)
+            yearly_scores.append((objective, year_weight))
+            yearly_briers.append((blend_brier, year_weight))
+
+        weighted_score = _weighted_mean(yearly_scores)
+        weighted_brier = _weighted_mean(yearly_briers)
+        if (
+            weighted_score < best_score
+            or (math.isclose(weighted_score, best_score) and weighted_brier < best_brier)
+            or (
+                math.isclose(weighted_score, best_score)
+                and math.isclose(weighted_brier, best_brier)
+                and abs(alpha - 0.60) < abs(best_alpha - 0.60)
+            )
+        ):
+            best_alpha = float(alpha)
+            best_score = weighted_score
+            best_brier = weighted_brier
+
+    return best_alpha, {
+        "weighted_brier_ratio": best_score,
+        "weighted_brier": best_brier,
+        "weighting_mode": weighting["mode"],
+        "recent_year_start": resolved_recent_start,
+        "recent_year_weight": resolved_recent_weight,
+        "recent_year_count": weighting["recent_year_count"],
+        "recent_total_ratio": weighting["recent_total_ratio"],
+        "recent_years": weighting["recent_years"],
+        "older_years": weighting["older_years"],
+    }
 
 
 class TarvikKagglePredictor:
@@ -178,6 +280,7 @@ class EnsembleKagglePredictor:
         alpha: float = 0.6,
         clip_lo: float = 0.01,
         clip_hi: float = 0.99,
+        alpha_training_info: Optional[Dict[str, object]] = None,
     ):
         """
         Args:
@@ -192,6 +295,7 @@ class EnsembleKagglePredictor:
         self.alpha = alpha
         self.clip_lo = clip_lo
         self.clip_hi = clip_hi
+        self.alpha_training_info = alpha_training_info or {}
 
     @classmethod
     def from_walk_forward(
@@ -203,15 +307,28 @@ class EnsembleKagglePredictor:
         backtest_path: Optional[str] = None,
         clip_lo: float = 0.01,
         clip_hi: float = 0.99,
+        recent_year_start: Optional[int] = 2021,
+        recent_year_weight: float = 2.0,
+        recent_year_count: Optional[int] = None,
+        recent_total_ratio: float = 1.0,
     ) -> "EnsembleKagglePredictor":
         """Build with walk-forward optimized alpha for a target year.
 
         Fits optimal alpha on all years < target_year from the per-game
-        predictions artifact + backtest pipeline predictions.
+        predictions artifact + backtest pipeline predictions. The objective is a
+        weighted mean of per-year Brier/seed-Brier ratios so the fit is aligned
+        to BSS and can emphasize recent tournaments.
 
         Falls back to alpha=0.60 if artifacts are unavailable.
         """
         alpha = 0.60  # default
+        alpha_training_info: Dict[str, object] = {
+            "strategy": "weighted_bss_ratio",
+            "recent_year_start": recent_year_start,
+            "recent_year_weight": recent_year_weight,
+            "recent_year_count": recent_year_count,
+            "recent_total_ratio": recent_total_ratio,
+        }
 
         try:
             repo_root = Path(__file__).resolve().parent.parent.parent
@@ -232,11 +349,14 @@ class EnsembleKagglePredictor:
                 import numpy as np
 
                 train_records = []
+                year_records: Dict[int, list[dict]] = {}
                 for yr_str, records in pergame.items():
-                    if int(yr_str) >= year:
+                    train_year = int(yr_str)
+                    if train_year >= year:
                         continue
                     pg_list = pipe_games.get(yr_str, [])
                     pipe_lookup = {(g["team1"], g["team2"]): g["pipeline"] for g in pg_list}
+                    merged_records = []
                     for r in records:
                         key = (r["team1"], r["team2"])
                         rev = (r["team2"], r["team1"])
@@ -244,26 +364,45 @@ class EnsembleKagglePredictor:
                         if p is None and rev in pipe_lookup:
                             p = round(1.0 - pipe_lookup[rev], 6)
                         if p is not None:
-                            train_records.append({**r, "pipeline": p})
+                            merged_record = {**r, "pipeline": p}
+                            train_records.append(merged_record)
+                            merged_records.append(merged_record)
+                    if merged_records:
+                        year_records[train_year] = merged_records
 
                 if len(train_records) >= 60:
-                    best_alpha, best_brier = 0.60, float("inf")
-                    for a in np.arange(0.0, 1.01, 0.05):
-                        errors = []
-                        for rec in train_records:
-                            pred = a * rec["torvik"] + (1.0 - a) * rec["pipeline"]
-                            errors.append((max(0.01, min(0.99, pred)) - rec["outcome"]) ** 2)
-                        brier = float(np.mean(errors))
-                        if brier < best_brier:
-                            best_alpha, best_brier = float(a), brier
-                    alpha = best_alpha
+                    alpha, objective_info = _select_weighted_alpha(
+                        year_records,
+                        clip_lo,
+                        clip_hi,
+                        recent_year_start=recent_year_start,
+                        recent_year_weight=recent_year_weight,
+                        recent_year_count=recent_year_count,
+                        recent_total_ratio=recent_total_ratio,
+                    )
+                    alpha_training_info.update(objective_info)
+                    alpha_training_info["training_games"] = len(train_records)
+                    alpha_training_info["training_years"] = len(year_records)
                     logger.info(
-                        "Walk-forward alpha for %d: %.2f (trained on %d games)", year, alpha, len(train_records)
+                        "Walk-forward alpha for %d: %.2f (trained on %d games across %d years; recent start=%s, weight=%.2f)",
+                        year,
+                        alpha,
+                        len(train_records),
+                        len(year_records),
+                        recent_year_start,
+                        recent_year_weight,
                     )
         except Exception as e:
             logger.warning("Walk-forward alpha failed (%s), using default 0.60", e)
 
-        return cls(torvik, pipeline_predict_fn, alpha=alpha, clip_lo=clip_lo, clip_hi=clip_hi)
+        return cls(
+            torvik,
+            pipeline_predict_fn,
+            alpha=alpha,
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            alpha_training_info=alpha_training_info,
+        )
 
     def predict(self, team1_id: str, team2_id: str) -> float:
         """Blended prediction: alpha * torvik + (1-alpha) * pipeline."""
