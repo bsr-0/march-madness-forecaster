@@ -1,0 +1,34 @@
+{
+  "incumbent": {
+    "mode": "ensemble",
+    "params": {
+      "recent_year_start": 2021,
+      "recent_year_weight": 2.0
+    }
+  },
+  "candidate_search_spaces": [
+    {
+      "modes": ["ensemble"],
+      "params": {
+        "recent_year_start": [2021],
+        "recent_year_weight": [1.0, 2.0, 3.0]
+      }
+    },
+    {
+      "modes": ["torvik_corrected"],
+      "params": {
+        "recent_year_start": [2021],
+        "recent_year_weight": [1.0, 2.0, 3.0],
+        "correction_ridge": [0.5, 1.0, 2.0],
+        "max_correction": [0.06, 0.08]
+      }
+    },
+    {
+      "modes": ["torvik"],
+      "params": {
+        "clip_lo": [0.01],
+        "clip_hi": [0.99]
+      }
+    }
+  ]
+}
