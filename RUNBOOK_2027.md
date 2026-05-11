@@ -4,6 +4,47 @@
 **Selection Sunday:** March 14, 2027.
 **Time budget:** ~24 hours from bracket announcement to pool lock.
 
+## Objective Hierarchy
+
+The repo has two different targets:
+
+- Primary: ESPN pool performance, measured by `P(1st)` or related pool EV.
+- Secondary: Kaggle-style game prediction performance, measured by held-out tournament `Brier`.
+
+For a blunt combined review of the repo's current data sources, methodology, and likely next steps from a skeptical external-statistician perspective, see [docs/skeptical-statistician-review.md](/Users/benrosen/march-madness-forecaster/docs/skeptical-statistician-review.md).
+
+If you are working on the Kaggle path, use `Brier` as the optimization metric and `BSS` as a guardrail, not the other way around.
+
+For the Kaggle path, this repo currently adopts a strong recency policy:
+
+- the most recent 5 observed tournaments should count about as much as all older observed tournaments combined
+- older years still stay in the fit window for regularization and stability
+
+See [docs/kaggle-objective-policy.md](/Users/benrosen/march-madness-forecaster/docs/kaggle-objective-policy.md) for the exact weighting rule and admission guidance.
+
+### Current Kaggle Baseline
+
+If you need a Kaggle submission baseline and have not re-run the full admission process, use:
+
+```bash
+python scripts/kaggle_torvik_submission.py \
+  --year 2027 \
+  --mode torvik_corrected_recent5_conservative \
+  --sample-submission data/kaggle/SampleSubmissionStage2.csv \
+  --output /private/tmp/kaggle_torvik_corrected_recent5_2027.csv
+```
+
+This is the admitted recent-5 conservative torvik-correction preset:
+
+- optimize on held-out `Brier`
+- keep `BSS` as a guardrail
+- use recent-block weighting where the most recent 5 tournaments count about as much as all older tournaments combined
+- use torvik correction `ridge=20.0`, `max_correction=0.06`
+- 8-feature model: seed gap, torvik confidence, market (odds), market disagreement, elo disagreement, round — admitted 2026-05-10
+- beats ensemble incumbent by +0.0071 Brier on final holdout (3/4 years), BSS correction 13/15 years
+
+Before replacing it, re-run the Kaggle admission gate and beat the current baseline on the same rules.
+
 ---
 
 ## Pre-Season Smoke Test (Run in February 2027)
