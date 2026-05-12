@@ -5,6 +5,8 @@ This document defines the next serious path for improving the repo's Kaggle seco
 - optimize held-out tournament `Brier`
 - keep `BSS` as a guardrail
 
+For the concrete vendor-feasibility execution checklist, see [docs/kaggle-market-odds-phase1-checklist.md](/Users/benrosen/march-madness-forecaster/docs/kaggle-market-odds-phase1-checklist.md).
+
 The internal-only path is now effectively exhausted. Future improvement should be treated as a data-acquisition problem first.
 
 ## Current status
@@ -177,6 +179,8 @@ Phase 1:
 - choose vendor
 - confirm historical tournament coverage for `2021-2026`
 - define schema and canonical team mapping
+
+Use [docs/kaggle-market-odds-phase1-checklist.md](/Users/benrosen/march-madness-forecaster/docs/kaggle-market-odds-phase1-checklist.md) as the execution document for this phase.
 
 Phase 2:
 
