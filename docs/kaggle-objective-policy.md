@@ -2,6 +2,8 @@
 
 This document defines the repo's secondary objective for Kaggle-style tournament prediction work.
 
+For the next-step external-data acquisition plan, see [docs/kaggle-external-data-roadmap.md](/Users/benrosen/march-madness-forecaster/docs/kaggle-external-data-roadmap.md).
+
 ## Objective Hierarchy
 
 The project has two different optimization targets:
