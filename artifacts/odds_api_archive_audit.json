@@ -1,0 +1,460 @@
+{
+  "archive": {
+    "first_snapshot": "2020-11-01_1700Z.json",
+    "last_snapshot": "2025-04-10_1700Z.json",
+    "snapshot_count": 936
+  },
+  "generated_at": "2026-05-14T03:05:25.126334+00:00",
+  "season_summary": {
+    "2021": {
+      "actual_snapshots": 191,
+      "completion_pct": 100.0,
+      "event_market_presence": {
+        "h2h": 5007,
+        "spreads": 4997,
+        "totals": 4581
+      },
+      "expected_snapshots": 191,
+      "first_missing_snapshot": null,
+      "median_books_per_event": 11.0,
+      "median_books_per_tournament_event": 13.0,
+      "missing_snapshots": 0,
+      "tournament_market_presence": {
+        "h2h": 515,
+        "spreads": 530,
+        "totals": 518
+      },
+      "unique_event_ids": 4041,
+      "unique_tournament_event_ids": 69
+    },
+    "2022": {
+      "actual_snapshots": 186,
+      "completion_pct": 100.0,
+      "event_market_presence": {
+        "h2h": 5848,
+        "spreads": 5858,
+        "totals": 5841
+      },
+      "expected_snapshots": 186,
+      "first_missing_snapshot": null,
+      "median_books_per_event": 14.0,
+      "median_books_per_tournament_event": 15.0,
+      "missing_snapshots": 0,
+      "tournament_market_presence": {
+        "h2h": 455,
+        "spreads": 459,
+        "totals": 459
+      },
+      "unique_event_ids": 5365,
+      "unique_tournament_event_ids": 70
+    },
+    "2023": {
+      "actual_snapshots": 186,
+      "completion_pct": 100.0,
+      "event_market_presence": {
+        "h2h": 6406,
+        "spreads": 6521,
+        "totals": 6470
+      },
+      "expected_snapshots": 186,
+      "first_missing_snapshot": null,
+      "median_books_per_event": 17.0,
+      "median_books_per_tournament_event": 17.0,
+      "missing_snapshots": 0,
+      "tournament_market_presence": {
+        "h2h": 411,
+        "spreads": 443,
+        "totals": 411
+      },
+      "unique_event_ids": 5713,
+      "unique_tournament_event_ids": 73
+    },
+    "2024": {
+      "actual_snapshots": 187,
+      "completion_pct": 100.0,
+      "event_market_presence": {
+        "h2h": 6679,
+        "spreads": 7097,
+        "totals": 7035
+      },
+      "expected_snapshots": 187,
+      "first_missing_snapshot": null,
+      "median_books_per_event": 12.0,
+      "median_books_per_tournament_event": 13.0,
+      "missing_snapshots": 0,
+      "tournament_market_presence": {
+        "h2h": 542,
+        "spreads": 581,
+        "totals": 566
+      },
+      "unique_event_ids": 5769,
+      "unique_tournament_event_ids": 113
+    },
+    "2025": {
+      "actual_snapshots": 186,
+      "completion_pct": 100.0,
+      "event_market_presence": {
+        "h2h": 6851,
+        "spreads": 6980,
+        "totals": 6973
+      },
+      "expected_snapshots": 186,
+      "first_missing_snapshot": null,
+      "median_books_per_event": 9.0,
+      "median_books_per_tournament_event": 10.0,
+      "missing_snapshots": 0,
+      "tournament_market_presence": {
+        "h2h": 585,
+        "spreads": 587,
+        "totals": 583
+      },
+      "unique_event_ids": 5793,
+      "unique_tournament_event_ids": 97
+    }
+  },
+  "tournament_summary": {
+    "2021": {
+      "coverage_pct": 94.03,
+      "expected_games": 67,
+      "extra_observed_count": 3,
+      "extra_observed_pairs": [
+        [
+          "baylor",
+          "ucla"
+        ],
+        [
+          "gonzaga",
+          "houston"
+        ],
+        [
+          "houston",
+          "ucla"
+        ]
+      ],
+      "matched_games": 63,
+      "unmatched_expected_count": 4,
+      "unmatched_expected_games": [
+        [
+          "georgia_tech",
+          "loyola__il"
+        ],
+        [
+          "illinois",
+          "loyola__il"
+        ],
+        [
+          "illinois",
+          "oregon_state"
+        ],
+        [
+          "mount_st__mary_s",
+          "texas_southern"
+        ]
+      ]
+    },
+    "2022": {
+      "coverage_pct": 94.03,
+      "expected_games": 67,
+      "extra_observed_count": 6,
+      "extra_observed_pairs": [
+        [
+          "baylor",
+          "gonzaga"
+        ],
+        [
+          "duke",
+          "kansas"
+        ],
+        [
+          "duke",
+          "villanova"
+        ],
+        [
+          "north_carolina",
+          "villanova"
+        ],
+        [
+          "ohio_state",
+          "villanova"
+        ],
+        [
+          "providence",
+          "richmond"
+        ]
+      ],
+      "matched_games": 63,
+      "unmatched_expected_count": 4,
+      "unmatched_expected_games": [
+        [
+          "cal_state_fullerton",
+          "duke"
+        ],
+        [
+          "iowa",
+          "providence"
+        ],
+        [
+          "loyola__il",
+          "ohio_state"
+        ],
+        [
+          "loyola__il",
+          "villanova"
+        ]
+      ]
+    },
+    "2023": {
+      "coverage_pct": 98.51,
+      "expected_games": 67,
+      "extra_observed_count": 3,
+      "extra_observed_pairs": [
+        [
+          "connecticut",
+          "florida_atlantic"
+        ],
+        [
+          "florida_atlantic",
+          "miami__fl"
+        ],
+        [
+          "miami__fl",
+          "san_diego_state"
+        ]
+      ],
+      "matched_games": 66,
+      "unmatched_expected_count": 1,
+      "unmatched_expected_games": [
+        [
+          "southeast_missouri_state",
+          "texas_a_m_corpus_christi"
+        ]
+      ]
+    },
+    "2024": {
+      "coverage_pct": 92.54,
+      "expected_games": 67,
+      "extra_observed_count": 37,
+      "extra_observed_pairs": [
+        [
+          "alabama",
+          "florida"
+        ],
+        [
+          "alabama",
+          "texas"
+        ],
+        [
+          "arizona",
+          "oregon"
+        ],
+        [
+          "auburn",
+          "florida"
+        ],
+        [
+          "auburn",
+          "mississippi_state"
+        ],
+        [
+          "auburn",
+          "south_carolina"
+        ],
+        [
+          "baylor",
+          "iowa_state"
+        ],
+        [
+          "boise_state",
+          "florida"
+        ],
+        [
+          "boise_state",
+          "new_mexico"
+        ],
+        [
+          "colorado",
+          "oregon"
+        ],
+        [
+          "colorado",
+          "washington_state"
+        ],
+        [
+          "colorado_state",
+          "nevada"
+        ],
+        [
+          "colorado_state",
+          "new_mexico"
+        ],
+        [
+          "connecticut",
+          "marquette"
+        ],
+        [
+          "connecticut",
+          "san_diego_state"
+        ],
+        [
+          "duke",
+          "nc_state"
+        ],
+        [
+          "florida",
+          "texas_a_m"
+        ],
+        [
+          "grambling",
+          "texas"
+        ],
+        [
+          "houston",
+          "iowa_state"
+        ],
+        [
+          "houston",
+          "texas_tech"
+        ]
+      ],
+      "matched_games": 62,
+      "unmatched_expected_count": 5,
+      "unmatched_expected_games": [
+        [
+          "auburn",
+          "connecticut"
+        ],
+        [
+          "auburn",
+          "san_diego_state"
+        ],
+        [
+          "connecticut",
+          "purdue"
+        ],
+        [
+          "houston",
+          "nc_state"
+        ],
+        [
+          "purdue",
+          "tcu"
+        ]
+      ]
+    },
+    "2025": {
+      "coverage_pct": 91.04,
+      "expected_games": 67,
+      "extra_observed_count": 27,
+      "extra_observed_pairs": [
+        [
+          "alabama",
+          "brigham_young"
+        ],
+        [
+          "alabama",
+          "florida"
+        ],
+        [
+          "alabama",
+          "kentucky"
+        ],
+        [
+          "american",
+          "duke"
+        ],
+        [
+          "arizona",
+          "houston"
+        ],
+        [
+          "arizona",
+          "texas_tech"
+        ],
+        [
+          "arkansas",
+          "texas_tech"
+        ],
+        [
+          "auburn",
+          "duke"
+        ],
+        [
+          "auburn",
+          "houston"
+        ],
+        [
+          "auburn",
+          "tennessee"
+        ],
+        [
+          "clemson",
+          "louisville"
+        ],
+        [
+          "colorado_state",
+          "utah_state"
+        ],
+        [
+          "connecticut",
+          "creighton"
+        ],
+        [
+          "creighton",
+          "st__john_s__ny"
+        ],
+        [
+          "duke",
+          "florida"
+        ],
+        [
+          "duke",
+          "louisville"
+        ],
+        [
+          "duke",
+          "oregon"
+        ],
+        [
+          "duke",
+          "tennessee"
+        ],
+        [
+          "florida",
+          "michigan_state"
+        ],
+        [
+          "florida",
+          "tennessee"
+        ]
+      ],
+      "matched_games": 61,
+      "unmatched_expected_count": 6,
+      "unmatched_expected_games": [
+        [
+          "alabama",
+          "wisconsin"
+        ],
+        [
+          "alabama_state",
+          "saint_francis"
+        ],
+        [
+          "american",
+          "mount_st__mary_s"
+        ],
+        [
+          "duke",
+          "mount_st__mary_s"
+        ],
+        [
+          "iowa_state",
+          "michigan_state"
+        ],
+        [
+          "st__john_s__ny",
+          "texas_tech"
+        ]
+      ]
+    }
+  }
+}
