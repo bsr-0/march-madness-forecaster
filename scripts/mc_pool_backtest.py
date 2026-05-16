@@ -1979,6 +1979,7 @@ def _run_one_year(
     scoring_vector,
     opponent_strategy="shared",
     pool_blend_weight=0.7,
+    pa_trials=200,
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -3262,7 +3263,7 @@ def _run_one_year(
                     print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
                 else:
                     # Score each candidate via pool simulation
-                    n_pa_trials = 200
+                    n_pa_trials = pa_trials
                     best_pa_p1 = -1.0
                     best_pa_idx = 0
                     for ci, (bvec, _) in enumerate(_pa_candidates):
@@ -3751,6 +3752,7 @@ def run_backtest(
     opponent_strategy: str = "shared",
     eval_start_year: int = None,
     pool_blend_weight: float = 0.7,
+    pa_trials: int = 200,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -3826,6 +3828,7 @@ def run_backtest(
         scoring_vector,
         opponent_strategy,
         pool_blend_weight,
+        pa_trials,
     )
 
     def _absorb(outcome: dict) -> None:
@@ -4130,6 +4133,14 @@ def main():
         help=f"Construction modes to evaluate (cross-product with --bases). "
         f"Valid: {', '.join(CONSTRUCTION_MODES)}. Use 'all' for all modes.",
     )
+    parser.add_argument(
+        "--pa-trials",
+        type=int,
+        default=200,
+        help="MC trials per candidate in pool-aware selection (default 200). "
+        "Higher values reduce selection noise but increase runtime linearly. "
+        "Recommended: 500-1000 for final production runs.",
+    )
     args = parser.parse_args()
 
     # Resolve mode list.
@@ -4206,6 +4217,7 @@ def main():
             opponent_strategy=args.opponent_strategy,
             eval_start_year=args.eval_start_year,
             pool_blend_weight=args.pool_blend_weight,
+            pa_trials=args.pa_trials,
         )
     finally:
         if log_file is not None:
