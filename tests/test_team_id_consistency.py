@@ -157,6 +157,8 @@ def test_st_suffix_generic_rule():
 
 def _expected_rounds(year: int):
     """Return expected round distribution based on tournament era."""
+    if year >= 2027:
+        return {"FF": 12, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
     if year >= 2011:
         return {"FF": 4, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
     return {"FF": 1, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
@@ -164,6 +166,8 @@ def _expected_rounds(year: int):
 
 def _expected_total(year: int):
     """Return expected total game count based on tournament era."""
+    if year >= 2027:
+        return 75
     return 67 if year >= 2011 else 64
 
 

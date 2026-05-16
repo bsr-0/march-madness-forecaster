@@ -69,10 +69,11 @@ CANONICAL_ROUND_LABELS: frozenset[str] = frozenset(
 )
 
 # Canonical per-round game counts, era-aware.
-# Pre-2011 played a single opening-round game (FF=1). 2011+ expanded to
-# a four-game First Four (FF=4). Everything else is structurally fixed.
-_CANONICAL_COUNTS_POST_2011: Dict[str, int] = {
-    "FF": 4,
+# Pre-2011 played a single opening-round game (FF=1). 2011-2026 expanded to
+# a four-game First Four (FF=4). 2027+ expands to 76 teams with 12 play-in
+# games (FF=12), still feeding 64 into R64. Everything else is fixed.
+_CANONICAL_COUNTS_POST_2027: Dict[str, int] = {
+    "FF": 12,
     "R64": 32,
     "R32": 16,
     "S16": 8,
@@ -80,8 +81,12 @@ _CANONICAL_COUNTS_POST_2011: Dict[str, int] = {
     "F4": 2,
     "NCG": 1,
 }
+_CANONICAL_COUNTS_POST_2011: Dict[str, int] = {
+    **_CANONICAL_COUNTS_POST_2027,
+    "FF": 4,
+}
 _CANONICAL_COUNTS_PRE_2011: Dict[str, int] = {
-    **_CANONICAL_COUNTS_POST_2011,
+    **_CANONICAL_COUNTS_POST_2027,
     "FF": 1,
 }
 
@@ -155,7 +160,15 @@ def _assert_canonical_distribution(games: List[Dict], season: int) -> None:
     per-round counts, because ESPN returns only completed games and a
     mid-tournament scrape legitimately has a reduced total.
     """
-    expected_total = 67 if season >= 2011 else 64
+    if season >= 2027:
+        expected_total = 75
+        expected = _CANONICAL_COUNTS_POST_2027
+    elif season >= 2011:
+        expected_total = 67
+        expected = _CANONICAL_COUNTS_POST_2011
+    else:
+        expected_total = 64
+        expected = _CANONICAL_COUNTS_PRE_2011
     if len(games) != expected_total:
         logger.info(
             "Skipping canonical-distribution assert for %d: scraped %d games "
@@ -166,8 +179,6 @@ def _assert_canonical_distribution(games: List[Dict], season: int) -> None:
             expected_total,
         )
         return
-
-    expected = _CANONICAL_COUNTS_POST_2011 if season >= 2011 else _CANONICAL_COUNTS_PRE_2011
     counts = dict(Counter(g["round_name"] for g in games))
     if counts != expected:
         raise TaxonomyValidationError(
