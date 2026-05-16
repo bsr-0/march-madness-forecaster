@@ -86,7 +86,7 @@ ABBREV_TO_TEAM_ID: Dict[str, str] = {
     # C
     "CAL": "california",
     "CLEM": "clemson",
-    "COFC": "charleston",
+    "COFC": "college_of_charleston",
     "COLG": "colgate",
     "COLO": "colorado",
     "CONN": "connecticut",
