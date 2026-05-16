@@ -13,7 +13,9 @@ defect only surfaced during O21's year-over-year analysis.
 
 Era-aware canonical counts:
     - pre-2011 (2005–2010): 64 games, 1×FF + 32×R64 + 16×R32 + 8×S16 + 4×E8 + 2×F4 + 1×NCG
-    - 2011+            :    67 games, 4×FF + 32×R64 + 16×R32 + 8×S16 + 4×E8 + 2×F4 + 1×NCG
+    - 2011-2026           : 67 games, 4×FF + 32×R64 + 16×R32 + 8×S16 + 4×E8 + 2×F4 + 1×NCG
+    - 2027+               : 75 games, 12×FF + 32×R64 + 16×R32 + 8×S16 + 4×E8 + 2×F4 + 1×NCG
+      (76-team expansion: 12 play-in games reduce field to 64 for R64)
 """
 
 from __future__ import annotations
@@ -28,6 +30,16 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _HIST_DIR = _REPO_ROOT / "data" / "raw" / "historical"
 
 CANONICAL_ROUND_NAMES = {"FF", "R64", "R32", "S16", "E8", "F4", "NCG"}
+
+CANONICAL_COUNTS_POST_2027 = {
+    "FF": 12,  # 2027+ expansion: 76 teams, 12 play-in games → 64 in R64.
+    "R64": 32,
+    "R32": 16,
+    "S16": 8,
+    "E8": 4,
+    "F4": 2,
+    "NCG": 1,
+}
 
 CANONICAL_COUNTS_POST_2011 = {
     "FF": 4,
@@ -70,7 +82,11 @@ def _load(year: int) -> list[dict]:
 
 
 def _expected_counts(year: int) -> dict[str, int]:
-    return CANONICAL_COUNTS_POST_2011 if year >= 2011 else CANONICAL_COUNTS_PRE_2011
+    if year >= 2027:
+        return CANONICAL_COUNTS_POST_2027
+    if year >= 2011:
+        return CANONICAL_COUNTS_POST_2011
+    return CANONICAL_COUNTS_PRE_2011
 
 
 @pytest.mark.parametrize("year", _available_years())

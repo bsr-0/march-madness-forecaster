@@ -526,11 +526,15 @@ def validate_tournament_results_completeness(
 
     Game counts vary by era:
     - 2005-2010: 64 games (1 play-in + 63 bracket)
-    - 2011+: 67 games (4 First Four + 63 bracket)
+    - 2011-2026: 67 games (4 First Four + 63 bracket)
+    - 2027+: 75 games (12 First Sixteen + 63 bracket, 76-team expansion)
 
     Returns a list of error strings (empty if valid).
     """
-    if year >= 2011:
+    if year >= 2027:
+        EXPECTED_ROUNDS = {"FF": 12, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
+        expected_total = 75
+    elif year >= 2011:
         EXPECTED_ROUNDS = {"FF": 4, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
         expected_total = 67
     else:
