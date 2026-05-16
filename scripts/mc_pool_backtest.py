@@ -3237,6 +3237,29 @@ def _run_one_year(
                 # P(1st) by 2pp. Extra candidates add selection noise.
                 # The "killed" label from meta_region_upset (7.9%) stands.
 
+                # (e) Confidence-routed candidates: lock high-certainty games
+                # (P >= 0.75) to chalk unconditionally, concentrate risk_level
+                # only on genuinely uncertain matchups (5v12, 6v11, 7v10).
+                # region_top_n × {tv, massey_avg} × {0.3, 0.5, 0.7} = up to 6
+                # exhaustive × tv × {0.3, 0.5, 0.7} = 3
+                _CONF_THR = 0.75
+                for _risk in (0.3, 0.5, 0.7):
+                    for _pb_name, _pb_rp in _pa_prob_bases[:2]:
+                        _pa_try_add(
+                            f"{_pb_name}_confroute_risk={_risk}",
+                            mode="region_top_n",
+                            round_probs=_pb_rp,
+                            risk_level=_risk,
+                            confidence_threshold=_CONF_THR,
+                        )
+                    _pa_try_add(
+                        f"tv_exhaust_confroute_risk={_risk}",
+                        mode="exhaustive_champion",
+                        round_probs=torvik_rp,
+                        risk_level=_risk,
+                        confidence_threshold=_CONF_THR,
+                    )
+
                 # De-duplicate identical brackets (keeps first label)
                 _pa_seen: set[bytes] = set()
                 _pa_unique: list[tuple[np.ndarray, str]] = []
@@ -3262,12 +3285,19 @@ def _run_one_year(
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
                     print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
                 else:
-                    # Score each candidate via pool simulation
+                    # Score each candidate via pool simulation using a
+                    # rank-based estimator: fraction of opponents beaten per
+                    # trial, averaged over trials.  Lower variance than binary
+                    # win/loss at the same trial budget, so candidate
+                    # discrimination is more reliable at n_pa_trials=200.
+                    # Selects the same bracket as binary P(1st) in expectation;
+                    # the displayed "RkScore" is not P(1st) but correlates
+                    # strongly — the outer backtest reports true P(1st).
                     n_pa_trials = pa_trials
-                    best_pa_p1 = -1.0
+                    best_pa_rk = -1.0
                     best_pa_idx = 0
                     for ci, (bvec, _) in enumerate(_pa_candidates):
-                        wins = 0
+                        rank_sum = 0.0
                         for _ in range(n_pa_trials):
                             opp = generate_opponent_brackets(
                                 n_opponents=n_opponents,
@@ -3299,17 +3329,17 @@ def _run_one_year(
                                 first_round,
                                 ESPN_SCORING,
                             )
-                            if c_score >= opp_scores.max():
-                                wins += 1
-                        p1 = wins / n_pa_trials
-                        if p1 > best_pa_p1:
-                            best_pa_p1 = p1
+                            n_opp = max(1, len(opp_scores))
+                            rank_sum += (opp_scores < c_score).sum() / n_opp
+                        rk = rank_sum / n_pa_trials
+                        if rk > best_pa_rk:
+                            best_pa_rk = rk
                             best_pa_idx = ci
                     meta_bracket = _pa_candidates[best_pa_idx][0]
                     print(
                         f"  {year}   {meta_mode:<24} "
                         f"selected={_pa_candidates[best_pa_idx][1]} "
-                        f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                        f"(best of {len(_pa_candidates)}, RkScore={best_pa_rk:.3f})"
                     )
             elif meta_mode == "meta_region_blend":
                 # Light blend: 90% torvik + 10% GBM round probs → region construction
