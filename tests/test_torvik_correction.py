@@ -4,6 +4,7 @@ from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,
     TorvikCorrectionModel,
     TorvikIsotonicCalibrator,
+    fit_torvik_correction_from_year_records,
     fit_torvik_isotonic_from_year_records,
     round_to_num,
 )
@@ -129,8 +130,6 @@ def test_round_feature_accepted_in_fit_and_predict():
 
 def test_market_and_elo_coverage_logged_in_training_info():
     """fit_torvik_correction_from_year_records logs market and elo coverage."""
-    from src.prediction.torvik_correction import fit_torvik_correction_from_year_records
-
     year_records = {
         2015: [{"torvik": 0.7, "seed1": 1, "seed2": 16, "outcome": 1.0, "odds": 0.75, "elo": 0.80, "round": "R64"}],
         2016: [{"torvik": 0.6, "seed1": 2, "seed2": 15, "outcome": 1.0, "odds": 0.0, "elo": 0.0}],  # both missing
@@ -144,6 +143,43 @@ def test_market_and_elo_coverage_logged_in_training_info():
     # Only 2015 row has real odds/elo → coverage = 1/3
     assert abs(model.training_info_["market_coverage"] - 1 / 3) < 1e-9
     assert abs(model.training_info_["elo_coverage"] - 1 / 3) < 1e-9
+
+
+def test_fit_torvik_correction_from_year_records_supports_market_field_override():
+    year_records = {
+        2015: [
+            {
+                "torvik": 0.60,
+                "seed1": 6,
+                "seed2": 11,
+                "outcome": 1.0,
+                "odds": 0.0,
+                "closing_market": 0.66,
+                "elo": 0.62,
+                "round": "R64",
+            }
+        ],
+        2016: [
+            {
+                "torvik": 0.55,
+                "seed1": 7,
+                "seed2": 10,
+                "outcome": 0.0,
+                "odds": 0.0,
+                "closing_market": 0.0,
+                "elo": 0.48,
+                "round": "R64",
+            }
+        ],
+    }
+
+    model = fit_torvik_correction_from_year_records(
+        year_records,
+        recent_year_start=None,
+        market_field="closing_market",
+    )
+
+    assert model.training_info_["market_coverage"] == 0.5
 
 
 # ---------------------------------------------------------------------------

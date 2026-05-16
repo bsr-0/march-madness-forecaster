@@ -1,0 +1,2262 @@
+{
+  "admission_gate": {
+    "checks": {
+      "calibration_degradation": {
+        "passed": true,
+        "threshold": 0.01,
+        "value": -0.0023823338192772575
+      },
+      "coefficient_stability": {
+        "details": {
+          "available": true,
+          "min_consistency": 1.0,
+          "per_feature": [
+            {
+              "consistency": 1.0,
+              "dominant_sign": -1,
+              "feature_index": 1
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": 1,
+              "feature_index": 2
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": -1,
+              "feature_index": 3
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": -1,
+              "feature_index": 4
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": 1,
+              "feature_index": 5
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": 1,
+              "feature_index": 6
+            },
+            {
+              "consistency": 1.0,
+              "dominant_sign": 1,
+              "feature_index": 7
+            }
+          ]
+        },
+        "passed": true,
+        "threshold": 0.75
+      },
+      "holdout_win_rate": {
+        "n_years": 4,
+        "passed": true,
+        "threshold": 0.75,
+        "value": 1.0,
+        "wins": 4
+      },
+      "mean_improvement": {
+        "passed": false,
+        "threshold": 0.002,
+        "value": 0.0003044908813081837
+      },
+      "per_year_regression": {
+        "passed": true,
+        "per_year": [
+          {
+            "candidate_bss": 0.19649893679000685,
+            "delta": -0.00046956210291326794,
+            "year": 2025
+          },
+          {
+            "candidate_bss": 0.08001441626701211,
+            "delta": -0.00013941965970309944,
+            "year": 2026
+          }
+        ],
+        "threshold": 0.003
+      },
+      "positive_final_bss": {
+        "passed": true,
+        "per_year": [
+          {
+            "candidate_bss": 0.19649893679000685,
+            "year": 2025
+          },
+          {
+            "candidate_bss": 0.08001441626701211,
+            "year": 2026
+          }
+        ]
+      },
+      "regression_tolerance": {
+        "delta": -0.0003044908813081837,
+        "passed": true,
+        "tolerance": 0.04083810766420316
+      }
+    },
+    "mean_improvement": 0.0003044908813081837,
+    "passed": false
+  },
+  "candidate_search": {
+    "n_experiments": 11,
+    "selected_spec": {
+      "mode": "closing_market_blend",
+      "name": "closing_market_blend__alpha=0.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+      "params": {
+        "alpha": 0.0,
+        "correction_ridge": 20.0,
+        "max_correction": 0.06,
+        "recent_total_ratio": 1.0,
+        "recent_year_count": 5,
+        "recent_year_start": 2021,
+        "recent_year_weight": 2.0
+      }
+    },
+    "shadow_ranked": [
+      {
+        "mean_brier": 0.1823594348066531,
+        "mean_bss": 0.08146777005198313,
+        "mean_ece": 0.12826281184701166,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19185739671234048,
+            "bss": 0.08279861686700252,
+            "ece": 0.17931749402126373,
+            "metadata": {
+              "alpha": 0.0,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1728614729009657,
+            "bss": 0.07998614581408547,
+            "ece": 0.07720812967275957,
+            "metadata": {
+              "alpha": 0.0,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.0,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18239726688750935,
+        "mean_bss": 0.08127721240066499,
+        "mean_ece": 0.13648073306630792,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19217145360724053,
+            "bss": 0.0812972235231918,
+            "ece": 0.18432459387157674,
+            "metadata": {
+              "alpha": 0.1,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17262308016777814,
+            "bss": 0.08125493413104878,
+            "ece": 0.0886368722610391,
+            "metadata": {
+              "alpha": 0.1,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.1__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.1,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1826268358167657,
+        "mean_bss": 0.08012088911670556,
+        "mean_ece": 0.11196833133230896,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.1926944908756994,
+            "bss": 0.07879676998696528,
+            "ece": 0.15919107321212467,
+            "metadata": {
+              "alpha": 0.2,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17255918075783197,
+            "bss": 0.08159502346060377,
+            "ece": 0.06474558945249327,
+            "metadata": {
+              "alpha": 0.2,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.2__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.2,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18304814159442218,
+        "mean_bss": 0.07799880020010475,
+        "mean_ece": 0.10510694238883597,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19342650851771723,
+            "bss": 0.0752972562583224,
+            "ece": 0.15468911248155123,
+            "metadata": {
+              "alpha": 0.3,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17266977467112712,
+            "bss": 0.08100641380275098,
+            "ece": 0.055524772296120704,
+            "metadata": {
+              "alpha": 0.3,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.3__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.3,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18366118422047883,
+        "mean_bss": 0.0749109456508622,
+        "mean_ece": 0.12867672520344506,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19436750653329393,
+            "bss": 0.07079868233726372,
+            "ece": 0.16490944244450426,
+            "metadata": {
+              "alpha": 0.4,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17295486190766374,
+            "bss": 0.07948910515748953,
+            "ece": 0.09244400796238585,
+            "metadata": {
+              "alpha": 0.4,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.4__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.4,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18446596369493573,
+        "mean_bss": 0.07085732546897783,
+        "mean_ece": 0.13460406465366453,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19551748492242965,
+            "bss": 0.06530104822378835,
+            "ece": 0.17584004859793345,
+            "metadata": {
+              "alpha": 0.5,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17341444246744178,
+            "bss": 0.07704309752481964,
+            "ece": 0.09336808070939562,
+            "metadata": {
+              "alpha": 0.5,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.5__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.5,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1854624800177927,
+        "mean_bss": 0.06583793965445228,
+        "mean_ece": 0.1426865844457288,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19687644368512427,
+            "bss": 0.058804353917896846,
+            "ece": 0.18701902300533085,
+            "metadata": {
+              "alpha": 0.6,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.1740485163504611,
+            "bss": 0.0736683909047422,
+            "ece": 0.09835414588612672,
+            "metadata": {
+              "alpha": 0.6,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.6__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.6,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18665073318904984,
+        "mean_bss": 0.059852788207285124,
+        "mean_ece": 0.13744583469259397,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.19844438282137783,
+            "bss": 0.05130859941958921,
+            "ece": 0.17276446631979928,
+            "metadata": {
+              "alpha": 0.7,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17485708355672183,
+            "bss": 0.06936498529725632,
+            "ece": 0.1021272030653887,
+            "metadata": {
+              "alpha": 0.7,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.7__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.7,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.18803072320870717,
+        "mean_bss": 0.05290187112747624,
+        "mean_ece": 0.13670962204884285,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.20022130233119034,
+            "bss": 0.04281378472886532,
+            "ece": 0.17974889289044815,
+            "metadata": {
+              "alpha": 0.8,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.175840144086224,
+            "bss": 0.064132880702362,
+            "ece": 0.09367035120723755,
+            "metadata": {
+              "alpha": 0.8,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.8__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.8,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.1896024500767646,
+        "mean_bss": 0.04498518841502619,
+        "mean_ece": 0.1596264947856151,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.20220720221456173,
+            "bss": 0.033319909845725415,
+            "ece": 0.1867333194610971,
+            "metadata": {
+              "alpha": 0.9,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17699769793896747,
+            "bss": 0.05797207712006003,
+            "ece": 0.1325196701101331,
+            "metadata": {
+              "alpha": 0.9,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=0.9__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 0.9,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      },
+      {
+        "mean_brier": 0.19136591379322224,
+        "mean_bss": 0.0361027400699343,
+        "mean_ece": 0.14370777777777777,
+        "mean_seed_brier": 0.19853351778083334,
+        "per_year": [
+          {
+            "brier": 0.20440208247149205,
+            "bss": 0.02282697477016926,
+            "ece": 0.19695396825396824,
+            "metadata": {
+              "alpha": 1.0,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 1.0,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.20917695965196825,
+            "year": 2023
+          },
+          {
+            "brier": 0.17832974511495242,
+            "bss": 0.05088257455034928,
+            "ece": 0.0904615873015873,
+            "metadata": {
+              "alpha": 1.0,
+              "coef": [
+                0.3802143491230272,
+                -0.30661857271773185,
+                0.08674424314881161,
+                -0.004668249439228162,
+                -0.16133854394858516,
+                0.07946108381407294,
+                0.1150807273253376,
+                0.13299843553322196
+              ],
+              "correction_ridge": 20.0,
+              "elo_coverage": 1.0,
+              "market_coverage": 0.9365079365079365,
+              "max_correction": 0.06,
+              "older_years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013,
+                2014,
+                2015,
+                2016
+              ],
+              "recent_total_ratio": 1.0,
+              "recent_year_count": 5,
+              "recent_year_start": 2017,
+              "recent_year_weight": 1.6,
+              "recent_years": [
+                2017,
+                2018,
+                2019,
+                2021,
+                2022
+              ],
+              "weighting_mode": "recent_block"
+            },
+            "seed_brier": 0.18789007590969845,
+            "year": 2024
+          }
+        ],
+        "spec": {
+          "mode": "closing_market_blend",
+          "name": "closing_market_blend__alpha=1.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+          "params": {
+            "alpha": 1.0,
+            "correction_ridge": 20.0,
+            "max_correction": 0.06,
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2021,
+            "recent_year_weight": 2.0
+          }
+        }
+      }
+    ]
+  },
+  "candidate_selected": {
+    "final": {
+      "mean_brier": 0.13047417222609622,
+      "mean_bss": 0.13331992208394794,
+      "mean_ece": 0.11926513005854768,
+      "mean_seed_brier": 0.1505447921911667,
+      "per_year": [
+        {
+          "brier": 0.11070979340238023,
+          "bss": 0.19649893679000685,
+          "ece": 0.123974279401982,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.31846874793208807,
+              -0.3324846979736634,
+              0.13815326308834736,
+              -0.0135761118278558,
+              -0.11610830109824809,
+              0.13231713423219318,
+              0.12840693955221383,
+              0.14681589781455393
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.9365079365079365,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.15023855104981224,
+          "bss": 0.08001441626701211,
+          "ece": 0.11455598071511336,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.31846874793208807,
+              -0.3324846979736634,
+              0.13815326308834736,
+              -0.0135761118278558,
+              -0.11610830109824809,
+              0.13231713423219318,
+              0.12840693955221383,
+              0.14681589781455393
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "closing_market_blend",
+        "name": "closing_market_blend__alpha=0.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "alpha": 0.0,
+          "correction_ridge": 20.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    },
+    "holdout": {
+      "mean_brier": 0.15641680351637466,
+      "mean_bss": 0.10382971930326446,
+      "mean_ece": 0.12376397095277968,
+      "mean_seed_brier": 0.174539154986,
+      "per_year": [
+        {
+          "brier": 0.19185739671234048,
+          "bss": 0.08279861686700252,
+          "ece": 0.17931749402126373,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.3802143491230272,
+              -0.30661857271773185,
+              0.08674424314881161,
+              -0.004668249439228162,
+              -0.16133854394858516,
+              0.07946108381407294,
+              0.1150807273253376,
+              0.13299843553322196
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.1728614729009657,
+          "bss": 0.07998614581408547,
+          "ece": 0.07720812967275957,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.3802143491230272,
+              -0.30661857271773185,
+              0.08674424314881161,
+              -0.004668249439228162,
+              -0.16133854394858516,
+              0.07946108381407294,
+              0.1150807273253376,
+              0.13299843553322196
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.9365079365079365,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        },
+        {
+          "brier": 0.11070979340238023,
+          "bss": 0.19649893679000685,
+          "ece": 0.123974279401982,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.31846874793208807,
+              -0.3324846979736634,
+              0.13815326308834736,
+              -0.0135761118278558,
+              -0.11610830109824809,
+              0.13231713423219318,
+              0.12840693955221383,
+              0.14681589781455393
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.9365079365079365,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.15023855104981224,
+          "bss": 0.08001441626701211,
+          "ece": 0.11455598071511336,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.31846874793208807,
+              -0.3324846979736634,
+              0.13815326308834736,
+              -0.0135761118278558,
+              -0.11610830109824809,
+              0.13231713423219318,
+              0.12840693955221383,
+              0.14681589781455393
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "closing_market_blend",
+        "name": "closing_market_blend__alpha=0.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "alpha": 0.0,
+          "correction_ridge": 20.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    },
+    "shadow": {
+      "mean_brier": 0.1823594348066531,
+      "mean_bss": 0.08146777005198313,
+      "mean_ece": 0.12826281184701166,
+      "mean_seed_brier": 0.19853351778083334,
+      "per_year": [
+        {
+          "brier": 0.19185739671234048,
+          "bss": 0.08279861686700252,
+          "ece": 0.17931749402126373,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.3802143491230272,
+              -0.30661857271773185,
+              0.08674424314881161,
+              -0.004668249439228162,
+              -0.16133854394858516,
+              0.07946108381407294,
+              0.1150807273253376,
+              0.13299843553322196
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.1728614729009657,
+          "bss": 0.07998614581408547,
+          "ece": 0.07720812967275957,
+          "metadata": {
+            "alpha": 0.0,
+            "coef": [
+              0.3802143491230272,
+              -0.30661857271773185,
+              0.08674424314881161,
+              -0.004668249439228162,
+              -0.16133854394858516,
+              0.07946108381407294,
+              0.1150807273253376,
+              0.13299843553322196
+            ],
+            "correction_ridge": 20.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 0.9365079365079365,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        }
+      ],
+      "spec": {
+        "mode": "closing_market_blend",
+        "name": "closing_market_blend__alpha=0.0__correction_ridge=20.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "alpha": 0.0,
+          "correction_ridge": 20.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    }
+  },
+  "generated_at": "2026-05-15T02:49:41.993442+00:00",
+  "incumbent": {
+    "final": {
+      "mean_brier": 0.1307786631074044,
+      "mean_bss": 0.1312973288286361,
+      "mean_ece": 0.12164746387782494,
+      "mean_seed_brier": 0.1505447921911667,
+      "per_year": [
+        {
+          "brier": 0.1111793555052935,
+          "bss": 0.19309098490662968,
+          "ece": 0.1263713770874343,
+          "metadata": {
+            "coef": [
+              0.3250169267480651,
+              -0.3558063522915036,
+              0.2263126822518059,
+              -0.02979063928680565,
+              -0.17202453932628609,
+              0.2180686226599136,
+              0.11900848009524222,
+              0.19782175338474173
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.15037797070951534,
+          "bss": 0.07916068015121802,
+          "ece": 0.11692355066821557,
+          "metadata": {
+            "coef": [
+              0.3250169267480651,
+              -0.3558063522915036,
+              0.2263126822518059,
+              -0.02979063928680565,
+              -0.17202453932628609,
+              0.2180686226599136,
+              0.11900848009524222,
+              0.19782175338474173
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    },
+    "holdout": {
+      "mean_brier": 0.15660092362263892,
+      "mean_bss": 0.10277482645541591,
+      "mean_ece": 0.12443861301559553,
+      "mean_seed_brier": 0.174539154986,
+      "per_year": [
+        {
+          "brier": 0.19186063647265433,
+          "bss": 0.08278312873523486,
+          "ece": 0.178400080970375,
+          "metadata": {
+            "coef": [
+              0.40378964754740426,
+              -0.31589629661066104,
+              0.15463732728939153,
+              -0.0012915304968513874,
+              -0.25206889174573455,
+              0.16223727220001138,
+              0.11371834892680963,
+              0.18560270893857098
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.17298573180309246,
+          "bss": 0.07932480752080351,
+          "ece": 0.07605944333635727,
+          "metadata": {
+            "coef": [
+              0.40378964754740426,
+              -0.31589629661066104,
+              0.15463732728939153,
+              -0.0012915304968513874,
+              -0.25206889174573455,
+              0.16223727220001138,
+              0.11371834892680963,
+              0.18560270893857098
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        },
+        {
+          "brier": 0.1111793555052935,
+          "bss": 0.19309098490662968,
+          "ece": 0.1263713770874343,
+          "metadata": {
+            "coef": [
+              0.3250169267480651,
+              -0.3558063522915036,
+              0.2263126822518059,
+              -0.02979063928680565,
+              -0.17202453932628609,
+              0.2180686226599136,
+              0.11900848009524222,
+              0.19782175338474173
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.13778425253115872,
+          "year": 2025
+        },
+        {
+          "brier": 0.15037797070951534,
+          "bss": 0.07916068015121802,
+          "ece": 0.11692355066821557,
+          "metadata": {
+            "coef": [
+              0.3250169267480651,
+              -0.3558063522915036,
+              0.2263126822518059,
+              -0.02979063928680565,
+              -0.17202453932628609,
+              0.2180686226599136,
+              0.11900848009524222,
+              0.19782175338474173
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016,
+              2017,
+              2018
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2019,
+            "recent_year_weight": 2.0,
+            "recent_years": [
+              2019,
+              2021,
+              2022,
+              2023,
+              2024
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.16330533185117468,
+          "year": 2026
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    },
+    "shadow": {
+      "mean_brier": 0.1824231841378734,
+      "mean_bss": 0.08114666895060296,
+      "mean_ece": 0.12722976215336612,
+      "mean_seed_brier": 0.19853351778083334,
+      "per_year": [
+        {
+          "brier": 0.19186063647265433,
+          "bss": 0.08278312873523486,
+          "ece": 0.178400080970375,
+          "metadata": {
+            "coef": [
+              0.40378964754740426,
+              -0.31589629661066104,
+              0.15463732728939153,
+              -0.0012915304968513874,
+              -0.25206889174573455,
+              0.16223727220001138,
+              0.11371834892680963,
+              0.18560270893857098
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.20917695965196825,
+          "year": 2023
+        },
+        {
+          "brier": 0.17298573180309246,
+          "bss": 0.07932480752080351,
+          "ece": 0.07605944333635727,
+          "metadata": {
+            "coef": [
+              0.40378964754740426,
+              -0.31589629661066104,
+              0.15463732728939153,
+              -0.0012915304968513874,
+              -0.25206889174573455,
+              0.16223727220001138,
+              0.11371834892680963,
+              0.18560270893857098
+            ],
+            "correction_ridge": 5.0,
+            "elo_coverage": 1.0,
+            "market_coverage": 1.0,
+            "max_correction": 0.06,
+            "older_years": [
+              2009,
+              2010,
+              2011,
+              2012,
+              2013,
+              2014,
+              2015,
+              2016
+            ],
+            "recent_total_ratio": 1.0,
+            "recent_year_count": 5,
+            "recent_year_start": 2017,
+            "recent_year_weight": 1.6,
+            "recent_years": [
+              2017,
+              2018,
+              2019,
+              2021,
+              2022
+            ],
+            "weighting_mode": "recent_block"
+          },
+          "seed_brier": 0.18789007590969845,
+          "year": 2024
+        }
+      ],
+      "spec": {
+        "mode": "torvik_corrected",
+        "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
+        "params": {
+          "correction_ridge": 5.0,
+          "max_correction": 0.06,
+          "recent_total_ratio": 1.0,
+          "recent_year_count": 5,
+          "recent_year_start": 2021,
+          "recent_year_weight": 2.0
+        }
+      }
+    }
+  },
+  "split": {
+    "dev_years": [
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022
+    ],
+    "final_years": [
+      2025,
+      2026
+    ],
+    "shadow_years": [
+      2023,
+      2024
+    ]
+  }
+}

@@ -39,6 +39,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.evaluation.bootstrap_metrics import expected_calibration_error
 from src.ml.evaluation.loyo_protocol import compute_ablation_threshold
+from src.prediction.kaggle_recency import resolve_recent_weighting, year_objective_weight
 from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,
     fit_torvik_correction_from_year_records,
@@ -50,6 +51,9 @@ PERGAME_ARTIFACT = REPO_ROOT / "artifacts" / "loyo_pergame_predictions.json"
 DEFAULT_DEV_YEARS = [year for year in range(2009, 2023) if year != 2020]
 DEFAULT_SHADOW_YEARS = [2023, 2024]
 DEFAULT_FINAL_YEARS = [2025, 2026]
+PRIORITY_WINDOW_YEARS = [2023, 2024, 2025]
+RECENT_WEIGHTED_YEAR_COUNT = 5
+RECENT_WEIGHTED_TOTAL_RATIO = 1.0
 
 
 @dataclass(frozen=True)
@@ -111,6 +115,99 @@ class EvaluationSummary:
             "mean_ece": self.mean_ece,
             "per_year": [row.to_dict() for row in self.per_year],
         }
+
+
+def _nan_if_empty(values: list[float], weights: list[float]) -> float:
+    if not values or not weights:
+        return float("nan")
+    total_weight = float(sum(weights))
+    if total_weight <= 0.0:
+        return float("nan")
+    return float(sum(value * weight for value, weight in zip(values, weights)) / total_weight)
+
+
+def _uniform_weighting(rows: list[YearMetrics]) -> dict[str, Any]:
+    years = [row.year for row in rows]
+    return {
+        "mode": "uniform",
+        "per_year_weights": {str(year): 1.0 for year in years},
+    }
+
+
+def _summary_block(
+    spec: ModelSpec,
+    rows: list[YearMetrics],
+    *,
+    requested_years: Optional[Iterable[int]] = None,
+    weighting: Optional[dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    ordered_rows = sorted(rows, key=lambda row: row.year)
+    resolved_weighting = weighting or _uniform_weighting(ordered_rows)
+    year_weights = {
+        row.year: float(resolved_weighting["per_year_weights"].get(str(row.year), 1.0))
+        for row in ordered_rows
+    }
+    weights = [year_weights[row.year] for row in ordered_rows]
+    mean_brier = _nan_if_empty([row.brier for row in ordered_rows], weights)
+    mean_seed_brier = _nan_if_empty([row.seed_brier for row in ordered_rows], weights)
+    mean_ece = _nan_if_empty([row.ece for row in ordered_rows], weights)
+    mean_bss = float("nan")
+    if not np.isnan(mean_brier) and not np.isnan(mean_seed_brier):
+        mean_bss = 1.0 - mean_brier / max(mean_seed_brier, 1e-12)
+
+    block = {
+        "spec": asdict(spec),
+        "mean_brier": mean_brier,
+        "mean_seed_brier": mean_seed_brier,
+        "mean_bss": mean_bss,
+        "mean_ece": mean_ece,
+        "per_year": [row.to_dict() for row in ordered_rows],
+        "used_years": [row.year for row in ordered_rows],
+        "weighting": resolved_weighting,
+    }
+    if requested_years is not None:
+        block["requested_years"] = [int(year) for year in requested_years]
+    return block
+
+
+def summarize_year_slice(summary: EvaluationSummary, years: Iterable[int]) -> Dict[str, Any]:
+    requested_years = [int(year) for year in years]
+    year_set = set(requested_years)
+    rows = [row for row in summary.per_year if row.year in year_set]
+    return _summary_block(summary.spec, rows, requested_years=requested_years)
+
+
+def summarize_recent_weighted(
+    summary: EvaluationSummary,
+    recent_year_count: int = RECENT_WEIGHTED_YEAR_COUNT,
+    recent_total_ratio: float = RECENT_WEIGHTED_TOTAL_RATIO,
+) -> Dict[str, Any]:
+    years = [row.year for row in summary.per_year]
+    weighting = resolve_recent_weighting(
+        years,
+        recent_year_count=recent_year_count,
+        recent_total_ratio=recent_total_ratio,
+    )
+    recent_start = weighting["recent_year_start"]
+    recent_weight = float(weighting["recent_year_weight"])
+    per_year_weights = {
+        str(year): float(year_objective_weight(year, recent_start, recent_weight))
+        for year in years
+    }
+    return _summary_block(
+        summary.spec,
+        summary.per_year,
+        weighting={
+            "mode": weighting["mode"],
+            "recent_year_start": weighting["recent_year_start"],
+            "recent_year_weight": recent_weight,
+            "recent_year_count": weighting["recent_year_count"],
+            "recent_total_ratio": weighting["recent_total_ratio"],
+            "recent_years": weighting["recent_years"],
+            "older_years": weighting["older_years"],
+            "per_year_weights": per_year_weights,
+        },
+    )
 
 
 def load_pergame(path: Path) -> dict[int, list[dict]]:
@@ -349,6 +446,162 @@ def _evaluate_torvik_corrected(
     )
 
 
+def _evaluate_closing_market_blend(
+    train_year_records: dict[int, list[dict]],
+    test_rows: list[dict],
+    params: Dict[str, Any],
+) -> YearMetrics:
+    """Post-hoc blend of torvik_corrected with tournament closing lines.
+
+    Uses the standard torvik_corrected model as the base prediction, then
+    for games where a tournament closing line is available, blends in the
+    market probability directly:
+
+        pred = alpha * closing_market + (1 - alpha) * torvik_corrected
+
+    Games without a closing line use torvik_corrected unchanged.  The blend
+    weight ``alpha`` is a tunable parameter (default 0.5).
+
+    This avoids the sparse-training problem that kills torvik_closing: the
+    closing market signal is only available for 2021-2025 tournament games
+    (~15% of training rows), making it an unstable regression feature.
+    Using it as a post-hoc override sidesteps that entirely.
+    """
+    clip_lo = _coerce_float(params, "clip_lo", 0.01)
+    clip_hi = _coerce_float(params, "clip_hi", 0.99)
+    recent_start = _coerce_int_or_none(params, "recent_year_start", 2021)
+    recent_weight = _coerce_float(params, "recent_year_weight", 2.0)
+    recent_count = _coerce_int_or_none(params, "recent_year_count", None)
+    recent_total_ratio = _coerce_float(params, "recent_total_ratio", 1.0)
+    ridge = _coerce_float(params, "correction_ridge", 5.0)
+    max_correction = _coerce_float(params, "max_correction", 0.10)
+    alpha = _coerce_float(params, "alpha", 0.5)
+
+    model = fit_torvik_correction_from_year_records(
+        train_year_records,
+        config=TorvikCorrectionConfig(
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            ridge=ridge,
+            max_correction=max_correction,
+        ),
+        recent_year_start=recent_start,
+        recent_year_weight=recent_weight,
+        recent_year_count=recent_count,
+        recent_total_ratio=recent_total_ratio,
+    )
+
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
+
+    torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
+    seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
+    seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
+    outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
+    seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
+    market = np.asarray([_resolve_signal(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+
+    base_preds = model.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
+
+    # Blend in closing market where available.
+    final_preds = base_preds.copy()
+    n_with_market = 0
+    for i, row in enumerate(test_rows):
+        cm = row.get("closing_market")
+        if cm is not None:
+            final_preds[i] = alpha * float(cm) + (1.0 - alpha) * base_preds[i]
+            n_with_market += 1
+
+    final_preds = np.clip(final_preds, clip_lo, clip_hi)
+    brier = float(np.mean((final_preds - outcomes) ** 2))
+    seed_brier = float(np.mean((seed - outcomes) ** 2))
+    metadata = {
+        "coef": model.coef_.tolist() if model.coef_ is not None else None,
+        **(model.training_info_ or {}),
+        "correction_ridge": ridge,
+        "max_correction": max_correction,
+        "alpha": alpha,
+        "market_coverage": n_with_market / max(len(test_rows), 1),
+    }
+    return YearMetrics(
+        year=int(test_rows[0]["year"]),
+        brier=brier,
+        seed_brier=seed_brier,
+        bss=1.0 - brier / max(seed_brier, 1e-12),
+        ece=expected_calibration_error(final_preds, outcomes),
+        metadata=metadata,
+    )
+
+
+def _evaluate_torvik_closing(
+    train_year_records: dict[int, list[dict]],
+    test_rows: list[dict],
+    params: Dict[str, Any],
+) -> YearMetrics:
+    """Torvik correction model using tournament closing lines as market signal.
+
+    Identical to torvik_corrected but reads ``closing_market`` instead of
+    ``odds``.  Games without a closing line fall back to torvik (same as the
+    regular-season BT fallback in torvik_corrected).
+    """
+    clip_lo = _coerce_float(params, "clip_lo", 0.01)
+    clip_hi = _coerce_float(params, "clip_hi", 0.99)
+    recent_start = _coerce_int_or_none(params, "recent_year_start", 2021)
+    recent_weight = _coerce_float(params, "recent_year_weight", 2.0)
+    recent_count = _coerce_int_or_none(params, "recent_year_count", None)
+    recent_total_ratio = _coerce_float(params, "recent_total_ratio", 1.0)
+    ridge = _coerce_float(params, "correction_ridge", 5.0)
+    max_correction = _coerce_float(params, "max_correction", 0.10)
+
+    model = fit_torvik_correction_from_year_records(
+        train_year_records,
+        config=TorvikCorrectionConfig(
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            ridge=ridge,
+            max_correction=max_correction,
+        ),
+        recent_year_start=recent_start,
+        recent_year_weight=recent_weight,
+        recent_year_count=recent_count,
+        recent_total_ratio=recent_total_ratio,
+        market_field="closing_market",
+    )
+
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
+
+    torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
+    seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
+    seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
+    outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
+    seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
+    market = np.asarray(
+        [_resolve_signal(row.get("closing_market"), float(row["torvik"])) for row in test_rows],
+        dtype=float,
+    )
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+    preds = model.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
+    brier = float(np.mean((preds - outcomes) ** 2))
+    seed_brier = float(np.mean((seed - outcomes) ** 2))
+
+    metadata = {
+        "coef": model.coef_.tolist() if model.coef_ is not None else None,
+        **(model.training_info_ or {}),
+        "correction_ridge": ridge,
+        "max_correction": max_correction,
+    }
+    return YearMetrics(
+        year=int(test_rows[0]["year"]),
+        brier=brier,
+        seed_brier=seed_brier,
+        bss=1.0 - brier / max(seed_brier, 1e-12),
+        ece=expected_calibration_error(preds, outcomes),
+        metadata=metadata,
+    )
+
+
 def _evaluate_torvik_isotonic(
     train_year_records: dict[int, list[dict]],
     test_rows: list[dict],
@@ -432,6 +685,10 @@ def evaluate_spec(
             metrics = _evaluate_ensemble(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_corrected":
             metrics = _evaluate_torvik_corrected(train_year_records, test_rows, spec.params)
+        elif spec.mode == "torvik_closing":
+            metrics = _evaluate_torvik_closing(train_year_records, test_rows, spec.params)
+        elif spec.mode == "closing_market_blend":
+            metrics = _evaluate_closing_market_blend(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_isotonic":
             metrics = _evaluate_torvik_isotonic(train_year_records, test_rows, spec.params)
         else:
@@ -464,6 +721,30 @@ def select_best_candidate(evaluations: List[EvaluationSummary]) -> EvaluationSum
             summary.spec.name,
         ),
     )
+
+
+def build_model_report_views(
+    shadow: EvaluationSummary,
+    final: EvaluationSummary,
+    holdout: EvaluationSummary,
+    *,
+    priority_window_years: Iterable[int] = PRIORITY_WINDOW_YEARS,
+    recent_year_count: int = RECENT_WEIGHTED_YEAR_COUNT,
+    recent_total_ratio: float = RECENT_WEIGHTED_TOTAL_RATIO,
+) -> Dict[str, Any]:
+    final_holdout = summarize_year_slice(holdout, [row.year for row in final.per_year])
+    return {
+        "shadow": _summary_block(shadow.spec, shadow.per_year),
+        "final": _summary_block(final.spec, final.per_year),
+        "final_holdout": final_holdout,
+        "holdout": _summary_block(holdout.spec, holdout.per_year),
+        "recent_weighted": summarize_recent_weighted(
+            holdout,
+            recent_year_count=recent_year_count,
+            recent_total_ratio=recent_total_ratio,
+        ),
+        "priority_window": summarize_year_slice(holdout, priority_window_years),
+    }
 
 
 def _coefficient_sign_stability(rows: List[YearMetrics]) -> Dict[str, Any]:
@@ -581,10 +862,123 @@ def evaluate_admission_gate(
     }
 
 
+def build_baseline_payload(
+    *,
+    dev_years: list[int],
+    shadow_years: list[int],
+    final_years: list[int],
+    shadow_incumbent: EvaluationSummary,
+    final_incumbent: EvaluationSummary,
+    holdout_incumbent: EvaluationSummary,
+) -> Dict[str, Any]:
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "split": {
+            "dev_years": dev_years,
+            "shadow_years": shadow_years,
+            "final_years": final_years,
+        },
+        "reporting_policy": {
+            "priority_window_years": PRIORITY_WINDOW_YEARS,
+            "recent_weighted": {
+                "mode": "recent_block",
+                "recent_year_count": RECENT_WEIGHTED_YEAR_COUNT,
+                "recent_total_ratio": RECENT_WEIGHTED_TOTAL_RATIO,
+            },
+        },
+        "incumbent": holdout_incumbent.to_dict(),
+        "incumbent_views": build_model_report_views(
+            shadow_incumbent,
+            final_incumbent,
+            holdout_incumbent,
+        ),
+    }
+
+
+def build_report_payload(
+    *,
+    dev_years: list[int],
+    shadow_years: list[int],
+    final_years: list[int],
+    shadow_incumbent: EvaluationSummary,
+    final_incumbent: EvaluationSummary,
+    holdout_incumbent: EvaluationSummary,
+    candidate_shadow_evals: list[EvaluationSummary],
+    selected_shadow: EvaluationSummary,
+    final_candidate: EvaluationSummary,
+    holdout_candidate: EvaluationSummary,
+    admission: Dict[str, Any],
+) -> Dict[str, Any]:
+    selected_spec = selected_shadow.spec
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "split": {
+            "dev_years": dev_years,
+            "shadow_years": shadow_years,
+            "final_years": final_years,
+        },
+        "reporting_policy": {
+            "priority_window_years": PRIORITY_WINDOW_YEARS,
+            "recent_weighted": {
+                "mode": "recent_block",
+                "recent_year_count": RECENT_WEIGHTED_YEAR_COUNT,
+                "recent_total_ratio": RECENT_WEIGHTED_TOTAL_RATIO,
+            },
+        },
+        "incumbent": build_model_report_views(
+            shadow_incumbent,
+            final_incumbent,
+            holdout_incumbent,
+        ),
+        "candidate_search": {
+            "n_experiments": len(candidate_shadow_evals),
+            "shadow_ranked": sorted(
+                [summary.to_dict() for summary in candidate_shadow_evals],
+                key=lambda item: (item["mean_brier"], item["mean_ece"], item["spec"]["name"]),
+            ),
+            "selected_spec": asdict(selected_spec),
+        },
+        "candidate_selected": build_model_report_views(
+            selected_shadow,
+            final_candidate,
+            holdout_candidate,
+        ),
+        "admission_gate": admission,
+    }
+
+
 def _write_json(path: Path, payload: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(payload, f, indent=2, sort_keys=True)
+
+
+def _format_metric(value: float, *, signed: bool = False) -> str:
+    if np.isnan(value):
+        return "n/a"
+    return f"{value:+.4f}" if signed else f"{value:.4f}"
+
+
+def _print_summary_block(label: str, views: Dict[str, Any], admission_label: str) -> None:
+    recent_weighted = views["recent_weighted"]
+    priority_window = views["priority_window"]
+    final_holdout = views["final_holdout"]
+    priority_years = ",".join(str(year) for year in PRIORITY_WINDOW_YEARS)
+    used_priority_years = ",".join(str(year) for year in priority_window["used_years"]) or "none"
+
+    print(f"{label}:")
+    print(
+        "  "
+        f"Recent-weighted Brier={_format_metric(recent_weighted['mean_brier'])}  "
+        f"Priority {priority_years} Brier={_format_metric(priority_window['mean_brier'])} "
+        f"(used {used_priority_years})"
+    )
+    print(
+        "  "
+        f"Final-holdout Brier={_format_metric(final_holdout['mean_brier'])}  "
+        f"Final-holdout BSS={_format_metric(final_holdout['mean_bss'], signed=True)}"
+    )
+    print(f"  Admission: {admission_label}")
 
 
 def _parse_json_arg(text: Optional[str]) -> Dict[str, Any]:
@@ -627,7 +1021,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Strict Kaggle admission gate")
     parser.add_argument("--pergame", default=str(PERGAME_ARTIFACT), help="Per-game artifact path")
     parser.add_argument("--experiment-spec", default=None, help="JSON spec with incumbent and candidate experiments")
-    _MODES = ["torvik", "ensemble", "torvik_corrected", "torvik_isotonic"]
+    _MODES = ["torvik", "ensemble", "torvik_corrected", "torvik_closing", "closing_market_blend", "torvik_isotonic"]
     parser.add_argument("--incumbent-mode", default="ensemble", choices=_MODES)
     parser.add_argument("--candidate-mode", default="torvik_corrected", choices=_MODES)
     parser.add_argument("--incumbent-params-json", default='{"recent_year_start": 2021, "recent_year_weight": 2.0}')
@@ -683,51 +1077,40 @@ def main() -> None:
         min_coef_sign_stability=args.min_coef_sign_stability,
     )
 
-    baseline_payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "split": {
-            "dev_years": dev_years,
-            "shadow_years": shadow_years,
-            "final_years": final_years,
-        },
-        "incumbent": holdout_incumbent.to_dict(),
-    }
-    report_payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "split": {
-            "dev_years": dev_years,
-            "shadow_years": shadow_years,
-            "final_years": final_years,
-        },
-        "incumbent": {
-            "shadow": shadow_incumbent.to_dict(),
-            "final": final_incumbent.to_dict(),
-            "holdout": holdout_incumbent.to_dict(),
-        },
-        "candidate_search": {
-            "n_experiments": len(candidate_shadow_evals),
-            "shadow_ranked": sorted(
-                [summary.to_dict() for summary in candidate_shadow_evals],
-                key=lambda item: (item["mean_brier"], item["mean_ece"], item["spec"]["name"]),
-            ),
-            "selected_spec": asdict(selected_spec),
-        },
-        "candidate_selected": {
-            "shadow": selected_shadow.to_dict(),
-            "final": final_candidate.to_dict(),
-            "holdout": holdout_candidate.to_dict(),
-        },
-        "admission_gate": admission,
-    }
+    baseline_payload = build_baseline_payload(
+        dev_years=dev_years,
+        shadow_years=shadow_years,
+        final_years=final_years,
+        shadow_incumbent=shadow_incumbent,
+        final_incumbent=final_incumbent,
+        holdout_incumbent=holdout_incumbent,
+    )
+    report_payload = build_report_payload(
+        dev_years=dev_years,
+        shadow_years=shadow_years,
+        final_years=final_years,
+        shadow_incumbent=shadow_incumbent,
+        final_incumbent=final_incumbent,
+        holdout_incumbent=holdout_incumbent,
+        candidate_shadow_evals=candidate_shadow_evals,
+        selected_shadow=selected_shadow,
+        final_candidate=final_candidate,
+        holdout_candidate=holdout_candidate,
+        admission=admission,
+    )
 
     _write_json(Path(args.baseline_output), baseline_payload)
     _write_json(Path(args.report_output), report_payload)
 
     print(f"Incumbent: {incumbent_spec.name}")
     print(f"Selected candidate: {selected_spec.name}")
+    _print_summary_block("Incumbent summary", report_payload["incumbent"], "INCUMBENT")
+    _print_summary_block(
+        "Selected candidate summary",
+        report_payload["candidate_selected"],
+        "PASS" if admission["passed"] else "FAIL",
+    )
     print(f"Shadow mean Brier: {selected_shadow.mean_brier:.4f}")
-    print(f"Final incumbent mean Brier: {final_incumbent.mean_brier:.4f}")
-    print(f"Final candidate mean Brier: {final_candidate.mean_brier:.4f}")
     print(f"Mean improvement: {admission['mean_improvement']:+.4f}")
     print(f"Admission: {'PASS' if admission['passed'] else 'FAIL'}")
     print(f"Baseline artifact: {args.baseline_output}")

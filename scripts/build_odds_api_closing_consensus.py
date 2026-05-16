@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.data.normalize import normalize_team_id
-from src.data.scrapers.betting_markets import american_to_probability
+from src.data.scrapers.betting_markets import decimal_to_probability
 from src.data.team_name_resolver import TeamNameResolver
 
 RAW_DIR = REPO_ROOT / "data/raw/odds_api/ncaab"
@@ -33,7 +33,9 @@ SEASONS = [
 ]
 
 TOURNEY_START = (3, 15)
-TOURNEY_END = (4, 8)
+# Extended to (4, 9) because late-evening championship games (e.g. 2024 tip
+# 9:20 PM ET) have UTC commence_time on April 9.
+TOURNEY_END = (4, 9)
 
 ODDS_API_EXTRA_ALIASES = {
     "texas_a_m_corpus_christi": [
@@ -43,7 +45,8 @@ ODDS_API_EXTRA_ALIASES = {
         "Texas A&M Corpus Christi Islanders",
     ],
     "miami__fl": ["Miami Hurricanes"],
-    "loyola__il": ["Loyola Chicago Ramblers"],
+    # Odds API uses "Loyola (Chi) Ramblers", not "Loyola Chicago Ramblers".
+    "loyola__il": ["Loyola Chicago Ramblers", "Loyola (Chi) Ramblers"],
     "mount_st__mary_s": ["Mount St. Mary's Mountaineers"],
     "saint_mary_s__ca": ["Saint Mary's Gaels"],
     "st__john_s__ny": ["St. John's Red Storm"],
@@ -102,8 +105,8 @@ def _extract_h2h_probabilities(event: dict, bookmaker: dict) -> tuple[float, flo
             prices[name] = float(price)
         if home_name not in prices or away_name not in prices:
             continue
-        home_prob = american_to_probability(prices[home_name])
-        away_prob = american_to_probability(prices[away_name])
+        home_prob = decimal_to_probability(prices[home_name])
+        away_prob = decimal_to_probability(prices[away_name])
         total = home_prob + away_prob
         if total <= 0:
             return None

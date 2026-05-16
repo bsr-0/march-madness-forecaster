@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-12T01:55:40.537523+00:00",
+  "generated_at": "2026-05-15T02:49:41.993281+00:00",
   "incumbent": {
     "mean_brier": 0.15660092362263892,
     "mean_bss": 0.10277482645541591,
@@ -193,12 +193,14 @@
     ],
     "spec": {
       "mode": "torvik_corrected",
-      "name": "torvik_corrected_recent5_conservative",
+      "name": "torvik_corrected__correction_ridge=5.0__max_correction=0.06__recent_total_ratio=1.0__recent_year_count=5__recent_year_start=2021__recent_year_weight=2.0",
       "params": {
         "correction_ridge": 5.0,
         "max_correction": 0.06,
         "recent_total_ratio": 1.0,
-        "recent_year_count": 5
+        "recent_year_count": 5,
+        "recent_year_start": 2021,
+        "recent_year_weight": 2.0
       }
     }
   },

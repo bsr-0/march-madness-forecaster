@@ -308,11 +308,14 @@ def fit_torvik_correction_from_year_records(
     recent_year_weight: float = 2.0,
     recent_year_count: int | None = None,
     recent_total_ratio: float = 1.0,
+    market_field: str = "odds",
 ) -> TorvikCorrectionModel:
     """Fit a correction model from walk-forward per-year records.
 
-    Reads ``odds``, ``elo``, and ``round`` from each row when present.
-    Missing values fall back to torvik (zero disagreement / R64 round).
+    Reads ``market_field`` (default ``odds``), ``elo``, and ``round`` from each
+    row when present.  Missing values fall back to torvik.  Pass
+    ``market_field="closing_market"`` to use tournament closing lines instead
+    of the regular-season Bradley-Terry market signal.
     """
     config = config or TorvikCorrectionConfig()
     weighting = resolve_recent_weighting(
@@ -338,7 +341,7 @@ def fit_torvik_correction_from_year_records(
             seed2_list.append(int(row["seed2"]))
             outcomes_list.append(float(row["outcome"]))
             sample_weights.append(weight)
-            market_list.append(_resolve_signal(row.get("odds"), tv))
+            market_list.append(_resolve_signal(row.get(market_field), tv))
             elo_list.append(_resolve_signal(row.get("elo"), tv))
             round_list.append(round_to_num(row.get("round")))
 
@@ -381,11 +384,13 @@ def fit_torvik_isotonic_from_year_records(
     recent_year_weight: float = 2.0,
     recent_year_count: int | None = None,
     recent_total_ratio: float = 1.0,
+    market_field: str = "odds",
 ) -> TorvikIsotonicCalibrator:
     """Fit a two-stage isotonic+linear calibrator from walk-forward per-year records.
 
     Same signature as ``fit_torvik_correction_from_year_records``; returns a
     ``TorvikIsotonicCalibrator`` instead of a ``TorvikCorrectionModel``.
+    Pass ``market_field="closing_market"`` to use tournament closing lines.
     """
     config = config or TorvikCorrectionConfig()
     weighting = resolve_recent_weighting(
@@ -411,7 +416,7 @@ def fit_torvik_isotonic_from_year_records(
             seed2_list.append(int(row["seed2"]))
             outcomes_list.append(float(row["outcome"]))
             sample_weights.append(weight)
-            market_list.append(_resolve_signal(row.get("odds"), tv))
+            market_list.append(_resolve_signal(row.get(market_field), tv))
             elo_list.append(_resolve_signal(row.get("elo"), tv))
             round_list.append(round_to_num(row.get("round")))
 

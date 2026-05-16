@@ -26,11 +26,19 @@ For Kaggle model selection, the repo should use strong recency weighting.
 
 Current policy choice:
 
+- Treat `2023-2025` as the default priority-1 evaluation window for near-term `2027` prediction work.
+- Use that 3-year block as the first window to inspect when judging whether a new idea is relevant enough to pursue.
 - Treat the most recent 5 observed tournaments as collectively just as important as all older observed tournaments combined.
 - Treat this as a modeling prior, not a theorem.
 - Older years still matter as regularization and as protection against chasing noise.
 
 This means candidate search should favor recent held-out performance much more than a simple equal-weight mean across all historical years.
+
+Interpretation:
+
+- `2023-2025` is the default "does this look relevant for 2027?" window.
+- The broader recent-5 weighting rule is still the repo's default objective weighting rule.
+- This does not, by itself, replace the stricter admission split used by `scripts/admit_kaggle_candidate.py`.
 
 ## Recommended Weighting Rule
 
@@ -55,11 +63,20 @@ This policy should be recomputed whenever the fit window changes.
 
 When choosing a Kaggle candidate:
 
-- Rank candidates on mean held-out `Brier`.
+- Keep the current admission script selector on held-out `Brier` unless the gate is explicitly revised later.
+- Keep the strict final-holdout mean `Brier` as the admission gate basis.
+- Check `2023-2025` first as the default priority evaluation slice for 2027-facing work.
 - Prefer recent shadow/final years over pooled all-history summaries.
 - Keep `BSS > 0` as a guardrail on each final holdout year.
 - Keep a single-year regression cap so a candidate cannot win on average while blowing up one recent year.
 - Report both weighted and unweighted summaries when possible.
+
+Recommended reporting order:
+
+- Weighted recent-aware held-out `Brier`
+- Final-holdout mean `Brier`
+- `2023-2025` mean `Brier`
+- `BSS` / stability guardrails
 
 ## Why This Policy Exists
 

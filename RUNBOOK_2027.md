@@ -17,8 +17,15 @@ If you are working on the Kaggle path, use `Brier` as the optimization metric an
 
 For the Kaggle path, this repo currently adopts a strong recency policy:
 
+- the default priority-1 evaluation window for 2027-facing work is `2023-2025`
 - the most recent 5 observed tournaments should count about as much as all older observed tournaments combined
 - older years still stay in the fit window for regularization and stability
+
+Interpret that as:
+
+- inspect `2023-2025` first when deciding whether a candidate is worth attention for 2027
+- keep the broader recent-5 weighting rule for the actual Brier objective
+- do not silently replace the stricter admission split with a looser recent-only slice
 
 See [docs/kaggle-objective-policy.md](/Users/benrosen/march-madness-forecaster/docs/kaggle-objective-policy.md) for the exact weighting rule and admission guidance.
 

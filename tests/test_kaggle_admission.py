@@ -18,12 +18,21 @@ def _load_admission_module():
     return module
 
 
+def _build_summary(module, name, years_to_brier):
+    spec = module.ModelSpec(name=name, mode="ensemble", params={})
+    rows = [
+        module.YearMetrics(year=year, brier=brier, seed_brier=0.20, bss=1.0 - brier / 0.20, ece=0.02, metadata={})
+        for year, brier in years_to_brier
+    ]
+    return module.EvaluationSummary(spec=spec, per_year=rows)
+
+
 def test_build_candidate_experiments_expands_search_space():
     module = _load_admission_module()
     spec_data = {
         "candidate_search_spaces": [
             {
-                "modes": ["ensemble", "torvik_corrected"],
+                "modes": ["ensemble", "torvik_corrected", "torvik_closing", "closing_market_blend"],
                 "params": {
                     "recent_year_start": [2021],
                     "recent_year_weight": [2.0, 3.0],
@@ -35,9 +44,11 @@ def test_build_candidate_experiments_expands_search_space():
     experiments = module.build_candidate_experiments(spec_data)
 
     names = sorted(spec.name for spec in experiments)
-    assert len(experiments) == 4
+    assert len(experiments) == 8
     assert any(name.startswith("ensemble__") for name in names)
     assert any(name.startswith("torvik_corrected__") for name in names)
+    assert any(name.startswith("torvik_closing__") for name in names)
+    assert any(name.startswith("closing_market_blend__") for name in names)
 
 
 def test_evaluate_admission_gate_flags_final_year_regression():
@@ -117,6 +128,110 @@ def test_evaluate_admission_gate_passes_clean_candidate():
     )
 
     assert result["passed"]
+
+
+def test_summarize_recent_weighted_uses_recent_block_policy():
+    module = _load_admission_module()
+    summary = _build_summary(
+        module,
+        "weighted",
+        [
+            (2019, 0.10),
+            (2021, 0.20),
+            (2022, 0.30),
+            (2023, 0.40),
+            (2024, 0.50),
+            (2025, 0.60),
+            (2026, 0.70),
+        ],
+    )
+
+    recent_weighted = module.summarize_recent_weighted(summary)
+
+    # Recent-5 policy on 7 years => 2 older years at weight 1.0, 5 recent years at 0.4 each.
+    assert recent_weighted["weighting"]["recent_year_count"] == 5
+    assert recent_weighted["weighting"]["recent_total_ratio"] == pytest.approx(1.0)
+    assert recent_weighted["weighting"]["recent_year_weight"] == pytest.approx(0.4)
+    assert recent_weighted["weighting"]["per_year_weights"]["2019"] == pytest.approx(1.0)
+    assert recent_weighted["weighting"]["per_year_weights"]["2023"] == pytest.approx(0.4)
+    assert recent_weighted["mean_brier"] == pytest.approx(0.325)
+
+
+def test_summarize_priority_window_uses_requested_years_when_all_present():
+    module = _load_admission_module()
+    summary = _build_summary(
+        module,
+        "priority",
+        [(2022, 0.19), (2023, 0.18), (2024, 0.17), (2025, 0.16), (2026, 0.15)],
+    )
+
+    priority_window = module.summarize_year_slice(summary, module.PRIORITY_WINDOW_YEARS)
+
+    assert priority_window["requested_years"] == [2023, 2024, 2025]
+    assert priority_window["used_years"] == [2023, 2024, 2025]
+    assert priority_window["mean_brier"] == pytest.approx((0.18 + 0.17 + 0.16) / 3.0)
+
+
+def test_summarize_priority_window_omits_missing_years():
+    module = _load_admission_module()
+    summary = _build_summary(
+        module,
+        "priority-missing",
+        [(2022, 0.19), (2023, 0.18), (2025, 0.16), (2026, 0.15)],
+    )
+
+    priority_window = module.summarize_year_slice(summary, module.PRIORITY_WINDOW_YEARS)
+
+    assert priority_window["requested_years"] == [2023, 2024, 2025]
+    assert priority_window["used_years"] == [2023, 2025]
+    assert priority_window["mean_brier"] == pytest.approx((0.18 + 0.16) / 2.0)
+
+
+def test_build_report_payload_includes_new_summary_blocks_without_changing_gate_result():
+    module = _load_admission_module()
+
+    incumbent_shadow = _build_summary(module, "incumbent", [(2023, 0.18), (2024, 0.18)])
+    incumbent_final = _build_summary(module, "incumbent", [(2025, 0.18), (2026, 0.18)])
+    incumbent_holdout = module._merge_summaries(incumbent_shadow.spec, incumbent_shadow, incumbent_final)
+
+    candidate_shadow = _build_summary(module, "candidate", [(2023, 0.17), (2024, 0.17)])
+    candidate_final = _build_summary(module, "candidate", [(2025, 0.175), (2026, 0.175)])
+    candidate_holdout = module._merge_summaries(candidate_shadow.spec, candidate_shadow, candidate_final)
+
+    admission = module.evaluate_admission_gate(
+        incumbent_holdout,
+        candidate_holdout,
+        incumbent_final,
+        candidate_final,
+        min_final_mean_improvement=0.002,
+        max_final_year_regression=0.003,
+        min_holdout_win_rate=0.75,
+        max_calibration_degradation=0.01,
+        min_coef_sign_stability=0.75,
+    )
+
+    report_payload = module.build_report_payload(
+        dev_years=[2019, 2021, 2022],
+        shadow_years=[2023, 2024],
+        final_years=[2025, 2026],
+        shadow_incumbent=incumbent_shadow,
+        final_incumbent=incumbent_final,
+        holdout_incumbent=incumbent_holdout,
+        candidate_shadow_evals=[candidate_shadow],
+        selected_shadow=candidate_shadow,
+        final_candidate=candidate_final,
+        holdout_candidate=candidate_holdout,
+        admission=admission,
+    )
+
+    assert admission["passed"]
+    assert report_payload["admission_gate"]["passed"]
+    assert report_payload["reporting_policy"]["priority_window_years"] == [2023, 2024, 2025]
+    for side in ("incumbent", "candidate_selected"):
+        assert "recent_weighted" in report_payload[side]
+        assert "priority_window" in report_payload[side]
+        assert "final_holdout" in report_payload[side]
+        assert report_payload[side]["final"]["mean_brier"] == pytest.approx(report_payload[side]["final_holdout"]["mean_brier"])
 
 
 def test_evaluate_spec_uses_explicit_fit_years(monkeypatch):

@@ -1,0 +1,24 @@
+{
+  "incumbent": {
+    "mode": "torvik_corrected",
+    "params": {
+      "correction_ridge": 5.0,
+      "max_correction": 0.06,
+      "recent_total_ratio": 1.0,
+      "recent_year_count": 5,
+      "recent_year_start": 2021,
+      "recent_year_weight": 2.0
+    }
+  },
+  "candidate_search_spaces": [
+    {
+      "modes": ["torvik_closing"],
+      "params": {
+        "recent_year_start": [2021],
+        "recent_year_weight": [2.0],
+        "correction_ridge": [5.0],
+        "max_correction": [0.06]
+      }
+    }
+  ]
+}

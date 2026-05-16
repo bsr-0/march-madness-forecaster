@@ -195,9 +195,9 @@ class TestOverrides:
         # Game 1 is 8v9 (team_0_8 vs team_0_9). Override to team_0_9 winning.
         overrides = {1: "team_0_9"}
         result = apply_upset_overrides(bracket, overrides, first_round, seeds)
-        assert result[1] == False  # Flipped
-        assert result[0] == True  # Other games unchanged
-        assert result[2] == True
+        assert not result[1]  # Flipped
+        assert result[0]  # Other games unchanged
+        assert result[2]
 
     def test_overrides_only_affect_r64(self):
         """Overrides with game_idx >= 32 are ignored."""
