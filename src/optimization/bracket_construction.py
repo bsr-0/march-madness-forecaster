@@ -150,6 +150,7 @@ def _make_ev_scorer(
     risk_level: float,
     pool_size: int,
     scoring_system: Dict[str, int],
+    confidence_threshold: Optional[float] = None,
 ) -> Callable[[str, str], float]:
     """Build a closure that scores (team_id, round_name) via the _ev_score formula.
 
@@ -162,6 +163,12 @@ def _make_ev_scorer(
     and ``pool_factor = 1 / log2(max(pool_size * public_prob, 1))`` for pools
     larger than 50 (else pool_factor = 1.0).
 
+    If ``confidence_threshold`` is set, any team whose ``model_prob`` for the
+    current round meets or exceeds the threshold is scored as pure chalk
+    (``model_prob * pts``, no differentiation weighting). This concentrates
+    the ``risk_level`` budget on genuinely uncertain games while locking
+    high-certainty picks (e.g. 1-seeds in R64) to chalk deterministically.
+
     Kept as a closure so each construction mode can build one scorer with
     fixed risk_level/pool_size/scoring_system and then pass it around without
     threading 5 parameters everywhere.
@@ -171,6 +178,11 @@ def _make_ev_scorer(
         model_prob = float(round_probs.get(team_id, {}).get(round_name, 0.0))
         public_prob = float(public_picks.get(team_id, {}).get(round_name, 0.0))
         pts = float(scoring_system.get(round_name, 10))
+
+        # Confidence routing: lock high-certainty games to chalk so the
+        # risk_level budget is concentrated on genuinely uncertain matchups.
+        if confidence_threshold is not None and model_prob >= confidence_threshold:
+            return model_prob * pts
 
         uniqueness = max(0.0, 1.0 - public_prob)
         pool_factor = 1.0
@@ -991,6 +1003,7 @@ def _region_top_n_construction(
     pool_size: int,
     scoring_system: Dict[str, int],
     max_outcomes: int = 100,
+    confidence_threshold: Optional[float] = None,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Pick the highest-EV complete-region outcome per region, then walk F4+CHAMP.
 
@@ -998,7 +1011,7 @@ def _region_top_n_construction(
     highest EV score. Then assemble the 4 regional champions and walk
     F4 + CHAMP with greedy EV-score.
     """
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
+    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
 
     all_picks: Dict[str, str] = {}
     e8_winners: Dict[str, str] = {}
@@ -1051,6 +1064,7 @@ def _exhaustive_champion_search(
     risk_level: float,
     pool_size: int,
     scoring_system: Dict[str, int],
+    confidence_threshold: Optional[float] = None,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Build a bracket for each of 64 possible champions, pick the best by E[pts].
 
@@ -1065,7 +1079,7 @@ def _exhaustive_champion_search(
     """
     all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
 
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
+    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
 
     best_picks: Optional[Dict[str, str]] = None
     best_champion = ""
@@ -1126,6 +1140,7 @@ def construct_bracket(
     forced_champion: Optional[str] = None,
     max_one_seeds_f4: int = 2,
     chalk_bias_table: Optional[Dict[int, Dict[str, float]]] = None,
+    confidence_threshold: Optional[float] = None,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Construct a complete 63-game bracket using the specified mode.
 
@@ -1140,6 +1155,11 @@ def construct_bracket(
         chalk_bias_table: Optional empirical chalk-bias ratios loaded from
             ``load_chalk_bias_table()``. Only used by ``champ_first_chalkfade``
             mode; auto-loaded from the latest artifact if None.
+        confidence_threshold: When set, any team whose ``model_prob`` for the
+            current round meets or exceeds this value is scored as pure chalk
+            (no differentiation weighting). Useful to lock high-certainty games
+            (e.g. 1v16 in R64 at P≈0.98) while concentrating ``risk_level``
+            on genuinely uncertain matchups.
 
     Raises:
         ValueError: if mode is unknown, if the seed map can't be built to
@@ -1173,13 +1193,23 @@ def construct_bracket(
 
     # Exhaustive champion search: try all 64 teams, pick best E[pts].
     if mode == "exhaustive_champion":
-        return _exhaustive_champion_search(by_region, round_probs, public_picks, risk_level, pool_size, scoring_system)
+        return _exhaustive_champion_search(
+            by_region, round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold
+        )
 
     # Region-level construction: enumerate top outcomes per region.
     if mode == "region_top_n":
-        return _region_top_n_construction(by_region, round_probs, public_picks, risk_level, pool_size, scoring_system)
+        return _region_top_n_construction(
+            by_region,
+            round_probs,
+            public_picks,
+            risk_level,
+            pool_size,
+            scoring_system,
+            confidence_threshold=confidence_threshold,
+        )
 
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system)
+    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
 
     # Determine locked teams and lock_through_round per mode.
     if mode == "champ_first":
