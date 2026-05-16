@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"additionalContext\":\"AUTO-DISPATCH: At session start, read docs/session-summaries/session-20260502-iteration-summary.md and dispatch the pool-optimizer agent (subagent_type=pool-optimizer) to pick up the next prioritized task. Current production strategy: meta_region_poolaware at 11.9% P(1st). Priority 1: improve opponent model using real pool brackets. Priority 2: more candidate diversity. Priority 3: upset specialist as poolaware candidate. Superpowers skills available in .claude/skills/. Specialized agents in .claude/agents/ (dispatch with Agent tool, subagent_type=name): code-reviewer, pool-optimizer, data-pipeline. This is a Python ML project using pytest, ruff linter. Verification: pytest, ruff check src/.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"AUTO-DISPATCH: At session start, read docs/session-summaries/session-20260502-iteration-summary.md and dispatch the pool-optimizer agent (subagent_type=pool-optimizer) to pick up the next prioritized task. Current production strategy: meta_region_poolaware at 11.9% P(1st). Priority 1: improve opponent model using real pool brackets. Priority 2: more candidate diversity. Priority 3: upset specialist as poolaware candidate. Superpowers skills available in .claude/skills/. Specialized agents in .claude/agents/ (dispatch with Agent tool, subagent_type=name): code-reviewer, pool-optimizer, data-pipeline. This is a Python ML project using pytest, ruff linter. Verification: pytest, ruff check src/.\"}}'",
             "timeout": 5000
           }
         ]

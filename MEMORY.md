@@ -44,16 +44,20 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Decision | Value | Source |
 |---|---|---|
 | Kaggle optimization target | Held-out tournament `Brier` is the optimization metric; `BSS` is a guardrail, not the primary ranking target. | `docs/kaggle-objective-policy.md`; `scripts/admit_kaggle_candidate.py` |
+| Default priority-1 Kaggle test window for 2027-facing work | `2023-2025` should be the first slice inspected when judging whether a candidate looks relevant for 2027 predictions. This is a reporting/evaluation priority window, not a replacement for the stricter admission split. | `docs/kaggle-objective-policy.md`; `RUNBOOK_2027.md` |
 | Kaggle recency policy | Most recent 5 observed tournaments count about as much as all older observed tournaments combined (`recent_year_count=5`, `recent_total_ratio=1.0`). Older years remain in-fit for shrinkage/stability. | `docs/kaggle-objective-policy.md`; `src/prediction/kaggle_recency.py` |
 | Current Kaggle baseline | `torvik_corrected_recent5_conservative` is the current secondary-path baseline. It is the admitted recent-5 conservative torvik-correction candidate: `ridge=5.0`, `max_correction=0.06`, recent-block weighting as above. Submission command: `python scripts/kaggle_torvik_submission.py --year 2026 --mode torvik_corrected_recent5_conservative --sample-submission data/kaggle/SampleSubmissionStage2.csv --output /private/tmp/kaggle_torvik_corrected_recent5_2026.csv` | `artifacts/kaggle_admission_recent5_conservative.json`; `artifacts/kaggle_baseline_recent5_conservative.json`; `scripts/kaggle_torvik_submission.py` |
 | Kaggle admission status of current baseline | **PASS** under the strict historical gate. Final holdout mean Brier: incumbent ensemble `0.1376`, admitted candidate `0.1301`. Final-holdout mean BSS: incumbent `+0.0861`, admitted candidate `+0.1358`. `2026` regression is only `+0.0019`, inside the `0.003` cap. | `artifacts/kaggle_admission_recent5_conservative.json`; `scripts/admit_kaggle_candidate.py` |
 | Final internal-only nonlinear candidate status | `torvik_isotonic` was tested against `torvik_corrected_recent5_conservative` under the same recent-5 admission gate and **failed**. Shadow mean Brier improved (`0.1686`), but final holdout regressed: incumbent `0.1308`, isotonic candidate `0.1351`, mean improvement `-0.0043`. Treat the internal-data Brier/BSS track as closed pending new external signal. | `configs/kaggle_admission_isotonic_recent5.json`; `artifacts/kaggle_admission_isotonic_recent5.json`; `scripts/admit_kaggle_candidate.py` |
+| First market-odds pilot status | The first tournament-closing-line reopen attempt did **not** admit a new baseline. `torvik_closing` improved final holdout mean Brier only trivially (`0.13070` vs incumbent `0.13078`, gain `0.00008`) and failed the `0.002` improvement threshold. A post-hoc `closing_market_blend` search selected `alpha=0.0`; its best final holdout mean Brier was `0.13047`, but that gain (`0.00030`) came from the stronger-shrinkage torvik correction, not from using the market signal directly. The tournament-only market artifact covers `302/315` main-bracket games across `2021-2025` (`96.8%`, `95.2%`, `100%`, `93.7%`, `93.7%` by year). | `configs/kaggle_admission_torvik_closing_recent5.json`; `configs/kaggle_admission_closing_blend_recent5.json`; `artifacts/kaggle_admission_torvik_closing.json`; `artifacts/kaggle_admission_closing_blend.json`; `artifacts/ncaa_tournament_market.json` |
 
 #### Current Brier/BSS Plan
 
 - Optimize the Kaggle path on held-out tournament `Brier`.
 - Keep `BSS` as a guardrail to confirm continued edge over the seed baseline.
+- Treat `2023-2025` as the default priority-1 test window when asking whether a candidate is relevant for 2027.
 - Use strong recent-block weighting: the most recent 5 observed tournaments should count about as much as all older observed tournaments combined.
+- Report Kaggle experiment summaries in this order: weighted recent-aware held-out `Brier`, final-holdout `Brier`, `2023-2025` `Brier`, then `BSS` / stability guardrails.
 - Treat `torvik_corrected_recent5_conservative` as the current admitted baseline until a new candidate clears the same admission gate.
 - Highest-priority future upgrade if work resumes: historical market odds, then a torvik-plus-market correction model.
 - The last serious repo-only fallback (`torvik_isotonic`) has already been tried and failed against the admitted baseline on final holdout. Do not reopen the internal-only calibration track without a materially different idea.
@@ -196,3 +200,21 @@ Source: `artifacts/backtest_runs/mc_pool_backtest_20260418_225840.txt` (O27 clos
 - Strategy: `POOL_STRATEGY_RECOMMENDATION.md`
 - Freeze: `pipeline_freeze.json`
 - Backtest artifacts: `mc_pool_backtest_*.txt`, `pool_report*.json`
+
+---
+
+## Recent Commit Note
+
+Recent commits:
+
+- `5f81e61` added the Odds API archive audit and closing-consensus artifact.
+- `486eb15` added the market-odds feasibility checklist.
+- `30c78ed` closed the internal Kaggle Brier track and added the external-data roadmap.
+- `991b7a2` added the women's pipeline LOYO Brier backtest baseline.
+- `6ae5ac3` closed the isotonic calibrator exploration as a non-improvement.
+
+Outstanding next steps:
+
+- Decide whether the market-odds artifacts stay as standalone research outputs or get wired into the Kaggle admission flow.
+- If Kaggle secondary-path work resumes, test only materially different candidates against the current recent-5 conservative baseline.
+- Keep the broad blend-complexity path closed unless new external signal changes the tradeoff.

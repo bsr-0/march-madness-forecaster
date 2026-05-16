@@ -41,7 +41,9 @@ SEASONS = [
 ]
 
 TOURNEY_START = (3, 15)
-TOURNEY_END = (4, 8)
+# Extended to (4, 9) because late-evening championship games (e.g. 2024 tip
+# 9:20 PM ET) have UTC commence_time on April 9.
+TOURNEY_END = (4, 9)
 
 _ODDS_NAME_ALIASES = {
     "texas_a_m_cc": "texas_a_m_corpus_christi",
@@ -60,6 +62,8 @@ _ODDS_NAME_ALIASES = {
     "uconn_huskies": "connecticut",
     "ole_miss_rebels": "mississippi",
     "miami_hurricanes": "miami__fl",
+    # Odds API uses "Loyola (Chi) Ramblers", not "Loyola Chicago Ramblers".
+    "loyola_chi_ramblers": "loyola__il",
     "loyola_chicago_ramblers": "loyola__il",
     "providence_friars": "providence",
     "southern_california_trojans": "southern_california",
