@@ -86,6 +86,7 @@ from src.simulation.pool_history_opponent_model import (
     build_pool_pick_distribution,
     build_pool_behavioral_model,
     build_blended_pool_opponent_model,
+    build_pool_history_opponent_matrix,
 )
 
 # ---------------------------------------------------------------------------
@@ -3278,21 +3279,40 @@ def _run_one_year(
                     # a bracket that beats 70% of opponents but never wins outright
                     # scores high on rank but has low P(1st). Binary is the correct
                     # unbiased estimator of what pays out.
+
+                    # Pool-history opponent matrix (LOYO-safe): use real pool brackets
+                    # from years ≠ test_year when available.  Falls back to synthetic
+                    # generation for pre-2023 years with no pool data.
+                    _pa_hist_matrix = build_pool_history_opponent_matrix(
+                        path=POOL_HIST_PATH,
+                        test_year=year,
+                        first_round=first_round,
+                        seeds=seeds,
+                        n_opponents=n_opponents,
+                        rng=_pa_rng,
+                    )
+                    _pa_use_hist = _pa_hist_matrix is not None
+
                     n_pa_trials = pa_trials
                     best_pa_p1 = -1.0
                     best_pa_idx = 0
                     for ci, (bvec, _) in enumerate(_pa_candidates):
                         wins = 0
                         for _ in range(n_pa_trials):
-                            opp = generate_opponent_brackets(
-                                n_opponents=n_opponents,
-                                first_round_matchups=first_round,
-                                pick_distribution=_pa_pub,
-                                matchup_probs=seed_pw,
-                                seeds=seeds,
-                                rng=_pa_rng,
-                                chalk_noise_std=pool_chalk_noise_std,
-                            )
+                            if _pa_use_hist:
+                                # Resample n_opponents rows from the real bracket matrix.
+                                idx = _pa_rng.integers(0, len(_pa_hist_matrix), size=n_opponents)
+                                opp = _pa_hist_matrix[idx]
+                            else:
+                                opp = generate_opponent_brackets(
+                                    n_opponents=n_opponents,
+                                    first_round_matchups=first_round,
+                                    pick_distribution=_pa_pub,
+                                    matchup_probs=seed_pw,
+                                    seeds=seeds,
+                                    rng=_pa_rng,
+                                    chalk_noise_std=pool_chalk_noise_std,
+                                )
                             _pa_out, _pa_br = simulate_tournament_outcomes(
                                 n_tournaments=1,
                                 first_round_matchups=first_round,
@@ -3320,11 +3340,12 @@ def _run_one_year(
                         if p1 > best_pa_p1:
                             best_pa_p1 = p1
                             best_pa_idx = ci
+                    _pa_opp_source = "pool_history" if _pa_use_hist else "synthetic"
                     meta_bracket = _pa_candidates[best_pa_idx][0]
                     print(
                         f"  {year}   {meta_mode:<24} "
                         f"selected={_pa_candidates[best_pa_idx][1]} "
-                        f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                        f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f}, opp={_pa_opp_source})"
                     )
             elif meta_mode == "meta_region_blend":
                 # Light blend: 90% torvik + 10% GBM round probs → region construction
