@@ -3185,16 +3185,29 @@ def _run_one_year(
                 if _alt_blend is not None:
                     _pa_prob_bases.append(("blend", _alt_blend))
 
-                # 80/20 torvik/massey_avg blend (if massey_avg available)
+                # torvik/massey_avg blends (if massey_avg available).
+                # tv_mass80 is in the main prob-base sweep (all 5 risks × 2 modes).
+                # tv_mass70/60/50 are structurally different points on the blend
+                # continuum; we add them as targeted 2-risk candidates only to avoid
+                # candidate-pool explosion (lesson from upset/confidence experiments).
+                _tv_massey_blends: list[tuple[str, Dict[str, Dict[str, float]]]] = []
                 if _alt_massey_avg is not None:
-                    _tv_mass_80_20: Dict[str, Dict[str, float]] = {}
-                    for tid in torvik_rp:
-                        _tv_mass_80_20[tid] = {}
-                        for rn in torvik_rp[tid]:
-                            tv_val = torvik_rp[tid][rn]
-                            ma_val = _alt_massey_avg.get(tid, {}).get(rn, tv_val)
-                            _tv_mass_80_20[tid][rn] = 0.8 * tv_val + 0.2 * ma_val
-                    _pa_prob_bases.append(("tv_mass80", _tv_mass_80_20))
+                    for _blend_name, _tv_w in (
+                        ("tv_mass80", 0.8),
+                        ("tv_mass70", 0.7),
+                        ("tv_mass60", 0.6),
+                        ("tv_mass50", 0.5),
+                    ):
+                        _blended: Dict[str, Dict[str, float]] = {}
+                        for tid in torvik_rp:
+                            _blended[tid] = {}
+                            for rn in torvik_rp[tid]:
+                                tv_val = torvik_rp[tid][rn]
+                                ma_val = _alt_massey_avg.get(tid, {}).get(rn, tv_val)
+                                _blended[tid][rn] = _tv_w * tv_val + (1.0 - _tv_w) * ma_val
+                        _tv_massey_blends.append((_blend_name, _blended))
+                    # tv_mass80 enters the main sweep (kept for backward compat)
+                    _pa_prob_bases.append(("tv_mass80", _tv_massey_blends[0][1]))
 
                 _pa_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
 
@@ -3228,7 +3241,21 @@ def _run_one_year(
                             risk_level=_risk,
                         )
 
-                # (d) Upset-aware candidates — REMOVED 2026-05-03.
+                # (d) Extra torvik/massey blend ratios at 2 risk levels each.
+                # tv_mass70/60/50 cover more of the torvik↔massey continuum.
+                # Limited to risk=0.3 and risk=0.7 (the extremes most likely to
+                # produce structurally distinct brackets from tv_mass80).
+                # Deduplication below removes any that collapse to existing picks.
+                for _blend_name, _blend_rp in _tv_massey_blends[1:]:  # skip tv_mass80
+                    for _risk in (0.3, 0.7):
+                        _pa_try_add(
+                            f"{_blend_name}_region_risk={_risk}",
+                            mode="region_top_n",
+                            round_probs=_blend_rp,
+                            risk_level=_risk,
+                        )
+
+                # (e) Upset-aware candidates — REMOVED 2026-05-03.
                 # A/B tested: calibrated upset probability adjustments
                 # (merged detector+specialist signals, 2 boost modes × 3 bases
                 # × 3 risks = ~18 candidates) vs no upset candidates.
@@ -3237,7 +3264,7 @@ def _run_one_year(
                 # P(1st) by 2pp. Extra candidates add selection noise.
                 # The "killed" label from meta_region_upset (7.9%) stands.
 
-                # (e) Confidence-routed candidates — REMOVED 2026-05-16.
+                # (f) Confidence-routed candidates — REMOVED 2026-05-16.
                 # A/B tested: confidence_threshold=0.75 lock on high-certainty games
                 # (9 new candidates) vs none.
                 # Result: 7.1% P(1st) WITH vs 11.9% WITHOUT — severe regression.
