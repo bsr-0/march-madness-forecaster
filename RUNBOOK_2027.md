@@ -117,11 +117,11 @@ Expected: 76 teams, 4 regions, 4 one-seeds.
 ### Step 3: Generate the bracket
 
 ```bash
-# Full production run (takes ~15 minutes with --pa-trials 500)
+# Full production run (~5 minutes)
 python -m scripts.mc_pool_backtest --modes meta_region_poolaware \
     --opponent pool --team-identity --n-opponents 30 \
     --n-repeats 50 --n-model 50 --years 2027 \
-    --pa-trials 500 --save-brackets
+    --save-brackets
 ```
 
 Output will show:
@@ -178,6 +178,6 @@ If any scraper 404s or returns unexpected format, check if the URL structure cha
 
 - **Production baseline:** 11.2% P(1st) (3.6x over seed random)
 - **Pool size:** ~30 people, winner-take-all
-- **Architecture:** ~25 candidate brackets, 200 MC trials each by default (use `--pa-trials 500` for production), select highest P(1st)
+- **Architecture:** ~25 candidate brackets, 200 MC trials each (500 validated, no improvement — 200 is sufficient), select highest P(1st)
 - **Runtime:** ~5 min for single-year production run
 - **Python:** 3.11.15 via pyenv
