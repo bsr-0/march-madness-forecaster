@@ -3173,6 +3173,10 @@ def _run_one_year(
                     except Exception:
                         pass
 
+                def _pa_try_add_vec(label: str, bvec: np.ndarray) -> None:
+                    """Append a pre-built bracket vector to candidates."""
+                    _pa_candidates.append((bvec, label))
+
                 # --- Probability bases to sweep ---
                 _pa_prob_bases: list[tuple[str, dict]] = [("tv", torvik_rp)]
                 _alt_massey_avg = base_round_probs.get("massey_avg")
@@ -3245,6 +3249,53 @@ def _run_one_year(
                 # already picks chalk for P>0.5 games at any risk_level) and the few
                 # structurally different ones add selection noise. Same lesson as
                 # upset candidates (2026-05-03): extra candidates hurt by noise.
+
+                # (f) Per-region independent construction — one region gets an
+                # "odd" (prob_base, risk) while the other three use torvik/risk=0.3.
+                # Variants per odd region (v3_tv_risk0.1 excluded: always deduplicates):
+                #   v1: odd=(torvik_rp, 0.9), base=(torvik_rp, 0.3)
+                #   v2: odd=(massey_avg_rp, 0.9), base=(torvik_rp, 0.3)  [if avail]
+                #   v4: odd=(massey_avg_rp, 0.1), base=(torvik_rp, 0.3)  [if avail]
+                # F4/CHAMP: torvik_rp, risk = mean of the 4 regional risks.
+                # Produces 4×3=12 pre-dedup candidates (or 4×1=4 if massey_avg absent).
+                from src.optimization.bracket_construction import construct_bracket_per_region
+
+                _pr_base_risk = 0.3
+                _pr_region_names = ["East", "West", "South", "Midwest"]
+                _pr_odd_variants: list[tuple[str, dict, float]] = [
+                    ("v1_tv_risk0.9", torvik_rp, 0.9),
+                ]
+                if _alt_massey_avg is not None:
+                    _pr_odd_variants.append(("v2_mass_risk0.9", _alt_massey_avg, 0.9))
+                    _pr_odd_variants.append(("v4_mass_risk0.1", _alt_massey_avg, 0.1))
+
+                for _pr_odd_region in _pr_region_names:
+                    for _pr_vname, _pr_odd_rp, _pr_odd_risk in _pr_odd_variants:
+                        _pr_params: dict[str, tuple] = {}
+                        for _pr_r in _pr_region_names:
+                            if _pr_r == _pr_odd_region:
+                                _pr_params[_pr_r] = (_pr_odd_rp, _pr_odd_risk)
+                            else:
+                                _pr_params[_pr_r] = (torvik_rp, _pr_base_risk)
+                        _pr_late_risk = sum(v[1] for v in _pr_params.values()) / 4.0
+                        _pr_label = f"per_region/{_pr_odd_region}/{_pr_vname}"
+                        try:
+                            _pr_picks, _, _, _, _ = construct_bracket_per_region(
+                                seeds=seeds,
+                                regions=regions,
+                                region_params=_pr_params,
+                                late_round_probs=torvik_rp,
+                                late_round_risk=_pr_late_risk,
+                                public_picks=_pa_pub,
+                                pool_size=n_opponents,
+                                scoring_system=_pa_scoring,
+                            )
+                            _pa_try_add_vec(
+                                _pr_label,
+                                _picks_dict_to_bool_array(_pr_picks, first_round),
+                            )
+                        except Exception:
+                            pass
 
                 # De-duplicate identical brackets (keeps first label)
                 _pa_seen: set[bytes] = set()
@@ -4046,6 +4097,219 @@ class _Tee:
             s.flush()
 
 
+def smoke_per_region(test_years=(2023, 2024, 2025)):
+    """Smoke test for per-region independent bracket construction.
+
+    For each test year, generates the existing ~25 poolaware candidates and
+    then generates 16 per-region contrast candidates.  Reports how many of
+    the per-region candidates are genuinely new (not already in the existing
+    pool's dedup set).
+
+    Run via: python -m scripts.mc_pool_backtest --smoke-per-region
+    """
+    from src.optimization.bracket_construction import (
+        construct_bracket,
+        construct_bracket_per_region,
+    )
+
+    print("=" * 72)
+    print("SMOKE TEST: per-region independent bracket construction")
+    print("=" * 72)
+
+    base_risk = 0.3
+    n_opponents = 30  # small pool matches production default
+
+    gate_years_passing = 0
+
+    for year in test_years:
+        print(f"\n--- Year {year} ---")
+
+        # Load data (same as _run_one_year)
+        seeds, regions = load_seeds_and_regions(year)
+        if not seeds or not regions:
+            print(f"  SKIP: no seeds/regions for {year}")
+            continue
+
+        games = load_tournament_results(year)
+        if not games:
+            print(f"  SKIP: no games for {year}")
+            continue
+
+        resolve_first_four(games, seeds, regions)
+        barthag = _load_torvik_barthag(year, seeds)
+        torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+
+        # Load massey_avg if available
+        from src.prediction.massey_probabilities import load_massey_avg_barthag
+
+        massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
+        massey_avg_rp = (
+            build_torvik_round_probabilities(seeds, regions, massey_barthag) if massey_barthag is not None else None
+        )
+
+        # Load pick distribution (ESPN preferred, seed fallback)
+        try:
+            pick_dist = build_espn_pick_distribution(year, seeds)
+        except FileNotFoundError:
+            pick_dist = build_seed_pick_distribution(seeds)
+
+        try:
+            region_order = derive_f4_region_pairing(games, regions)
+        except ValueError as exc:
+            print(f"  SKIP: {exc}")
+            continue
+        first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
+
+        # --- Step 1: generate existing poolaware candidates to capture baseline dedup set ---
+        _pa_pub = pick_dist if pick_dist else {}
+        _pa_scoring = dict(ESPN_SCORING)
+        one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
+
+        _pa_prob_bases = [("tv", torvik_rp)]
+        if massey_avg_rp is not None:
+            _pa_prob_bases.append(("mass_avg", massey_avg_rp))
+
+        baseline_candidates: list = []
+
+        def _baseline_add(label: str, **kwargs):
+            try:
+                p, _, _, _, _ = construct_bracket(
+                    seeds=seeds,
+                    regions=regions,
+                    public_picks=_pa_pub,
+                    pool_size=n_opponents,
+                    scoring_system=_pa_scoring,
+                    **kwargs,
+                )
+                baseline_candidates.append((_picks_dict_to_bool_array(p, first_round), label))
+            except Exception:
+                pass
+
+        # (a) forced 1-seed champions
+        for forced in one_seed_teams:
+            _baseline_add(
+                f"tv_champ={forced}", mode="region_top_n", round_probs=torvik_rp, risk_level=0.5, forced_champion=forced
+            )
+
+        # (b) risk sweeps × prob bases
+        for _risk in (0.1, 0.3, 0.5, 0.7, 0.9):
+            for _pb_name, _pb_rp in _pa_prob_bases:
+                _baseline_add(
+                    f"{_pb_name}_region_risk={_risk}", mode="region_top_n", round_probs=_pb_rp, risk_level=_risk
+                )
+
+        # (c) exhaustive champion × select risks
+        for _risk in (0.3, 0.5, 0.7):
+            for _pb_name, _pb_rp in _pa_prob_bases:
+                _baseline_add(
+                    f"{_pb_name}_exhaust_risk={_risk}", mode="exhaustive_champion", round_probs=_pb_rp, risk_level=_risk
+                )
+
+        # Dedup baseline pool
+        _seen: set = set()
+        _unique_baseline = []
+        for bvec, label in baseline_candidates:
+            key = bvec.tobytes()
+            if key not in _seen:
+                _seen.add(key)
+                _unique_baseline.append((bvec, label))
+
+        print(f"  Baseline pool: {len(baseline_candidates)} attempted, {len(_unique_baseline)} unique")
+
+        # --- Step 2: generate 16 per-region contrast candidates ---
+        # For each of 4 regions as the "odd" region, try 4 variants:
+        #   v1: odd=(torvik_rp, risk=0.9), base=(torvik_rp, risk=0.3)
+        #   v2: odd=(massey_avg_rp, risk=0.9), base=(torvik_rp, risk=0.3)  [if massey_avg available]
+        #   v3: odd=(torvik_rp, risk=0.1), base=(torvik_rp, risk=0.3)
+        #   v4: odd=(massey_avg_rp, risk=0.1), base=(torvik_rp, risk=0.3)  [if massey_avg available]
+        # F4/CHAMP: torvik_rp, average risk of the 4 regions.
+
+        REGION_NAMES = ["East", "West", "South", "Midwest"]
+        per_region_candidates: list = []
+        per_region_attempted = 0
+
+        odd_variants = [
+            ("v1_tv_risk0.9", torvik_rp, 0.9),
+            ("v3_tv_risk0.1", torvik_rp, 0.1),
+        ]
+        if massey_avg_rp is not None:
+            odd_variants.insert(1, ("v2_mass_risk0.9", massey_avg_rp, 0.9))
+            odd_variants.append(("v4_mass_risk0.1", massey_avg_rp, 0.1))
+
+        for odd_region in REGION_NAMES:
+            for variant_name, odd_rp, odd_risk in odd_variants:
+                # Build per-region params: odd region gets the variant, others get base
+                region_params = {}
+                for r in REGION_NAMES:
+                    if r == odd_region:
+                        region_params[r] = (odd_rp, odd_risk)
+                    else:
+                        region_params[r] = (torvik_rp, base_risk)
+
+                # Late-round risk: average of all 4 region risks
+                all_risks = [region_params[r][1] for r in REGION_NAMES]
+                late_risk = sum(all_risks) / 4.0
+
+                label = f"per_region/{odd_region}/{variant_name}"
+                per_region_attempted += 1
+                try:
+                    p, _, _, _, _ = construct_bracket_per_region(
+                        seeds=seeds,
+                        regions=regions,
+                        region_params=region_params,
+                        late_round_probs=torvik_rp,
+                        late_round_risk=late_risk,
+                        public_picks=_pa_pub,
+                        pool_size=n_opponents,
+                        scoring_system=_pa_scoring,
+                    )
+                    bvec = _picks_dict_to_bool_array(p, first_round)
+                    per_region_candidates.append((bvec, label))
+                except Exception as exc:
+                    print(f"    ERROR {label}: {exc}")
+
+        # --- Step 3: check which per-region candidates are genuinely new ---
+        new_count = 0
+        new_labels = []
+        dup_labels = []
+        for bvec, label in per_region_candidates:
+            key = bvec.tobytes()
+            if key not in _seen:
+                new_count += 1
+                new_labels.append(label)
+                _seen.add(key)  # count each truly new bracket only once
+            else:
+                dup_labels.append(label)
+
+        print(f"  Per-region attempted: {per_region_attempted}")
+        print(f"  Genuinely new brackets: {new_count}")
+        if new_labels:
+            print("  New variants:")
+            for lbl in new_labels:
+                print(f"    + {lbl}")
+        if dup_labels:
+            print(f"  Deduplicated ({len(dup_labels)} duplicates, suppressed list)")
+
+        total_pool = len(_unique_baseline) + new_count
+        print(f"  Pool size if per-region added: {len(_unique_baseline)} + {new_count} = {total_pool}")
+
+        # Gate: >=4 unique new brackets per year
+        if new_count >= 4:
+            gate_years_passing += 1
+            print(f"  GATE: PASS ({new_count} >= 4 unique new brackets)")
+        else:
+            print(f"  GATE: FAIL ({new_count} < 4 unique new brackets)")
+
+    print("\n" + "=" * 72)
+    gate_met = gate_years_passing >= len(test_years)
+    print(f"GATE RESULT: {gate_years_passing}/{len(test_years)} years passed (>= 4 unique per-region brackets).")
+    if gate_met:
+        print("PROCEED to Phase 2: per-region candidates add structural diversity.")
+    else:
+        print("STOP: contrast strategy too aggressively deduplicated. Rethink variants.")
+    print("=" * 72)
+
+
 def main():
     import argparse
 
@@ -4156,7 +4420,18 @@ def main():
         "Higher values reduce selection noise but increase runtime linearly. "
         "Recommended: 500-1000 for final production runs.",
     )
+    parser.add_argument(
+        "--smoke-per-region",
+        action="store_true",
+        help="Run Phase 1 smoke test for per-region independent bracket construction "
+        "(years 2023-2025). Counts unique new brackets vs the existing poolaware pool. "
+        "Does NOT run a backtest.",
+    )
     args = parser.parse_args()
+
+    # Short-circuit for smoke tests — no backtest run.
+    if args.smoke_per_region:
+        return smoke_per_region()
 
     # Resolve mode list.
     # New interface: --bases X Y --construction-modes A B → cross-product
