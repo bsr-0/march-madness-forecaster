@@ -3196,7 +3196,7 @@ def _run_one_year(
                             _tv_mass_80_20[tid][rn] = 0.8 * tv_val + 0.2 * ma_val
                     _pa_prob_bases.append(("tv_mass80", _tv_mass_80_20))
 
-                _pa_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
+                _pa_risk_levels = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
 
                 # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
                 for forced in one_seed_teams:
