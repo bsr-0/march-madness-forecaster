@@ -511,6 +511,75 @@ def _evaluate_torvik_corrected_odds_api(
     )
 
 
+def _evaluate_torvik_corrected_movement(
+    train_year_records: dict[int, list[dict]],
+    test_rows: list[dict],
+    params: Dict[str, Any],
+) -> YearMetrics:
+    """Torvik correction with opening-to-closing line movement as 9th feature.
+
+    Identical to torvik_corrected but passes ``market_movement`` (closing - opening)
+    to the model both during training and prediction. Movement is 0.0 for rows
+    without opening line data (pre-2021 and any games the opening scraper missed).
+    """
+    clip_lo = _coerce_float(params, "clip_lo", 0.01)
+    clip_hi = _coerce_float(params, "clip_hi", 0.99)
+    recent_start = _coerce_int_or_none(params, "recent_year_start", 2021)
+    recent_weight = _coerce_float(params, "recent_year_weight", 2.0)
+    recent_count = _coerce_int_or_none(params, "recent_year_count", None)
+    recent_total_ratio = _coerce_float(params, "recent_total_ratio", 1.0)
+    ridge = _coerce_float(params, "correction_ridge", 5.0)
+    max_correction = _coerce_float(params, "max_correction", 0.10)
+
+    model = fit_torvik_correction_from_year_records(
+        train_year_records,
+        config=TorvikCorrectionConfig(
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            ridge=ridge,
+            max_correction=max_correction,
+        ),
+        recent_year_start=recent_start,
+        recent_year_weight=recent_weight,
+        recent_year_count=recent_count,
+        recent_total_ratio=recent_total_ratio,
+    )
+
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
+
+    torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
+    seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
+    seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
+    outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
+    seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
+    market = np.asarray([_resolve_signal(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+    movement = np.asarray([float(row.get("market_movement") or 0.0) for row in test_rows], dtype=float)
+    preds = model.predict(
+        torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds, movement_vals=movement
+    )
+    brier = float(np.mean((preds - outcomes) ** 2))
+    seed_brier = float(np.mean((seed - outcomes) ** 2))
+
+    n_with_movement = int(np.sum(movement != 0.0))
+    metadata = {
+        "coef": model.coef_.tolist() if model.coef_ is not None else None,
+        **(model.training_info_ or {}),
+        "correction_ridge": ridge,
+        "max_correction": max_correction,
+        "movement_coverage_test": n_with_movement / max(len(test_rows), 1),
+    }
+    return YearMetrics(
+        year=int(test_rows[0]["year"]),
+        brier=brier,
+        seed_brier=seed_brier,
+        bss=1.0 - brier / max(seed_brier, 1e-12),
+        ece=expected_calibration_error(preds, outcomes),
+        metadata=metadata,
+    )
+
+
 def _evaluate_closing_market_blend(
     train_year_records: dict[int, list[dict]],
     test_rows: list[dict],
@@ -752,6 +821,8 @@ def evaluate_spec(
             metrics = _evaluate_torvik_corrected(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_corrected_odds_api":
             metrics = _evaluate_torvik_corrected_odds_api(train_year_records, test_rows, spec.params)
+        elif spec.mode == "torvik_corrected_movement":
+            metrics = _evaluate_torvik_corrected_movement(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_closing":
             metrics = _evaluate_torvik_closing(train_year_records, test_rows, spec.params)
         elif spec.mode == "closing_market_blend":
@@ -1093,6 +1164,7 @@ def main() -> None:
         "ensemble",
         "torvik_corrected",
         "torvik_corrected_odds_api",
+        "torvik_corrected_movement",
         "torvik_closing",
         "closing_market_blend",
         "torvik_isotonic",

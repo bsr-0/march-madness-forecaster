@@ -31,7 +31,27 @@ logger = logging.getLogger(__name__)
 
 ARTIFACT_PATH = REPO_ROOT / "artifacts" / "loyo_pergame_predictions.json"
 TOURNAMENT_MARKET_PATH = REPO_ROOT / "artifacts" / "ncaa_tournament_market.json"
+TOURNAMENT_OPENING_PATH = REPO_ROOT / "artifacts" / "ncaa_tournament_opening.json"
 DATA_ROOT = REPO_ROOT / "data"
+
+
+def _load_opening_market_lookup() -> dict[tuple[int, str, str], float]:
+    """Load tournament opening market probabilities keyed by (year, team1, team2).
+
+    Keys stored in both orderings; value is always P(team1 wins).
+    """
+    if not TOURNAMENT_OPENING_PATH.exists():
+        return {}
+    with open(TOURNAMENT_OPENING_PATH) as f:
+        data = json.load(f)
+    lookup: dict[tuple[int, str, str], float] = {}
+    for row in data.get("games", []):
+        yr = int(row["year"])
+        t1, t2 = row["team1"], row["team2"]
+        p = float(row["team1_open_prob"])
+        lookup[(yr, t1, t2)] = p
+        lookup[(yr, t2, t1)] = 1.0 - p
+    return lookup
 
 
 def _load_closing_market_lookup() -> dict[tuple[int, str, str], float]:
@@ -160,6 +180,7 @@ def load_tournament_games(year: int) -> list[dict]:
 def generate_year(
     year: int,
     closing_market: dict[tuple[int, str, str], float] | None = None,
+    opening_market: dict[tuple[int, str, str], float] | None = None,
 ) -> tuple[list[dict], dict[str, bool]]:
     """Generate per-game predictions for a single year.
 
@@ -167,6 +188,9 @@ def generate_year(
     ``closing_market`` is the lookup from _load_closing_market_lookup(); when
     provided, a ``closing_market`` field is added to each record (None when
     no closing line exists for that game).
+    ``opening_market`` is the lookup from _load_opening_market_lookup(); when
+    provided, a ``market_movement`` field is added (closing - opening, None when
+    either is missing).
     """
     games = load_tournament_games(year)
     if not games:
@@ -237,6 +261,15 @@ def generate_year(
             cm = closing_market.get((year, t1, t2))
             record["closing_market"] = round(cm, 6) if cm is not None else None
 
+        # Add line movement (closing - opening) when both are available.
+        if closing_market is not None and opening_market is not None:
+            cm = closing_market.get((year, t1, t2))
+            om = opening_market.get((year, t1, t2))
+            if cm is not None and om is not None:
+                record["market_movement"] = round(cm - om, 6)
+            else:
+                record["market_movement"] = None
+
         records.append(record)
     return records, availability
 
@@ -244,10 +277,11 @@ def generate_year(
 def generate_all(years: list[int]) -> dict[str, list[dict]]:
     """Generate per-game predictions for all years."""
     closing_market = _load_closing_market_lookup()
+    opening_market = _load_opening_market_lookup()
     result = {}
     all_availability: dict[int, dict[str, bool]] = {}
     for year in years:
-        games, avail = generate_year(year, closing_market=closing_market)
+        games, avail = generate_year(year, closing_market=closing_market, opening_market=opening_market)
         if games:
             result[str(year)] = games
             all_availability[year] = avail
