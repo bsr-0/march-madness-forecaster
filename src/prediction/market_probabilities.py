@@ -179,6 +179,137 @@ def load_market_ratings(
     return barthag
 
 
+def load_odds_api_market_ratings(
+    year: int,
+    seeds: Dict[str, int],
+    cutoff_date: Optional[str] = None,
+) -> Optional[Dict[str, float]]:
+    """Derive barthag-equivalent ratings from the Odds API closing consensus.
+
+    Uses direct multi-book H2H consensus closing probabilities (avg ~13 books)
+    instead of the spread-conversion approach in load_market_ratings(). Available
+    for seasons 2021-2026 only; returns None for earlier years.
+
+    Args:
+        year: Season year (e.g., 2025)
+        seeds: Tournament teams {team_id: seed}
+        cutoff_date: ISO date string (YYYY-MM-DD). Only games before this
+            date are used. Defaults to {year}-03-15.
+
+    Returns:
+        Dict[team_id, float] for all teams in seeds, or None if year is outside
+        2021-2026 or insufficient data is available.
+    """
+    import json
+    from pathlib import Path
+
+    if year < 2021:
+        logger.debug("No Odds API coverage before 2021, returning None for %d", year)
+        return None
+
+    if cutoff_date is None:
+        cutoff_date = f"{year}-{DEFAULT_CUTOFF_MMDD}"
+
+    artifact_path = Path(__file__).resolve().parent.parent.parent / "artifacts" / "odds_api_closing_consensus.json"
+    if not artifact_path.exists():
+        logger.warning("odds_api_closing_consensus.json not found, returning None for %d", year)
+        return None
+
+    with open(artifact_path) as f:
+        data = json.load(f)
+
+    raw_games = data.get("games", [])
+
+    # Filter: correct season, not tournament window, before cutoff, enough books
+    valid_games = []
+    all_teams: set[str] = set()
+    for g in raw_games:
+        if g.get("season") != year:
+            continue
+        if g.get("tournament_window", False):
+            continue
+        if g.get("closing_snapshot", "9999") >= cutoff_date:
+            continue
+        p_home = g.get("home_win_prob")
+        p_away = g.get("away_win_prob")
+        if p_home is None or p_away is None:
+            continue
+        p_home = float(p_home)
+        if p_home <= 0.01 or p_home >= 0.99:
+            continue
+        h_id = g.get("home_team_id")
+        a_id = g.get("away_team_id")
+        if not h_id or not a_id:
+            continue
+        all_teams.add(h_id)
+        all_teams.add(a_id)
+        valid_games.append((h_id, a_id, p_home))
+
+    tourney_teams = set(seeds.keys())
+    tourney_games = [(h, a, p) for h, a, p in valid_games if h in tourney_teams or a in tourney_teams]
+    if len(tourney_games) < MIN_GAMES_THRESHOLD:
+        logger.warning(
+            "Only %d tournament-team games from Odds API for %d (need %d), returning None",
+            len(tourney_games),
+            year,
+            MIN_GAMES_THRESHOLD,
+        )
+        return None
+
+    # Bradley-Terry MLE on direct consensus probabilities
+    team_list = sorted(all_teams)
+    team_idx = {t: i for i, t in enumerate(team_list)}
+    n_teams = len(team_list)
+    r = [1.0] * n_teams
+
+    for iteration in range(BT_MAX_ITER):
+        wins = [0.0] * n_teams
+        denom = [0.0] * n_teams
+
+        for h_id, a_id, p_home in valid_games:
+            i = team_idx[h_id]
+            j = team_idx[a_id]
+            wins[i] += p_home
+            wins[j] += 1.0 - p_home
+            pair_sum = r[i] + r[j]
+            if pair_sum > 1e-12:
+                inv = 1.0 / pair_sum
+                denom[i] += inv
+                denom[j] += inv
+
+        max_delta = 0.0
+        for k in range(n_teams):
+            new_r = wins[k] / denom[k] if denom[k] > 1e-12 else r[k]
+            max_delta = max(max_delta, abs(new_r - r[k]))
+            r[k] = new_r
+
+        sorted_r = sorted(r)
+        median_r = sorted_r[n_teams // 2]
+        if median_r > 1e-12:
+            for k in range(n_teams):
+                r[k] /= median_r
+
+        if max_delta < 1e-6:
+            logger.debug("Odds API BT converged in %d iterations for %d", iteration + 1, year)
+            break
+
+    barthag = {}
+    for tid in tourney_teams:
+        if tid in team_idx:
+            rating = r[team_idx[tid]]
+            barthag[tid] = rating / (rating + 1.0)
+        else:
+            seed = seeds[tid]
+            barthag[tid] = max(0.10, 1.0 - seed * 0.04)
+            logger.debug("No Odds API data for %s (seed %d), using seed fallback", tid, seed)
+
+    n_fallback = sum(1 for tid in tourney_teams if tid not in team_idx)
+    if n_fallback > 0:
+        logger.info("%d/%d tournament teams missing from Odds API, using seed fallback", n_fallback, len(tourney_teams))
+
+    return barthag
+
+
 def load_spread_power_ratings(
     year: int,
     seeds: Dict[str, int],
