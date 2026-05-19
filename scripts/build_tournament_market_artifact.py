@@ -34,7 +34,7 @@ RAW_DIR = REPO_ROOT / "data/raw/odds_api/ncaab"
 HIST_DIR = REPO_ROOT / "data/raw/historical"
 OUTPUT_PATH = REPO_ROOT / "artifacts" / "ncaa_tournament_market.json"
 
-SEASONS = [2021, 2022, 2023, 2024, 2025]
+SEASONS = [2021, 2022, 2023, 2024, 2025, 2026]
 
 # Extended window matches the fixed scripts: championship games tip late ET.
 TOURNEY_START_MMDD = "03-15"

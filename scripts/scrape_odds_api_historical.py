@@ -1,6 +1,6 @@
 """Download historical NCAAB odds snapshots from The Odds API.
 
-Covers November 2020 through April 2025 (when the API's NCAAB coverage begins).
+Covers November 2020 through April 2026 (when the API's NCAAB coverage begins).
 Fetches h2h + spreads + totals in a single call per snapshot.
 
 Storage: data/raw/odds_api/ncaab/<YYYY-MM-DD_HHUZ>.json
@@ -47,6 +47,7 @@ SEASONS = [
     (date(2022, 11, 1), date(2023, 4, 10)),  # 2022-23
     (date(2023, 11, 1), date(2024, 4, 10)),  # 2023-24
     (date(2024, 11, 1), date(2025, 4, 10)),  # 2024-25
+    (date(2025, 11, 1), date(2026, 4, 10)),  # 2025-26
 ]
 
 # Tournament typically runs mid-March through first week of April.
