@@ -1,0 +1,2919 @@
+{
+  "games": [
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.909825,
+      "team2": "iona",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-22_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.706609,
+      "team2": "maryland",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.752067,
+      "team2": "colgate",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-26_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.807302,
+      "team2": "oral_roberts",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.485991,
+      "team2": "texas_tech",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-29_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.757343,
+      "team2": "arkansas",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-04-05_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.362087,
+      "team2": "gonzaga",
+      "year": 2021
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.904289,
+      "team2": "hartford",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-04-02_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.646058,
+      "team2": "houston",
+      "year": 2021
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2021-03-26_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.720637,
+      "team2": "villanova",
+      "year": 2021
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.706539,
+      "team2": "wisconsin",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "brigham_young",
+      "team1_open_prob": 0.60406,
+      "team2": "ucla",
+      "year": 2021
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.440093,
+      "team2": "rutgers",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "colorado",
+      "team1_open_prob": 0.684377,
+      "team2": "georgetown",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.582927,
+      "team2": "maryland",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.669145,
+      "team2": "ohio",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.738301,
+      "team2": "uc_santa_barbara",
+      "year": 2021
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.503802,
+      "team2": "virginia_tech",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "florida_state",
+      "team1_open_prob": 0.534279,
+      "team2": "colorado",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "florida_state",
+      "team1_open_prob": 0.82908,
+      "team2": "unc_greensboro",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-27_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.860325,
+      "team2": "creighton",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.956122,
+      "team2": "norfolk_state",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.866165,
+      "team2": "oklahoma",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-29_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.785363,
+      "team2": "southern_california",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-04-03_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.886007,
+      "team2": "ucla",
+      "year": 2021
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.890072,
+      "team2": "cleveland_state",
+      "year": 2021
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.738134,
+      "team2": "rutgers",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-27_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.699177,
+      "team2": "syracuse",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.903228,
+      "team2": "drexel",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.722769,
+      "team2": "loyola__il",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "iowa",
+      "team1_open_prob": 0.898199,
+      "team2": "grand_canyon",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.803891,
+      "team2": "eastern_washington",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "loyola__il",
+      "team1_open_prob": 0.676943,
+      "team2": "georgia_tech",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-27_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.558418,
+      "team2": "florida_state",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.666436,
+      "team2": "louisiana_state",
+      "year": 2021
+    },
+    {
+      "n_books": 6,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.866807,
+      "team2": "texas_southern",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-30_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.718429,
+      "team2": "ucla",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.522566,
+      "team2": "wisconsin",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "ohio_state",
+      "team1_open_prob": 0.881515,
+      "team2": "oral_roberts",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "oklahoma",
+      "team1_open_prob": 0.496944,
+      "team2": "missouri",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "oklahoma_state",
+      "team1_open_prob": 0.747365,
+      "team2": "liberty",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "oral_roberts",
+      "team1_open_prob": 0.265342,
+      "team2": "florida",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "oregon",
+      "team1_open_prob": 0.31825,
+      "team2": "iowa",
+      "year": 2021
+    },
+    {
+      "n_books": 6,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "oregon",
+      "team1_open_prob": 0.675601,
+      "team2": "virginia_commonwealth",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-28_2300Z.json",
+      "team1": "oregon_state",
+      "team1_open_prob": 0.25226,
+      "team2": "houston",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "oregon_state",
+      "team1_open_prob": 0.298467,
+      "team2": "oklahoma_state",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.713352,
+      "team2": "north_texas",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.587186,
+      "team2": "syracuse",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "southern_california",
+      "team1_open_prob": 0.678719,
+      "team2": "drake",
+      "year": 2021
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2021-03-22_2300Z.json",
+      "team1": "southern_california",
+      "team1_open_prob": 0.508492,
+      "team2": "kansas",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-28_2300Z.json",
+      "team1": "southern_california",
+      "team1_open_prob": 0.552911,
+      "team2": "oregon",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "syracuse",
+      "team1_open_prob": 0.407697,
+      "team2": "west_virginia",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.784012,
+      "team2": "oregon_state",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-20_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.764658,
+      "team2": "abilene_christian",
+      "year": 2021
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2021-03-18_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.614876,
+      "team2": "utah_state",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.641289,
+      "team2": "abilene_christian",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-27_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.300362,
+      "team2": "alabama",
+      "year": 2021
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2021-03-21_2300Z.json",
+      "team1": "villanova",
+      "team1_open_prob": 0.703065,
+      "team2": "north_texas",
+      "year": 2021
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "villanova",
+      "team1_open_prob": 0.694751,
+      "team2": "winthrop",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "virginia",
+      "team1_open_prob": 0.732998,
+      "team2": "ohio",
+      "year": 2021
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2021-03-19_2300Z.json",
+      "team1": "west_virginia",
+      "team1_open_prob": 0.870063,
+      "team2": "morehead_state",
+      "year": 2021
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.621628,
+      "team2": "notre_dame",
+      "year": 2022
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2022-03-24_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.539137,
+      "team2": "houston",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-20_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.802903,
+      "team2": "tcu",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.948313,
+      "team2": "wright_state",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-26_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.364685,
+      "team2": "duke",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.713356,
+      "team2": "new_mexico_state",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.650003,
+      "team2": "vermont",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "auburn",
+      "team1_open_prob": 0.91097,
+      "team2": "jacksonville_state",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.938484,
+      "team2": "norfolk_state",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "boise_state",
+      "team1_open_prob": 0.413421,
+      "team2": "memphis",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "colorado_state",
+      "team1_open_prob": 0.478105,
+      "team2": "michigan",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.714693,
+      "team2": "new_mexico_state",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.929842,
+      "team2": "cal_state_fullerton",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.702921,
+      "team2": "michigan_state",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-04-02_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.638413,
+      "team2": "north_carolina",
+      "year": 2022
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2022-03-24_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.5,
+      "team2": "texas_tech",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-23_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.798402,
+      "team2": "arkansas",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.824826,
+      "team2": "memphis",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.635246,
+      "team2": "illinois",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.77689,
+      "team2": "uab",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-25_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.550776,
+      "team2": "villanova",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.754592,
+      "team2": "chattanooga",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "iowa",
+      "team1_open_prob": 0.816121,
+      "team2": "richmond",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.359953,
+      "team2": "wisconsin",
+      "year": 2022
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.842421,
+      "team2": "creighton",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-26_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.699082,
+      "team2": "miami__fl",
+      "year": 2022
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2022-04-04_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.637497,
+      "team2": "north_carolina",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-24_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.739446,
+      "team2": "providence",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.947761,
+      "team2": "texas_southern",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-04-01_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.633163,
+      "team2": "villanova",
+      "year": 2022
+    },
+    {
+      "n_books": 7,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.926695,
+      "team2": "saint_peter_s",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "louisiana_state",
+      "team1_open_prob": 0.627659,
+      "team2": "iowa_state",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.265092,
+      "team2": "auburn",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-25_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.595254,
+      "team2": "iowa_state",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.311266,
+      "team2": "tennessee",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "michigan_state",
+      "team1_open_prob": 0.491551,
+      "team2": "davidson",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "murray_state",
+      "team1_open_prob": 0.549485,
+      "team2": "san_francisco",
+      "year": 2022
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.324794,
+      "team2": "baylor",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.607356,
+      "team2": "marquette",
+      "year": 2022
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2022-03-26_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.75852,
+      "team2": "saint_peter_s",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-25_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.443465,
+      "team2": "ucla",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "ohio_state",
+      "team1_open_prob": 0.5,
+      "team2": "loyola__il",
+      "year": 2022
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "providence",
+      "team1_open_prob": 0.549505,
+      "team2": "south_dakota_state",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-20_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.597247,
+      "team2": "texas",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.910006,
+      "team2": "yale",
+      "year": 2022
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "saint_mary_s__ca",
+      "team1_open_prob": 0.576477,
+      "team2": "indiana",
+      "year": 2022
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "saint_peter_s",
+      "team1_open_prob": 0.238916,
+      "team2": "murray_state",
+      "year": 2022
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2022-03-24_2300Z.json",
+      "team1": "saint_peter_s",
+      "team1_open_prob": 0.13429,
+      "team2": "purdue",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.552274,
+      "team2": "creighton",
+      "year": 2022
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "seton_hall",
+      "team1_open_prob": 0.530107,
+      "team2": "tcu",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "southern_california",
+      "team1_open_prob": 0.541918,
+      "team2": "miami__fl",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-16_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.925069,
+      "team2": "longwood",
+      "year": 2022
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.510051,
+      "team2": "virginia_tech",
+      "year": 2022
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.905639,
+      "team2": "montana_state",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-19_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.742326,
+      "team2": "notre_dame",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.887952,
+      "team2": "akron",
+      "year": 2022
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.578105,
+      "team2": "saint_mary_s__ca",
+      "year": 2022
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2022-03-17_2300Z.json",
+      "team1": "villanova",
+      "team1_open_prob": 0.905978,
+      "team2": "delaware",
+      "year": 2022
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2022-03-23_2300Z.json",
+      "team1": "villanova",
+      "team1_open_prob": 0.661297,
+      "team2": "michigan",
+      "year": 2022
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2022-03-18_2300Z.json",
+      "team1": "wisconsin",
+      "team1_open_prob": 0.74165,
+      "team2": "colgate",
+      "year": 2022
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.775158,
+      "team2": "maryland",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-03-23_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.741333,
+      "team2": "san_diego_state",
+      "year": 2023
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.949734,
+      "team2": "texas_a_m_corpus_christi",
+      "year": 2023
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.87303,
+      "team2": "princeton",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.544577,
+      "team2": "illinois",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.393527,
+      "team2": "kansas",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.822384,
+      "team2": "uc_santa_barbara",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-22_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.633257,
+      "team2": "arkansas",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-03-25_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.591241,
+      "team2": "gonzaga",
+      "year": 2023
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.784458,
+      "team2": "iona",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-04-01_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.685015,
+      "team2": "miami__fl",
+      "year": 2023
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.611752,
+      "team2": "saint_mary_s__ca",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-04-03_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.749659,
+      "team2": "san_diego_state",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.49068,
+      "team2": "baylor",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.663929,
+      "team2": "nc_state",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-03-24_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.804167,
+      "team2": "princeton",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.699623,
+      "team2": "oral_roberts",
+      "year": 2023
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "fairleigh_dickinson",
+      "team1_open_prob": 0.118839,
+      "team2": "florida_atlantic",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-24_2300Z.json",
+      "team1": "florida_atlantic",
+      "team1_open_prob": 0.45838,
+      "team2": "kansas_state",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-23_2300Z.json",
+      "team1": "florida_atlantic",
+      "team1_open_prob": 0.349673,
+      "team2": "tennessee",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.896502,
+      "team2": "grand_canyon",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-19_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.641104,
+      "team2": "tcu",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-23_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.48707,
+      "team2": "ucla",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.684893,
+      "team2": "auburn",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-23_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.743729,
+      "team2": "miami__fl",
+      "year": 2023
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.932319,
+      "team2": "northern_kentucky",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "indiana",
+      "team1_open_prob": 0.634387,
+      "team2": "kent_state",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "iowa",
+      "team1_open_prob": 0.481412,
+      "team2": "auburn",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.626406,
+      "team2": "pittsburgh",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.942086,
+      "team2": "howard",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "kansas_state",
+      "team1_open_prob": 0.413912,
+      "team2": "kentucky",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-22_2300Z.json",
+      "team1": "kansas_state",
+      "team1_open_prob": 0.465704,
+      "team2": "michigan_state",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "kansas_state",
+      "team1_open_prob": 0.747004,
+      "team2": "montana_state",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.619826,
+      "team2": "providence",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "marquette",
+      "team1_open_prob": 0.576168,
+      "team2": "michigan_state",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "marquette",
+      "team1_open_prob": 0.823572,
+      "team2": "vermont",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "maryland",
+      "team1_open_prob": 0.447,
+      "team2": "west_virginia",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "memphis",
+      "team1_open_prob": 0.536713,
+      "team2": "florida_atlantic",
+      "year": 2023
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.543885,
+      "team2": "drake",
+      "year": 2023
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2023-03-19_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.453449,
+      "team2": "indiana",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-25_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.374017,
+      "team2": "texas",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "michigan_state",
+      "team1_open_prob": 0.546925,
+      "team2": "southern_california",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "missouri",
+      "team1_open_prob": 0.470111,
+      "team2": "utah_state",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "northwestern",
+      "team1_open_prob": 0.542767,
+      "team2": "boise_state",
+      "year": 2023
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "princeton",
+      "team1_open_prob": 0.297443,
+      "team2": "missouri",
+      "year": 2023
+    },
+    {
+      "n_books": 5,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.941487,
+      "team2": "fairleigh_dickinson",
+      "year": 2023
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "saint_mary_s__ca",
+      "team1_open_prob": 0.621995,
+      "team2": "virginia_commonwealth",
+      "year": 2023
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.662458,
+      "team2": "college_of_charleston",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-03-25_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.452422,
+      "team2": "creighton",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-31_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.574642,
+      "team2": "florida_atlantic",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.680778,
+      "team2": "furman",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "tcu",
+      "team1_open_prob": 0.660348,
+      "team2": "arizona_state",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.399435,
+      "team2": "duke",
+      "year": 2023
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.828539,
+      "team2": "louisiana",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.871076,
+      "team2": "colgate",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-17_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.679565,
+      "team2": "penn_state",
+      "year": 2023
+    },
+    {
+      "n_books": 19,
+      "snapshot_used": "2023-03-24_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.634032,
+      "team2": "xavier",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "texas_a_m",
+      "team1_open_prob": 0.58261,
+      "team2": "penn_state",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.742588,
+      "team2": "northwestern",
+      "year": 2023
+    },
+    {
+      "n_books": 15,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.921175,
+      "team2": "unc_asheville",
+      "year": 2023
+    },
+    {
+      "n_books": 16,
+      "snapshot_used": "2023-03-15_2300Z.json",
+      "team1": "virginia",
+      "team1_open_prob": 0.682967,
+      "team2": "furman",
+      "year": 2023
+    },
+    {
+      "n_books": 17,
+      "snapshot_used": "2023-03-16_2300Z.json",
+      "team1": "xavier",
+      "team1_open_prob": 0.853661,
+      "team2": "kennesaw_state",
+      "year": 2023
+    },
+    {
+      "n_books": 18,
+      "snapshot_used": "2023-03-18_2300Z.json",
+      "team1": "xavier",
+      "team1_open_prob": 0.64742,
+      "team2": "pittsburgh",
+      "year": 2023
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-30_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.595775,
+      "team2": "clemson",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.795102,
+      "team2": "college_of_charleston",
+      "year": 2024
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.680937,
+      "team2": "grand_canyon",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.793105,
+      "team2": "dayton",
+      "year": 2024
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.9341,
+      "team2": "long_beach_state",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "auburn",
+      "team1_open_prob": 0.857928,
+      "team2": "yale",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "baylor",
+      "team1_open_prob": 0.882541,
+      "team2": "colgate",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "brigham_young",
+      "team1_open_prob": 0.797575,
+      "team2": "duquesne",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-27_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.271721,
+      "team2": "arizona",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.370214,
+      "team2": "baylor",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.434986,
+      "team2": "new_mexico",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-04-05_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.844013,
+      "team2": "alabama",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-29_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.772276,
+      "team2": "illinois",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.889788,
+      "team2": "northwestern",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-04-08_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.721864,
+      "team2": "purdue",
+      "year": 2024
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.953456,
+      "team2": "stetson",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.865055,
+      "team2": "akron",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "creighton",
+      "team1_open_prob": 0.624587,
+      "team2": "oregon",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "dayton",
+      "team1_open_prob": 0.478047,
+      "team2": "nevada",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.727329,
+      "team2": "james_madison",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.851886,
+      "team2": "vermont",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.532806,
+      "team2": "colorado",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "florida_atlantic",
+      "team1_open_prob": 0.594283,
+      "team2": "northwestern",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.628272,
+      "team2": "kansas",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.711243,
+      "team2": "mcneese_state",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-29_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.646017,
+      "team2": "duke",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.947507,
+      "team2": "longwood",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-24_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.782576,
+      "team2": "texas_a_m",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.801286,
+      "team2": "duquesne",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-28_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.484983,
+      "team2": "iowa_state",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.854058,
+      "team2": "morehead_state",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.908947,
+      "team2": "south_dakota_state",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.717746,
+      "team2": "washington_state",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.722586,
+      "team2": "samford",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.875959,
+      "team2": "oakland",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "marquette",
+      "team1_open_prob": 0.620783,
+      "team2": "colorado",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "marquette",
+      "team1_open_prob": 0.892294,
+      "team2": "western_kentucky",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "mississippi_state",
+      "team1_open_prob": 0.477918,
+      "team2": "michigan_state",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-28_2300Z.json",
+      "team1": "nc_state",
+      "team1_open_prob": 0.288243,
+      "team2": "marquette",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "nc_state",
+      "team1_open_prob": 0.696314,
+      "team2": "oakland",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "nebraska",
+      "team1_open_prob": 0.512677,
+      "team2": "texas_a_m",
+      "year": 2024
+    },
+    {
+      "n_books": 12,
+      "snapshot_used": "2024-03-28_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.64593,
+      "team2": "alabama",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.605943,
+      "team2": "michigan_state",
+      "year": 2024
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.948974,
+      "team2": "wagner",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-28_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.672935,
+      "team2": "gonzaga",
+      "year": 2024
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.952787,
+      "team2": "grambling",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-04-05_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.781806,
+      "team2": "nc_state",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-30_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.602312,
+      "team2": "tennessee",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "saint_mary_s__ca",
+      "team1_open_prob": 0.675133,
+      "team2": "grand_canyon",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "san_diego_state",
+      "team1_open_prob": 0.71116,
+      "team2": "uab",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "south_carolina",
+      "team1_open_prob": 0.515185,
+      "team2": "oregon",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-29_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.60913,
+      "team2": "creighton",
+      "year": 2024
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.938343,
+      "team2": "saint_peter_s",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-23_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.70635,
+      "team2": "texas",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-20_2300Z.json",
+      "team1": "texas",
+      "team1_open_prob": 0.56758,
+      "team2": "colorado_state",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.638444,
+      "team2": "nc_state",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "utah_state",
+      "team1_open_prob": 0.383792,
+      "team2": "tcu",
+      "year": 2024
+    },
+    {
+      "n_books": 13,
+      "snapshot_used": "2024-03-21_2300Z.json",
+      "team1": "washington_state",
+      "team1_open_prob": 0.482313,
+      "team2": "drake",
+      "year": 2024
+    },
+    {
+      "n_books": 14,
+      "snapshot_used": "2024-03-22_2300Z.json",
+      "team1": "wisconsin",
+      "team1_open_prob": 0.668783,
+      "team2": "james_madison",
+      "year": 2024
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.943279,
+      "team2": "robert_morris",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.666938,
+      "team2": "saint_mary_s__ca",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.884755,
+      "team2": "akron",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-23_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.614663,
+      "team2": "oregon",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "auburn",
+      "team1_open_prob": 0.786182,
+      "team2": "creighton",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-28_2300Z.json",
+      "team1": "auburn",
+      "team1_open_prob": 0.781211,
+      "team2": "michigan",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-29_2300Z.json",
+      "team1": "auburn",
+      "team1_open_prob": 0.663888,
+      "team2": "michigan_state",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "brigham_young",
+      "team1_open_prob": 0.563122,
+      "team2": "virginia_commonwealth",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.741547,
+      "team2": "mcneese_state",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.691238,
+      "team2": "oklahoma",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-29_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.740995,
+      "team2": "alabama",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-27_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.809177,
+      "team2": "arizona",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.854007,
+      "team2": "baylor",
+      "year": 2025
+    },
+    {
+      "n_books": 5,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.973853,
+      "team2": "mount_st__mary_s",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-04-04_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.577814,
+      "team2": "auburn",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.80109,
+      "team2": "connecticut",
+      "year": 2025
+    },
+    {
+      "n_books": 8,
+      "snapshot_used": "2025-04-07_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.509496,
+      "team2": "houston",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-26_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.703709,
+      "team2": "maryland",
+      "year": 2025
+    },
+    {
+      "n_books": 8,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.968188,
+      "team2": "norfolk_state",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-28_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.721332,
+      "team2": "texas_tech",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.714116,
+      "team2": "georgia",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-04-05_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.319505,
+      "team2": "duke",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.663182,
+      "team2": "gonzaga",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-28_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.785211,
+      "team2": "purdue",
+      "year": 2025
+    },
+    {
+      "n_books": 8,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.968754,
+      "team2": "siu_edwardsville",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-29_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.58907,
+      "team2": "tennessee",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.618802,
+      "team2": "xavier",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.895575,
+      "team2": "lipscomb",
+      "year": 2025
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.66871,
+      "team2": "mississippi",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.654453,
+      "team2": "arkansas",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.452397,
+      "team2": "illinois",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.844239,
+      "team2": "troy",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "louisville",
+      "team1_open_prob": 0.566066,
+      "team2": "creighton",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "marquette",
+      "team1_open_prob": 0.616384,
+      "team2": "new_mexico",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "maryland",
+      "team1_open_prob": 0.733452,
+      "team2": "colorado_state",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "maryland",
+      "team1_open_prob": 0.819227,
+      "team2": "grand_canyon",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "memphis",
+      "team1_open_prob": 0.461289,
+      "team2": "colorado_state",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.426118,
+      "team2": "texas_a_m",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.562226,
+      "team2": "uc_san_diego",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "michigan_state",
+      "team1_open_prob": 0.920252,
+      "team2": "bryant",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-23_2300Z.json",
+      "team1": "michigan_state",
+      "team1_open_prob": 0.722806,
+      "team2": "new_mexico",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "mississippi_state",
+      "team1_open_prob": 0.528742,
+      "team2": "baylor",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "missouri",
+      "team1_open_prob": 0.697123,
+      "team2": "drake",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "oregon",
+      "team1_open_prob": 0.724327,
+      "team2": "liberty",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.746634,
+      "team2": "high_point",
+      "year": 2025
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.688123,
+      "team2": "mcneese_state",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "saint_mary_s__ca",
+      "team1_open_prob": 0.628641,
+      "team2": "vanderbilt",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "st__john_s__ny",
+      "team1_open_prob": 0.721501,
+      "team2": "arkansas",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "st__john_s__ny",
+      "team1_open_prob": 0.928683,
+      "team2": "omaha",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-27_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.636961,
+      "team2": "kentucky",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-22_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.662018,
+      "team2": "ucla",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.932023,
+      "team2": "wofford",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "texas_a_m",
+      "team1_open_prob": 0.734426,
+      "team2": "yale",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.723257,
+      "team2": "drake",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.901873,
+      "team2": "unc_wilmington",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-20_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.670345,
+      "team2": "utah_state",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2025-03-21_2300Z.json",
+      "team1": "wisconsin",
+      "team1_open_prob": 0.513117,
+      "team2": "brigham_young",
+      "year": 2025
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2025-03-19_2300Z.json",
+      "team1": "wisconsin",
+      "team1_open_prob": 0.920071,
+      "team2": "montana",
+      "year": 2025
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.850786,
+      "team2": "hofstra",
+      "year": 2026
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2026-03-22_2300Z.json",
+      "team1": "alabama",
+      "team1_open_prob": 0.494474,
+      "team2": "texas_tech",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-26_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.765436,
+      "team2": "arkansas",
+      "year": 2026
+    },
+    {
+      "n_books": 5,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.976079,
+      "team2": "long_island_university",
+      "year": 2026
+    },
+    {
+      "n_books": 8,
+      "snapshot_used": "2026-04-04_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.499674,
+      "team2": "michigan",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-28_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.703475,
+      "team2": "purdue",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "arizona",
+      "team1_open_prob": 0.850059,
+      "team2": "utah_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.899335,
+      "team2": "hawaii",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "arkansas",
+      "team1_open_prob": 0.855339,
+      "team2": "high_point",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "brigham_young",
+      "team1_open_prob": 0.564106,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "clemson",
+      "team1_open_prob": 0.453657,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.940182,
+      "team2": "furman",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-04-03_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.457514,
+      "team2": "illinois",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-27_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.54363,
+      "team2": "michigan_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-22_2300Z.json",
+      "team1": "connecticut",
+      "team1_open_prob": 0.632121,
+      "team2": "ucla",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-28_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.661931,
+      "team2": "connecticut",
+      "year": 2026
+    },
+    {
+      "n_books": 6,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.973067,
+      "team2": "siena",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-26_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.705639,
+      "team2": "st__john_s__ny",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "duke",
+      "team1_open_prob": 0.84855,
+      "team2": "tcu",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.826045,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 5,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "florida",
+      "team1_open_prob": 0.977263,
+      "team2": "prairie_view",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "georgia",
+      "team1_open_prob": 0.557262,
+      "team2": "saint_louis",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.938043,
+      "team2": "kennesaw_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "gonzaga",
+      "team1_open_prob": 0.683733,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.953734,
+      "team2": "idaho",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-26_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.565332,
+      "team2": "illinois",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "houston",
+      "team1_open_prob": 0.801834,
+      "team2": "texas_a_m",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-27_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.721987,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.955623,
+      "team2": "pennsylvania",
+      "year": 2026
+    },
+    {
+      "n_books": 9,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "illinois",
+      "team1_open_prob": 0.814054,
+      "team2": "virginia_commonwealth",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.65455,
+      "team2": "kentucky",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-27_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.612711,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "iowa_state",
+      "team1_open_prob": 0.955184,
+      "team2": "tennessee_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.87782,
+      "team2": "california_baptist",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "kansas",
+      "team1_open_prob": 0.398741,
+      "team2": "st__john_s__ny",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "kentucky",
+      "team1_open_prob": 0.586252,
+      "team2": "santa_clara",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "louisville",
+      "team1_open_prob": 0.636332,
+      "team2": "south_florida",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "miami__fl",
+      "team1_open_prob": 0.523014,
+      "team2": "missouri",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-26_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.791529,
+      "team2": "alabama",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-04-06_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.720938,
+      "team2": "connecticut",
+      "year": 2026
+    },
+    {
+      "n_books": 4,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.974375,
+      "team2": "howard",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.860879,
+      "team2": "saint_louis",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-28_2300Z.json",
+      "team1": "michigan",
+      "team1_open_prob": 0.737563,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-20_2300Z.json",
+      "team1": "michigan_state",
+      "team1_open_prob": 0.633779,
+      "team2": "louisville",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-25_2300Z.json",
+      "team1": "nebraska",
+      "team1_open_prob": 0.540277,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "nebraska",
+      "team1_open_prob": 0.870988,
+      "team2": "troy",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "nebraska",
+      "team1_open_prob": 0.451277,
+      "team2": "vanderbilt",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "north_carolina",
+      "team1_open_prob": 0.575363,
+      "team2": "virginia_commonwealth",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "ohio_state",
+      "team1_open_prob": 0.566016,
+      "team2": "tcu",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.739336,
+      "team2": "miami__fl",
+      "year": 2026
+    },
+    {
+      "n_books": 8,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.9593,
+      "team2": "queens__nc",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-25_2300Z.json",
+      "team1": "purdue",
+      "team1_open_prob": 0.749933,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "saint_mary_s__ca",
+      "team1_open_prob": 0.596207,
+      "team2": "texas_a_m",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "st__john_s__ny",
+      "team1_open_prob": 0.807983,
+      "team2": "northern_iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "tennessee",
+      "team1_open_prob": 0.81725,
+      "team2": "miami__oh",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "texas_tech",
+      "team1_open_prob": 0.727707,
+      "team2": "akron",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "ucla",
+      "team1_open_prob": 0.676081,
+      "team2": "ucf",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "vanderbilt",
+      "team1_open_prob": 0.844187,
+      "team2": "mcneese_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "villanova",
+      "team1_open_prob": 0.461635,
+      "team2": "utah_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-21_2300Z.json",
+      "team1": "virginia",
+      "team1_open_prob": 0.486518,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-19_2300Z.json",
+      "team1": "virginia",
+      "team1_open_prob": 0.92605,
+      "team2": "wright_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "snapshot_used": "2026-03-18_2300Z.json",
+      "team1": "wisconsin",
+      "team1_open_prob": 0.794767,
+      "team2": "high_point",
+      "year": 2026
+    }
+  ],
+  "generated_at": "2026-05-19T02:06:56.365810+00:00",
+  "n_games": 363,
+  "seasons": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "source": "The Odds API day-before snapshots (opening line proxy)"
+}

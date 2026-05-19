@@ -1,6 +1,6 @@
 """Calibration and correction layers on top of torvik probabilities.
 
-Linear correction feature vector (8 features):
+Linear correction feature vector (8 or 9 features):
   0 intercept
   1 seed_gap          = (seed2 - seed1) / 15
   2 abs_seed_gap      = |seed2 - seed1| / 15
@@ -9,9 +9,11 @@ Linear correction feature vector (8 features):
   5 market_disagree   = market_prob - torvik
   6 elo_disagree      = elo_prob - torvik
   7 round_num         = normalized round (R64=0 … CH=1)
+  8 market_movement   = closing_prob - opening_prob (0 when absent)  [optional]
 
 Missing market/elo values fall back to torvik (disagreement → 0).
 Missing round falls back to 0.0 (R64 baseline; most common round).
+Missing market_movement falls back to 0.0 (no movement signal).
 
 Two model classes:
 
@@ -80,6 +82,7 @@ class TorvikCorrectionModel:
         market_prob: float,
         elo_prob: float,
         round_num: float,
+        market_movement: float = 0.0,
     ) -> np.ndarray:
         seed_gap = (seed2 - seed1) / 15.0
         abs_seed_gap = abs(seed2 - seed1) / 15.0
@@ -96,6 +99,7 @@ class TorvikCorrectionModel:
                 market_disagreement,
                 elo_disagreement,
                 round_num,
+                market_movement,
             ],
             dtype=float,
         )
@@ -110,6 +114,7 @@ class TorvikCorrectionModel:
         market_probs: Optional[np.ndarray] = None,
         elo_probs: Optional[np.ndarray] = None,
         round_nums: Optional[np.ndarray] = None,
+        movement_vals: Optional[np.ndarray] = None,
     ) -> "TorvikCorrectionModel":
         torvik_probs = np.asarray(torvik_probs, dtype=float)
         seed1 = np.asarray(seed1, dtype=float)
@@ -120,11 +125,14 @@ class TorvikCorrectionModel:
         market_probs = _resolve_array(market_probs, torvik_probs)
         elo_probs = _resolve_array(elo_probs, torvik_probs)
         round_nums = np.zeros(n, dtype=float) if round_nums is None else np.asarray(round_nums, dtype=float)
+        movement_vals = np.zeros(n, dtype=float) if movement_vals is None else np.asarray(movement_vals, dtype=float)
 
         X = np.vstack(
             [
-                self._feature_vector(float(p), int(s1), int(s2), float(m), float(e), float(r))
-                for p, s1, s2, m, e, r in zip(torvik_probs, seed1, seed2, market_probs, elo_probs, round_nums)
+                self._feature_vector(float(p), int(s1), int(s2), float(m), float(e), float(r), float(mv))
+                for p, s1, s2, m, e, r, mv in zip(
+                    torvik_probs, seed1, seed2, market_probs, elo_probs, round_nums, movement_vals
+                )
             ]
         )
         target = outcomes - torvik_probs
@@ -149,6 +157,7 @@ class TorvikCorrectionModel:
         market_probs: Optional[np.ndarray] = None,
         elo_probs: Optional[np.ndarray] = None,
         round_nums: Optional[np.ndarray] = None,
+        movement_vals: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         if self.coef_ is None:
             raise ValueError("TorvikCorrectionModel must be fit before predict()")
@@ -161,11 +170,14 @@ class TorvikCorrectionModel:
         market_probs = _resolve_array(market_probs, torvik_probs)
         elo_probs = _resolve_array(elo_probs, torvik_probs)
         round_nums = np.zeros(n, dtype=float) if round_nums is None else np.asarray(round_nums, dtype=float)
+        movement_vals = np.zeros(n, dtype=float) if movement_vals is None else np.asarray(movement_vals, dtype=float)
 
         X = np.vstack(
             [
-                self._feature_vector(float(p), int(s1), int(s2), float(m), float(e), float(r))
-                for p, s1, s2, m, e, r in zip(torvik_probs, seed1, seed2, market_probs, elo_probs, round_nums)
+                self._feature_vector(float(p), int(s1), int(s2), float(m), float(e), float(r), float(mv))
+                for p, s1, s2, m, e, r, mv in zip(
+                    torvik_probs, seed1, seed2, market_probs, elo_probs, round_nums, movement_vals
+                )
             ]
         )
         correction = np.clip(X @ self.coef_, -self.config.max_correction, self.config.max_correction)
@@ -179,6 +191,7 @@ class TorvikCorrectionModel:
         market_prob: Optional[float] = None,
         elo_prob: Optional[float] = None,
         round_num: float = 0.0,
+        market_movement: float = 0.0,
     ) -> float:
         m = _resolve_signal(market_prob, torvik_prob)
         e = _resolve_signal(elo_prob, torvik_prob)
@@ -189,6 +202,7 @@ class TorvikCorrectionModel:
             market_probs=np.asarray([m]),
             elo_probs=np.asarray([e]),
             round_nums=np.asarray([round_num]),
+            movement_vals=np.asarray([market_movement]),
         )
         return float(pred[0])
 
@@ -329,7 +343,7 @@ def fit_torvik_correction_from_year_records(
     resolved_recent_weight = float(weighting["recent_year_weight"])
 
     torvik_list, seed1_list, seed2_list, outcomes_list = [], [], [], []
-    market_list, elo_list, round_list, sample_weights = [], [], [], []
+    market_list, elo_list, round_list, movement_list, sample_weights = [], [], [], [], []
 
     for year in sorted(year_records):
         rows = year_records[year]
@@ -344,6 +358,7 @@ def fit_torvik_correction_from_year_records(
             market_list.append(_resolve_signal(row.get(market_field), tv))
             elo_list.append(_resolve_signal(row.get("elo"), tv))
             round_list.append(round_to_num(row.get("round")))
+            movement_list.append(float(row.get("market_movement") or 0.0))
 
     if not torvik_list:
         raise ValueError("No training records available for torvik correction")
@@ -351,6 +366,7 @@ def fit_torvik_correction_from_year_records(
     torvik_arr = np.asarray(torvik_list, dtype=float)
     market_arr = np.asarray(market_list, dtype=float)
     elo_arr = np.asarray(elo_list, dtype=float)
+    movement_arr = np.asarray(movement_list, dtype=float)
 
     model = TorvikCorrectionModel(config)
     model.training_info_ = {
@@ -363,6 +379,7 @@ def fit_torvik_correction_from_year_records(
         "weighting_mode": weighting["mode"],
         "market_coverage": float(np.mean(market_arr != torvik_arr)),
         "elo_coverage": float(np.mean(elo_arr != torvik_arr)),
+        "movement_coverage": float(np.mean(movement_arr != 0.0)),
     }
     model.fit(
         torvik_arr,
@@ -373,6 +390,7 @@ def fit_torvik_correction_from_year_records(
         market_probs=market_arr,
         elo_probs=elo_arr,
         round_nums=np.asarray(round_list, dtype=float),
+        movement_vals=movement_arr,
     )
     return model
 
