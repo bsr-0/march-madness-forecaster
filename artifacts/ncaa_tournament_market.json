@@ -24,6 +24,11 @@
       "coverage_pct": 93.65,
       "n_games": 63,
       "n_with_odds": 59
+    },
+    "2026": {
+      "coverage_pct": 98.41,
+      "n_games": 63,
+      "n_with_odds": 62
     }
   },
   "games": [
@@ -2442,16 +2447,513 @@
       "team1_win_prob": 0.907138,
       "team2": "montana",
       "year": 2025
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "alabama",
+      "team1_win_prob": 0.848092,
+      "team2": "hofstra",
+      "year": 2026
+    },
+    {
+      "n_books": 9,
+      "source": "consensus",
+      "team1": "alabama",
+      "team1_win_prob": 0.494474,
+      "team2": "texas_tech",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "arizona",
+      "team1_win_prob": 0.765436,
+      "team2": "arkansas",
+      "year": 2026
+    },
+    {
+      "n_books": 4,
+      "source": "consensus",
+      "team1": "arizona",
+      "team1_win_prob": 0.973596,
+      "team2": "long_island_university",
+      "year": 2026
+    },
+    {
+      "n_books": 8,
+      "source": "consensus",
+      "team1": "arizona",
+      "team1_win_prob": 0.499674,
+      "team2": "michigan",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "arizona",
+      "team1_win_prob": 0.703475,
+      "team2": "purdue",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "arizona",
+      "team1_win_prob": 0.843383,
+      "team2": "utah_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "arkansas",
+      "team1_win_prob": 0.894902,
+      "team2": "hawaii",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "arkansas",
+      "team1_win_prob": 0.855339,
+      "team2": "high_point",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "brigham_young",
+      "team1_win_prob": 0.570621,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "clemson",
+      "team1_win_prob": 0.467487,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "connecticut",
+      "team1_win_prob": 0.940182,
+      "team2": "furman",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "connecticut",
+      "team1_win_prob": 0.456935,
+      "team2": "illinois",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "connecticut",
+      "team1_win_prob": 0.54363,
+      "team2": "michigan_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "connecticut",
+      "team1_win_prob": 0.632121,
+      "team2": "ucla",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "duke",
+      "team1_win_prob": 0.676678,
+      "team2": "connecticut",
+      "year": 2026
+    },
+    {
+      "n_books": 5,
+      "source": "consensus",
+      "team1": "duke",
+      "team1_win_prob": 0.972947,
+      "team2": "siena",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "duke",
+      "team1_win_prob": 0.712842,
+      "team2": "st__john_s__ny",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "duke",
+      "team1_win_prob": 0.852886,
+      "team2": "tcu",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "florida",
+      "team1_win_prob": 0.822878,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 5,
+      "source": "consensus",
+      "team1": "florida",
+      "team1_win_prob": 0.977263,
+      "team2": "prairie_view",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "georgia",
+      "team1_win_prob": 0.557262,
+      "team2": "saint_louis",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "gonzaga",
+      "team1_win_prob": 0.938043,
+      "team2": "kennesaw_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "gonzaga",
+      "team1_win_prob": 0.68763,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "houston",
+      "team1_win_prob": 0.953734,
+      "team2": "idaho",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "houston",
+      "team1_win_prob": 0.565332,
+      "team2": "illinois",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "houston",
+      "team1_win_prob": 0.803454,
+      "team2": "texas_a_m",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "illinois",
+      "team1_win_prob": 0.733199,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 9,
+      "source": "consensus",
+      "team1": "illinois",
+      "team1_win_prob": 0.955623,
+      "team2": "pennsylvania",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "illinois",
+      "team1_win_prob": 0.835526,
+      "team2": "virginia_commonwealth",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "iowa_state",
+      "team1_win_prob": 0.666959,
+      "team2": "kentucky",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "iowa_state",
+      "team1_win_prob": 0.612711,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "iowa_state",
+      "team1_win_prob": 0.954681,
+      "team2": "tennessee_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "kansas",
+      "team1_win_prob": 0.87782,
+      "team2": "california_baptist",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "kansas",
+      "team1_win_prob": 0.389361,
+      "team2": "st__john_s__ny",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "kentucky",
+      "team1_win_prob": 0.586252,
+      "team2": "santa_clara",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "louisville",
+      "team1_win_prob": 0.607829,
+      "team2": "south_florida",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "miami__fl",
+      "team1_win_prob": 0.523014,
+      "team2": "missouri",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "michigan",
+      "team1_win_prob": 0.801173,
+      "team2": "alabama",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "michigan",
+      "team1_win_prob": 0.720938,
+      "team2": "connecticut",
+      "year": 2026
+    },
+    {
+      "n_books": 5,
+      "source": "consensus",
+      "team1": "michigan",
+      "team1_win_prob": 0.971064,
+      "team2": "howard",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "michigan",
+      "team1_win_prob": 0.860879,
+      "team2": "saint_louis",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "michigan",
+      "team1_win_prob": 0.771876,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "michigan_state",
+      "team1_win_prob": 0.659899,
+      "team2": "louisville",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "nebraska",
+      "team1_win_prob": 0.53436,
+      "team2": "iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "nebraska",
+      "team1_win_prob": 0.870988,
+      "team2": "troy",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "nebraska",
+      "team1_win_prob": 0.451277,
+      "team2": "vanderbilt",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "north_carolina",
+      "team1_win_prob": 0.566846,
+      "team2": "virginia_commonwealth",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "ohio_state",
+      "team1_win_prob": 0.566016,
+      "team2": "tcu",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "purdue",
+      "team1_win_prob": 0.739336,
+      "team2": "miami__fl",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "purdue",
+      "team1_win_prob": 0.954877,
+      "team2": "queens__nc",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "purdue",
+      "team1_win_prob": 0.782389,
+      "team2": "texas",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "saint_mary_s__ca",
+      "team1_win_prob": 0.58774,
+      "team2": "texas_a_m",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "st__john_s__ny",
+      "team1_win_prob": 0.820842,
+      "team2": "northern_iowa",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "tennessee",
+      "team1_win_prob": 0.826418,
+      "team2": "miami__oh",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "texas_tech",
+      "team1_win_prob": 0.727707,
+      "team2": "akron",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "ucla",
+      "team1_win_prob": 0.67498,
+      "team2": "ucf",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "vanderbilt",
+      "team1_win_prob": 0.841759,
+      "team2": "mcneese_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "villanova",
+      "team1_win_prob": 0.456654,
+      "team2": "utah_state",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "virginia",
+      "team1_win_prob": 0.487863,
+      "team2": "tennessee",
+      "year": 2026
+    },
+    {
+      "n_books": 11,
+      "source": "consensus",
+      "team1": "virginia",
+      "team1_win_prob": 0.925585,
+      "team2": "wright_state",
+      "year": 2026
+    },
+    {
+      "n_books": 10,
+      "source": "consensus",
+      "team1": "wisconsin",
+      "team1_win_prob": 0.811138,
+      "team2": "high_point",
+      "year": 2026
     }
   ],
-  "generated_at": "2026-05-15T02:42:31.304153+00:00",
-  "n_games": 302,
+  "generated_at": "2026-05-19T00:55:27.518008+00:00",
+  "n_games": 364,
   "seasons": [
     2021,
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
   "source": "The Odds API historical snapshots via odds_api_closing_consensus.json"
 }
