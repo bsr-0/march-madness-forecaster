@@ -176,8 +176,8 @@ If any scraper 404s or returns unexpected format, check if the URL structure cha
 
 ## Key Numbers
 
-- **Production baseline:** 11.2% P(1st) (3.6x over seed random)
+- **Production baseline:** 11.9% P(1st) (3.8x over seed random, p=0.0076 permutation-validated)
 - **Pool size:** ~30 people, winner-take-all
-- **Architecture:** ~25 candidate brackets, 200 MC trials each (500 validated, no improvement — 200 is sufficient), select highest P(1st)
+- **Architecture:** ~25-35 unique candidate brackets, 200 MC trials each (500 validated, no improvement — 200 is sufficient), select highest P(1st)
 - **Runtime:** ~5 min for single-year production run
 - **Python:** 3.11.15 via pyenv
