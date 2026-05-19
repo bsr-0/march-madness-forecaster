@@ -4,7 +4,8 @@
 
 **READ BEFORE ANY OPTIMIZATION WORK.** Full details in `memory/project_north_star_metric.md`.
 
-- **BSS = 0 is the field-wide ceiling.** No public project has beaten seed-implied probabilities over multiple years. Do NOT pursue model accuracy improvements.
+- **Model accuracy is not the pool's bottleneck — don't pursue it for P(1st).** The Kaggle model (torvik_corrected) achieves BSS +0.133 (Brier=0.1305) and is at an architecture plateau — see `memory/project_kaggle_brier_pipeline.md`. Marginal Brier improvements don't translate to P(1st) gains; construction and selection dominate. **Do NOT pursue model accuracy improvements for pool purposes.**
+- **For Kaggle submissions:** BSS +0.133 is the current production baseline. Architecture ceiling reached (2026 upset-year anomaly blocks further gains with current feature set). See `memory/project_kaggle_brier_pipeline.md` before attempting Brier improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
 - **Current baseline:** 11.9% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 8.0% meta_region, 4.6% meta_gbm. Seed baseline: 3.1%. Permutation-validated: p=0.0076 after multiple comparison correction.
 - **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
