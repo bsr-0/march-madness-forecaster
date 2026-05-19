@@ -144,8 +144,7 @@ def _summary_block(
     ordered_rows = sorted(rows, key=lambda row: row.year)
     resolved_weighting = weighting or _uniform_weighting(ordered_rows)
     year_weights = {
-        row.year: float(resolved_weighting["per_year_weights"].get(str(row.year), 1.0))
-        for row in ordered_rows
+        row.year: float(resolved_weighting["per_year_weights"].get(str(row.year), 1.0)) for row in ordered_rows
     }
     weights = [year_weights[row.year] for row in ordered_rows]
     mean_brier = _nan_if_empty([row.brier for row in ordered_rows], weights)
@@ -190,10 +189,7 @@ def summarize_recent_weighted(
     )
     recent_start = weighting["recent_year_start"]
     recent_weight = float(weighting["recent_year_weight"])
-    per_year_weights = {
-        str(year): float(year_objective_weight(year, recent_start, recent_weight))
-        for year in years
-    }
+    per_year_weights = {str(year): float(year_objective_weight(year, recent_start, recent_weight)) for year in years}
     return _summary_block(
         summary.spec,
         summary.per_year,
@@ -424,6 +420,75 @@ def _evaluate_torvik_corrected(
     outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
     seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
     market = np.asarray([_resolve_signal(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+    preds = model.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
+    brier = float(np.mean((preds - outcomes) ** 2))
+    seed_brier = float(np.mean((seed - outcomes) ** 2))
+
+    metadata = {
+        "coef": model.coef_.tolist() if model.coef_ is not None else None,
+        **(model.training_info_ or {}),
+        "correction_ridge": ridge,
+        "max_correction": max_correction,
+    }
+    return YearMetrics(
+        year=int(test_rows[0]["year"]),
+        brier=brier,
+        seed_brier=seed_brier,
+        bss=1.0 - brier / max(seed_brier, 1e-12),
+        ece=expected_calibration_error(preds, outcomes),
+        metadata=metadata,
+    )
+
+
+def _evaluate_torvik_corrected_odds_api(
+    train_year_records: dict[int, list[dict]],
+    test_rows: list[dict],
+    params: Dict[str, Any],
+) -> YearMetrics:
+    """Torvik correction using Odds API multi-book H2H consensus as market signal.
+
+    Identical to torvik_corrected but reads ``odds_api`` instead of ``odds``.
+    Falls back to ``odds`` (unified_odds BT) for rows without Odds API data
+    (pre-2021 training years), then falls back to torvik for rows with neither.
+    """
+    clip_lo = _coerce_float(params, "clip_lo", 0.01)
+    clip_hi = _coerce_float(params, "clip_hi", 0.99)
+    recent_start = _coerce_int_or_none(params, "recent_year_start", 2021)
+    recent_weight = _coerce_float(params, "recent_year_weight", 2.0)
+    recent_count = _coerce_int_or_none(params, "recent_year_count", None)
+    recent_total_ratio = _coerce_float(params, "recent_total_ratio", 1.0)
+    ridge = _coerce_float(params, "correction_ridge", 5.0)
+    max_correction = _coerce_float(params, "max_correction", 0.10)
+
+    model = fit_torvik_correction_from_year_records(
+        train_year_records,
+        config=TorvikCorrectionConfig(
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            ridge=ridge,
+            max_correction=max_correction,
+        ),
+        recent_year_start=recent_start,
+        recent_year_weight=recent_weight,
+        recent_year_count=recent_count,
+        recent_total_ratio=recent_total_ratio,
+        market_field="odds_api",
+    )
+
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
+
+    torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
+    seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
+    seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
+    outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
+    seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
+    # Use odds_api with fallback to odds, then to torvik
+    market = np.asarray(
+        [_resolve_signal(row.get("odds_api") or row.get("odds"), float(row["torvik"])) for row in test_rows],
+        dtype=float,
+    )
     elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
     rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
     preds = model.predict(torvik, seed1, seed2, market_probs=market, elo_probs=elo, round_nums=rounds)
@@ -685,6 +750,8 @@ def evaluate_spec(
             metrics = _evaluate_ensemble(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_corrected":
             metrics = _evaluate_torvik_corrected(train_year_records, test_rows, spec.params)
+        elif spec.mode == "torvik_corrected_odds_api":
+            metrics = _evaluate_torvik_corrected_odds_api(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_closing":
             metrics = _evaluate_torvik_closing(train_year_records, test_rows, spec.params)
         elif spec.mode == "closing_market_blend":
@@ -1021,7 +1088,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Strict Kaggle admission gate")
     parser.add_argument("--pergame", default=str(PERGAME_ARTIFACT), help="Per-game artifact path")
     parser.add_argument("--experiment-spec", default=None, help="JSON spec with incumbent and candidate experiments")
-    _MODES = ["torvik", "ensemble", "torvik_corrected", "torvik_closing", "closing_market_blend", "torvik_isotonic"]
+    _MODES = [
+        "torvik",
+        "ensemble",
+        "torvik_corrected",
+        "torvik_corrected_odds_api",
+        "torvik_closing",
+        "closing_market_blend",
+        "torvik_isotonic",
+    ]
     parser.add_argument("--incumbent-mode", default="ensemble", choices=_MODES)
     parser.add_argument("--candidate-mode", default="torvik_corrected", choices=_MODES)
     parser.add_argument("--incumbent-params-json", default='{"recent_year_start": 2021, "recent_year_weight": 2.0}')

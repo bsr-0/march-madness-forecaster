@@ -71,13 +71,21 @@ def _load_all_barthag_sources(
     """Load barthag ratings from all available probability sources."""
     sources: dict[str, dict[str, float] | None] = {}
 
-    # Odds (market Bradley-Terry)
+    # Odds (market Bradley-Terry from unified_odds / SBRO+Covers)
     try:
         from src.prediction.market_probabilities import load_market_ratings
 
         sources["odds"] = load_market_ratings(year, seeds)
     except Exception:
         sources["odds"] = None
+
+    # Odds API BT (direct multi-book H2H consensus, 2021-2026 only)
+    try:
+        from src.prediction.market_probabilities import load_odds_api_market_ratings
+
+        sources["odds_api"] = load_odds_api_market_ratings(year, seeds)
+    except Exception:
+        sources["odds_api"] = None
 
     # Spread power
     try:
