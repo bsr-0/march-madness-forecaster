@@ -42,8 +42,10 @@ from src.ml.evaluation.loyo_protocol import compute_ablation_threshold
 from src.prediction.kaggle_recency import resolve_recent_weighting, year_objective_weight
 from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,
+    compute_year_chalk_score,
     fit_torvik_correction_from_year_records,
     fit_torvik_isotonic_from_year_records,
+    predict_with_effective_max,
 )
 from src.prediction.torvik_kaggle import _select_weighted_alpha
 
@@ -794,6 +796,108 @@ def _evaluate_torvik_isotonic(
     )
 
 
+def _evaluate_torvik_corrected_chalk_adaptive(
+    train_year_records: dict[int, list[dict]],
+    test_rows: list[dict],
+    params: Dict[str, Any],
+) -> YearMetrics:
+    """Torvik correction with chalk-adaptive max_correction scaling.
+
+    Uses the Phase 0 finding (Spearman r=-0.697, p=0.025): years where torvik
+    enters the tournament most confident about favorites tend to be upset-heavy.
+    The correction model's intercept (+0.318, learned from chalk-heavy training
+    history) over-corrects in those years.
+
+    Mechanism: compute torvik_conf_mean for the test year (pre-game, LOYO-safe),
+    compare to the training-year baseline, and scale max_correction down for
+    high-confidence years:
+
+        deviation = test_chalk_score - training_baseline
+        scale     = max(min_scale, 1.0 - chalk_alpha * deviation)
+        effective_max = max_correction * scale
+
+    At chalk_alpha=0, reduces to the standard incumbent.
+    At chalk_alpha>0, 2026 (deviation≈+0.05) gets a reduced cap; chalk years
+    (negative deviation) get a slightly increased cap.
+    """
+    clip_lo = _coerce_float(params, "clip_lo", 0.01)
+    clip_hi = _coerce_float(params, "clip_hi", 0.99)
+    recent_start = _coerce_int_or_none(params, "recent_year_start", 2021)
+    recent_weight = _coerce_float(params, "recent_year_weight", 2.0)
+    recent_count = _coerce_int_or_none(params, "recent_year_count", None)
+    recent_total_ratio = _coerce_float(params, "recent_total_ratio", 1.0)
+    ridge = _coerce_float(params, "correction_ridge", 5.0)
+    max_correction = _coerce_float(params, "max_correction", 0.06)
+    chalk_alpha = _coerce_float(params, "chalk_alpha", 0.0)
+    min_scale = _coerce_float(params, "min_scale", 0.1)
+
+    model = fit_torvik_correction_from_year_records(
+        train_year_records,
+        config=TorvikCorrectionConfig(
+            clip_lo=clip_lo,
+            clip_hi=clip_hi,
+            ridge=ridge,
+            max_correction=max_correction,
+        ),
+        recent_year_start=recent_start,
+        recent_year_weight=recent_weight,
+        recent_year_count=recent_count,
+        recent_total_ratio=recent_total_ratio,
+    )
+
+    from src.prediction.torvik_correction import _resolve_signal, round_to_num
+
+    # Compute the test year's chalk score from pre-game torvik probs (LOYO-safe).
+    test_chalk_score = compute_year_chalk_score(test_rows)
+    chalk_baseline = float((model.training_info_ or {}).get("chalk_baseline", 0.45))
+    deviation = test_chalk_score - chalk_baseline
+    scale = max(min_scale, 1.0 - chalk_alpha * deviation)
+    effective_max = max_correction * scale
+
+    torvik = np.asarray([float(row["torvik"]) for row in test_rows], dtype=float)
+    seed1 = np.asarray([int(row["seed1"]) for row in test_rows], dtype=float)
+    seed2 = np.asarray([int(row["seed2"]) for row in test_rows], dtype=float)
+    outcomes = np.asarray([float(row["outcome"]) for row in test_rows], dtype=float)
+    seed = np.asarray([float(row["seed"]) for row in test_rows], dtype=float)
+    market = np.asarray([_resolve_signal(row.get("odds"), float(row["torvik"])) for row in test_rows], dtype=float)
+    elo = np.asarray([_resolve_signal(row.get("elo"), float(row["torvik"])) for row in test_rows], dtype=float)
+    rounds = np.asarray([round_to_num(row.get("round")) for row in test_rows], dtype=float)
+
+    preds = predict_with_effective_max(
+        model,
+        torvik,
+        seed1,
+        seed2,
+        effective_max,
+        market_probs=market,
+        elo_probs=elo,
+        round_nums=rounds,
+    )
+    brier = float(np.mean((preds - outcomes) ** 2))
+    seed_brier = float(np.mean((seed - outcomes) ** 2))
+
+    metadata = {
+        "coef": model.coef_.tolist() if model.coef_ is not None else None,
+        **(model.training_info_ or {}),
+        "correction_ridge": ridge,
+        "max_correction": max_correction,
+        "chalk_alpha": chalk_alpha,
+        "test_chalk_score": test_chalk_score,
+        "chalk_baseline": chalk_baseline,
+        "deviation": deviation,
+        "scale": scale,
+        "effective_max_correction": effective_max,
+    }
+    return YearMetrics(
+        year=int(test_rows[0]["year"]),
+        brier=brier,
+        seed_brier=seed_brier,
+        bss=1.0 - brier / max(seed_brier, 1e-12),
+        ece=expected_calibration_error(preds, outcomes),
+        metadata=metadata,
+    )
+
+
 def evaluate_spec(
     data: dict[int, list[dict]],
     spec: ModelSpec,
@@ -829,6 +933,8 @@ def evaluate_spec(
             metrics = _evaluate_closing_market_blend(train_year_records, test_rows, spec.params)
         elif spec.mode == "torvik_isotonic":
             metrics = _evaluate_torvik_isotonic(train_year_records, test_rows, spec.params)
+        elif spec.mode == "torvik_corrected_chalk_adaptive":
+            metrics = _evaluate_torvik_corrected_chalk_adaptive(train_year_records, test_rows, spec.params)
         else:
             raise ValueError(f"Unsupported model mode: {spec.mode}")
 
@@ -1168,6 +1274,7 @@ def main() -> None:
         "torvik_closing",
         "closing_market_blend",
         "torvik_isotonic",
+        "torvik_corrected_chalk_adaptive",
     ]
     parser.add_argument("--incumbent-mode", default="ensemble", choices=_MODES)
     parser.add_argument("--candidate-mode", default="torvik_corrected", choices=_MODES)

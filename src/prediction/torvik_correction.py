@@ -58,6 +58,61 @@ def _resolve_signal(value: float | None, fallback: float) -> float:
 _resolve_market = _resolve_signal
 
 
+def compute_year_chalk_score(games: list[dict]) -> float:
+    """Compute torvik confidence mean for a year's pre-game records.
+
+    Returns mean(|torvik - 0.5| * 2) across all games.  This is a pre-game
+    observable (torvik probs are known at Selection Sunday) so it is LOYO-safe
+    for use as a year-level chalk/upset signal.
+
+    Phase 0 audit found Spearman r = -0.697 (p=0.025) with mean_residual across
+    2016-2026: years where torvik is most confident tend to be upset-heavy.
+    """
+    if not games:
+        return 0.45  # fallback to approximate historical mean
+    torvik_vals = np.asarray([float(g["torvik"]) for g in games], dtype=float)
+    return float(np.mean(np.abs(torvik_vals - 0.5) * 2.0))
+
+
+def predict_with_effective_max(
+    model: "TorvikCorrectionModel",
+    torvik_probs: np.ndarray,
+    seed1: np.ndarray,
+    seed2: np.ndarray,
+    effective_max_correction: float,
+    market_probs: Optional[np.ndarray] = None,
+    elo_probs: Optional[np.ndarray] = None,
+    round_nums: Optional[np.ndarray] = None,
+    movement_vals: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """Like model.predict() but clips corrections at effective_max_correction.
+
+    Used by the chalk-adaptive evaluator to reduce the correction cap in
+    years where the tournament field shows unusually high model confidence.
+    """
+    if model.coef_ is None:
+        raise ValueError("TorvikCorrectionModel must be fit before predict()")
+
+    torvik_probs = np.asarray(torvik_probs, dtype=float)
+    seed1 = np.asarray(seed1, dtype=float)
+    seed2 = np.asarray(seed2, dtype=float)
+    n = len(torvik_probs)
+
+    mkt = _resolve_array(market_probs, torvik_probs)
+    elo = _resolve_array(elo_probs, torvik_probs)
+    rnd = np.zeros(n, dtype=float) if round_nums is None else np.asarray(round_nums, dtype=float)
+    mv = np.zeros(n, dtype=float) if movement_vals is None else np.asarray(movement_vals, dtype=float)
+
+    X = np.vstack(
+        [
+            model._feature_vector(float(p), int(s1), int(s2), float(m), float(e), float(r), float(v))
+            for p, s1, s2, m, e, r, v in zip(torvik_probs, seed1, seed2, mkt, elo, rnd, mv)
+        ]
+    )
+    correction = np.clip(X @ model.coef_, -effective_max_correction, effective_max_correction)
+    return np.clip(torvik_probs + correction, model.config.clip_lo, model.config.clip_hi)
+
+
 @dataclass
 class TorvikCorrectionConfig:
     clip_lo: float = 0.01
@@ -368,6 +423,11 @@ def fit_torvik_correction_from_year_records(
     elo_arr = np.asarray(elo_list, dtype=float)
     movement_arr = np.asarray(movement_list, dtype=float)
 
+    # Chalk baseline: mean torvik confidence across training years.
+    # Used by chalk-adaptive evaluation to scale max_correction per test year.
+    chalk_scores_by_year = {year: compute_year_chalk_score(year_records[year]) for year in year_records}
+    chalk_baseline = float(np.mean(list(chalk_scores_by_year.values()))) if chalk_scores_by_year else 0.45
+
     model = TorvikCorrectionModel(config)
     model.training_info_ = {
         "recent_year_start": resolved_recent_start,
@@ -380,6 +440,8 @@ def fit_torvik_correction_from_year_records(
         "market_coverage": float(np.mean(market_arr != torvik_arr)),
         "elo_coverage": float(np.mean(elo_arr != torvik_arr)),
         "movement_coverage": float(np.mean(movement_arr != 0.0)),
+        "chalk_baseline": chalk_baseline,
+        "chalk_scores_by_year": chalk_scores_by_year,
     }
     model.fit(
         torvik_arr,
