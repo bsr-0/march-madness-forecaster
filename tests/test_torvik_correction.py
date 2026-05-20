@@ -12,9 +12,9 @@ from src.prediction.torvik_correction import (
 
 def test_torvik_correction_prediction_is_bounded():
     model = TorvikCorrectionModel(TorvikCorrectionConfig(max_correction=0.10, clip_lo=0.01, clip_hi=0.99))
-    # 8 features: intercept, seed_gap, abs_seed_gap, torvik_confidence,
-    #             market_prob, market_disagree, elo_disagree, round_num
-    model.coef_ = np.asarray([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+    # 9 features: intercept, seed_gap, abs_seed_gap, torvik_confidence,
+    #             market_prob, market_disagree, elo_disagree, round_num, market_movement
+    model.coef_ = np.asarray([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
 
     pred = model.predict_one(0.96, 1, 16)
 
@@ -255,7 +255,7 @@ def test_isotonic_calibrator_coef_exposed():
     model.fit(torvik, seed1, seed2, outcomes)
 
     assert model.coef_ is not None
-    assert len(model.coef_) == 8  # intercept + 7 features
+    assert len(model.coef_) == 9  # intercept + 8 features (incl. market_movement)
 
 
 def test_fit_isotonic_from_year_records_returns_calibrator():
