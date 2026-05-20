@@ -1,0 +1,21 @@
+{
+  "incumbent": {
+    "mode": "torvik_corrected",
+    "params": {
+      "correction_ridge": 20.0,
+      "max_correction": 0.06,
+      "recent_year_count": 5
+    }
+  },
+  "candidate_search_spaces": [
+    {
+      "mode": "torvik_corrected_chalk_adaptive",
+      "params": {
+        "correction_ridge": [20.0],
+        "max_correction": [0.06],
+        "recent_year_count": [5],
+        "chalk_alpha": [1.0, 3.0, 5.0, 8.0, 10.0, 15.0, 20.0]
+      }
+    }
+  ]
+}
