@@ -8,9 +8,10 @@
 // This is the single source of truth for what appears in the
 // strategy selector. Keep it accurate — it directly drives the UI.
 //
-// ═══ CURRENT BEST MODELS (2026-05-24) ═══════════════════════════
+// ═══ CURRENT BEST MODELS (2026-05-25) ═══════════════════════════
 //   Best:   meta_region_poolaware — 11.9% P(1st), 14-yr LOYO, p=0.008
 //   Strong: meta_region           —  8.0% P(1st), 14-yr LOYO, p<0.001
+//   Strong: meta_exhaustive        —  7.7% P(1st), 14-yr LOYO, p<0.001
 //   Seed baseline (random-ish):      3.1% P(1st)
 //
 // ═══ HOW TO UPDATE AFTER A NEW SEASON ══════════════════════════
@@ -51,6 +52,25 @@ const STRATEGIES = [
       'Bracket: docs/data/bracket_2026.json.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026.json.
     // To swap to a new season's bracket, update the JSON file and re-deploy.
+    pick: null,
+  },
+  {
+    key: 'exhaustive',
+    label: 'Exhaustive Search',
+    subtitle: 'Best champion by simulation',
+    description:
+      'Tests all 64 possible champions and builds the full bracket that maximizes expected pool points ' +
+      'for each. Picks whichever champion produces the highest-scoring bracket overall — more targeted ' +
+      'than regional beam search. Validated via the same 14-year walk-forward backtest as Pool Optimizer.',
+    p_first: 7.7,
+    badge: '~7.7% P(1st)',
+    badge_tone: 'green',
+    is_top: false,
+    is_model: true,
+    backtest_note:
+      'meta_exhaustive: 7.7% P(1st), 11/14 years, p<0.001. ' +
+      'Source: 14-yr LOYO backtest, N≈30 pool. ' +
+      'Bracket: docs/data/bracket_2026_exhaustive.json. Champion: Michigan (1-seed).',
     pick: null,
   },
   {
@@ -120,6 +140,25 @@ const STRATEGIES = [
     },
   },
   {
+    key: 'champ_odds',
+    label: 'Championship Odds',
+    subtitle: 'Path-adjusted win probability',
+    description:
+      'Picks the team with the higher pre-tournament championship probability in each matchup. ' +
+      'Unlike raw efficiency ratings, this accounts for bracket draw — a 1-seed facing a tough ' +
+      'region gets a lower probability than one in an easier half. Useful for surfacing picks ' +
+      'where path difficulty makes a meaningful difference.',
+    p_first: null,
+    badge: 'Stat Lens',
+    badge_tone: 'sky',
+    is_top: false,
+    is_model: false,
+    backtest_note:
+      'No systematic pool backtest. Championship probability accounts for bracket path difficulty ' +
+      'in addition to raw ability — differs from Barthag when draw is uneven.',
+    pick: (t1, t2) => (t1.champ_prob ?? 0) >= (t2.champ_prob ?? 0) ? t1 : t2,
+  },
+  {
     key: 'offense',
     label: 'Offensive Edge',
     subtitle: 'Favor explosive offenses',
@@ -179,9 +218,10 @@ const BADGE_COLORS = {
 
 // ── App state ──
 
-let bracketData   = null;
-let teamIndex     = {};         // team_id → { barthag, adj_oe, adj_de }
-let currentKey    = 'pool';
+let bracketData      = null;
+let exhaustiveData   = null;
+let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
+let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
 let roundsCache   = {};         // strategy key → computed rounds[]
 
@@ -190,10 +230,11 @@ let roundsCache   = {};         // strategy key → computed rounds[]
 // ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  let bracket, profiles;
+  let bracket, exhaustive, profiles;
   try {
-    [bracket, profiles] = await Promise.all([
+    [bracket, exhaustive, profiles] = await Promise.all([
       fetch('data/bracket_2026.json?v=dc8aebb').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=dc8aebb').then(r => r.json()),
       fetch('data/team_profiles.json?v=dc8aebb').then(r => r.json()),
     ]);
   } catch (err) {
@@ -203,14 +244,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  bracketData = bracket;
+  bracketData    = bracket;
+  exhaustiveData = exhaustive;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
     teamIndex[t.team_id] = {
-      barthag:  t.barthag,
-      adj_oe:   t.adj_offensive_efficiency,
-      adj_de:   t.adj_defensive_efficiency,
+      barthag:    t.barthag,
+      adj_oe:     t.adj_offensive_efficiency,
+      adj_de:     t.adj_defensive_efficiency,
+      champ_prob: t.championship_prob ?? null,
+      elo_rating: t.rating ?? null,
     };
   }
 
@@ -223,10 +267,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 //
 // All strategies share the same internal game format:
 //   { round, region, team1, team2, win_prob, is_upset,
-//     precomputed_winner_id? }   ← only present for pool strategy
+//     precomputed_winner_id? }   ← only present for pre-computed strategies
 //
 // Team objects:
-//   { id, name, seed, barthag, adj_oe, adj_de }
+//   { id, name, seed, barthag, adj_oe, adj_de, champ_prob, elo_rating }
 // ──────────────────────────────────────────────────────────────────
 
 // Log5 matchup probability given two Barthag values (p = P(beat avg D1)).
@@ -241,17 +285,19 @@ function mkTeam(id, rawName, seed, ratingFallback) {
   const prof = teamIndex[id] || {};
   return {
     id,
-    name: rawName.replace(/^\(\d+\)\s*/, ''),
+    name:       rawName.replace(/^\(\d+\)\s*/, ''),
     seed,
-    barthag: prof.barthag  ?? ratingFallback,
-    adj_oe:  prof.adj_oe   ?? null,
-    adj_de:  prof.adj_de   ?? null,
+    barthag:    prof.barthag    ?? ratingFallback,
+    adj_oe:     prof.adj_oe     ?? null,
+    adj_de:     prof.adj_de     ?? null,
+    champ_prob: prof.champ_prob ?? null,
+    elo_rating: prof.elo_rating ?? null,
   };
 }
 
-// Convert pool strategy's pre-computed bracketData into the internal format.
-function poolRounds() {
-  return bracketData.rounds.map(round => ({
+// Convert a pre-computed bracket JSON into the internal game format.
+function precomputedRounds(data) {
+  return data.rounds.map(round => ({
     round_name: round.round_name,
     games: round.games.map(g => ({
       round:   g.round,
@@ -264,6 +310,9 @@ function poolRounds() {
     })),
   }));
 }
+
+function poolRounds()      { return precomputedRounds(bracketData); }
+function exhaustiveRounds() { return precomputedRounds(exhaustiveData); }
 
 // Simulate the full bracket for a non-pool strategy from R64.
 function simulate(strategy) {
@@ -352,7 +401,11 @@ function pick(game, strategy) {
 function getRounds(key) {
   if (roundsCache[key]) return roundsCache[key];
   const s = STRATEGIES.find(s => s.key === key);
-  roundsCache[key] = s.pick === null ? poolRounds() : simulate(s);
+  if (s.pick === null) {
+    roundsCache[key] = key === 'exhaustive' ? exhaustiveRounds() : poolRounds();
+  } else {
+    roundsCache[key] = simulate(s);
+  }
   return roundsCache[key];
 }
 
