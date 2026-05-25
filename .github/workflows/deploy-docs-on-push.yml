@@ -15,6 +15,7 @@ on:
       - "docs/index.html"
       - "docs/app.js"
       - "docs/style.css"
+  workflow_dispatch:
 
 permissions:
   pages: write
