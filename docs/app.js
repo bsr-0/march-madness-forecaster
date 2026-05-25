@@ -108,7 +108,7 @@ const STRATEGIES = [
     is_model: false,
     backtest_note:
       'No systematic backtest. Higher ceiling, higher variance. ' +
-      'Not recommended as your only bracket in a pool — use it to differentiate if you have multiple entries.',
+      'High variance — good for years where chalk flops early. No systematic backtest.',
     pick: (t1, t2, winProb) => {
       // winProb is t1's probability. Underdog = higher seed number.
       const t1IsUnderdog = t1.seed > t2.seed;
@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, profiles;
   try {
     [bracket, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json').then(r => r.json()),
-      fetch('data/team_profiles.json').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=dc8aebb').then(r => r.json()),
+      fetch('data/team_profiles.json?v=dc8aebb').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
