@@ -1,458 +1,594 @@
-/* ── March Madness Forecaster — App ── */
+/* ══════════════════════════════════════════════════════════════════
+ * March Madness Forecaster — Bracket Picker
+ * ══════════════════════════════════════════════════════════════════ */
 
-// ── State ──
-let bracketData = null;
-let validationData = null;
-let dashboardData = null;
-let modelMetrics = null;
-let currentRound = 'Round of 64';
-let currentRegion = 'All';
+// ──────────────────────────────────────────────────────────────────
+// STRATEGY CATALOG
+//
+// This is the single source of truth for what appears in the
+// strategy selector. Keep it accurate — it directly drives the UI.
+//
+// ═══ CURRENT BEST MODELS (2026-05-24) ═══════════════════════════
+//   Best:   meta_region_poolaware — 11.9% P(1st), 14-yr LOYO, p=0.008
+//   Strong: meta_region           —  8.0% P(1st), 14-yr LOYO, p<0.001
+//   Seed baseline (random-ish):      3.1% P(1st)
+//
+// ═══ HOW TO UPDATE AFTER A NEW SEASON ══════════════════════════
+//   1. Approve and run:  python scripts/mc_pool_backtest.py
+//   2. Identify the best strategy from the printed backtest report
+//   3. Export its bracket:  python scripts/export_bracket.py --mode <strategy>
+//      → save to docs/data/bracket_<YEAR>.json
+//   4. Update the 'pool' entry below:
+//      - Change bracket_file to point at the new JSON
+//      - Update p_first and backtest_note with the new numbers
+//   5. If a new strategy overtakes 'pool' as best, mark the old
+//      one is_top: false and the new one is_top: true
+//   6. Never hardcode a P(1st) number without a backtest citation
+//
+// ═══ ADDING A NEW PREFERENCE LENS ══════════════════════════════
+//   Add an entry with a pick function (t1, t2, winProb) → team.
+//   Set is_model: false and p_first: null if untested.
+//   Mark badge_tone: 'sky' for stat lenses, 'red' for risky modes.
+// ──────────────────────────────────────────────────────────────────
 
-// ── Boot ──
-document.addEventListener('DOMContentLoaded', async () => {
-  const [b, v, d, m] = await Promise.all([
-    fetch('data/bracket_2026.json').then(r => r.json()),
-    fetch('data/validation_2025.json').then(r => r.json()),
-    fetch('data/dashboard.json').then(r => r.json()),
-    fetch('data/model_metrics.json').then(r => r.json()),
-  ]);
-  bracketData = b;
-  validationData = v;
-  dashboardData = d;
-  modelMetrics = m;
+const STRATEGIES = [
+  {
+    key: 'pool',
+    label: 'Pool Optimizer',
+    subtitle: 'Best backtested model',
+    description:
+      'Generates ~25 diverse candidate brackets and selects the one with the highest simulated P(win) ' +
+      'against a realistic pool field. The strongest strategy across 14 years of historical backtests — ' +
+      'outperforms the seed baseline every single year.',
+    p_first: 11.9,          // ← update this after each backtest run
+    badge: '11.9% P(1st)',
+    badge_tone: 'gold',
+    is_top: true,           // ← set to true for the current best model
+    is_model: true,
+    backtest_note:
+      'Beats seed baseline 14/14 years. p = 0.008. ' +
+      'Source: meta_region_poolaware, 14-yr LOYO backtest, N≈30 pool. ' +
+      'Bracket: docs/data/bracket_2026.json.',
+    // Pre-computed picks: pick === null means use winner_id from bracket_2026.json.
+    // To swap to a new season's bracket, update the JSON file and re-deploy.
+    pick: null,
+  },
+  {
+    key: 'stat',
+    label: 'Stat-Driven',
+    subtitle: 'Pure Barthag ratings',
+    description:
+      'Picks the team with the higher Barthag efficiency rating in every matchup. ' +
+      'Approximates the meta_region algorithm (region beam search on Torvik probabilities) ' +
+      'and historically outperforms the seed baseline 11 out of 14 years.',
+    p_first: 8.0,
+    badge: '~8% P(1st)',
+    badge_tone: 'green',
+    is_top: false,
+    is_model: true,
+    backtest_note:
+      'Approximates meta_region: 8.0% P(1st), 11/14 years, p<0.001. ' +
+      'Computed client-side from Barthag in team_profiles.json. ' +
+      'For the exact meta_region bracket, run mc_pool_backtest.py --mode meta_region.',
+    pick: (t1, t2) => t1.barthag >= t2.barthag ? t1 : t2,
+  },
+  {
+    key: 'chalk',
+    label: 'Chalk',
+    subtitle: 'Always the favorite',
+    description:
+      'Pick the lower seed (stronger team) in every game. Ties broken by Barthag rating. ' +
+      'Simple and safe — but historically equivalent to the seed baseline (~3% P(1st)) ' +
+      'and offers no differentiation in winner-take-all pools.',
+    p_first: null,
+    badge: 'Traditional',
+    badge_tone: 'neutral',
+    is_top: false,
+    is_model: false,
+    backtest_note:
+      'Similar to seed baseline (~3.1% P(1st)). No upside differentiation in winner-take-all pools. ' +
+      'Use this if you want a conventional, defensible bracket.',
+    pick: (t1, t2) => {
+      if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
+      return t1.barthag >= t2.barthag ? t1 : t2;   // tie-break
+    },
+  },
+  {
+    key: 'upset',
+    label: 'Upset Year',
+    subtitle: 'Lean into the chaos',
+    description:
+      'Pick the underdog whenever the model gives them ≥ 38% probability — otherwise falls back to chalk. ' +
+      'Captures the 5/12, 10/7, and close 8/9 games where chaos is plausible. ' +
+      'Good for upset-heavy years like 2023 where favorites flamed out early.',
+    p_first: null,
+    badge: 'High Risk',
+    badge_tone: 'red',
+    is_top: false,
+    is_model: false,
+    backtest_note:
+      'No systematic backtest. Higher ceiling, higher variance. ' +
+      'Not recommended as your only bracket in a pool — use it to differentiate if you have multiple entries.',
+    pick: (t1, t2, winProb) => {
+      // winProb is t1's probability. Underdog = higher seed number.
+      const t1IsUnderdog = t1.seed > t2.seed;
+      const underdogProb = t1IsUnderdog ? winProb : 1 - winProb;
+      if (underdogProb >= 0.38) return t1IsUnderdog ? t1 : t2;
+      // chalk fallback for non-competitive underdogs
+      if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
+      return t1.barthag >= t2.barthag ? t1 : t2;
+    },
+  },
+  {
+    key: 'offense',
+    label: 'Offensive Edge',
+    subtitle: 'Favor explosive offenses',
+    description:
+      'Pick the team with the higher adjusted offensive efficiency. ' +
+      'Favors high-scoring, fast-paced teams. Useful as a lens for individual close games ' +
+      'in years where tempo and scoring output dominate tournament outcomes.',
+    p_first: null,
+    badge: 'Stat Lens',
+    badge_tone: 'sky',
+    is_top: false,
+    is_model: false,
+    backtest_note:
+      'No systematic pool backtest. Use as a supplemental stat lens, not a primary strategy.',
+    pick: (t1, t2) => (t1.adj_oe ?? 100) >= (t2.adj_oe ?? 100) ? t1 : t2,
+  },
+  {
+    key: 'defense',
+    label: 'Defensive Wall',
+    subtitle: 'Trust stingy defenses',
+    description:
+      'Pick the team with the lower adjusted defensive efficiency (harder to score against). ' +
+      'Tournament basketball often rewards teams that suffocate opponents — ' +
+      'particularly in high-leverage late rounds.',
+    p_first: null,
+    badge: 'Stat Lens',
+    badge_tone: 'sky',
+    is_top: false,
+    is_model: false,
+    backtest_note:
+      'No systematic pool backtest. Use as a supplemental stat lens, not a primary strategy.',
+    pick: (t1, t2) => (t1.adj_de ?? 120) <= (t2.adj_de ?? 120) ? t1 : t2,
+  },
+];
 
-  renderPredictions();
-  renderBacktest();
-});
+// ── Display constants ──
 
-const CHART_COLORS = {
-  grid: 'rgba(92, 64, 41, 0.14)',
-  tick: '#7e7469',
-  axis: '#4f5c61',
-  legend: '#1e282f',
-  accent: '#bb4d2d',
-  accentFill: 'rgba(187, 77, 45, 0.14)',
-  gold: '#c89125',
-  goldFill: 'rgba(200, 145, 37, 0.16)',
-  green: '#2f7a63',
-  greenFill: 'rgba(47, 122, 99, 0.72)',
-  yellowFill: 'rgba(200, 145, 37, 0.72)',
-  redFill: 'rgba(187, 77, 45, 0.7)',
-  yellow: '#c89125',
-  red: '#bb4d2d',
+const ROUND_SHORT = {
+  'Round of 64':  'R64',
+  'Round of 32':  'R32',
+  'Sweet 16':     'S16',
+  'Elite 8':      'E8',
+  'Final Four':   'F4',
+  'Championship': 'Champ',
 };
 
-// ── Tab Switching ──
-function switchTab(tab) {
-  document.getElementById('section-predictions').classList.toggle('hidden', tab !== 'predictions');
-  document.getElementById('section-backtest').classList.toggle('hidden', tab !== 'backtest');
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
+const REGIONS = ['East', 'West', 'South', 'Midwest'];
+
+// Colors per strategy badge tone (inline styles avoid needing a CSS class per strategy)
+const BADGE_COLORS = {
+  gold:    { bg: 'rgba(200,145,37,0.18)',  text: '#6b4800' },
+  green:   { bg: 'rgba(47,122,99,0.16)',   text: '#1d5940' },
+  red:     { bg: 'rgba(187,77,45,0.16)',   text: '#6e2211' },
+  sky:     { bg: 'rgba(47,94,138,0.14)',   text: '#20405e' },
+  neutral: { bg: 'rgba(92,64,41,0.10)',    text: '#4f3720' },
+};
+
+// ── App state ──
+
+let bracketData   = null;
+let teamIndex     = {};         // team_id → { barthag, adj_oe, adj_de }
+let currentKey    = 'pool';
+let currentRound  = 'Round of 64';
+let roundsCache   = {};         // strategy key → computed rounds[]
+
+// ──────────────────────────────────────────────────────────────────
+// BOOT
+// ──────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  let bracket, profiles;
+  try {
+    [bracket, profiles] = await Promise.all([
+      fetch('data/bracket_2026.json').then(r => r.json()),
+      fetch('data/team_profiles.json').then(r => r.json()),
+    ]);
+  } catch (err) {
+    document.body.innerHTML =
+      '<p style="padding:48px;font-family:sans-serif;color:#bb4d2d">Failed to load bracket data. ' +
+      'Make sure docs/data/bracket_2026.json and docs/data/team_profiles.json are present.</p>';
+    return;
+  }
+
+  bracketData = bracket;
+
+  // Build O(1) team lookup
+  for (const t of profiles.teams) {
+    teamIndex[t.team_id] = {
+      barthag:  t.barthag,
+      adj_oe:   t.adj_offensive_efficiency,
+      adj_de:   t.adj_defensive_efficiency,
+    };
+  }
+
+  renderStrategyStrip();
+  activateStrategy('pool');
+});
+
+// ──────────────────────────────────────────────────────────────────
+// BRACKET ENGINE
+//
+// All strategies share the same internal game format:
+//   { round, region, team1, team2, win_prob, is_upset,
+//     precomputed_winner_id? }   ← only present for pool strategy
+//
+// Team objects:
+//   { id, name, seed, barthag, adj_oe, adj_de }
+// ──────────────────────────────────────────────────────────────────
+
+// Log5 matchup probability given two Barthag values (p = P(beat avg D1)).
+function log5(p1, p2) {
+  const n = p1 * (1 - p2);
+  const d = n + p2 * (1 - p1);
+  return d > 0 ? n / d : 0.5;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// SECTION 1: 2026 PREDICTIONS
-// ═══════════════════════════════════════════════════════════════════
-
-function renderPredictions() {
-  renderChampionshipProbs();
-  renderRoundSelector();
-  renderRegionFilter();
-  renderBracketGames();
-  renderUpsetAlerts();
+// Build a rich team object, falling back to inline rating if not in teamIndex.
+function mkTeam(id, rawName, seed, ratingFallback) {
+  const prof = teamIndex[id] || {};
+  return {
+    id,
+    name: rawName.replace(/^\(\d+\)\s*/, ''),
+    seed,
+    barthag: prof.barthag  ?? ratingFallback,
+    adj_oe:  prof.adj_oe   ?? null,
+    adj_de:  prof.adj_de   ?? null,
+  };
 }
 
-// ── Championship Probability Cards ──
-function renderChampionshipProbs() {
-  const container = document.getElementById('champ-probs');
-  const teams = bracketData.championship_probabilities.slice(0, 16);
-  const maxProb = teams[0]?.championship_prob || 0.1;
+// Convert pool strategy's pre-computed bracketData into the internal format.
+function poolRounds() {
+  return bracketData.rounds.map(round => ({
+    round_name: round.round_name,
+    games: round.games.map(g => ({
+      round:   g.round,
+      region:  g.region,
+      team1:   mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating),
+      team2:   mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating),
+      win_prob: g.win_prob,
+      is_upset: g.is_upset,
+      precomputed_winner_id: g.winner_id,
+    })),
+  }));
+}
 
-  container.innerHTML = teams.map((t, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const pct = (t.championship_prob * 100).toFixed(1);
-    const barW = ((t.championship_prob / maxProb) * 100).toFixed(0);
-    const ff = (t.final_four_prob * 100).toFixed(1);
-    const e8 = (t.elite_eight_prob * 100).toFixed(1);
+// Simulate the full bracket for a non-pool strategy from R64.
+function simulate(strategy) {
+  const r64 = bracketData.rounds[0].games.map(g => ({
+    round:    'Round of 64',
+    region:   g.region,
+    team1:    mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating),
+    team2:    mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating),
+    win_prob: g.win_prob,     // use model's R64 probabilities
+    is_upset: g.is_upset,
+  }));
+
+  const allRounds = [{ round_name: 'Round of 64', games: r64 }];
+
+  // Group R64 games by region for bracket progression
+  let byRegion = {};
+  for (const reg of REGIONS) byRegion[reg] = r64.filter(g => g.region === reg);
+
+  // R32, S16, E8 — each round halves games per region
+  for (const roundName of ['Round of 32', 'Sweet 16', 'Elite 8']) {
+    const nextGames = [];
+    const nextByRegion = {};
+
+    for (const reg of REGIONS) {
+      const prev = byRegion[reg];
+      nextByRegion[reg] = [];
+
+      for (let i = 0; i < prev.length; i += 2) {
+        const w1 = pick(prev[i], strategy);
+        const w2 = pick(prev[i + 1], strategy);
+        const wp = log5(w1.barthag, w2.barthag);
+        const game = {
+          round: roundName, region: reg,
+          team1: w1, team2: w2,
+          win_prob: wp,
+          is_upset: upsetCheck(w1, w2, wp),
+        };
+        nextByRegion[reg].push(game);
+        nextGames.push(game);
+      }
+    }
+
+    allRounds.push({ round_name: roundName, games: nextGames });
+    byRegion = nextByRegion;
+  }
+
+  // Final Four: East vs West, South vs Midwest
+  const e8w = {};
+  for (const reg of REGIONS) e8w[reg] = pick(byRegion[reg][0], strategy);
+
+  const f4 = [
+    mkGame('Final Four', 'East vs West',    e8w['East'],  e8w['West'],    strategy),
+    mkGame('Final Four', 'South vs Midwest', e8w['South'], e8w['Midwest'], strategy),
+  ];
+  allRounds.push({ round_name: 'Final Four', games: f4 });
+
+  const champ = mkGame('Championship', 'Championship',
+    pick(f4[0], strategy), pick(f4[1], strategy), strategy);
+  allRounds.push({ round_name: 'Championship', games: [champ] });
+
+  return allRounds;
+}
+
+function mkGame(round, region, t1, t2, strategy) {
+  const wp = log5(t1.barthag, t2.barthag);
+  return { round, region, team1: t1, team2: t2, win_prob: wp, is_upset: upsetCheck(t1, t2, wp) };
+}
+
+function upsetCheck(t1, t2, wp) {
+  return (t1.seed > t2.seed && wp > 0.5) || (t2.seed > t1.seed && wp < 0.5);
+}
+
+// Determine the winner of a game for a given strategy.
+function pick(game, strategy) {
+  // Pool strategy: use pre-computed result
+  if (game.precomputed_winner_id !== undefined) {
+    return game.precomputed_winner_id === game.team1.id ? game.team1 : game.team2;
+  }
+  if (strategy.pick) {
+    return strategy.pick(game.team1, game.team2, game.win_prob);
+  }
+  return game.team1.barthag >= game.team2.barthag ? game.team1 : game.team2;
+}
+
+// Get cached rounds for a strategy key.
+function getRounds(key) {
+  if (roundsCache[key]) return roundsCache[key];
+  const s = STRATEGIES.find(s => s.key === key);
+  roundsCache[key] = s.pick === null ? poolRounds() : simulate(s);
+  return roundsCache[key];
+}
+
+// Build the champion's path through every round.
+function championPath(rounds, key) {
+  const strategy = STRATEGIES.find(s => s.key === key);
+  const champGame = rounds[rounds.length - 1].games[0];
+  const champ = pick(champGame, strategy);
+
+  const path = [];
+  for (const round of rounds) {
+    for (const game of round.games) {
+      const winner = pick(game, strategy);
+      if (winner.id !== champ.id) continue;
+      const opp = winner.id === game.team1.id ? game.team2 : game.team1;
+      const champWinProb = winner.id === game.team1.id ? game.win_prob : 1 - game.win_prob;
+      path.push({
+        round: round.round_name,
+        opp_name: opp.name,
+        opp_seed: opp.seed,
+        win_prob: champWinProb,
+      });
+    }
+  }
+  return { champ, path };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// RENDERING
+// ──────────────────────────────────────────────────────────────────
+
+function activateStrategy(key) {
+  currentKey   = key;
+  currentRound = 'Round of 64';
+
+  renderStrategyStrip();
+  renderStrategyDetail();
+
+  const rounds = getRounds(key);
+  renderChampionPath(rounds, key);
+  renderRoundTabs(rounds);
+  renderGames(rounds);
+}
+
+// ── Strategy strip ──
+
+function renderStrategyStrip() {
+  const el = document.getElementById('strategy-strip');
+  el.innerHTML = STRATEGIES.map(s => {
+    const bc = BADGE_COLORS[s.badge_tone] || BADGE_COLORS.neutral;
+    const badgeHTML = s.badge
+      ? `<span class="strategy-badge" style="background:${bc.bg};color:${bc.text}">${s.badge}</span>`
+      : '';
+    const starHTML = s.is_top ? '<span class="strategy-star">★</span>' : '';
     return `
-      <div class="champ-card">
-        <div class="champ-rank ${rankClass}">${i + 1}</div>
-        <div class="champ-info">
-          <div class="champ-name">${t.team_name}</div>
-          <div class="champ-details">(${t.seed}) ${t.region} · ${t.conference}</div>
-          <div class="champ-details">F4 ${ff}% · E8 ${e8}%</div>
-          <div class="champ-bar-bg"><div class="champ-bar-fill" style="width:${barW}%"></div></div>
+      <button class="strategy-btn${s.key === currentKey ? ' active' : ''}"
+              onclick="activateStrategy('${s.key}')">
+        ${starHTML}
+        <span class="strategy-btn-label">${s.label}</span>
+        <span class="strategy-btn-sub">${s.subtitle}</span>
+        ${badgeHTML}
+      </button>`;
+  }).join('');
+}
+
+// ── Strategy detail panel ──
+
+function renderStrategyDetail() {
+  const el = document.getElementById('strategy-detail');
+  const s  = STRATEGIES.find(s => s.key === currentKey);
+  const bc = BADGE_COLORS[s.badge_tone] || BADGE_COLORS.neutral;
+
+  const tagHTML = s.is_model
+    ? `<span class="sd-tag sd-tag-model">Model-backed</span>`
+    : `<span class="sd-tag sd-tag-pref">Preference lens</span>`;
+
+  const perfHTML = s.p_first != null
+    ? `<span class="sd-perf" style="background:${bc.bg};color:${bc.text}">${s.p_first}% P(1st) historically</span>`
+    : '';
+
+  el.innerHTML = `
+    <div class="sd-row">${tagHTML}${perfHTML}</div>
+    <p class="sd-desc">${s.description}</p>
+    <p class="sd-note">${s.backtest_note}</p>
+  `;
+}
+
+// ── Champion path ──
+
+function renderChampionPath(rounds, key) {
+  const el = document.getElementById('path-flow');
+  const { champ, path } = championPath(rounds, key);
+  const bc = BADGE_COLORS[STRATEGIES.find(s => s.key === key).badge_tone] || BADGE_COLORS.neutral;
+
+  const champHTML = `
+    <div class="path-champ">
+      <div class="path-champ-seed" style="background:${bc.bg};color:${bc.text}">${champ.seed}</div>
+      <div class="path-champ-name">${champ.name}</div>
+      <div class="path-champ-label">Projected Champion</div>
+    </div>`;
+
+  const stepsHTML = path.map(stop => {
+    const pct = (stop.win_prob * 100).toFixed(0);
+    return `
+      <div class="path-connector">→</div>
+      <div class="path-stop">
+        <div class="path-stop-round">${ROUND_SHORT[stop.round] || stop.round}</div>
+        <div class="path-stop-opp">
+          <span class="path-stop-seed">${stop.opp_seed}</span>${stop.opp_name}
         </div>
-        <div class="champ-prob">${pct}%</div>
+        <div class="path-stop-prob">${pct}%</div>
       </div>`;
   }).join('');
+
+  el.innerHTML = champHTML + stepsHTML + '<div class="path-connector">→</div><div class="path-trophy">🏆</div>';
 }
 
-// ── Round Selector ──
-function renderRoundSelector() {
-  const container = document.getElementById('round-selector');
-  const rounds = bracketData.rounds.map(r => r.round_name);
-  container.innerHTML = rounds.map(r => {
-    const cls = r === currentRound ? 'active' : '';
-    return `<button class="round-btn ${cls}" onclick="selectRound('${r}')">${r}</button>`;
-  }).join('');
+// ── Round tabs ──
+
+function renderRoundTabs(rounds) {
+  const el = document.getElementById('round-tabs');
+  el.innerHTML = rounds.map(r => `
+    <button class="round-btn${r.round_name === currentRound ? ' active' : ''}"
+            onclick="selectRound('${r.round_name}')">
+      ${ROUND_SHORT[r.round_name] || r.round_name}
+    </button>`).join('');
 }
 
 function selectRound(round) {
   currentRound = round;
-  renderRoundSelector();
-  renderRegionFilter();
-  renderBracketGames();
+  const rounds = getRounds(currentKey);
+  renderRoundTabs(rounds);
+  renderGames(rounds);
 }
 
-// ── Region Filter ──
-function renderRegionFilter() {
-  const container = document.getElementById('region-filter');
-  const roundObj = bracketData.rounds.find(r => r.round_name === currentRound);
-  if (!roundObj) return;
+// ── Games grid ──
 
-  const regions = ['All', ...new Set(roundObj.games.map(g => g.region))];
-  container.innerHTML = regions.map(r => {
-    const cls = r === currentRegion ? 'active' : '';
-    return `<button class="region-btn ${cls}" onclick="selectRegion('${r}')">${r}</button>`;
-  }).join('');
-}
+function renderGames(rounds) {
+  const el     = document.getElementById('bracket-body');
+  const round  = rounds.find(r => r.round_name === currentRound);
+  if (!round) { el.innerHTML = ''; return; }
 
-function selectRegion(region) {
-  currentRegion = region;
-  renderRegionFilter();
-  renderBracketGames();
-}
+  const strategy = STRATEGIES.find(s => s.key === currentKey);
+  const isNational = currentRound === 'Final Four' || currentRound === 'Championship';
 
-// ── Bracket Game Cards ──
-function renderBracketGames() {
-  const container = document.getElementById('bracket-games');
-  const roundObj = bracketData.rounds.find(r => r.round_name === currentRound);
-  if (!roundObj) { container.innerHTML = ''; return; }
-
-  let games = roundObj.games;
-  if (currentRegion !== 'All') {
-    games = games.filter(g => g.region === currentRegion);
+  if (isNational) {
+    el.innerHTML = `<div class="games-grid">${round.games.map(g => gameCard(g, strategy)).join('')}</div>`;
+  } else {
+    const grouped = {};
+    for (const g of round.games) {
+      if (!grouped[g.region]) grouped[g.region] = [];
+      grouped[g.region].push(g);
+    }
+    el.innerHTML = REGIONS.filter(r => grouped[r]).map(region => `
+      <div class="region-group">
+        <div class="region-label">${region}</div>
+        <div class="games-grid">${grouped[region].map(g => gameCard(g, strategy)).join('')}</div>
+      </div>`).join('');
   }
-
-  container.innerHTML = games.map(g => gameCardHTML(g)).join('');
 }
 
-function gameCardHTML(g) {
-  const t1Win = g.winner_id === g.team1_id;
-  const prob = (g.win_prob * 100).toFixed(1);
-  const probClass = g.win_prob >= 0.75 ? 'high' : g.win_prob >= 0.55 ? 'mid' : 'low';
-  const upsetClass = g.is_upset ? 'upset' : '';
+// ── Game card ──
 
-  const t1Class = t1Win ? 'winner' : 'loser';
-  const t2Class = t1Win ? 'loser' : 'winner';
-  const t1Prob = t1Win ? prob : (100 - parseFloat(prob)).toFixed(1);
-  const t2Prob = t1Win ? (100 - parseFloat(prob)).toFixed(1) : prob;
-  const t1ProbClass = parseFloat(t1Prob) >= 75 ? 'high' : parseFloat(t1Prob) >= 55 ? 'mid' : 'low';
-  const t2ProbClass = parseFloat(t2Prob) >= 75 ? 'high' : parseFloat(t2Prob) >= 55 ? 'mid' : 'low';
+function gameCard(game, strategy) {
+  const winner     = pick(game, strategy);
+  const t1IsPick   = winner.id === game.team1.id;
+  const t1ProbPct  = (game.win_prob * 100).toFixed(1);
+  const t2ProbPct  = (100 - parseFloat(t1ProbPct)).toFixed(1);
+  const bc         = BADGE_COLORS[strategy.badge_tone] || BADGE_COLORS.neutral;
+  const pickBadge  = `<span class="pick-badge" style="background:${bc.bg};color:${bc.text}">PICK</span>`;
 
   return `
-    <div class="game-card ${upsetClass}">
-      <div class="game-team ${t1Class}">
+    <div class="game-card${game.is_upset ? ' upset' : ''}">
+      <div class="game-team${t1IsPick ? ' is-pick' : ' not-pick'}">
         <div class="game-team-main">
-          <span class="team-seed ${seedClass(g.team1_seed)}">${g.team1_seed}</span>
-          <span class="team-name">${g.team1.replace(/^\(\d+\)\s*/, '')}</span>
+          <span class="team-seed ${seedCls(game.team1.seed)}">${game.team1.seed}</span>
+          <span class="team-name">${game.team1.name}</span>
         </div>
-        <span class="win-prob ${t1ProbClass}">${t1Prob}%</span>
+        <div class="game-team-right">
+          ${t1IsPick ? pickBadge : ''}
+          <span class="win-prob ${probCls(parseFloat(t1ProbPct))}">${t1ProbPct}%</span>
+        </div>
       </div>
-      <div class="game-team ${t2Class}">
+      <div class="game-team${t1IsPick ? ' not-pick' : ' is-pick'}">
         <div class="game-team-main">
-          <span class="team-seed ${seedClass(g.team2_seed)}">${g.team2_seed}</span>
-          <span class="team-name">${g.team2.replace(/^\(\d+\)\s*/, '')}</span>
+          <span class="team-seed ${seedCls(game.team2.seed)}">${game.team2.seed}</span>
+          <span class="team-name">${game.team2.name}</span>
         </div>
-        <span class="win-prob ${t2ProbClass}">${t2Prob}%</span>
+        <div class="game-team-right">
+          ${!t1IsPick ? pickBadge : ''}
+          <span class="win-prob ${probCls(parseFloat(t2ProbPct))}">${t2ProbPct}%</span>
+        </div>
       </div>
+      ${miniStats(game.team1, game.team2)}
       <div class="game-meta">
-        <span>${g.region}</span>
-        <span>${g.round}</span>
-        ${g.is_upset ? '<span class="upset-badge">Upset</span>' : ''}
+        <span>${game.region}</span>
+        ${game.is_upset ? '<span class="upset-badge">Upset pick</span>' : ''}
       </div>
     </div>`;
 }
 
-function seedClass(seed) {
+function miniStats(t1, t2) {
+  const defs = [
+    { label: 'Barthag', v1: t1.barthag, v2: t2.barthag, higherWins: true,  fmt: v => v.toFixed(3) },
+    { label: 'Adj OE',  v1: t1.adj_oe,  v2: t2.adj_oe,  higherWins: true,  fmt: v => v.toFixed(1) },
+    { label: 'Adj DE',  v1: t1.adj_de,  v2: t2.adj_de,  higherWins: false, fmt: v => v.toFixed(1) },
+  ].filter(d => d.v1 != null && d.v2 != null);
+
+  if (defs.length === 0) return '';
+
+  const items = defs.map(d => {
+    const t1Better = d.higherWins ? d.v1 > d.v2 : d.v1 < d.v2;
+    return `
+      <div class="mini-stat">
+        <span class="mini-stat-label">${d.label}</span>
+        <span class="mini-stat-pair">
+          <span class="${t1Better ? 'ms-edge' : ''}">${d.fmt(d.v1)}</span>
+          <span class="ms-sep">·</span>
+          <span class="${!t1Better ? 'ms-edge' : ''}">${d.fmt(d.v2)}</span>
+        </span>
+      </div>`;
+  }).join('');
+
+  return `<div class="game-mini-stats">${items}</div>`;
+}
+
+// ── Helpers ──
+
+function seedCls(seed) {
   if (seed <= 4) return 'top-seed';
   if (seed <= 8) return 'mid-seed';
   return 'low-seed';
 }
 
-// ── Upset Alerts ──
-function renderUpsetAlerts() {
-  const container = document.getElementById('upset-alerts');
-  const upsets = [];
-  bracketData.rounds.forEach(r => {
-    r.games.forEach(g => {
-      if (g.is_upset) upsets.push(g);
-    });
-  });
-  if (upsets.length === 0) {
-    container.innerHTML = '<p class="empty-state">No upsets predicted.</p>';
-    return;
-  }
-  container.innerHTML = upsets.map(g => gameCardHTML(g)).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SECTION 2: LOYO BACKTEST VALIDATION (2018-2024)
-// ═══════════════════════════════════════════════════════════════════
-
-function renderBacktest() {
-  renderHeadlineMetrics();
-  renderKaggleMetrics();
-  renderESPNMetrics();
-  renderCalibrationChart();
-  renderPerYearTable();
-  renderRoundAccuracyChart();
-  renderIntegrityNote();
-}
-
-// ── Headline Metrics ──
-function renderHeadlineMetrics() {
-  const container = document.getElementById('headline-metrics');
-  const o = validationData.overall;
-  const bt = dashboardData.backtest;
-
-  const metrics = [
-    { value: (o.accuracy * 100).toFixed(1) + '%', label: 'Overall Accuracy', tone: 'metric-tone-emerald' },
-    { value: o.brier_score.toFixed(4), label: 'Brier Score', tone: 'metric-tone-sky' },
-    { value: o.log_loss.toFixed(4), label: 'Log Loss', tone: 'metric-tone-ink' },
-    { value: o.n_games, label: 'Games Tested', tone: 'metric-tone-ink' },
-    { value: bt.kaggle?.estimated_rank || 'N/A', label: 'Est. Kaggle Rank', tone: 'metric-tone-amber' },
-    { value: bt.espn_pool ? '#' + bt.espn_pool.rank_position + '/' + bt.espn_pool.pool_size : 'N/A', label: 'ESPN Pool Rank', tone: 'metric-tone-brick' },
-  ];
-
-  container.innerHTML = metrics.map(m => `
-    <div class="metric-card">
-      <div class="metric-value ${m.tone}">${m.value}</div>
-      <div class="metric-label">${m.label}</div>
-    </div>`).join('');
-}
-
-// ── Kaggle Metrics ──
-function renderKaggleMetrics() {
-  const container = document.getElementById('kaggle-metrics');
-  const k = dashboardData.backtest.kaggle;
-  if (!k) { container.innerHTML = '<p class="empty-state">No Kaggle data available.</p>'; return; }
-
-  const rows = [
-    { label: 'Estimated Rank', value: k.estimated_rank, cls: 'great' },
-    { label: 'Brier Score', value: k.brier?.toFixed(4), cls: 'good' },
-    { label: 'Round-Weighted Brier', value: k.round_weighted_brier?.toFixed(4), cls: '' },
-    { label: 'Accuracy', value: (k.accuracy * 100).toFixed(1) + '%', cls: 'good' },
-  ];
-
-  container.innerHTML = rows.map(r => `
-    <div class="stat-row">
-      <span class="stat-label">${r.label}</span>
-      <span class="stat-value ${r.cls}">${r.value}</span>
-    </div>`).join('');
-}
-
-// ── ESPN Pool Metrics ──
-function renderESPNMetrics() {
-  const container = document.getElementById('espn-metrics');
-  const e = dashboardData.backtest.espn_pool;
-  if (!e) { container.innerHTML = '<p class="empty-state">No ESPN pool data available.</p>'; return; }
-
-  const percentile = ((1 - e.rank_position / e.pool_size) * 100).toFixed(0);
-  const rows = [
-    { label: 'Pool Size', value: e.pool_size, cls: '' },
-    { label: 'Rank Position', value: '#' + e.rank_position, cls: 'good' },
-    { label: 'Percentile', value: percentile + 'th', cls: 'great' },
-    { label: 'Total Score', value: e.score.toLocaleString(), cls: 'good' },
-  ];
-
-  container.innerHTML = rows.map(r => `
-    <div class="stat-row">
-      <span class="stat-label">${r.label}</span>
-      <span class="stat-value ${r.cls}">${r.value}</span>
-    </div>`).join('');
-}
-
-// ── Calibration Chart ──
-function renderCalibrationChart() {
-  const ctx = document.getElementById('calibration-chart').getContext('2d');
-  const cal = validationData.calibration;
-  const labels = cal.map(c => c.bin_center);
-  const predicted = cal.map(c => c.predicted_avg);
-  const actual = cal.map(c => c.actual_avg);
-  const counts = cal.map(c => c.count);
-
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels.map(l => (l * 100).toFixed(0) + '%'),
-      datasets: [
-        {
-          label: 'Perfect Calibration',
-          data: labels,
-          borderColor: CHART_COLORS.tick,
-          borderDash: [6, 4],
-          borderWidth: 1.5,
-          pointRadius: 0,
-          fill: false,
-        },
-        {
-          label: 'Predicted Avg',
-          data: predicted,
-          borderColor: CHART_COLORS.accent,
-          backgroundColor: CHART_COLORS.accentFill,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointBackgroundColor: CHART_COLORS.accent,
-          fill: false,
-        },
-        {
-          label: 'Actual Win Rate',
-          data: actual,
-          borderColor: CHART_COLORS.gold,
-          backgroundColor: CHART_COLORS.goldFill,
-          borderWidth: 2,
-          pointRadius: 5,
-          pointBackgroundColor: CHART_COLORS.gold,
-          fill: false,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          title: { display: true, text: 'Predicted Probability Bin', color: CHART_COLORS.axis },
-          ticks: { color: CHART_COLORS.tick },
-          grid: { color: CHART_COLORS.grid },
-        },
-        y: {
-          min: 0, max: 1,
-          title: { display: true, text: 'Frequency / Probability', color: CHART_COLORS.axis },
-          ticks: { color: CHART_COLORS.tick, callback: v => (v * 100) + '%' },
-          grid: { color: CHART_COLORS.grid },
-        },
-      },
-      plugins: {
-        legend: { labels: { color: CHART_COLORS.legend } },
-        tooltip: {
-          callbacks: {
-            afterLabel: function(ctx) {
-              if (ctx.datasetIndex === 2) {
-                return 'n = ' + counts[ctx.dataIndex];
-              }
-            }
-          }
-        }
-      },
-    },
-  });
-}
-
-// ── Per-Year Table ──
-function renderPerYearTable() {
-  const tbody = document.getElementById('per-year-body');
-  const years = validationData.per_year;
-
-  tbody.innerHTML = years.map(y => {
-    const skillColor = y.skill_score >= 0 ? 'table-positive' : 'table-negative';
-    const skillSign = y.skill_score >= 0 ? '+' : '';
-    return `
-      <tr>
-        <td class="year-cell">${y.year}</td>
-        <td>${y.n_games}</td>
-        <td class="table-positive">${(y.accuracy * 100).toFixed(1)}%</td>
-        <td>${y.brier_score.toFixed(4)}</td>
-        <td class="table-muted">${y.seed_baseline_brier.toFixed(4)}</td>
-        <td class="${skillColor}">${skillSign}${(y.skill_score * 100).toFixed(1)}%</td>
-        <td>${y.upsets_correctly_predicted}/${y.upsets_actual}</td>
-      </tr>`;
-  }).join('');
-}
-
-// ── Round Accuracy Chart ──
-function renderRoundAccuracyChart() {
-  const canvas = document.getElementById('round-accuracy-chart');
-  const ctx = canvas.getContext('2d');
-
-  // Try model_metrics first, then aggregate from per-year round_breakdowns
-  let ra = modelMetrics.round_accuracy || {};
-  if (Object.keys(ra).length === 0 && validationData.per_year) {
-    const agg = {};
-    validationData.per_year.forEach(y => {
-      const rb = y.round_breakdown || {};
-      Object.entries(rb).forEach(([round, stats]) => {
-        if (!agg[round]) agg[round] = { correct: 0, total: 0 };
-        agg[round].correct += stats.correct || 0;
-        agg[round].total += stats.total || 0;
-      });
-    });
-    Object.entries(agg).forEach(([round, s]) => {
-      if (s.total > 0) ra[round] = { accuracy: s.correct / s.total, total: s.total };
-    });
-  }
-
-  const labels = Object.keys(ra);
-  if (labels.length === 0) {
-    canvas.parentElement.innerHTML = '<p class="empty-state">No round-level accuracy data available yet. Run the backtest pipeline to generate this data.</p>';
-    return;
-  }
-  const accs = labels.map(l => ra[l].accuracy);
-  const totals = labels.map(l => ra[l].total);
-
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Accuracy',
-        data: accs,
-        backgroundColor: accs.map(a => a >= 0.75 ? CHART_COLORS.greenFill : a >= 0.65 ? CHART_COLORS.yellowFill : CHART_COLORS.redFill),
-        borderColor: accs.map(a => a >= 0.75 ? CHART_COLORS.green : a >= 0.65 ? CHART_COLORS.yellow : CHART_COLORS.red),
-        borderWidth: 1.5,
-        borderRadius: 6,
-      }],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          min: 0, max: 1,
-          ticks: { color: CHART_COLORS.tick, callback: v => (v * 100) + '%' },
-          grid: { color: CHART_COLORS.grid },
-          title: { display: true, text: 'Accuracy', color: CHART_COLORS.axis },
-        },
-        x: {
-          ticks: { color: CHART_COLORS.legend },
-          grid: { display: false },
-        },
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              const idx = ctx.dataIndex;
-              return `${(ctx.raw * 100).toFixed(1)}% (${totals[idx]} games)`;
-            }
-          }
-        }
-      },
-    },
-  });
-}
-
-// ── Integrity Note ──
-function renderIntegrityNote() {
-  const el = document.getElementById('integrity-note');
-  const integrity = dashboardData.backtest.integrity;
-  if (integrity) {
-    el.innerHTML = `
-      <strong>Level ${integrity.level}:</strong> ${integrity.note}<br>
-      <span class="meta-note">Source: ${integrity.source}</span>
-    `;
-  } else {
-    el.textContent = 'No integrity metadata available. Backtest results should be interpreted as retrospective.';
-  }
+function probCls(pct) {
+  if (pct >= 70) return 'high';
+  if (pct >= 52) return 'mid';
+  return 'low';
 }
