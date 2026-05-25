@@ -1979,7 +1979,7 @@ def _run_one_year(
     scoring_vector,
     opponent_strategy="shared",
     pool_blend_weight=0.7,
-    pa_trials=200,
+    pa_trials=500,
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -3152,6 +3152,20 @@ def _run_one_year(
                 from src.optimization.bracket_construction import construct_bracket
 
                 one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
+
+                # Sort 1-seeds by regional path difficulty (easiest draw first).
+                # Difficulty = sum of Barthag for seeds 2, 3, 4 in the same region.
+                # Lower total = weaker opposition = easier path to the Final Four.
+                # The MC selection loop uses strict > so the first candidate in
+                # the list wins ties — easiest-path 1-seed is the correct prior.
+                def _path_difficulty(team_id: str) -> float:
+                    r = regions[team_id]
+                    return sum(
+                        barthag.get(tid, 0.5) for tid, s in seeds.items() if regions.get(tid) == r and s in (2, 3, 4)
+                    )
+
+                one_seed_teams = sorted(one_seed_teams, key=_path_difficulty)
+
                 _pa_rng = np.random.default_rng(77777 + year)
 
                 _pa_candidates: list[tuple[np.ndarray, str]] = []  # (bracket, label)
@@ -3198,7 +3212,9 @@ def _run_one_year(
 
                 _pa_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
 
-                # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
+                # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5).
+                # one_seed_teams is sorted easiest-path-first so the easiest-path
+                # 1-seed wins MC tie-breaks (selector uses strict >).
                 for forced in one_seed_teams:
                     _pa_try_add(
                         f"tv_champ={forced}",
@@ -3206,6 +3222,22 @@ def _run_one_year(
                         round_probs=torvik_rp,
                         risk_level=0.5,
                         forced_champion=forced,
+                    )
+
+                # (a2) Easiest-path 1-seed × full risk sweep.
+                # Step (a) only forces each 1-seed at risk=0.5. The easiest-path
+                # 1-seed gets candidates at all remaining risk levels so the
+                # selector can find the optimal construction for that team.
+                _easiest_path_champ = one_seed_teams[0]
+                for _risk in _pa_risk_levels:
+                    if _risk == 0.5:
+                        continue  # already added in step (a)
+                    _pa_try_add(
+                        f"tv_easiest_path_risk={_risk}",
+                        mode="region_top_n",
+                        round_probs=torvik_rp,
+                        risk_level=_risk,
+                        forced_champion=_easiest_path_champ,
                     )
 
                 # (b) Risk sweeps × prob bases × region_top_n (no forced champ)
@@ -3767,7 +3799,7 @@ def run_backtest(
     opponent_strategy: str = "shared",
     eval_start_year: int = None,
     pool_blend_weight: float = 0.7,
-    pa_trials: int = 200,
+    pa_trials: int = 500,
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -4151,8 +4183,8 @@ def main():
     parser.add_argument(
         "--pa-trials",
         type=int,
-        default=200,
-        help="MC trials per candidate in pool-aware selection (default 200). "
+        default=500,
+        help="MC trials per candidate in pool-aware selection (default 500). "
         "Higher values reduce selection noise but increase runtime linearly. "
         "Recommended: 500-1000 for final production runs.",
     )
