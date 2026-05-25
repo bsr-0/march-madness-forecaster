@@ -1,0 +1,27 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - heading "🏀 March Madness Forecaster" [level=1] [ref=e6]
+        - paragraph [ref=e7]: ML-powered NCAA tournament predictions
+      - generic [ref=e8]:
+        - generic [ref=e9]: Blended Barthag-Elo Ensemble
+        - generic [ref=e10]: "Training: 2005–2024 · 100k+ games"
+  - navigation [ref=e11]:
+    - generic [ref=e13]:
+      - button "2026 Predictions" [ref=e14] [cursor=pointer]
+      - button "LOYO Backtest (2018–2024)" [ref=e15] [cursor=pointer]
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - heading "Championship Probabilities" [level=2] [ref=e18]
+      - paragraph [ref=e19]: Top contenders ranked by simulated championship win probability
+    - generic [ref=e20]:
+      - heading "Predicted Bracket" [level=2] [ref=e21]
+      - paragraph [ref=e22]: Full tournament simulation — select a round to view
+    - generic [ref=e23]:
+      - heading "Predicted Upsets" [level=2] [ref=e24]
+      - paragraph [ref=e25]: Games where the model picks the lower seed to win
+  - contentinfo [ref=e26]:
+    - generic [ref=e27]:
+      - paragraph [ref=e28]: March Madness Forecaster · Built with leave-year-out cross-validation · No data leakage
+      - paragraph [ref=e29]: "Model: Blended Barthag-Elo Ensemble with Seed Priors and Temperature Calibration"
