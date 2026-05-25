@@ -3,217 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>March Madness Forecaster</title>
+  <title>2026 Bracket Picker — March Madness Forecaster</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
 
-  <header class="hero-shell">
-    <div class="hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow">2026 Tournament Desk</p>
-        <h1>March Madness Forecaster</h1>
-        <p class="hero-deck">
-          A bracket-first forecast board for title equity, upset pressure, and honest holdout results.
-          Built for people who want more than a generic "model says Team X" page.
-        </p>
-      </div>
-
-      <aside class="hero-aside">
-        <div class="hero-chip">No leakage</div>
-        <div class="hero-chip">LOYO validation</div>
-        <div class="hero-chip">Kaggle + pool mode</div>
-      </aside>
-    </div>
-
-    <div class="hero-rail">
-      <article class="rail-card">
-        <span class="rail-label">Forecast Style</span>
-        <strong>Bracket board, not a black box</strong>
-        <p>Probabilities, round filters, and upset reads in one place.</p>
-      </article>
-      <article class="rail-card">
-        <span class="rail-label">Training Window</span>
-        <strong>Historical games, tournament honesty</strong>
-        <p>Cross-validation is visible, not hidden behind a single score.</p>
-      </article>
-      <article class="rail-card">
-        <span class="rail-label">Decision Focus</span>
-        <strong>Useful for picks, not just model bragging</strong>
-        <p>Kaggle and pool performance live beside calibration and accuracy.</p>
-      </article>
+  <header class="page-header">
+    <div class="page-header-inner">
+      <p class="eyebrow">2026 Tournament</p>
+      <h1>Bracket Picker</h1>
+      <p class="page-tagline">
+        Choose a pick style — pool-optimized, stat-driven, or preference-based — then browse the full bracket
+        with per-game recommendations and key stats side by side.
+      </p>
     </div>
   </header>
 
-  <main class="dashboard-shell">
-    <nav class="tabs-shell">
-      <button id="tab-predictions" onclick="switchTab('predictions')" class="tab-btn active">
-        2026 Forecast Board
-      </button>
-      <button id="tab-backtest" onclick="switchTab('backtest')" class="tab-btn">
-        Holdout Record
-      </button>
-    </nav>
+  <main class="page-main">
 
-    <section id="section-predictions" class="dashboard-section">
-      <div class="section-head">
-        <div>
-          <p class="section-kicker">Current Tournament View</p>
-          <h2>Championship board and bracket path</h2>
-        </div>
-        <p class="section-note">Read this like a selection-room wall: who owns the title path, where the bracket bends, and where the model sees stress.</p>
-      </div>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Title Race</p>
-            <h3>Championship probabilities</h3>
-          </div>
-          <p>Top contenders ranked by simulated championship share.</p>
-        </div>
-        <div id="champ-probs" class="champ-grid"></div>
-      </section>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Bracket Board</p>
-            <h3>Predicted bracket</h3>
-          </div>
-          <p>Filter by round or region to trace the path the model expects.</p>
-        </div>
-        <div id="round-selector" class="filter-strip"></div>
-        <div id="region-filter" class="filter-strip filter-strip-secondary"></div>
-        <div id="bracket-games" class="games-grid"></div>
-      </section>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Pressure Points</p>
-            <h3>Predicted upsets</h3>
-          </div>
-          <p>Lower-seed wins the model is willing to stand behind.</p>
-        </div>
-        <div id="upset-alerts" class="games-grid"></div>
-      </section>
+    <!-- Strategy selector -->
+    <section class="strategy-section">
+      <p class="section-label">Pick your approach</p>
+      <div class="strategy-strip" id="strategy-strip"></div>
+      <div class="strategy-detail" id="strategy-detail"></div>
     </section>
 
-    <section id="section-backtest" class="dashboard-section hidden">
-      <div class="section-head">
-        <div>
-          <p class="section-kicker">Validation Ledger</p>
-          <h2>How the forecast held up out of sample</h2>
-        </div>
-        <p class="section-note">This is the evidence wall: tournament holdouts, Kaggle-style scoring, pool outcomes, calibration shape, and per-year variance.</p>
+    <!-- Champion path -->
+    <section class="path-section">
+      <p class="section-label">Projected path to the title</p>
+      <div class="path-scroll">
+        <div class="path-flow" id="path-flow"></div>
       </div>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">LOYO Summary</p>
-            <h3>Headline validation metrics</h3>
-          </div>
-          <p>Leave-one-year-out across 2018-2024, excluding 2020. 2025 fold remains pending the latest rerun.</p>
-        </div>
-        <div id="headline-metrics" class="headline-grid"></div>
-      </section>
-
-      <section class="two-up-grid">
-        <article class="content-panel compact-panel">
-          <div class="panel-head">
-            <div>
-              <p class="panel-kicker">Competition Readout</p>
-              <h3>Kaggle performance</h3>
-            </div>
-          </div>
-          <div id="kaggle-metrics"></div>
-        </article>
-
-        <article class="content-panel compact-panel">
-          <div class="panel-head">
-            <div>
-              <p class="panel-kicker">Pool Readout</p>
-              <h3>ESPN simulation</h3>
-            </div>
-          </div>
-          <div id="espn-metrics"></div>
-        </article>
-      </section>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Reliability</p>
-            <h3>Calibration plot</h3>
-          </div>
-          <p>Predicted probability against actual win rate. The closer to the diagonal, the more trustworthy the confidence.</p>
-        </div>
-        <div class="chart-wrap chart-wrap-wide">
-          <canvas id="calibration-chart"></canvas>
-        </div>
-      </section>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Tournament Ledger</p>
-            <h3>Per-year breakdown</h3>
-          </div>
-          <p>Each holdout year, its baseline, and how much skill was actually earned.</p>
-        </div>
-        <div class="table-wrap">
-          <table id="per-year-table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th>Games</th>
-                <th>Accuracy</th>
-                <th>Brier</th>
-                <th>Seed Baseline</th>
-                <th>Skill</th>
-                <th>Upsets</th>
-              </tr>
-            </thead>
-            <tbody id="per-year-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="content-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Round Texture</p>
-            <h3>Round-by-round accuracy</h3>
-          </div>
-          <p>Where the model holds its edge and where the bracket gets noisy.</p>
-        </div>
-        <div class="chart-wrap">
-          <canvas id="round-accuracy-chart"></canvas>
-        </div>
-      </section>
-
-      <section class="content-panel integrity-panel">
-        <div class="panel-head">
-          <div>
-            <p class="panel-kicker">Governance</p>
-            <h3>Data integrity guarantee</h3>
-          </div>
-        </div>
-        <p id="integrity-note"></p>
-      </section>
     </section>
+
+    <!-- Bracket board -->
+    <section class="bracket-section">
+      <div class="bracket-header">
+        <p class="section-label">Bracket board</p>
+        <div class="round-tabs" id="round-tabs"></div>
+      </div>
+      <div class="bracket-body" id="bracket-body"></div>
+    </section>
+
+    <!-- Performance note -->
+    <section class="perf-section">
+      <p class="perf-note">
+        <strong>Pool Optimizer</strong> is validated via 14-year leave-one-year-out backtest (2011–2025, excl. 2020).
+        Against a simulated N≈30 pool it achieves <strong>11.9% P(1st)</strong> vs a 3.1% seed baseline. p&thinsp;=&thinsp;0.008.
+        The <strong>Stat-Driven</strong> lens approximates meta_region (~8% P(1st), p&thinsp;&lt;&thinsp;0.001).
+        Chalk, Upset Year, and stat-lens strategies are preference filters with no pool-backtest guarantee.
+      </p>
+    </section>
+
   </main>
 
   <footer class="site-footer">
-    <p>March Madness Forecaster</p>
-    <p>Holdout-first validation, bracket-aware presentation, and zero-interest in leaking future information.</p>
+    <span>March Madness Forecaster · 2026</span>
+    <span>Backtested bracket models for pool competition</span>
   </footer>
 
   <script src="app.js"></script>
