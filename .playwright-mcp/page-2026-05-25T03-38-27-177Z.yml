@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - paragraph [ref=e4]: 2026 Tournament
+      - heading "Bracket Picker" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Choose a pick style — pool-optimized, stat-driven, or preference-based — then browse the full bracket with per-game recommendations and key stats side by side.
+  - main [ref=e7]:
+    - paragraph [ref=e9]: Pick your approach
+    - paragraph [ref=e11]: Projected path to the title
+    - paragraph [ref=e14]: Bracket board
+    - paragraph [ref=e16]:
+      - strong [ref=e17]: Pool Optimizer
+      - text: is validated via 14-year leave-one-year-out backtest (2011–2025, excl. 2020). Against a simulated N≈30 pool it achieves
+      - strong [ref=e18]: 11.9% P(1st)
+      - text: vs a 3.1% seed baseline. p = 0.008. The
+      - strong [ref=e19]: Stat-Driven
+      - text: lens approximates meta_region (~8% P(1st), p < 0.001). Chalk, Upset Year, and stat-lens strategies are preference filters with no pool-backtest guarantee.
+  - contentinfo [ref=e20]: March Madness Forecaster · 2026 Backtested bracket models for pool competition
