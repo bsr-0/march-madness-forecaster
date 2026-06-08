@@ -9,19 +9,25 @@
     {
       "matchup": "8 vs 9",
       "games": 24,
-      "upsets": 14,
-      "upset_rate": 0.5833
+      "upsets": 17,
+      "upset_rate": 0.7083
     },
     {
       "matchup": "2 vs 3",
       "games": 11,
-      "upsets": 6,
-      "upset_rate": 0.5455
+      "upsets": 7,
+      "upset_rate": 0.6364
     },
     {
       "matchup": "1 vs 11",
       "games": 4,
       "upsets": 2,
+      "upset_rate": 0.5
+    },
+    {
+      "matchup": "6 vs 11",
+      "games": 24,
+      "upsets": 12,
       "upset_rate": 0.5
     },
     {
@@ -37,16 +43,22 @@
       "upset_rate": 0.4286
     },
     {
-      "matchup": "6 vs 11",
+      "matchup": "7 vs 10",
+      "games": 24,
+      "upsets": 10,
+      "upset_rate": 0.4167
+    },
+    {
+      "matchup": "1 vs 5",
+      "games": 11,
+      "upsets": 4,
+      "upset_rate": 0.3636
+    },
+    {
+      "matchup": "5 vs 12",
       "games": 24,
       "upsets": 8,
       "upset_rate": 0.3333
-    },
-    {
-      "matchup": "7 vs 10",
-      "games": 24,
-      "upsets": 7,
-      "upset_rate": 0.2917
     },
     {
       "matchup": "2 vs 7",
@@ -64,6 +76,12 @@
       "matchup": "1 vs 8",
       "games": 8,
       "upsets": 2,
+      "upset_rate": 0.25
+    },
+    {
+      "matchup": "4 vs 13",
+      "games": 24,
+      "upsets": 6,
       "upset_rate": 0.25
     },
     {
@@ -85,34 +103,28 @@
       "upset_rate": 0.2
     },
     {
-      "matchup": "1 vs 5",
-      "games": 11,
-      "upsets": 2,
-      "upset_rate": 0.1818
-    },
-    {
-      "matchup": "4 vs 13",
-      "games": 24,
-      "upsets": 4,
-      "upset_rate": 0.1667
-    },
-    {
-      "matchup": "5 vs 12",
-      "games": 24,
-      "upsets": 4,
-      "upset_rate": 0.1667
-    },
-    {
       "matchup": "1 vs 3",
       "games": 7,
       "upsets": 1,
       "upset_rate": 0.1429
     },
     {
+      "matchup": "2 vs 15",
+      "games": 24,
+      "upsets": 3,
+      "upset_rate": 0.125
+    },
+    {
       "matchup": "1 vs 4",
       "games": 9,
       "upsets": 1,
       "upset_rate": 0.1111
+    },
+    {
+      "matchup": "1 vs 16",
+      "games": 24,
+      "upsets": 2,
+      "upset_rate": 0.0833
     },
     {
       "matchup": "3 vs 14",
@@ -125,18 +137,6 @@
       "games": 15,
       "upsets": 1,
       "upset_rate": 0.0667
-    },
-    {
-      "matchup": "1 vs 16",
-      "games": 24,
-      "upsets": 1,
-      "upset_rate": 0.0417
-    },
-    {
-      "matchup": "2 vs 15",
-      "games": 24,
-      "upsets": 1,
-      "upset_rate": 0.0417
     },
     {
       "matchup": "1 vs 2",

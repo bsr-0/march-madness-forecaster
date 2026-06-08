@@ -10,88 +10,88 @@
       2023,
       2024
     ],
-    "overall_accuracy": 0.7725,
-    "overall_brier": 0.163,
+    "overall_accuracy": 0.6965,
+    "overall_brier": 0.1977,
     "best_year": 2019,
-    "worst_year": 2022
+    "worst_year": 2021
   },
   "prospective_evaluation": null,
   "calibration": [
     {
       "bin_center": 0.05,
-      "predicted_avg": 0.0827,
-      "actual_avg": 0.3333,
-      "count": 3
+      "predicted_avg": 0.0749,
+      "actual_avg": 0.5,
+      "count": 4
     },
     {
       "bin_center": 0.15,
-      "predicted_avg": 0.1565,
-      "actual_avg": 0.6667,
-      "count": 3
+      "predicted_avg": 0.1492,
+      "actual_avg": 0.75,
+      "count": 4
     },
     {
       "bin_center": 0.25,
-      "predicted_avg": 0.2597,
-      "actual_avg": 0.6,
+      "predicted_avg": 0.2461,
+      "actual_avg": 0.8,
       "count": 10
     },
     {
       "bin_center": 0.35,
-      "predicted_avg": 0.3614,
-      "actual_avg": 0.625,
+      "predicted_avg": 0.3448,
+      "actual_avg": 0.75,
       "count": 16
     },
     {
       "bin_center": 0.45,
-      "predicted_avg": 0.4534,
-      "actual_avg": 0.6333,
-      "count": 30
+      "predicted_avg": 0.454,
+      "actual_avg": 0.7436,
+      "count": 39
     },
     {
       "bin_center": 0.55,
-      "predicted_avg": 0.5555,
-      "actual_avg": 0.7576,
-      "count": 66
+      "predicted_avg": 0.5497,
+      "actual_avg": 0.7302,
+      "count": 63
     },
     {
       "bin_center": 0.65,
-      "predicted_avg": 0.65,
-      "actual_avg": 0.7246,
+      "predicted_avg": 0.6452,
+      "actual_avg": 0.7101,
       "count": 69
     },
     {
       "bin_center": 0.75,
-      "predicted_avg": 0.7535,
-      "actual_avg": 0.9286,
-      "count": 56
+      "predicted_avg": 0.7486,
+      "actual_avg": 0.8154,
+      "count": 65
     },
     {
       "bin_center": 0.85,
-      "predicted_avg": 0.845,
-      "actual_avg": 0.8824,
-      "count": 51
+      "predicted_avg": 0.8431,
+      "actual_avg": 0.7895,
+      "count": 57
     },
     {
       "bin_center": 0.95,
-      "predicted_avg": 0.9464,
-      "actual_avg": 0.9595,
-      "count": 74
+      "predicted_avg": 0.9478,
+      "actual_avg": 0.9067,
+      "count": 75
     }
   ],
   "round_accuracy": {
     "Round of 64": {
-      "accuracy": 0.8073,
-      "correct": 155,
+      "accuracy": 0.7188,
+      "correct": 138,
       "total": 192
     },
     "Round of 32": {
-      "accuracy": 0.7812,
-      "correct": 75,
+      "accuracy": 0.7396,
+      "correct": 71,
       "total": 96
     },
     "Sweet 16": {
-      "accuracy": 0.6458,
-      "correct": 31,
+      "accuracy": 0.5625,
+      "correct": 27,
       "total": 48
     },
     "Elite 8": {
@@ -100,8 +100,8 @@
       "total": 24
     },
     "Final Four": {
-      "accuracy": 0.9167,
-      "correct": 11,
+      "accuracy": 0.8333,
+      "correct": 10,
       "total": 12
     },
     "Championship": {

@@ -153,10 +153,6 @@ for t in metrics_2025.get("teams", []):
 print("\n1. Generating 2026 bracket predictions...")
 
 bracket_teams = bracket_2026["teams"]
-team_by_region_seed = {}
-for t in bracket_teams:
-    key = (t["region"], t["seed"])
-    team_by_region_seed[key] = t
 
 # Standard bracket matchups: 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
 R64_MATCHUPS = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
@@ -183,7 +179,9 @@ def predict_game(team_a, team_b):
     prob = blend_prob(ep, sp)
 
     winner = team_a if prob >= 0.5 else team_b
-    win_prob = prob if prob >= 0.5 else 1 - prob
+    # Store team_a's (team1's) probability so app.js can display team1 at
+    # win_prob% and team2 at (1-win_prob)% without needing to know who won.
+    win_prob = prob
 
     return {
         "team1": f"({seed_a}) {team_a['team_name']}",
@@ -202,6 +200,30 @@ def predict_game(team_a, team_b):
         "win_prob": round(win_prob, 4),
         "is_upset": winner["seed"] > min(seed_a, seed_b),
     }
+
+
+# Resolve First Four: raw bracket has 68 teams with 4 play-in pairs sharing
+# the same (region, seed) slot. Simulate each pair and keep only the winner.
+_ff_slots: dict = {}
+_regular_teams = []
+for t in bracket_teams:
+    if t.get("first_four"):
+        _ff_slots.setdefault((t["region"], t["seed"]), []).append(t)
+    else:
+        _regular_teams.append(t)
+
+_ff_winners = []
+for _pair in _ff_slots.values():
+    if len(_pair) == 2:
+        _g = predict_game(_pair[0], _pair[1])
+        _ff_winners.append(_pair[0] if _pair[0]["team_id"] == _g["winner_id"] else _pair[1])
+    else:
+        _ff_winners.extend(_pair)
+
+team_by_region_seed = {}
+for t in _regular_teams + _ff_winners:
+    key = (t["region"], t["seed"])
+    team_by_region_seed[key] = t
 
 
 def simulate_bracket():
