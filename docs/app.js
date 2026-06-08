@@ -273,11 +273,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 //   { id, name, seed, barthag, adj_oe, adj_de, champ_prob, elo_rating }
 // ──────────────────────────────────────────────────────────────────
 
-// Log5 matchup probability given two Barthag values (p = P(beat avg D1)).
-function log5(p1, p2) {
-  const n = p1 * (1 - p2);
-  const d = n + p2 * (1 - p1);
-  return d > 0 ? n / d : 0.5;
+// Blended win probability matching generate_web_data.py's predict_game formula:
+// 70% Elo (Barthag-scaled to 2000-point range) + 30% historical seed probability.
+function matchupWinProb(t1, t2) {
+  const elo1 = t1.barthag * 2000;
+  const elo2 = t2.barthag * 2000;
+  const ep = 1.0 / (1.0 + Math.pow(10, (elo2 - elo1) / 400));
+  const sp = 1.0 / (1.0 + Math.exp(-0.15 * (t2.seed - t1.seed)));
+  return Math.max(0.01, Math.min(0.99, 0.7 * ep + 0.3 * sp));
 }
 
 // Build a rich team object, falling back to inline rating if not in teamIndex.
@@ -343,7 +346,7 @@ function simulate(strategy) {
       for (let i = 0; i < prev.length; i += 2) {
         const w1 = pick(prev[i], strategy);
         const w2 = pick(prev[i + 1], strategy);
-        const wp = log5(w1.barthag, w2.barthag);
+        const wp = matchupWinProb(w1, w2);
         const game = {
           round: roundName, region: reg,
           team1: w1, team2: w2,
@@ -377,7 +380,7 @@ function simulate(strategy) {
 }
 
 function mkGame(round, region, t1, t2, strategy) {
-  const wp = log5(t1.barthag, t2.barthag);
+  const wp = matchupWinProb(t1, t2);
   return { round, region, team1: t1, team2: t2, win_prob: wp, is_upset: upsetCheck(t1, t2, wp) };
 }
 
