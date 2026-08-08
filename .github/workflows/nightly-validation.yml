@@ -1,9 +1,9 @@
 name: Nightly Deep Validation
 
 on:
-  schedule:
-    # Run nightly at 03:00 UTC
-    - cron: "0 3 * * *"
+  # schedule:
+  #   # Run nightly at 03:00 UTC
+  #   - cron: "0 3 * * *"
   workflow_dispatch:
 
 concurrency:
