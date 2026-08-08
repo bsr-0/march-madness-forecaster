@@ -41,11 +41,11 @@ on:
         required: false
         default: true
         type: boolean
-  schedule:
-    # Every Monday at 6:00 UTC during regular season (Nov-Feb)
-    - cron: "0 6 * 11-12,1-2 1"
-    # Daily at 6:00 UTC during March Madness (March and April)
-    - cron: "0 6 * 3-4 *"
+  # schedule:
+  #   # Every Monday at 6:00 UTC during regular season (Nov-Feb)
+  #   - cron: "0 6 * 11-12,1-2 1"
+  #   # Daily at 6:00 UTC during March Madness (March and April)
+  #   - cron: "0 6 * 3-4 *"
 
 concurrency:
   group: data-ingestion
