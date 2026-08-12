@@ -85,10 +85,16 @@ def main():
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
 
-    prob_bases = [("tv", torvik_rp)]
+    # (name, round_probs, rating_dict) — rating_dict is carried alongside each
+    # prob base so the winning candidate's *own* ratings drive its displayed
+    # win_prob (via Log5), instead of every candidate showing generic Torvik
+    # barthag regardless of which base actually picked it.
+    prob_bases = [("tv", torvik_rp, barthag)]
     massey_barthag = load_massey_avg_barthag(YEAR, seeds, PROJECT_ROOT / "data")
     if massey_barthag is not None:
-        prob_bases.append(("mass_avg", build_torvik_round_probabilities(seeds, regions, massey_barthag)))
+        prob_bases.append(
+            ("mass_avg", build_torvik_round_probabilities(seeds, regions, massey_barthag), massey_barthag)
+        )
 
     pick_dist, n_opponents = resolve_opponents(seeds)
     seed_pw = build_seed_probabilities(seeds)
@@ -97,9 +103,9 @@ def main():
     rng = np.random.default_rng(77777 + YEAR)
 
     one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
-    candidates: list[tuple[dict, np.ndarray, str]] = []  # (picks, bool_vector, label)
+    candidates: list[tuple[dict, np.ndarray, str, dict]] = []  # (picks, bool_vector, label, rating_dict)
 
-    def try_add(label: str, **kwargs) -> None:
+    def try_add(label: str, rating: dict, **kwargs) -> None:
         try:
             picks, _champ, _f4, _ev, _var = construct_bracket(
                 seeds=seeds,
@@ -110,7 +116,7 @@ def main():
                 **kwargs,
             )
             bvec = _picks_dict_to_bool_array(picks, first_round)
-            candidates.append((picks, bvec, label))
+            candidates.append((picks, bvec, label, rating))
         except Exception as exc:
             print(f"  candidate '{label}' skipped: {exc}")
 
@@ -118,6 +124,7 @@ def main():
     for forced in one_seed_teams:
         try_add(
             f"tv_champ={forced}",
+            barthag,
             mode="region_top_n",
             round_probs=torvik_rp,
             risk_level=0.5,
@@ -126,9 +133,10 @@ def main():
 
     # (b) Risk sweeps x prob bases x region_top_n (no forced champ)
     for risk in RISK_LEVELS:
-        for pb_name, pb_rp in prob_bases:
+        for pb_name, pb_rp, pb_rating in prob_bases:
             try_add(
                 f"{pb_name}_region_risk={risk}",
+                pb_rating,
                 mode="region_top_n",
                 round_probs=pb_rp,
                 risk_level=risk,
@@ -136,9 +144,10 @@ def main():
 
     # (c) Exhaustive champion search x prob bases x select risks
     for risk in (0.3, 0.5, 0.7):
-        for pb_name, pb_rp in prob_bases:
+        for pb_name, pb_rp, pb_rating in prob_bases:
             try_add(
                 f"{pb_name}_exhaust_risk={risk}",
+                pb_rating,
                 mode="exhaustive_champion",
                 round_probs=pb_rp,
                 risk_level=risk,
@@ -147,11 +156,11 @@ def main():
     # De-duplicate identical brackets (keeps first label)
     seen: set[bytes] = set()
     unique = []
-    for picks, bvec, label in candidates:
+    for picks, bvec, label, rating in candidates:
         key = bvec.tobytes()
         if key not in seen:
             seen.add(key)
-            unique.append((picks, bvec, label))
+            unique.append((picks, bvec, label, rating))
     candidates = unique
 
     if not candidates:
@@ -167,12 +176,13 @@ def main():
             scoring_system=scoring,
         )
         best_label = "fallback"
+        best_rating = barthag
     else:
         # Score each candidate via pool simulation (binary P(1st) estimator) —
         # mirrors mc_pool_backtest.py's meta_region_poolaware selection exactly.
         best_p1 = -1.0
         best_idx = 0
-        for ci, (_picks, bvec, _label) in enumerate(candidates):
+        for ci, (_picks, bvec, _label, _rating) in enumerate(candidates):
             wins = 0
             for _ in range(PA_TRIALS):
                 opp = generate_opponent_brackets(
@@ -203,14 +213,17 @@ def main():
             if p1 > best_p1:
                 best_p1 = p1
                 best_idx = ci
-        best_picks, _bvec, best_label = candidates[best_idx]
+        best_picks, _bvec, best_label, best_rating = candidates[best_idx]
         print(
             f"  Selected {best_label} (best of {len(candidates)} candidates, "
             f"simulated P(1st)={best_p1:.3f})"
         )
 
     team_names = load_team_names()
-    rounds = build_bracket_json(seeds, regions, barthag, torvik_rp, best_picks, team_names)
+    # Use the winning candidate's own ratings for displayed win_prob, not
+    # always generic Torvik barthag — so the percentage actually reflects
+    # whichever prob base drove this specific bracket's picks.
+    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names)
 
     output = {
         "season": YEAR,
