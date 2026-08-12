@@ -240,15 +240,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=dc8aebb').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=dc8aebb').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=dc8aebb').then(r => r.json()),
-      fetch('data/team_profiles.json?v=dc8aebb').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-12').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-12').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-12').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-12').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
       '<p style="padding:48px;font-family:sans-serif;color:#bb4d2d">Failed to load bracket data. ' +
-      'Make sure docs/data/bracket_2026.json and docs/data/team_profiles.json are present.</p>';
+      'Make sure bracket_2026.json, bracket_2026_exhaustive.json, bracket_2026_region.json, ' +
+      'and team_profiles.json are present in docs/data/.</p>';
     return;
   }
 
@@ -406,7 +407,7 @@ function upsetCheck(t1, t2, wp) {
 // Determine the winner of a game for a given strategy.
 function pick(game, strategy) {
   // Pool strategy: use pre-computed result
-  if (game.precomputed_winner_id !== undefined) {
+  if (game.precomputed_winner_id != null) {
     return game.precomputed_winner_id === game.team1.id ? game.team1 : game.team2;
   }
   if (strategy.pick) {
@@ -429,6 +430,7 @@ function getRounds(key) {
 
 // Build the champion's path through every round.
 function championPath(rounds, key) {
+  if (!rounds || rounds.length === 0) return { champ: null, path: [] };
   const strategy = STRATEGIES.find(s => s.key === key);
   const champGame = rounds[rounds.length - 1].games[0];
   const champ = pick(champGame, strategy);
@@ -516,6 +518,7 @@ function renderStrategyDetail() {
 function renderChampionPath(rounds, key) {
   const el = document.getElementById('path-flow');
   const { champ, path } = championPath(rounds, key);
+  if (!champ) { el.innerHTML = '<p>No bracket data available.</p>'; return; }
   const bc = BADGE_COLORS[STRATEGIES.find(s => s.key === key).badge_tone] || BADGE_COLORS.neutral;
 
   const champHTML = `
@@ -594,9 +597,12 @@ function gameCard(game, strategy) {
   const t2ProbPct  = (100 - parseFloat(t1ProbPct)).toFixed(1);
   const bc         = BADGE_COLORS[strategy.badge_tone] || BADGE_COLORS.neutral;
   const pickBadge  = `<span class="pick-badge" style="background:${bc.bg};color:${bc.text}">PICK</span>`;
+  // Upset: strategy is picking the higher-seeded (underdog) team
+  const isUpsetPick = game.team1.seed !== game.team2.seed &&
+    winner.id === (game.team1.seed > game.team2.seed ? game.team1.id : game.team2.id);
 
   return `
-    <div class="game-card${game.is_upset ? ' upset' : ''}">
+    <div class="game-card${isUpsetPick ? ' upset' : ''}">
       <div class="game-team${t1IsPick ? ' is-pick' : ' not-pick'}">
         <div class="game-team-main">
           <span class="team-seed ${seedCls(game.team1.seed)}">${game.team1.seed}</span>
@@ -620,7 +626,7 @@ function gameCard(game, strategy) {
       ${miniStats(game.team1, game.team2)}
       <div class="game-meta">
         <span>${game.region}</span>
-        ${game.is_upset ? '<span class="upset-badge">Upset pick</span>' : ''}
+        ${isUpsetPick ? '<span class="upset-badge">Upset pick</span>' : ''}
       </div>
     </div>`;
 }

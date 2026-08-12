@@ -159,8 +159,39 @@ for t in metrics_2025.get("teams", []):
 print("\n1. Building team lookups...")
 
 bracket_teams = bracket_2026["teams"]
-team_by_region_seed = {}
+
+
+def _ff_winner(team_a, team_b):
+    """Deterministic First Four resolution (same blended formula as mc_predict)."""
+    ra = rating_lookup(ratings_2026, team_a["team_id"])
+    rb = rating_lookup(ratings_2026, team_b["team_id"])
+    ep = elo_win_prob(ra.get("barthag", 0.5) * 2000, rb.get("barthag", 0.5) * 2000)
+    sp = seed_win_prob(team_a["seed"], team_b["seed"])
+    return team_a if blend_prob(ep, sp) >= 0.5 else team_b
+
+
+# Resolve First Four: the raw bracket has 68 teams, with 4 play-in pairs
+# sharing the same (region, seed) slot. Without this, the naive
+# team_by_region_seed dict-build below silently drops one team per pair
+# (last write wins) and corrupts every downstream R64 matchup that depends
+# on the dropped team's slot.
+_ff_slots: dict = {}
+_regular_teams = []
 for t in bracket_teams:
+    if t.get("first_four"):
+        _ff_slots.setdefault((t["region"], t["seed"]), []).append(t)
+    else:
+        _regular_teams.append(t)
+
+_ff_winners = []
+for _pair in _ff_slots.values():
+    if len(_pair) == 2:
+        _ff_winners.append(_ff_winner(_pair[0], _pair[1]))
+    else:
+        _ff_winners.extend(_pair)
+
+team_by_region_seed = {}
+for t in _regular_teams + _ff_winners:
     key = (t["region"], t["seed"])
     team_by_region_seed[key] = t
 
