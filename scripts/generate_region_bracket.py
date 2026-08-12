@@ -14,7 +14,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.generate_exhaustive_bracket import build_bracket_json, load_team_names
+from scripts._bracket_export_common import (
+    build_bracket_json,
+    load_team_names,
+    resolve_pool_consensus,
+)
 from scripts.mc_pool_backtest import (
     ESPN_SCORING,
     _load_torvik_barthag,
@@ -54,14 +58,17 @@ def main():
     )
 
     team_names = load_team_names()
+    pool_pick_dist, opponent_source = resolve_pool_consensus(seeds, YEAR)
+    print(f"  Opponent field for display: {opponent_source or 'unavailable'}")
 
-    rounds = build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names)
+    rounds = build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names, pool_pick_dist)
 
     output = {
         "season": YEAR,
         "generated_at": datetime.now().strftime("%Y-%m-%d"),
         "model": "Torvik Barthag — Region Top-N Beam Search",
         "n_simulations": 10000,
+        "opponent_source": opponent_source,
         "rounds": rounds,
     }
 

@@ -240,10 +240,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-12').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-12').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-12').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-12').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-12b').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-12b').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-12b').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-12b').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
@@ -317,6 +317,8 @@ function precomputedRounds(data) {
       win_prob: g.win_prob,
       is_upset: g.is_upset,
       precomputed_winner_id: g.winner_id,
+      team1_pool_pct: g.team1_pool_pct ?? null,
+      team2_pool_pct: g.team2_pool_pct ?? null,
     })),
   }));
 }
@@ -493,6 +495,10 @@ function renderStrategyStrip() {
 
 // ── Strategy detail panel ──
 
+// Source data behind each precomputed strategy's team1_pool_pct/team2_pool_pct
+// annotations — "what fraction of the opponent field picked this team."
+const OPPONENT_SOURCE_DATA = { pool: () => bracketData, exhaustive: () => exhaustiveData, stat: () => regionData };
+
 function renderStrategyDetail() {
   const el = document.getElementById('strategy-detail');
   const s  = STRATEGIES.find(s => s.key === currentKey);
@@ -506,10 +512,18 @@ function renderStrategyDetail() {
     ? `<span class="sd-perf" style="background:${bc.bg};color:${bc.text}">${s.p_first}% P(1st) historically</span>`
     : '';
 
+  const dataFn = OPPONENT_SOURCE_DATA[currentKey];
+  const opponentSource = dataFn ? dataFn()?.opponent_source : null;
+  const opponentHTML = opponentSource
+    ? `<p class="sd-opponent">"% of pool" on each pick below is from <strong>${opponentSource}</strong> — ` +
+      `what your actual opponents picked, independent of which model built this bracket.</p>`
+    : '';
+
   el.innerHTML = `
     <div class="sd-row">${tagHTML}${perfHTML}</div>
     <p class="sd-desc">${s.description}</p>
     <p class="sd-note">${s.backtest_note}</p>
+    ${opponentHTML}
   `;
 }
 
@@ -610,7 +624,10 @@ function gameCard(game, strategy) {
         </div>
         <div class="game-team-right">
           ${t1IsPick ? pickBadge : ''}
-          <span class="win-prob ${probCls(parseFloat(t1ProbPct))}">${t1ProbPct}%</span>
+          <div class="prob-stack">
+            <span class="win-prob ${probCls(parseFloat(t1ProbPct))}">${t1ProbPct}%</span>
+            ${poolPctLabel(game.team1_pool_pct)}
+          </div>
         </div>
       </div>
       <div class="game-team${t1IsPick ? ' not-pick' : ' is-pick'}">
@@ -620,7 +637,10 @@ function gameCard(game, strategy) {
         </div>
         <div class="game-team-right">
           ${!t1IsPick ? pickBadge : ''}
-          <span class="win-prob ${probCls(parseFloat(t2ProbPct))}">${t2ProbPct}%</span>
+          <div class="prob-stack">
+            <span class="win-prob ${probCls(parseFloat(t2ProbPct))}">${t2ProbPct}%</span>
+            ${poolPctLabel(game.team2_pool_pct)}
+          </div>
         </div>
       </div>
       ${miniStats(game.team1, game.team2)}
@@ -629,6 +649,14 @@ function gameCard(game, strategy) {
         ${isUpsetPick ? '<span class="upset-badge">Upset pick</span>' : ''}
       </div>
     </div>`;
+}
+
+// Small "what the opponent field actually picked" subtext under win_prob.
+// null/undefined means no opponent data for this team/round — render nothing
+// rather than a misleading 0%.
+function poolPctLabel(pct) {
+  if (pct == null) return '';
+  return `<span class="pool-pct">${(pct * 100).toFixed(0)}% of pool</span>`;
 }
 
 function miniStats(t1, t2) {

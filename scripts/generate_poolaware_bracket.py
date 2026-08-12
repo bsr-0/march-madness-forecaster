@@ -26,7 +26,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.generate_exhaustive_bracket import build_bracket_json, load_team_names
+from scripts._bracket_export_common import build_bracket_json, load_team_names
 from scripts.mc_pool_backtest import (
     ESPN_SCORING,
     N_OPPONENTS,
@@ -63,17 +63,18 @@ def resolve_opponents(seeds):
     try:
         pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, YEAR)
         pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
+        source = f"your pool history (N={group_size})"
         print(f"  Opponent source: pool history ({group_size - 1} opponents)")
-        return pick_dist, group_size - 1
+        return pick_dist, group_size - 1, source
     except (FileNotFoundError, KeyError):
         pass
     try:
         pick_dist = build_espn_pick_distribution(YEAR, seeds)
         print(f"  Opponent source: ESPN picks ({N_OPPONENTS} opponents)")
-        return pick_dist, N_OPPONENTS
+        return pick_dist, N_OPPONENTS, "ESPN public picks"
     except FileNotFoundError:
         print(f"  Opponent source: none available — using empty pick distribution ({N_OPPONENTS} opponents)")
-        return {}, N_OPPONENTS
+        return {}, N_OPPONENTS, None
 
 
 def main():
@@ -96,7 +97,7 @@ def main():
             ("mass_avg", build_torvik_round_probabilities(seeds, regions, massey_barthag), massey_barthag)
         )
 
-    pick_dist, n_opponents = resolve_opponents(seeds)
+    pick_dist, n_opponents, opponent_source = resolve_opponents(seeds)
     seed_pw = build_seed_probabilities(seeds)
     first_round = build_first_round_matchups(seeds, regions)
     scoring = dict(ESPN_SCORING)
@@ -222,14 +223,17 @@ def main():
     team_names = load_team_names()
     # Use the winning candidate's own ratings for displayed win_prob, not
     # always generic Torvik barthag — so the percentage actually reflects
-    # whichever prob base drove this specific bracket's picks.
-    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names)
+    # whichever prob base drove this specific bracket's picks. pick_dist here
+    # is already the real opponent field (pool history preferred over ESPN),
+    # so it doubles as the pool-consensus annotation for display.
+    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names, pick_dist)
 
     output = {
         "season": YEAR,
         "generated_at": datetime.now().strftime("%Y-%m-%d"),
         "model": "Region Top-N x Multi-Candidate Pool-Aware Selection (meta_region_poolaware)",
         "n_simulations": PA_TRIALS,
+        "opponent_source": opponent_source,
         "rounds": rounds,
     }
 
