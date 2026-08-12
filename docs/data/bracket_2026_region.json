@@ -3,6 +3,7 @@
   "generated_at": "2026-08-12",
   "model": "Torvik Barthag \u2014 Region Top-N Beam Search",
   "n_simulations": 10000,
+  "opponent_source": "your pool history (N=31)",
   "rounds": [
     {
       "round_name": "Round of 64",
@@ -22,7 +23,9 @@
           "win_prob": 0.9809,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(8) Ohio State",
@@ -39,7 +42,9 @@
           "win_prob": 0.6699,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.5082,
+          "team2_pool_pct": 0.5082
         },
         {
           "team1": "(5) St. John's (NY)",
@@ -56,7 +61,9 @@
           "win_prob": 0.8303,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(4) Kansas",
@@ -73,7 +80,9 @@
           "win_prob": 0.8751,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(6) Louisville",
@@ -90,7 +99,9 @@
           "win_prob": 0.7434,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.4098,
+          "team2_pool_pct": 0.6066
         },
         {
           "team1": "(3) Michigan State",
@@ -107,7 +118,9 @@
           "win_prob": 0.9129,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(7) UCLA",
@@ -124,7 +137,9 @@
           "win_prob": 0.6849,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6721,
+          "team2_pool_pct": 0.3443
         },
         {
           "team1": "(2) Connecticut",
@@ -141,7 +156,9 @@
           "win_prob": 0.9637,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(1) Arizona",
@@ -158,7 +175,9 @@
           "win_prob": 0.987,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(8) Villanova",
@@ -175,7 +194,9 @@
           "win_prob": 0.4728,
           "is_upset": true,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.377,
+          "team2_pool_pct": 0.6393
         },
         {
           "team1": "(5) Wisconsin",
@@ -192,7 +213,9 @@
           "win_prob": 0.8266,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.8689,
+          "team2_pool_pct": 0.1475
         },
         {
           "team1": "(4) Arkansas",
@@ -209,7 +232,9 @@
           "win_prob": 0.8812,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.9672,
+          "team2_pool_pct": 0.0492
         },
         {
           "team1": "(6) BYU",
@@ -226,7 +251,9 @@
           "win_prob": 0.6035,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6393,
+          "team2_pool_pct": 0.377
         },
         {
           "team1": "(3) Gonzaga",
@@ -243,7 +270,9 @@
           "win_prob": 0.9406,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(7) Miami (FL)",
@@ -260,7 +289,9 @@
           "win_prob": 0.5679,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.5082,
+          "team2_pool_pct": 0.5082
         },
         {
           "team1": "(2) Purdue",
@@ -277,7 +308,9 @@
           "win_prob": 0.9717,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(1) Florida",
@@ -294,7 +327,9 @@
           "win_prob": 0.9906,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(8) Clemson",
@@ -311,7 +346,9 @@
           "win_prob": 0.4279,
           "is_upset": true,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.3443,
+          "team2_pool_pct": 0.6721
         },
         {
           "team1": "(5) Vanderbilt",
@@ -328,7 +365,9 @@
           "win_prob": 0.8536,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.9016,
+          "team2_pool_pct": 0.1148
         },
         {
           "team1": "(4) Nebraska",
@@ -345,7 +384,9 @@
           "win_prob": 0.9163,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.8361,
+          "team2_pool_pct": 0.1803
         },
         {
           "team1": "(6) North Carolina",
@@ -362,7 +403,9 @@
           "win_prob": 0.6378,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.377,
+          "team2_pool_pct": 0.6393
         },
         {
           "team1": "(3) Illinois",
@@ -379,7 +422,9 @@
           "win_prob": 0.9636,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(7) Saint Mary's (CA)",
@@ -396,7 +441,9 @@
           "win_prob": 0.5715,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6066,
+          "team2_pool_pct": 0.4098
         },
         {
           "team1": "(2) Houston",
@@ -413,7 +460,9 @@
           "win_prob": 0.9641,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(1) Michigan",
@@ -430,7 +479,9 @@
           "win_prob": 0.9871,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(8) Georgia",
@@ -447,7 +498,9 @@
           "win_prob": 0.5228,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6066,
+          "team2_pool_pct": 0.4098
         },
         {
           "team1": "(5) Texas Tech",
@@ -464,7 +517,9 @@
           "win_prob": 0.8202,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6066,
+          "team2_pool_pct": 0.4098
         },
         {
           "team1": "(4) Alabama",
@@ -481,7 +536,9 @@
           "win_prob": 0.8699,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.8689,
+          "team2_pool_pct": 0.1475
         },
         {
           "team1": "(6) Tennessee",
@@ -498,7 +555,9 @@
           "win_prob": 0.8637,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.7377,
+          "team2_pool_pct": 0.2787
         },
         {
           "team1": "(3) Virginia",
@@ -515,7 +574,9 @@
           "win_prob": 0.9112,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(7) Kentucky",
@@ -532,7 +593,9 @@
           "win_prob": 0.4991,
           "is_upset": true,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 0.6393,
+          "team2_pool_pct": 0.377
         },
         {
           "team1": "(2) Iowa State",
@@ -549,7 +612,9 @@
           "win_prob": 0.9785,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 64"
+          "round": "Round of 64",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         }
       ]
     },
@@ -571,7 +636,9 @@
           "win_prob": 0.8173,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(5) St. John's (NY)",
@@ -588,7 +655,9 @@
           "win_prob": 0.5371,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.7377,
+          "team2_pool_pct": 0.2787
         },
         {
           "team1": "(6) Louisville",
@@ -605,7 +674,9 @@
           "win_prob": 0.4532,
           "is_upset": true,
           "region": "East",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.1475,
+          "team2_pool_pct": 0.7705
         },
         {
           "team1": "(7) UCLA",
@@ -622,7 +693,9 @@
           "win_prob": 0.2969,
           "is_upset": false,
           "region": "East",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.2459,
+          "team2_pool_pct": 0.7377
         },
         {
           "team1": "(1) Arizona",
@@ -639,7 +712,9 @@
           "win_prob": 0.8271,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.9672,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(5) Wisconsin",
@@ -656,7 +731,9 @@
           "win_prob": 0.4611,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.3115,
+          "team2_pool_pct": 0.6721
         },
         {
           "team1": "(6) BYU",
@@ -673,7 +750,9 @@
           "win_prob": 0.3248,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.2131,
+          "team2_pool_pct": 0.6393
         },
         {
           "team1": "(7) Miami (FL)",
@@ -690,7 +769,9 @@
           "win_prob": 0.2099,
           "is_upset": false,
           "region": "West",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.1475,
+          "team2_pool_pct": 0.7705
         },
         {
           "team1": "(1) Florida",
@@ -707,7 +788,9 @@
           "win_prob": 0.7572,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.9672,
+          "team2_pool_pct": 0.0492
         },
         {
           "team1": "(5) Vanderbilt",
@@ -724,7 +807,9 @@
           "win_prob": 0.5704,
           "is_upset": true,
           "region": "South",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.7049,
+          "team2_pool_pct": 0.2787
         },
         {
           "team1": "(6) North Carolina",
@@ -741,7 +826,9 @@
           "win_prob": 0.238,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.2131,
+          "team2_pool_pct": 0.7705
         },
         {
           "team1": "(7) Saint Mary's (CA)",
@@ -758,7 +845,9 @@
           "win_prob": 0.2211,
           "is_upset": false,
           "region": "South",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.082,
+          "team2_pool_pct": 0.9016
         },
         {
           "team1": "(1) Michigan",
@@ -775,7 +864,9 @@
           "win_prob": 0.8706,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 1.0,
+          "team2_pool_pct": 0.0164
         },
         {
           "team1": "(5) Texas Tech",
@@ -792,7 +883,9 @@
           "win_prob": 0.5048,
           "is_upset": true,
           "region": "Midwest",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.4754,
+          "team2_pool_pct": 0.4098
         },
         {
           "team1": "(6) Tennessee",
@@ -809,7 +902,9 @@
           "win_prob": 0.5114,
           "is_upset": true,
           "region": "Midwest",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.3115,
+          "team2_pool_pct": 0.6393
         },
         {
           "team1": "(10) Santa Clara",
@@ -826,7 +921,9 @@
           "win_prob": 0.2249,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Round of 32"
+          "round": "Round of 32",
+          "team1_pool_pct": 0.0164,
+          "team2_pool_pct": 0.9016
         }
       ]
     },
@@ -848,7 +945,9 @@
           "win_prob": 0.7645,
           "is_upset": false,
           "region": "East",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.8689,
+          "team2_pool_pct": 0.0492
         },
         {
           "team1": "(6) Louisville",
@@ -865,7 +964,9 @@
           "win_prob": 0.3919,
           "is_upset": false,
           "region": "East",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.082,
+          "team2_pool_pct": 0.4098
         },
         {
           "team1": "(1) Arizona",
@@ -882,7 +983,9 @@
           "win_prob": 0.754,
           "is_upset": false,
           "region": "West",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.8033,
+          "team2_pool_pct": 0.1475
         },
         {
           "team1": "(3) Gonzaga",
@@ -899,7 +1002,9 @@
           "win_prob": 0.4014,
           "is_upset": false,
           "region": "West",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.3443,
+          "team2_pool_pct": 0.541
         },
         {
           "team1": "(1) Florida",
@@ -916,7 +1021,9 @@
           "win_prob": 0.6418,
           "is_upset": false,
           "region": "South",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.8033,
+          "team2_pool_pct": 0.1475
         },
         {
           "team1": "(3) Illinois",
@@ -933,7 +1040,9 @@
           "win_prob": 0.4742,
           "is_upset": false,
           "region": "South",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.2787,
+          "team2_pool_pct": 0.6393
         },
         {
           "team1": "(1) Michigan",
@@ -950,7 +1059,9 @@
           "win_prob": 0.7652,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.9016,
+          "team2_pool_pct": 0.0492
         },
         {
           "team1": "(6) Tennessee",
@@ -967,7 +1078,9 @@
           "win_prob": 0.377,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Sweet 16"
+          "round": "Sweet 16",
+          "team1_pool_pct": 0.082,
+          "team2_pool_pct": 0.6721
         }
       ]
     },
@@ -989,7 +1102,9 @@
           "win_prob": 0.6675,
           "is_upset": false,
           "region": "East",
-          "round": "Elite 8"
+          "round": "Elite 8",
+          "team1_pool_pct": 0.7049,
+          "team2_pool_pct": 0.1475
         },
         {
           "team1": "(1) Arizona",
@@ -1006,7 +1121,9 @@
           "win_prob": 0.6126,
           "is_upset": false,
           "region": "West",
-          "round": "Elite 8"
+          "round": "Elite 8",
+          "team1_pool_pct": 0.6721,
+          "team2_pool_pct": 0.082
         },
         {
           "team1": "(1) Florida",
@@ -1023,7 +1140,9 @@
           "win_prob": 0.509,
           "is_upset": false,
           "region": "South",
-          "round": "Elite 8"
+          "round": "Elite 8",
+          "team1_pool_pct": 0.3443,
+          "team2_pool_pct": 0.5082
         },
         {
           "team1": "(1) Michigan",
@@ -1040,7 +1159,9 @@
           "win_prob": 0.6537,
           "is_upset": false,
           "region": "Midwest",
-          "round": "Elite 8"
+          "round": "Elite 8",
+          "team1_pool_pct": 0.5082,
+          "team2_pool_pct": 0.3115
         }
       ]
     },
@@ -1062,7 +1183,9 @@
           "win_prob": 0.5156,
           "is_upset": false,
           "region": "East vs West",
-          "round": "Final Four"
+          "round": "Final Four",
+          "team1_pool_pct": 0.5738,
+          "team2_pool_pct": 0.4754
         },
         {
           "team1": "(1) Florida",
@@ -1079,7 +1202,9 @@
           "win_prob": 0.3968,
           "is_upset": false,
           "region": "South vs Midwest",
-          "round": "Final Four"
+          "round": "Final Four",
+          "team1_pool_pct": 0.1803,
+          "team2_pool_pct": 0.3115
         }
       ]
     },
@@ -1101,7 +1226,9 @@
           "win_prob": 0.4671,
           "is_upset": false,
           "region": "Championship",
-          "round": "Championship"
+          "round": "Championship",
+          "team1_pool_pct": 0.0703,
+          "team2_pool_pct": 0.1172
         }
       ]
     }

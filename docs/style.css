@@ -279,6 +279,18 @@ body {
   max-width: 70rem;
 }
 
+.sd-opponent {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  line-height: 1.5;
+  max-width: 70rem;
+}
+
+.sd-opponent strong {
+  color: var(--ink);
+}
+
 /* ══════════════════════════════════════════════════════════════════
  * CHAMPION PATH
  * ══════════════════════════════════════════════════════════════════ */
@@ -595,6 +607,20 @@ body {
 .win-prob.high { color: var(--accent-green); }
 .win-prob.mid  { color: #b5790f; }
 .win-prob.low  { color: var(--accent); }
+
+.prob-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.pool-pct {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
 
 /* ── Strategy pick badge (inline in game card) ── */
 .pick-badge {
