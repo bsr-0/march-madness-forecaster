@@ -148,9 +148,15 @@ for t in metrics_2025.get("teams", []):
     tid = t.get("team_id", "")
     metrics_lookup_2025[tid] = t
 
-# ── 1. Generate 2026 Bracket Predictions ─────────────────────────
+# ── 1. Team lookups for bracket predictions ──────────────────────
+#
+# docs/data/bracket_2026.json (the UI's "Pool Optimizer" tab) is generated
+# separately by scripts/generate_poolaware_bracket.py, which runs the real
+# meta_region_poolaware algorithm. This script only builds the team lookups
+# needed for the Monte Carlo championship-probability table below (feeds
+# team_profiles.json), and no longer produces a bracket_2026.json of its own.
 
-print("\n1. Generating 2026 bracket predictions...")
+print("\n1. Building team lookups...")
 
 bracket_teams = bracket_2026["teams"]
 team_by_region_seed = {}
@@ -163,141 +169,6 @@ R64_MATCHUPS = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2
 REGIONS = ["East", "West", "South", "Midwest"]
 ROUND_NAMES = ["Round of 64", "Round of 32", "Sweet 16", "Elite 8", "Final Four", "Championship"]
 
-
-def predict_game(team_a, team_b):
-    """Predict a single game using blended Elo + seed model."""
-    tid_a = team_a["team_id"]
-    tid_b = team_b["team_id"]
-    seed_a = team_a["seed"]
-    seed_b = team_b["seed"]
-
-    ra = rating_lookup(ratings_2026, tid_a)
-    rb = rating_lookup(ratings_2026, tid_b)
-
-    # Use barthag as Elo-like rating (scale to ~1500 range)
-    elo_a = ra.get("barthag", 0.5) * 2000
-    elo_b = rb.get("barthag", 0.5) * 2000
-
-    ep = elo_win_prob(elo_a, elo_b)
-    sp = seed_win_prob(seed_a, seed_b)
-    prob = blend_prob(ep, sp)
-
-    winner = team_a if prob >= 0.5 else team_b
-    win_prob = prob if prob >= 0.5 else 1 - prob
-
-    return {
-        "team1": f"({seed_a}) {team_a['team_name']}",
-        "team2": f"({seed_b}) {team_b['team_name']}",
-        "team1_id": tid_a,
-        "team2_id": tid_b,
-        "team1_seed": seed_a,
-        "team2_seed": seed_b,
-        "team1_rating": round(ra.get("barthag", 0.5), 4),
-        "team2_rating": round(rb.get("barthag", 0.5), 4),
-        "team1_rank": ra.get("t_rank", 999),
-        "team2_rank": rb.get("t_rank", 999),
-        "winner": winner["team_name"],
-        "winner_id": winner["team_id"],
-        "winner_seed": winner["seed"],
-        "win_prob": round(win_prob, 4),
-        "is_upset": winner["seed"] > min(seed_a, seed_b),
-    }
-
-
-def simulate_bracket():
-    """Simulate entire tournament bracket."""
-    all_rounds = []
-
-    # Round of 64
-    r64_games = []
-    r64_winners = {}
-    for region in REGIONS:
-        for s1, s2 in R64_MATCHUPS:
-            t1 = team_by_region_seed.get((region, s1))
-            t2 = team_by_region_seed.get((region, s2))
-            if t1 and t2:
-                game = predict_game(t1, t2)
-                game["region"] = region
-                game["round"] = "Round of 64"
-                r64_games.append(game)
-                r64_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
-    all_rounds.append({"round_name": "Round of 64", "games": r64_games})
-
-    # Round of 32: winners of (1v16) vs (8v9), (5v12) vs (4v13), (6v11) vs (3v14), (7v10) vs (2v15)
-    R32_MATCHUPS = [(1, 8), (5, 4), (6, 3), (7, 2)]
-    r32_games = []
-    r32_winners = {}
-    for region in REGIONS:
-        for s1, s2 in R32_MATCHUPS:
-            t1 = r64_winners.get((region, s1))
-            t2 = r64_winners.get((region, s2))
-            if t1 and t2:
-                game = predict_game(t1, t2)
-                game["region"] = region
-                game["round"] = "Round of 32"
-                r32_games.append(game)
-                r32_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
-    all_rounds.append({"round_name": "Round of 32", "games": r32_games})
-
-    # Sweet 16
-    S16_MATCHUPS = [(1, 4), (3, 2)]  # top half vs bottom half
-    s16_games = []
-    s16_winners = {}
-    for region in REGIONS:
-        for s1, s2 in S16_MATCHUPS:
-            t1 = r32_winners.get((region, s1))
-            t2 = r32_winners.get((region, s2))
-            if t1 and t2:
-                game = predict_game(t1, t2)
-                game["region"] = region
-                game["round"] = "Sweet 16"
-                s16_games.append(game)
-                s16_winners[(region, min(s1, s2))] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
-    all_rounds.append({"round_name": "Sweet 16", "games": s16_games})
-
-    # Elite 8
-    e8_games = []
-    e8_winners = {}
-    for region in REGIONS:
-        t1 = s16_winners.get((region, 1))
-        t2 = s16_winners.get((region, 2))
-        if t1 and t2:
-            game = predict_game(t1, t2)
-            game["region"] = region
-            game["round"] = "Elite 8"
-            e8_games.append(game)
-            e8_winners[region] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
-    all_rounds.append({"round_name": "Elite 8", "games": e8_games})
-
-    # Final Four
-    FF_MATCHUPS = [("East", "West"), ("South", "Midwest")]
-    f4_games = []
-    f4_winners = {}
-    for r1, r2 in FF_MATCHUPS:
-        t1 = e8_winners.get(r1)
-        t2 = e8_winners.get(r2)
-        if t1 and t2:
-            game = predict_game(t1, t2)
-            game["region"] = f"{r1} vs {r2}"
-            game["round"] = "Final Four"
-            f4_games.append(game)
-            f4_winners[f"{r1}/{r2}"] = next(t for t in [t1, t2] if t["team_id"] == game["winner_id"])
-    all_rounds.append({"round_name": "Final Four", "games": f4_games})
-
-    # Championship
-    f4_keys = list(f4_winners.keys())
-    if len(f4_keys) == 2:
-        t1 = f4_winners[f4_keys[0]]
-        t2 = f4_winners[f4_keys[1]]
-        game = predict_game(t1, t2)
-        game["region"] = "Championship"
-        game["round"] = "Championship"
-        all_rounds.append({"round_name": "Championship", "games": [game]})
-
-    return all_rounds
-
-
-bracket_predictions = simulate_bracket()
 
 # Monte Carlo simulation for championship probabilities
 print("  Running Monte Carlo simulation (10,000 tournaments)...")
@@ -396,27 +267,9 @@ for tid, count in championship_counts.most_common():
         }
     )
 
-bracket_output = {
-    "season": 2026,
-    "generated_at": "2026-03-16",
-    "model": "Blended Barthag-Elo + Seed Prior (70/30)",
-    "n_simulations": N_SIMS,
-    "rounds": bracket_predictions,
-    "championship_probabilities": sorted(champ_probs, key=lambda x: -x["championship_prob"]),
-    "teams": [
-        {
-            "team_id": t["team_id"],
-            "team_name": t["team_name"],
-            "seed": t["seed"],
-            "region": t["region"],
-            "conference": t["conference"],
-            "rating": round(t["rating"], 2),
-        }
-        for t in bracket_teams
-    ],
-}
-
-save(bracket_output, "bracket_2026.json")
+# champ_probs feeds team_profiles.json's championship_prob/final_four_prob/
+# elite_eight_prob fields below (§5). docs/data/bracket_2026.json itself is
+# owned by scripts/generate_poolaware_bracket.py — see comment in §1.
 
 # ── 2. 2025 Backtest Validation (no data leakage) ────────────────
 

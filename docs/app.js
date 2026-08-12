@@ -17,8 +17,13 @@
 // ═══ HOW TO UPDATE AFTER A NEW SEASON ══════════════════════════
 //   1. Approve and run:  python scripts/mc_pool_backtest.py
 //   2. Identify the best strategy from the printed backtest report
-//   3. Export its bracket:  python scripts/export_bracket.py --mode <strategy>
-//      → save to docs/data/bracket_<YEAR>.json
+//   3. Update YEAR in scripts/generate_poolaware_bracket.py,
+//      scripts/generate_region_bracket.py, and
+//      scripts/generate_exhaustive_bracket.py, then run each —
+//      they write docs/data/bracket_<YEAR>.json,
+//      bracket_<YEAR>_region.json, and bracket_<YEAR>_exhaustive.json.
+//      (Wired into .github/workflows/generate-web-data.yml so this
+//      also happens automatically on data refreshes.)
 //   4. Update the 'pool' entry below:
 //      - Change bracket_file to point at the new JSON
 //      - Update p_first and backtest_note with the new numbers
@@ -75,22 +80,23 @@ const STRATEGIES = [
   },
   {
     key: 'stat',
-    label: 'Stat-Driven',
-    subtitle: 'Pure Barthag ratings',
+    label: 'Region Beam Search',
+    subtitle: 'Region-level construction',
     description:
-      'Picks the team with the higher Barthag efficiency rating in every matchup. ' +
-      'Approximates the meta_region algorithm (region beam search on Torvik probabilities) ' +
-      'and historically outperforms the seed baseline 11 out of 14 years.',
+      'Builds each region independently via beam search over Torvik round probabilities, then ' +
+      'assembles the Final Four and champion from the region winners. The algorithm ' +
+      'meta_region_poolaware is built on top of. Outperforms the seed baseline 11 out of 14 years.',
     p_first: 8.0,
     badge: '~8% P(1st)',
     badge_tone: 'green',
     is_top: false,
     is_model: true,
     backtest_note:
-      'Approximates meta_region: 8.0% P(1st), 11/14 years, p<0.001. ' +
-      'Computed client-side from Barthag in team_profiles.json. ' +
-      'For the exact meta_region bracket, run mc_pool_backtest.py --mode meta_region.',
-    pick: (t1, t2) => t1.barthag >= t2.barthag ? t1 : t2,
+      'meta_region: 8.0% P(1st), 11/14 years, p<0.001. ' +
+      'Source: 14-yr LOYO backtest, N≈30 pool. ' +
+      'Bracket: docs/data/bracket_2026_region.json.',
+    // Pre-computed picks: pick === null means use winner_id from bracket_2026_region.json.
+    pick: null,
   },
   {
     key: 'chalk',
@@ -220,6 +226,7 @@ const BADGE_COLORS = {
 
 let bracketData      = null;
 let exhaustiveData   = null;
+let regionData        = null;
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -230,11 +237,12 @@ let roundsCache   = {};         // strategy key → computed rounds[]
 // ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  let bracket, exhaustive, profiles;
+  let bracket, exhaustive, region, profiles;
   try {
-    [bracket, exhaustive, profiles] = await Promise.all([
+    [bracket, exhaustive, region, profiles] = await Promise.all([
       fetch('data/bracket_2026.json?v=dc8aebb').then(r => r.json()),
       fetch('data/bracket_2026_exhaustive.json?v=dc8aebb').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=dc8aebb').then(r => r.json()),
       fetch('data/team_profiles.json?v=dc8aebb').then(r => r.json()),
     ]);
   } catch (err) {
@@ -246,6 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bracketData    = bracket;
   exhaustiveData = exhaustive;
+  regionData     = region;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -311,8 +320,17 @@ function precomputedRounds(data) {
   }));
 }
 
-function poolRounds()      { return precomputedRounds(bracketData); }
+function poolRounds()       { return precomputedRounds(bracketData); }
 function exhaustiveRounds() { return precomputedRounds(exhaustiveData); }
+function regionRounds()     { return precomputedRounds(regionData); }
+
+// Precomputed strategies read their bracket straight from a JSON file
+// instead of simulating client-side (see STRATEGIES pick === null).
+const PRECOMPUTED_ROUNDS = {
+  pool: poolRounds,
+  exhaustive: exhaustiveRounds,
+  stat: regionRounds,
+};
 
 // Simulate the full bracket for a non-pool strategy from R64.
 function simulate(strategy) {
@@ -402,7 +420,7 @@ function getRounds(key) {
   if (roundsCache[key]) return roundsCache[key];
   const s = STRATEGIES.find(s => s.key === key);
   if (s.pick === null) {
-    roundsCache[key] = key === 'exhaustive' ? exhaustiveRounds() : poolRounds();
+    roundsCache[key] = PRECOMPUTED_ROUNDS[key]();
   } else {
     roundsCache[key] = simulate(s);
   }

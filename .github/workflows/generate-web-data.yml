@@ -55,6 +55,16 @@ jobs:
           echo "=== Generating web data ==="
           python scripts/generate_web_data.py
 
+      - name: Generate pool-aware, region, and exhaustive brackets
+        run: |
+          set -euo pipefail
+          echo "=== Generating meta_region_poolaware bracket (docs/data/bracket_2026.json) ==="
+          python scripts/generate_poolaware_bracket.py
+          echo "=== Generating meta_region bracket (docs/data/bracket_2026_region.json) ==="
+          python scripts/generate_region_bracket.py
+          echo "=== Generating meta_exhaustive bracket (docs/data/bracket_2026_exhaustive.json) ==="
+          python scripts/generate_exhaustive_bracket.py
+
       - name: Build dashboard data
         run: |
           set -euo pipefail
