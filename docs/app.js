@@ -148,6 +148,7 @@ const BADGE_COLORS = {
 let bracketData      = null;
 let exhaustiveData   = null;
 let regionData        = null;
+let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -158,13 +159,13 @@ let roundsCache   = {};         // strategy key → computed rounds[]
 // ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  let bracket, exhaustive, region, profiles;
+  let bracket, exhaustive, region, profiles, loyo;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-13b').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13b').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-13b').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-13b').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-13c').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13c').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-13c').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-13c').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
@@ -173,10 +174,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       'and team_profiles.json are present in docs/data/.</p>';
     return;
   }
+  // Per-year ESPN points is a nice-to-have, not required to render the
+  // bracket picker — fetch separately so a missing/broken file degrades
+  // to "no points table" instead of blocking the whole page.
+  try {
+    loyo = await fetch('data/loyo_points.json?v=2026-08-13c').then(r => r.json());
+  } catch (err) {
+    loyo = null;
+  }
 
   bracketData    = bracket;
   exhaustiveData = exhaustive;
   regionData     = region;
+  loyoData       = loyo;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -445,7 +455,45 @@ function renderStrategyDetail() {
     <p class="sd-desc">${s.description}</p>
     <p class="sd-note">${s.backtest_note}</p>
     ${opponentHTML}
+    ${loyoPointsHTML(currentKey)}
   `;
+}
+
+// Per-year ESPN points, one holdout year at a time (leave-one-year-out
+// walk-forward backtest — the actual points that strategy's bracket would
+// have scored against that year's real outcome, not a simulated proxy).
+function loyoPointsHTML(key) {
+  if (!loyoData || !loyoData.points_by_strategy[key]) return '';
+  const pts = loyoData.points_by_strategy[key];
+  const years = loyoData.years.filter(y => pts[y] != null);
+  if (years.length === 0) return '';
+
+  const vals = years.map(y => pts[y]);
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const max = Math.max(...vals);
+
+  const chips = years.map(y => {
+    const v = pts[y];
+    const heightPct = Math.max(8, Math.round((v / max) * 100));
+    return `
+      <div class="loyo-chip" title="${y}: ${v.toFixed(0)} pts">
+        <div class="loyo-chip-bar-track">
+          <div class="loyo-chip-bar" style="height:${heightPct}%"></div>
+        </div>
+        <div class="loyo-chip-pts">${v.toFixed(0)}</div>
+        <div class="loyo-chip-year">'${y.slice(2)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="loyo-points">
+      <p class="loyo-points-label">
+        ESPN points by holdout year (leave-one-year-out, real outcomes) — mean ${mean.toFixed(0)}
+      </p>
+      <div class="loyo-points-scroll">
+        <div class="loyo-points-row">${chips}</div>
+      </div>
+    </div>`;
 }
 
 // ── Champion path ──
