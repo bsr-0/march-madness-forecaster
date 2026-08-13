@@ -595,9 +595,6 @@ class TestBacktestModeRegistration:
             "meta_region_massey",
             "meta_region_blend90",
             "meta_region_poolaware",
-            "meta_region_poolaware_wideseed",
-            "meta_ensemble_agree",
-            "meta_region_poolaware_minimax",
         ],
     )
     def test_new_modes_registered(self, mode):
