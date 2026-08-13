@@ -240,10 +240,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-12b').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-12b').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-12b').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-12b').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-13').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-13').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-13').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
