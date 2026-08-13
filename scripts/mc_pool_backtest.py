@@ -190,6 +190,10 @@ LEGACY_MODE_MAP = {
     "meta_region_massey": ("meta", "region_massey"),  # Region top-N with massey_avg round probs
     "meta_region_blend90": ("meta", "region_blend90"),  # Region top-N with 90% torvik + 10% massey_avg
     "meta_region_poolaware": ("meta", "region_poolaware"),  # Region top-N × multi-candidate, pool-sim P(1st) selection
+    "meta_region_poolaware_wideseed": (
+        "meta",
+        "region_poolaware_wideseed",
+    ),  # poolaware, forced-champion candidates from seeds 1-4 (not just 1-seeds)
     "meta_region_upset": ("meta", "region_upset"),  # Region top-N + upset specialist overrides on R64 coin-flips
     "knn": ("knn", "forward"),  # B8: KNN matchup similarity, forward construction
     "meta_region_knn": ("meta", "region_knn"),  # Region top-N with KNN round probs
@@ -241,6 +245,7 @@ ALL_MODES: Tuple[str, ...] = (
     "meta_region_massey",
     "meta_region_blend90",
     "meta_region_poolaware",
+    "meta_region_poolaware_wideseed",
     "meta_region_upset",
     "knn",
     "meta_region_knn",
@@ -3325,6 +3330,173 @@ def _run_one_year(
                         f"  {year}   {meta_mode:<24} "
                         f"selected={_pa_candidates[best_pa_idx][1]} "
                         f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                    )
+            elif meta_mode == "meta_region_poolaware_wideseed":
+                # Identical to meta_region_poolaware, EXCEPT the forced-champion
+                # candidate sweep covers seeds 1-4 instead of 1-seeds only.
+                #
+                # Motivation: meta_region_poolaware's other candidate branches
+                # (risk sweeps, exhaustive-champion sweeps) are unforced and can
+                # naturally surface a non-1-seed champion if the beam search
+                # lands there (e.g. production picked a 2-seed Final Four team
+                # in 2026) — but nothing in the candidate pool ever *deliberately*
+                # tests "what if seed 2/3/4 is champion" the way it deliberately
+                # tests all four 1-seeds. 2-4 seeds win often enough historically
+                # that this is a real gap in candidate diversity, not specific to
+                # any one year's outcome.
+                from src.optimization.bracket_construction import construct_bracket
+
+                wide_seed_teams = [tid for tid, s in seeds.items() if s <= 4]
+                _paw_rng = np.random.default_rng(77777 + year)
+
+                _paw_candidates: list[tuple[np.ndarray, str]] = []  # (bracket, label)
+                _paw_pub = pick_dist if pick_dist else {}
+                _paw_scoring = dict(ESPN_SCORING)
+
+                def _paw_try_add(label: str, **kwargs) -> None:
+                    """Build a bracket and append to candidates; swallow errors."""
+                    try:
+                        p, _ch, _, _, _ = construct_bracket(
+                            seeds=seeds,
+                            regions=regions,
+                            public_picks=_paw_pub,
+                            pool_size=n_opponents,
+                            scoring_system=_paw_scoring,
+                            **kwargs,
+                        )
+                        _paw_candidates.append((_picks_dict_to_bool_array(p, first_round), label))
+                    except Exception:
+                        pass
+
+                # --- Probability bases to sweep (same as meta_region_poolaware) ---
+                _paw_prob_bases: list[tuple[str, dict]] = [("tv", torvik_rp)]
+                _paw_alt_massey_avg = base_round_probs.get("massey_avg")
+                if _paw_alt_massey_avg is not None:
+                    _paw_prob_bases.append(("mass_avg", _paw_alt_massey_avg))
+                _paw_alt_massey_best = base_round_probs.get("massey_best")
+                if _paw_alt_massey_best is not None:
+                    _paw_prob_bases.append(("mass_best", _paw_alt_massey_best))
+                _paw_alt_blend = base_round_probs.get("blend")
+                if _paw_alt_blend is not None:
+                    _paw_prob_bases.append(("blend", _paw_alt_blend))
+
+                if _paw_alt_massey_avg is not None:
+                    _paw_tv_mass_80_20: Dict[str, Dict[str, float]] = {}
+                    for tid in torvik_rp:
+                        _paw_tv_mass_80_20[tid] = {}
+                        for rn in torvik_rp[tid]:
+                            tv_val = torvik_rp[tid][rn]
+                            ma_val = _paw_alt_massey_avg.get(tid, {}).get(rn, tv_val)
+                            _paw_tv_mass_80_20[tid][rn] = 0.8 * tv_val + 0.2 * ma_val
+                    _paw_prob_bases.append(("tv_mass80", _paw_tv_mass_80_20))
+
+                _paw_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
+
+                # (a) Forced seed-1-through-4 champions × region_top_n (torvik, risk=0.5)
+                # — the one change from meta_region_poolaware.
+                for forced in wide_seed_teams:
+                    _paw_try_add(
+                        f"tv_champ={forced}",
+                        mode="region_top_n",
+                        round_probs=torvik_rp,
+                        risk_level=0.5,
+                        forced_champion=forced,
+                    )
+
+                # (b) Risk sweeps × prob bases × region_top_n (no forced champ)
+                for _risk in _paw_risk_levels:
+                    for _pb_name, _pb_rp in _paw_prob_bases:
+                        _paw_try_add(
+                            f"{_pb_name}_region_risk={_risk}",
+                            mode="region_top_n",
+                            round_probs=_pb_rp,
+                            risk_level=_risk,
+                        )
+
+                # (c) Exhaustive champion search × prob bases × select risks
+                for _risk in (0.3, 0.5, 0.7):
+                    for _pb_name, _pb_rp in _paw_prob_bases:
+                        _paw_try_add(
+                            f"{_pb_name}_exhaust_risk={_risk}",
+                            mode="exhaustive_champion",
+                            round_probs=_pb_rp,
+                            risk_level=_risk,
+                        )
+
+                # De-duplicate identical brackets (keeps first label)
+                _paw_seen: set[bytes] = set()
+                _paw_unique: list[tuple[np.ndarray, str]] = []
+                for bvec, label in _paw_candidates:
+                    key = bvec.tobytes()
+                    if key not in _paw_seen:
+                        _paw_seen.add(key)
+                        _paw_unique.append((bvec, label))
+                _paw_candidates = _paw_unique
+
+                if not _paw_candidates:
+                    picks_fb, champ_fb, _, _, _ = construct_bracket(
+                        mode="region_top_n",
+                        seeds=seeds,
+                        regions=regions,
+                        round_probs=torvik_rp,
+                        public_picks=_paw_pub,
+                        risk_level=0.5,
+                        pool_size=n_opponents,
+                        scoring_system=_paw_scoring,
+                    )
+                    meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
+                    print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
+                else:
+                    # Score each candidate via pool simulation (binary P(1st) estimator) —
+                    # same estimator as meta_region_poolaware, see its comment for why
+                    # binary (not rank-based) is the correct unbiased estimator.
+                    n_paw_trials = pa_trials
+                    best_paw_p1 = -1.0
+                    best_paw_idx = 0
+                    for ci, (bvec, _) in enumerate(_paw_candidates):
+                        wins = 0
+                        for _ in range(n_paw_trials):
+                            opp = generate_opponent_brackets(
+                                n_opponents=n_opponents,
+                                first_round_matchups=first_round,
+                                pick_distribution=_paw_pub,
+                                matchup_probs=seed_pw,
+                                seeds=seeds,
+                                rng=_paw_rng,
+                                chalk_noise_std=pool_chalk_noise_std,
+                            )
+                            _paw_out, _paw_br = simulate_tournament_outcomes(
+                                n_tournaments=1,
+                                first_round_matchups=first_round,
+                                matchup_probs=seed_pw,
+                                seeds=seeds,
+                                noise_std=0.16,
+                                rng=_paw_rng,
+                            )
+                            sim_winners = {rnd: set(_paw_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+                            c_score = score_brackets_team_identity(
+                                bvec.reshape(1, 63),
+                                sim_winners,
+                                first_round,
+                                ESPN_SCORING,
+                            )[0]
+                            opp_scores = score_brackets_team_identity(
+                                opp,
+                                sim_winners,
+                                first_round,
+                                ESPN_SCORING,
+                            )
+                            if c_score >= opp_scores.max():
+                                wins += 1
+                        p1 = wins / n_paw_trials
+                        if p1 > best_paw_p1:
+                            best_paw_p1 = p1
+                            best_paw_idx = ci
+                    meta_bracket = _paw_candidates[best_paw_idx][0]
+                    print(
+                        f"  {year}   {meta_mode:<24} "
+                        f"selected={_paw_candidates[best_paw_idx][1]} "
+                        f"(best of {len(_paw_candidates)}, P1={best_paw_p1:.3f})"
                     )
             elif meta_mode == "meta_region_blend":
                 # Light blend: 90% torvik + 10% GBM round probs → region construction
