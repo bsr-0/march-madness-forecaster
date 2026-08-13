@@ -302,6 +302,12 @@ body {
   padding: 24px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
+  /* .page-main is a column flexbox; flex items default to min-width: auto,
+     which lets .path-flow's min-width: max-content (needed so all 6 round
+     stops sit in a row) blow this section wider than the viewport instead
+     of scrolling internally. min-width: 0 lets it shrink to the column
+     width so .path-scroll's own overflow-x below actually engages. */
+  min-width: 0;
 }
 
 .path-scroll {
