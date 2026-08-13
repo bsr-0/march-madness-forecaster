@@ -119,85 +119,6 @@ const STRATEGIES = [
       return t1.barthag >= t2.barthag ? t1 : t2;   // tie-break
     },
   },
-  {
-    key: 'upset',
-    label: 'Upset Year',
-    subtitle: 'Lean into the chaos',
-    description:
-      'Pick the underdog whenever the model gives them ≥ 38% probability — otherwise falls back to chalk. ' +
-      'Captures the 5/12, 10/7, and close 8/9 games where chaos is plausible. ' +
-      'Good for upset-heavy years like 2023 where favorites flamed out early.',
-    p_first: null,
-    badge: 'High Risk',
-    badge_tone: 'red',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'No systematic backtest. Higher ceiling, higher variance. ' +
-      'High variance — good for years where chalk flops early. No systematic backtest.',
-    pick: (t1, t2, winProb) => {
-      // winProb is t1's probability. Underdog = higher seed number.
-      const t1IsUnderdog = t1.seed > t2.seed;
-      const underdogProb = t1IsUnderdog ? winProb : 1 - winProb;
-      if (underdogProb >= 0.38) return t1IsUnderdog ? t1 : t2;
-      // chalk fallback for non-competitive underdogs
-      if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
-      return t1.barthag >= t2.barthag ? t1 : t2;
-    },
-  },
-  {
-    key: 'champ_odds',
-    label: 'Championship Odds',
-    subtitle: 'Path-adjusted win probability',
-    description:
-      'Picks the team with the higher pre-tournament championship probability in each matchup. ' +
-      'Unlike raw efficiency ratings, this accounts for bracket draw — a 1-seed facing a tough ' +
-      'region gets a lower probability than one in an easier half. Useful for surfacing picks ' +
-      'where path difficulty makes a meaningful difference.',
-    p_first: null,
-    badge: 'Stat Lens',
-    badge_tone: 'sky',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'No systematic pool backtest. Championship probability accounts for bracket path difficulty ' +
-      'in addition to raw ability — differs from Barthag when draw is uneven.',
-    pick: (t1, t2) => (t1.champ_prob ?? 0) >= (t2.champ_prob ?? 0) ? t1 : t2,
-  },
-  {
-    key: 'offense',
-    label: 'Offensive Edge',
-    subtitle: 'Favor explosive offenses',
-    description:
-      'Pick the team with the higher adjusted offensive efficiency. ' +
-      'Favors high-scoring, fast-paced teams. Useful as a lens for individual close games ' +
-      'in years where tempo and scoring output dominate tournament outcomes.',
-    p_first: null,
-    badge: 'Stat Lens',
-    badge_tone: 'sky',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'No systematic pool backtest. Use as a supplemental stat lens, not a primary strategy.',
-    pick: (t1, t2) => (t1.adj_oe ?? 100) >= (t2.adj_oe ?? 100) ? t1 : t2,
-  },
-  {
-    key: 'defense',
-    label: 'Defensive Wall',
-    subtitle: 'Trust stingy defenses',
-    description:
-      'Pick the team with the lower adjusted defensive efficiency (harder to score against). ' +
-      'Tournament basketball often rewards teams that suffocate opponents — ' +
-      'particularly in high-leverage late rounds.',
-    p_first: null,
-    badge: 'Stat Lens',
-    badge_tone: 'sky',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'No systematic pool backtest. Use as a supplemental stat lens, not a primary strategy.',
-    pick: (t1, t2) => (t1.adj_de ?? 120) <= (t2.adj_de ?? 120) ? t1 : t2,
-  },
 ];
 
 // ── Display constants ──
@@ -240,10 +161,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-13').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-13').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-13').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-13b').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13b').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-13b').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-13b').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
