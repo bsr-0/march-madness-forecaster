@@ -40,7 +40,9 @@ from pathlib import Path
 from typing import Dict, Iterable, Optional
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
-_TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+# round_probs[team][rnd] = P(team WINS its rnd game) — see the identical
+# fix + comment in src/prediction/roster_adj_probabilities.py, same bug.
+_TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 # Meta keys in four-factor snapshot files (not team IDs).
 _SNAPSHOT_META_KEYS = frozenset({"data_type", "cutoff_date", "tournament_start", "snapshot_type", "n_teams"})

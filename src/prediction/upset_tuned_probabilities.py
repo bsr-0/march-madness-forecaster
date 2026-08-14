@@ -43,7 +43,9 @@ _RESULTS_TO_PROB_ROUND = {
     "NCG": "CHAMP",
 }
 
-_TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+# round_probs[team][rnd] = P(team WINS its rnd game) — see the identical
+# fix + comment in src/prediction/roster_adj_probabilities.py, same bug.
+_TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 # Bound the calibration multiplier so small-N historical cells don't
 # produce wildly distorted probabilities (e.g., a 16-seed with a 0%

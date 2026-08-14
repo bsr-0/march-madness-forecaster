@@ -63,9 +63,11 @@ def build_contrarian_round_probs(
             adjusted = model_p * (ratio**strength)
             result[tid][rnd] = max(adjusted, 0.001)
 
-    # Re-normalize: within each round, the sum of advancement probs
-    # should equal the number of teams advancing to that round.
-    teams_per_round = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+    # Re-normalize: within each round, the sum of advancement probs should
+    # equal the number of WINNERS of that round (round_probs[t][rnd] =
+    # P(t wins its rnd game)), not the number of teams entering it — see
+    # the same fix + comment in src/prediction/roster_adj_probabilities.py.
+    teams_per_round = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
     for rnd in ROUND_NAMES:
         total = sum(result[tid].get(rnd, 0) for tid in result)
         target = teams_per_round.get(rnd, 32)

@@ -33,7 +33,15 @@ from typing import Dict, Iterable
 from src.data.normalize import bridge_cbbpy_id
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
-_TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+# round_probs[team][rnd] = P(team WINS its rnd game), per
+# build_torvik_round_probabilities — so each round's total across all 64
+# teams sums to the number of WINNERS of that round (32/16/8/4/2/1), not
+# the number of teams entering it. Verified directly against real
+# round_probs output 2026-08-13 (sums were 32.0/16.0/8.0/4.0/2.0/1.0).
+# This constant previously used the entrants convention {64,32,16,8,4,2}
+# — exactly double at every round — which silently inflated every team's
+# adjusted probability ~2x per round during renormalization.
+_TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 # Catalog spec C2: barthag *= 1 + 0.02 * z, clipped to ±4%.
 _Z_SCALE = 0.02

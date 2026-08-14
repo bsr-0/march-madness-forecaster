@@ -20,7 +20,7 @@ from src.prediction.roster_adj_probabilities import (
 )
 
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
-_TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+_TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 
 def test_load_team_talent_2026_covers_tournament_field():
