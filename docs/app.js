@@ -149,6 +149,8 @@ let bracketData      = null;
 let exhaustiveData   = null;
 let regionData        = null;
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
+let factorsData        = null;  // roster/coach team factors, see docs/data/team_factors.json
+let currentFactor      = 'roster';
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -162,10 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles, loyo;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-13c').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13c').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-13c').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-13c').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-13d').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13d').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-13d').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-13d').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
@@ -174,19 +176,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       'and team_profiles.json are present in docs/data/.</p>';
     return;
   }
-  // Per-year ESPN points is a nice-to-have, not required to render the
-  // bracket picker — fetch separately so a missing/broken file degrades
-  // to "no points table" instead of blocking the whole page.
+  // Per-year ESPN points and team factors are nice-to-haves, not required
+  // to render the bracket picker — fetch separately so a missing/broken
+  // file degrades to "no panel" instead of blocking the whole page.
+  let factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-13c').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-13d').then(r => r.json());
   } catch (err) {
     loyo = null;
+  }
+  try {
+    factors = await fetch('data/team_factors.json?v=2026-08-13d').then(r => r.json());
+  } catch (err) {
+    factors = null;
   }
 
   bracketData    = bracket;
   exhaustiveData = exhaustive;
   regionData     = region;
   loyoData       = loyo;
+  factorsData    = factors;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -201,6 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderStrategyStrip();
   activateStrategy('pool');
+  renderFactorsPanel();
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -665,4 +675,72 @@ function probCls(pct) {
   if (pct >= 70) return 'high';
   if (pct >= 52) return 'mid';
   return 'low';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// TEAM FACTORS PANEL
+//
+// roster_adj (top-5 WARP) and coach_adj (tournament experience) were
+// backtested 2026-08-13 and found statistically indistinguishable from
+// the base model on P(1st) — they don't change a bracket's odds. This
+// panel surfaces which teams they nudge, as an exploration/insight tool,
+// not a competing strategy.
+// ──────────────────────────────────────────────────────────────────
+
+const FACTOR_DEFS = {
+  roster: { label: 'Roster Talent', field: 'roster_e8_pct', context: t => `WARP z=${t.roster_warp_z >= 0 ? '+' : ''}${t.roster_warp_z.toFixed(1)}` },
+  coach:  { label: 'Coaching Experience', field: 'coach_e8_pct', context: t => `${t.coach_prior_apps} tourney apps` },
+};
+
+function setFactor(key) {
+  currentFactor = key;
+  renderFactorsPanel();
+}
+
+function renderFactorsPanel() {
+  const toggleEl = document.getElementById('factors-toggle');
+  const noteEl   = document.getElementById('factors-note');
+  const listEl   = document.getElementById('factors-list');
+  if (!toggleEl || !listEl) return;
+
+  toggleEl.innerHTML = Object.entries(FACTOR_DEFS).map(([key, def]) => `
+    <button class="factors-toggle-btn${key === currentFactor ? ' active' : ''}"
+            onclick="setFactor('${key}')">${def.label}</button>
+  `).join('');
+
+  if (!factorsData) {
+    noteEl.textContent = '';
+    listEl.innerHTML = '<p style="color:var(--ink-faint);font-size:0.85rem;">Team factors data not available.</p>';
+    return;
+  }
+
+  noteEl.textContent = factorsData.note || '';
+
+  const def = FACTOR_DEFS[currentFactor];
+  const teams = factorsData.teams
+    .map(t => ({ ...t, delta: t[def.field] - t.baseline_e8_pct }))
+    .filter(t => t.delta > 0.01)
+    .sort((a, b) => b.delta - a.delta)
+    .slice(0, 10);
+
+  if (teams.length === 0) {
+    listEl.innerHTML = '<p style="color:var(--ink-faint);font-size:0.85rem;">No teams gain a meaningful edge from this factor this year.</p>';
+    return;
+  }
+
+  listEl.innerHTML = teams.map(t => `
+    <div class="factors-row">
+      <div class="factors-row-main">
+        <span class="team-seed ${seedCls(t.seed)}">${t.seed}</span>
+        <span class="factors-row-name">${t.team_name}</span>
+        <span class="factors-row-region">${t.region}</span>
+      </div>
+      <div class="factors-row-stats">
+        <span class="factors-row-base">${t.baseline_e8_pct.toFixed(1)}%</span>
+        <span>&rarr;</span>
+        <span class="factors-row-delta pos">+${t.delta.toFixed(2)}pp</span>
+      </div>
+      <span class="factors-row-context">${def.context(t)}</span>
+    </div>
+  `).join('');
 }
