@@ -110,7 +110,7 @@ def test_upset_tuned_renormalizes_to_bracket_team_counts():
     hist = compute_historical_seed_reach_rates(max_year_exclusive=2026, data_root=DATA_ROOT)
 
     adjusted = build_upset_tuned_round_probs(model_rp, seeds, hist)
-    for rnd, target in {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}.items():
+    for rnd, target in {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}.items():
         total = sum(adjusted[t][rnd] for t in seeds)
         assert total == pytest.approx(target, rel=1e-6), (
             f"Round {rnd} total should renormalize to {target}, got {total:.4f}"
@@ -133,7 +133,7 @@ def test_upset_tuned_factor_is_clipped():
     # is indirectly tested by bracket_team_counts (it would blow up targets
     # catastrophically if the clip weren't applied).
     total_e8 = sum(adjusted[t]["E8"] for t in seeds)
-    assert total_e8 == pytest.approx(8.0, rel=1e-6)
+    assert total_e8 == pytest.approx(4.0, rel=1e-6)
 
 
 def test_upset_tuned_registered_in_pipeline():

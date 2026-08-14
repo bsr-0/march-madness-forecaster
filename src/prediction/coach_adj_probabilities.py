@@ -42,7 +42,9 @@ from typing import Dict, Iterable, Tuple
 from src.prediction.kaggle_bridge import build_bridge, normalize_kaggle_spellings
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
-_TEAMS_PER_ROUND = {"R64": 64, "R32": 32, "S16": 16, "E8": 8, "F4": 4, "CHAMP": 2}
+# round_probs[team][rnd] = P(team WINS its rnd game) — see the identical
+# fix + comment in src/prediction/roster_adj_probabilities.py, same bug.
+_TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 # Catalog spec C1: barthag *= 1 + 0.01 * min(log(1 + apps), 3).
 # log(1 + 19) ≈ 3, so the cap binds at ~19 prior tournament appearances.
