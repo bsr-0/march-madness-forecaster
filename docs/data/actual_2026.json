@@ -1,0 +1,105 @@
+{
+  "season": 2026,
+  "status": "completed",
+  "champion_id": "michigan",
+  "champion_name": "Michigan",
+  "runner_up_id": "connecticut",
+  "runner_up_name": "Connecticut",
+  "final_four_ids": [
+    "arizona",
+    "illinois",
+    "michigan",
+    "connecticut"
+  ],
+  "final_four_names": [
+    "Arizona",
+    "Illinois",
+    "Michigan",
+    "Connecticut"
+  ],
+  "results_by_round": {
+    "R64": [
+      "duke",
+      "michigan",
+      "houston",
+      "michigan_state",
+      "illinois",
+      "gonzaga",
+      "nebraska",
+      "arkansas",
+      "high_point",
+      "vanderbilt",
+      "louisville",
+      "virginia_commonwealth",
+      "texas",
+      "texas_a_m",
+      "tcu",
+      "saint_louis",
+      "arizona",
+      "florida",
+      "iowa_state",
+      "purdue",
+      "connecticut",
+      "virginia",
+      "alabama",
+      "kansas",
+      "texas_tech",
+      "st__john_s__ny",
+      "tennessee",
+      "kentucky",
+      "ucla",
+      "miami__fl",
+      "utah_state",
+      "iowa"
+    ],
+    "R32": [
+      "michigan",
+      "duke",
+      "houston",
+      "michigan_state",
+      "texas",
+      "illinois",
+      "nebraska",
+      "arkansas",
+      "iowa",
+      "arizona",
+      "purdue",
+      "iowa_state",
+      "connecticut",
+      "tennessee",
+      "st__john_s__ny",
+      "alabama"
+    ],
+    "S16": [
+      "arizona",
+      "purdue",
+      "illinois",
+      "iowa",
+      "duke",
+      "michigan",
+      "connecticut",
+      "tennessee"
+    ],
+    "E8": [
+      "arizona",
+      "illinois",
+      "michigan",
+      "connecticut"
+    ],
+    "F4": [
+      "michigan",
+      "connecticut"
+    ],
+    "CHAMP": [
+      "michigan"
+    ]
+  },
+  "scoring": {
+    "R64": 10,
+    "R32": 20,
+    "S16": 40,
+    "E8": 80,
+    "F4": 160,
+    "CHAMP": 320
+  }
+}
