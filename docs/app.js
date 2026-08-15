@@ -114,53 +114,10 @@ const STRATEGIES = [
     backtest_note:
       'Similar to seed baseline (~3.1% P(1st)). No upside differentiation in winner-take-all pools. ' +
       'Use this if you want a conventional, defensible bracket.',
-    probModel: 'torvik',
     pick: (t1, t2) => {
       if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
-      return effectiveBarthag(t1, 'torvik') >= effectiveBarthag(t2, 'torvik') ? t1 : t2;   // tie-break
+      return effectiveBarthag(t1) >= effectiveBarthag(t2) ? t1 : t2;   // tie-break
     },
-  },
-  {
-    key: 'roster',
-    label: 'Roster Talent',
-    subtitle: 'Favors top-5 WARP',
-    description:
-      'Picks the favorite in every game using a probability model nudged by roster talent (top-5 player WARP) ' +
-      'instead of pure Torvik rating — a team with elite top-end talent gets a small boost (capped at ±4%), ' +
-      'a thin roster a small penalty. This is a preference lens, not a projected edge: tested against the ' +
-      'production pool-optimizer construction, it lost (10.4% P(1st) vs 11.2% baseline, 0/15 backtest years ' +
-      'ahead — see MEMORY.md D19). Use this if you weight roster talent more heavily than the model does.',
-    p_first: null,
-    badge: 'Preference',
-    badge_tone: 'neutral',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'roster_adj tested against meta_region_poolaware: 10.4% P(1st) vs 11.2% baseline, 0 years ahead of 15. ' +
-      'Offered for exploration/preference, not a backtested contender.',
-    probModel: 'roster',
-    pick: (t1, t2, wp) => (wp >= 0.5 ? t1 : t2),
-  },
-  {
-    key: 'coach',
-    label: 'Coach Experience',
-    subtitle: 'Favors veteran coaches',
-    description:
-      'Picks the favorite in every game using a probability model nudged by the head coach’s prior NCAA ' +
-      'tournament experience — more appearances, a small one-sided boost (up to +3%, never a penalty for a ' +
-      'new coach). This is a preference lens, not a projected edge: tested against the production pool-' +
-      'optimizer construction, it lost (11.1% P(1st) vs 11.2% baseline, 0/15 backtest years ahead — see ' +
-      'MEMORY.md D19). Use this if you weight tournament coaching experience more heavily than the model does.',
-    p_first: null,
-    badge: 'Preference',
-    badge_tone: 'neutral',
-    is_top: false,
-    is_model: false,
-    backtest_note:
-      'coach_adj tested against meta_region_poolaware: 11.1% P(1st) vs 11.2% baseline, 0 years ahead of 15. ' +
-      'Offered for exploration/preference, not a backtested contender.',
-    probModel: 'coach',
-    pick: (t1, t2, wp) => (wp >= 0.5 ? t1 : t2),
   },
 ];
 
@@ -188,29 +145,45 @@ const BADGE_COLORS = {
 
 // ── App state ──
 
-let bracketData      = null;
-let exhaustiveData   = null;
-let regionData        = null;
+// bracketData[approach][base] — one precomputed bracket JSON per (approach,
+// probability base) combination. approach ∈ {pool, exhaustive, stat}; each
+// was actually constructed under that base (see scripts/prob_base_variants.py
+// + generate_{poolaware,exhaustive,region}_bracket.py --prob-base), so
+// switching bases genuinely changes picks, not just displayed odds. A base
+// that failed to fetch (or was never generated) stays null and callers fall
+// back to torvik.
+let bracketData = { pool: {}, exhaustive: {}, stat: {} };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let factorsData        = null;  // roster/coach barthag, see docs/data/team_factors.json
+let currentProbBase   = 'torvik';  // 'torvik' | 'roster' | 'coach' — applies to every approach
 let teamIndex        = {};      // team_id → { barthag, roster_barthag, coach_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
-let roundsCache   = {};         // strategy key → computed rounds[]
+let roundsCache   = {};         // "key_base" → computed rounds[]
+
+const BRACKET_FILES = {
+  pool:       { torvik: 'bracket_2026.json',           roster: 'bracket_2026_roster.json',           coach: 'bracket_2026_coach.json' },
+  exhaustive: { torvik: 'bracket_2026_exhaustive.json', roster: 'bracket_2026_exhaustive_roster.json', coach: 'bracket_2026_exhaustive_coach.json' },
+  stat:       { torvik: 'bracket_2026_region.json',     roster: 'bracket_2026_region_roster.json',     coach: 'bracket_2026_region_coach.json' },
+};
 
 // ──────────────────────────────────────────────────────────────────
 // BOOT
 // ──────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  let bracket, exhaustive, region, profiles, loyo;
+  let profiles;
   try {
-    [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-14b').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-14b').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-14b').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-14b').then(r => r.json()),
+    const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
+      fetch('data/bracket_2026.json?v=2026-08-14c').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-14c').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-14c').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-14c').then(r => r.json()),
     ]);
+    bracketData.pool.torvik       = poolTv;
+    bracketData.exhaustive.torvik = exhaustiveTv;
+    bracketData.stat.torvik       = regionTv;
+    profiles = profilesRes;
   } catch (err) {
     document.body.innerHTML =
       '<p style="padding:48px;font-family:sans-serif;color:#bb4d2d">Failed to load bracket data. ' +
@@ -218,24 +191,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       'and team_profiles.json are present in docs/data/.</p>';
     return;
   }
-  // Per-year ESPN points and team factors are nice-to-haves, not required
-  // to render the bracket picker — fetch separately so a missing/broken
-  // file degrades to "no panel" instead of blocking the whole page.
-  let factors;
+
+  // Roster/coach probability-base variants and the per-year points/factors
+  // panels are all nice-to-haves, not required to render the bracket picker
+  // — fetch separately so a missing/broken file degrades gracefully (falls
+  // back to torvik for a bracket variant, "no panel" for loyo/factors)
+  // instead of blocking the whole page.
+  const altFetches = [];
+  for (const approach of ['pool', 'exhaustive', 'stat']) {
+    for (const base of ['roster', 'coach']) {
+      altFetches.push(
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-14c`)
+          .then(r => r.json())
+          .then(data => { bracketData[approach][base] = data; })
+          .catch(() => { bracketData[approach][base] = null; })
+      );
+    }
+  }
+  await Promise.all(altFetches);
+
+  let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-14b').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-14c').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-14b').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-14c').then(r => r.json());
   } catch (err) {
     factors = null;
   }
 
-  bracketData    = bracket;
-  exhaustiveData = exhaustive;
-  regionData     = region;
   loyoData       = loyo;
   factorsData    = factors;
 
@@ -251,7 +237,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // Merge in the roster/coach barthag lenses (docs/data/team_factors.json),
   // if the fetch above succeeded. Missing entries just fall back to torvik
-  // barthag in effectiveBarthag() — never a hard failure.
+  // barthag in effectiveBarthag() — never a hard failure. Only Chalk (no
+  // precomputed bracket per base) uses this directly; pool/exhaustive/stat
+  // get their alt-base picks from the precomputed JSON above instead.
   if (factorsData && factorsData.teams) {
     for (const t of factorsData.teams) {
       if (teamIndex[t.team_id]) {
@@ -262,6 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   renderStrategyStrip();
+  renderProbBaseToggle();
   activateStrategy('pool');
 });
 
@@ -300,19 +289,22 @@ function mkTeam(id, rawName, seed, ratingFallback) {
   };
 }
 
-// The barthag value that drives win probabilities for a given strategy's
-// probModel ('torvik' | 'roster' | 'coach'). Falls back to torvik barthag
-// when a team has no data for the requested lens — never a hard failure.
-function effectiveBarthag(team, model) {
-  if (model === 'torvik' || !model) return team.barthag;
-  const alt = model === 'roster' ? team.roster_barthag : team.coach_barthag;
+// The barthag value that drives Chalk's live win probabilities under the
+// selected global probability base (see renderProbBaseToggle). Falls back
+// to torvik barthag when a team has no data for the requested lens — never
+// a hard failure. Only Chalk uses this: pool/exhaustive/stat get their
+// alt-base picks from a genuinely separate precomputed bracket instead
+// (see bracketData / BRACKET_FILES), not a client-side recompute.
+function effectiveBarthag(team) {
+  if (currentProbBase === 'torvik') return team.barthag;
+  const alt = currentProbBase === 'roster' ? team.roster_barthag : team.coach_barthag;
   return alt ?? team.barthag;
 }
 
-// Convert a pre-computed bracket JSON into the internal game format.
-// These strategies (pool/exhaustive/region) always ran their construction
-// against torvik round_probs, so their picks AND win_prob both come
-// straight from the JSON — no client-side recomputation.
+// Convert a pre-computed bracket JSON into the internal game format. Picks
+// AND win_prob both come straight from the JSON — it was actually
+// constructed under the selected probability base (see BRACKET_FILES),
+// not recomputed client-side.
 function precomputedRounds(data) {
   return data.rounds.map(round => ({
     round_name: round.round_name,
@@ -330,9 +322,11 @@ function precomputedRounds(data) {
   }));
 }
 
-function poolRounds()       { return precomputedRounds(bracketData); }
-function exhaustiveRounds() { return precomputedRounds(exhaustiveData); }
-function regionRounds()     { return precomputedRounds(regionData); }
+// Each precomputed approach falls back to its torvik bracket if the
+// selected base failed to load (e.g. generation skipped for that year).
+function poolRounds()       { return precomputedRounds(bracketData.pool[currentProbBase]       ?? bracketData.pool.torvik); }
+function exhaustiveRounds() { return precomputedRounds(bracketData.exhaustive[currentProbBase]  ?? bracketData.exhaustive.torvik); }
+function regionRounds()     { return precomputedRounds(bracketData.stat[currentProbBase]        ?? bracketData.stat.torvik); }
 
 // Precomputed strategies read their bracket straight from a JSON file
 // instead of simulating client-side (see STRATEGIES pick === null).
@@ -342,23 +336,24 @@ const PRECOMPUTED_ROUNDS = {
   stat: regionRounds,
 };
 
-// Simulate the full bracket for a non-pool strategy from R64. Both the
-// R64 win_prob AND every subsequent round's picks use strategy.probModel
-// consistently — for 'roster'/'coach', this means the selected probability
-// lens genuinely drives which team advances, not just what's displayed.
+// Simulate the full bracket for Chalk (the only strategy without a
+// precomputed bracket per probability base) from R64. R64 matchup
+// structure (which teams play which) is identical across every approach
+// and base — only pulled from bracketData.pool.torvik for convenience —
+// but win_prob is recomputed via effectiveBarthag() under the currently
+// selected base, so Chalk's same-seed tie-breaks genuinely follow it too.
 function simulate(strategy) {
-  const model = strategy.probModel || 'torvik';
-  const r64 = bracketData.rounds[0].games.map(g => {
+  const r64 = bracketData.pool.torvik.rounds[0].games.map(g => {
     const team1 = mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating);
     const team2 = mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating);
-    const win_prob = model === 'torvik' ? g.win_prob : log5(effectiveBarthag(team1, model), effectiveBarthag(team2, model));
+    const win_prob = currentProbBase === 'torvik' ? g.win_prob : log5(effectiveBarthag(team1), effectiveBarthag(team2));
     return {
       round:    'Round of 64',
       region:   g.region,
       team1,
       team2,
       win_prob,
-      is_upset: usingAltLens ? upsetCheck(team1, team2, win_prob) : g.is_upset,
+      is_upset: currentProbBase === 'torvik' ? g.is_upset : upsetCheck(team1, team2, win_prob),
     };
   });
 
@@ -380,7 +375,7 @@ function simulate(strategy) {
       for (let i = 0; i < prev.length; i += 2) {
         const w1 = pick(prev[i], strategy);
         const w2 = pick(prev[i + 1], strategy);
-        const wp = log5(effectiveBarthag(w1, model), effectiveBarthag(w2, model));
+        const wp = log5(effectiveBarthag(w1), effectiveBarthag(w2));
         const game = {
           round: roundName, region: reg,
           team1: w1, team2: w2,
@@ -414,8 +409,7 @@ function simulate(strategy) {
 }
 
 function mkGame(round, region, t1, t2, strategy) {
-  const model = strategy.probModel || 'torvik';
-  const wp = log5(effectiveBarthag(t1, model), effectiveBarthag(t2, model));
+  const wp = log5(effectiveBarthag(t1), effectiveBarthag(t2));
   return { round, region, team1: t1, team2: t2, win_prob: wp, is_upset: upsetCheck(t1, t2, wp) };
 }
 
@@ -432,20 +426,22 @@ function pick(game, strategy) {
   if (strategy.pick) {
     return strategy.pick(game.team1, game.team2, game.win_prob);
   }
-  const model = strategy.probModel || 'torvik';
-  return effectiveBarthag(game.team1, model) >= effectiveBarthag(game.team2, model) ? game.team1 : game.team2;
+  return effectiveBarthag(game.team1) >= effectiveBarthag(game.team2) ? game.team1 : game.team2;
 }
 
-// Get cached rounds for a strategy key.
+// Get cached rounds for a strategy key. Cache key includes the probability
+// base — a precomputed strategy's rounds genuinely differ per base now
+// (different source JSON), not just Chalk.
 function getRounds(key) {
-  if (roundsCache[key]) return roundsCache[key];
+  const cacheKey = `${key}_${currentProbBase}`;
+  if (roundsCache[cacheKey]) return roundsCache[cacheKey];
   const s = STRATEGIES.find(s => s.key === key);
   if (s.pick === null) {
-    roundsCache[key] = PRECOMPUTED_ROUNDS[key]();
+    roundsCache[cacheKey] = PRECOMPUTED_ROUNDS[key]();
   } else {
-    roundsCache[key] = simulate(s);
+    roundsCache[cacheKey] = simulate(s);
   }
-  return roundsCache[key];
+  return roundsCache[cacheKey];
 }
 
 // Build the champion's path through every round.
@@ -515,7 +511,11 @@ function renderStrategyStrip() {
 
 // Source data behind each precomputed strategy's team1_pool_pct/team2_pool_pct
 // annotations — "what fraction of the opponent field picked this team."
-const OPPONENT_SOURCE_DATA = { pool: () => bracketData, exhaustive: () => exhaustiveData, stat: () => regionData };
+const OPPONENT_SOURCE_DATA = {
+  pool:       () => bracketData.pool[currentProbBase]       ?? bracketData.pool.torvik,
+  exhaustive: () => bracketData.exhaustive[currentProbBase] ?? bracketData.exhaustive.torvik,
+  stat:       () => bracketData.stat[currentProbBase]       ?? bracketData.stat.torvik,
+};
 
 function renderStrategyDetail() {
   const el = document.getElementById('strategy-detail');
@@ -752,5 +752,43 @@ function probCls(pct) {
   if (pct >= 70) return 'high';
   if (pct >= 52) return 'mid';
   return 'low';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// PROBABILITY BASE TOGGLE
+//
+// Applies to every approach, not just Chalk: Pool Optimizer / Exhaustive
+// Search / Region Beam Search each have a real precomputed bracket per
+// base (see BRACKET_FILES / scripts/prob_base_variants.py) — the same
+// construction algorithm actually run against roster_adj-/coach_adj-
+// adjusted round_probs instead of torvik, so switching bases can change
+// which team a given approach picks, not just what percentage is shown.
+// roster/coach are exploratory: tested against the production
+// meta_region_poolaware construction, both lost (MEMORY.md D19).
+// ──────────────────────────────────────────────────────────────────
+
+const PROB_BASE_DEFS = {
+  torvik: { label: 'Torvik', note: 'The backtested base every approach’s published P(1st) is measured against.' },
+  roster: { label: 'Roster Talent', note: 'Swaps in roster_adj (top-5 WARP) round probabilities for every approach. Exploratory — lost against the production construction in backtest (MEMORY.md D19).' },
+  coach:  { label: 'Coach Experience', note: 'Swaps in coach_adj (prior NCAA tournament appearances) round probabilities for every approach. Exploratory — lost against the production construction in backtest (MEMORY.md D19).' },
+};
+
+function setProbBase(base) {
+  currentProbBase = base;
+  renderProbBaseToggle();
+  activateStrategy(currentKey);
+}
+
+function renderProbBaseToggle() {
+  const toggleEl = document.getElementById('probbase-toggle');
+  const noteEl   = document.getElementById('probbase-note');
+  if (!toggleEl) return;
+
+  toggleEl.innerHTML = Object.entries(PROB_BASE_DEFS).map(([key, def]) => `
+    <button class="probbase-toggle-btn${key === currentProbBase ? ' active' : ''}"
+            onclick="setProbBase('${key}')">${def.label}</button>
+  `).join('');
+
+  if (noteEl) noteEl.textContent = PROB_BASE_DEFS[currentProbBase].note;
 }
 

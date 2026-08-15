@@ -15,12 +15,15 @@ script exports that nudge two ways:
      lets the UI recompute a live Log5 win probability for any single
      matchup under an alternate probability model, as a lens on top of
      a validated bracket rather than a replacement for one.
-Both use the identical per-team multiplicative factor (imported directly
-from the adjustment modules, not re-derived) so the two views agree.
+Both use the identical per-team multiplicative factor (scripts/prob_base_
+variants.py, shared with the bracket_2026*_roster.json/_coach.json
+generators) so this file and those brackets always agree.
+
+Feeds Chalk's live probModel switching in docs/app.js (the only strategy
+without a precomputed bracket per probability base — see getRounds()).
 """
 
 import json
-import math
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,30 +37,15 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
     load_seeds_and_regions,
 )
+from scripts.prob_base_variants import coach_factor, roster_factor
 from src.prediction.coach_adj_probabilities import (
-    _LOG_CEILING,
-    _LOG_SCALE,
     build_coach_adj_round_probs,
     load_coach_experience,
 )
 from src.prediction.roster_adj_probabilities import (
-    _MAX_ADJUSTMENT,
-    _Z_SCALE,
     build_roster_adj_round_probs,
     load_team_talent,
 )
-
-
-def _roster_factor(z: float) -> float:
-    """Same per-team multiplicative factor as build_roster_adj_round_probs,
-    applied to a scalar barthag instead of round_probs."""
-    return 1.0 + max(-_MAX_ADJUSTMENT, min(_MAX_ADJUSTMENT, _Z_SCALE * z))
-
-
-def _coach_factor(prior_apps: int) -> float:
-    """Same per-team multiplicative factor as build_coach_adj_round_probs,
-    applied to a scalar barthag instead of round_probs."""
-    return 1.0 + _LOG_SCALE * min(math.log(1 + prior_apps), _LOG_CEILING)
 
 YEAR = 2026
 OUT_PATH = PROJECT_ROOT / "docs" / "data" / "team_factors.json"
@@ -110,8 +98,8 @@ def main():
                 "coach_e8_pct": round(coach_rp.get(tid, {}).get("E8", 0.0) * 100, 2),
                 "coach_prior_apps": prior_apps,
                 "baseline_barthag": round(team_barthag, 4),
-                "roster_barthag": round(team_barthag * _roster_factor(z), 4),
-                "coach_barthag": round(team_barthag * _coach_factor(prior_apps), 4),
+                "roster_barthag": round(team_barthag * roster_factor(z), 4),
+                "coach_barthag": round(team_barthag * coach_factor(prior_apps), 4),
             }
         )
 
