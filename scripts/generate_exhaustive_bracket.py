@@ -2,12 +2,12 @@
 
 Uses exhaustive_champion construction mode (tries all 64 possible champions,
 picks the bracket with the highest expected points) on the selected
-probability base (--prob-base torvik|roster|coach). Torvik is the default,
+probability base (--prob-base torvik|elo|ap). Torvik is the default,
 backtested base (docs/app.js STRATEGIES['exhaustive'], 7.7% P(1st)).
-roster/coach swap in roster_adj-/coach_adj-adjusted round_probs and ratings
-so the same construction algorithm can be viewed through that lens — this
-is exploratory (MEMORY.md D19: roster/coach lose against the production
-construction), not a claim that either beats Torvik.
+elo/ap swap in a fully independent rating system (see
+scripts/prob_base_variants.py) so the same construction algorithm can be
+viewed through that lens — exploratory, not a claim that either beats
+Torvik on P(1st).
 """
 
 import argparse
@@ -40,7 +40,7 @@ OUT_DIR = PROJECT_ROOT / "docs" / "data"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "roster", "coach"], default="torvik")
+    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap"], default="torvik")
     args = parser.parse_args()
 
     seeds, regions = load_seeds_and_regions(YEAR)
@@ -50,7 +50,7 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-    rating, round_probs = load_prob_base(args.prob_base, YEAR, seeds, torvik_rp, barthag)
+    rating, round_probs = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
 
     try:
         pick_dist = build_espn_pick_distribution(YEAR, seeds)

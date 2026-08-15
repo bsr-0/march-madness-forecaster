@@ -1,89 +1,77 @@
 """Shared helper: resolve a probability-base name to (rating, round_probs).
 
 Used by every docs/data/bracket_2026*.json generator script so "torvik" /
-"roster" / "coach" mean the same adjustment everywhere — one source of
-truth for the per-team factor, instead of copies that could silently
-drift apart (see the _TEAMS_PER_ROUND bug from 2026-08-13 for what
-duplicating this kind of constant costs).
+"elo" / "ap" mean the same thing everywhere.
 
-roster/coach are exploratory lenses, not validated strategies: tested
-against the production meta_region_poolaware construction, both lost
-(MEMORY.md D19 — 10.4%/11.1% P(1st) vs 11.2% baseline, 0/15 years ahead).
+Superseded 2026-08-15: roster_adj/coach_adj (top-5 WARP, coach tournament
+experience) were the original probability bases here, but investigation
+showed they rarely move any pick for the 2026 field — they're small,
+capped (+-4%/+3%), post-hoc rescales of Torvik's own round_probs, and
+Torvik's structural gaps between top teams are usually bigger than what
+the cap can close. Only 1-2 of 63 games ever differed from Torvik across
+any construction. Replaced with elo and ap_strength: fully independent
+rating systems (not derived from Torvik at all), each simulated fresh via
+the same MC round_probs builder Torvik uses. Checked against the 2026
+field before adopting: elo disagrees with Torvik on 20/68 first-round
+favorites (and flips the Duke-Michigan championship favorite outright);
+ap_strength disagrees on 14/68. Both are "preference lens" bases, not
+separately backtested as standalone P(1st) contenders — see the honest
+framing in docs/app.js's PROB_BASE_DEFS.
 """
 
-import math
-import statistics
+import sys
 from pathlib import Path
 from typing import Dict, Tuple
 
-from src.prediction.coach_adj_probabilities import (
-    _LOG_CEILING,
-    _LOG_SCALE,
-    build_coach_adj_round_probs,
-    load_coach_experience,
-)
-from src.prediction.roster_adj_probabilities import (
-    _MAX_ADJUSTMENT,
-    _Z_SCALE,
-    build_roster_adj_round_probs,
-    load_team_talent,
-)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts.mc_pool_backtest import build_torvik_round_probabilities
+from src.prediction.ap_probabilities import load_ap_strength_barthag
+from src.prediction.elo_probabilities import load_elo_barthag
 
 MODEL_LABELS = {
     "torvik": "Torvik Barthag",
-    "roster": "Roster Talent-Adjusted Torvik",
-    "coach": "Coach Experience-Adjusted Torvik",
+    "elo": "Elo Rating",
+    "ap": "AP Poll Strength",
 }
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"
-
-
-def roster_factor(z: float) -> float:
-    """Same per-team multiplicative factor as build_roster_adj_round_probs,
-    applied to a scalar barthag instead of round_probs."""
-    return 1.0 + max(-_MAX_ADJUSTMENT, min(_MAX_ADJUSTMENT, _Z_SCALE * z))
-
-
-def coach_factor(prior_apps: int) -> float:
-    """Same per-team multiplicative factor as build_coach_adj_round_probs,
-    applied to a scalar barthag instead of round_probs."""
-    return 1.0 + _LOG_SCALE * min(math.log(1 + prior_apps), _LOG_CEILING)
 
 
 def load_prob_base(
     base: str,
     year: int,
     seeds: Dict[str, int],
+    regions: Dict[str, str],
     torvik_rp: Dict[str, Dict[str, float]],
     barthag: Dict[str, float],
 ) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
-    """Resolve "torvik" | "roster" | "coach" to (rating, round_probs).
+    """Resolve "torvik" | "elo" | "ap" to (rating, round_probs).
 
     rating: scalar per-team barthag-equivalent, used for displayed Log5
-        win_prob in the exported bracket JSON (see build_bracket_json).
-    round_probs: what construct_bracket actually optimizes candidates over.
+        win_prob in the exported bracket JSON (see build_bracket_json) and
+        for Chalk's live client-side lens.
+    round_probs: what construct_bracket actually optimizes candidates
+        over. For elo/ap this is a FRESH Monte Carlo simulation from that
+        base's own barthag (via the same build_torvik_round_probabilities
+        machinery Torvik uses) -- not a rescale of Torvik's round_probs --
+        so round_probs and the displayed win_prob can never structurally
+        disagree the way a post-hoc rescale can.
     """
     if base == "torvik":
         return barthag, torvik_rp
 
-    if base == "roster":
-        team_talent = load_team_talent(year, seeds.keys(), DATA_ROOT)
-        vals = list(team_talent.values())
-        mean = statistics.fmean(vals) if len(vals) >= 2 else 0.0
-        std = statistics.stdev(vals) if len(vals) >= 2 else 0.0
-        rating = {}
-        for tid in seeds:
-            w = team_talent.get(tid)
-            z = (w - mean) / std if w is not None and std > 1e-9 else 0.0
-            rating[tid] = barthag.get(tid, 0.0) * roster_factor(z)
-        round_probs = build_roster_adj_round_probs(torvik_rp, team_talent)
-        return rating, round_probs
+    if base == "elo":
+        elo_barthag = load_elo_barthag(year, seeds, DATA_ROOT)
+        if elo_barthag is None:
+            return barthag, torvik_rp
+        return elo_barthag, build_torvik_round_probabilities(seeds, regions, elo_barthag)
 
-    if base == "coach":
-        coach_experience = load_coach_experience(year, seeds.keys(), DATA_ROOT)
-        rating = {tid: barthag.get(tid, 0.0) * coach_factor(coach_experience.get(tid, 0)) for tid in seeds}
-        round_probs = build_coach_adj_round_probs(torvik_rp, coach_experience)
-        return rating, round_probs
+    if base == "ap":
+        ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), DATA_ROOT)
+        if ap_barthag is None:
+            return barthag, torvik_rp
+        return ap_barthag, build_torvik_round_probabilities(seeds, regions, ap_barthag)
 
-    raise ValueError(f"Unknown prob base: {base!r}. Valid: torvik, roster, coach.")
+    raise ValueError(f"Unknown prob base: {base!r}. Valid: torvik, elo, ap.")

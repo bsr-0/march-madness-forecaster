@@ -154,17 +154,17 @@ const BADGE_COLORS = {
 // back to torvik.
 let bracketData = { pool: {}, exhaustive: {}, stat: {} };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
-let factorsData        = null;  // roster/coach barthag, see docs/data/team_factors.json
-let currentProbBase   = 'torvik';  // 'torvik' | 'roster' | 'coach' — applies to every approach
-let teamIndex        = {};      // team_id → { barthag, roster_barthag, coach_barthag, adj_oe, adj_de, champ_prob, elo_rating }
+let factorsData        = null;  // elo/ap barthag, see docs/data/team_factors.json
+let currentProbBase   = 'torvik';  // 'torvik' | 'elo' | 'ap' — applies to every approach
+let teamIndex        = {};      // team_id → { barthag, elo_barthag, ap_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
 let roundsCache   = {};         // "key_base" → computed rounds[]
 
 const BRACKET_FILES = {
-  pool:       { torvik: 'bracket_2026.json',           roster: 'bracket_2026_roster.json',           coach: 'bracket_2026_coach.json' },
-  exhaustive: { torvik: 'bracket_2026_exhaustive.json', roster: 'bracket_2026_exhaustive_roster.json', coach: 'bracket_2026_exhaustive_coach.json' },
-  stat:       { torvik: 'bracket_2026_region.json',     roster: 'bracket_2026_region_roster.json',     coach: 'bracket_2026_region_coach.json' },
+  pool:       { torvik: 'bracket_2026.json',           elo: 'bracket_2026_elo.json',           ap: 'bracket_2026_ap.json' },
+  exhaustive: { torvik: 'bracket_2026_exhaustive.json', elo: 'bracket_2026_exhaustive_elo.json', ap: 'bracket_2026_exhaustive_ap.json' },
+  stat:       { torvik: 'bracket_2026_region.json',     elo: 'bracket_2026_region_elo.json',     ap: 'bracket_2026_region_ap.json' },
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -175,10 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-15').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-15').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-15').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-15b').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15b').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-15b').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-15b').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -192,16 +192,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Roster/coach probability-base variants and the per-year points/factors
+  // Elo/AP probability-base variants and the per-year points/factors
   // panels are all nice-to-haves, not required to render the bracket picker
   // — fetch separately so a missing/broken file degrades gracefully (falls
   // back to torvik for a bracket variant, "no panel" for loyo/factors)
   // instead of blocking the whole page.
   const altFetches = [];
   for (const approach of ['pool', 'exhaustive', 'stat']) {
-    for (const base of ['roster', 'coach']) {
+    for (const base of ['elo', 'ap']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15b`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -212,12 +212,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-15').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-15b').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-15').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-15b').then(r => r.json());
   } catch (err) {
     factors = null;
   }
@@ -235,16 +235,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       elo_rating: t.rating ?? null,
     };
   }
-  // Merge in the roster/coach barthag lenses (docs/data/team_factors.json),
-  // if the fetch above succeeded. Missing entries just fall back to torvik
+  // Merge in the elo/ap barthag lenses (docs/data/team_factors.json), if
+  // the fetch above succeeded. Missing entries just fall back to torvik
   // barthag in effectiveBarthag() — never a hard failure. Only Chalk (no
   // precomputed bracket per base) uses this directly; pool/exhaustive/stat
   // get their alt-base picks from the precomputed JSON above instead.
   if (factorsData && factorsData.teams) {
     for (const t of factorsData.teams) {
       if (teamIndex[t.team_id]) {
-        teamIndex[t.team_id].roster_barthag = t.roster_barthag;
-        teamIndex[t.team_id].coach_barthag  = t.coach_barthag;
+        teamIndex[t.team_id].elo_barthag = t.elo_barthag;
+        teamIndex[t.team_id].ap_barthag  = t.ap_barthag;
       }
     }
   }
@@ -280,8 +280,8 @@ function mkTeam(id, rawName, seed, ratingFallback) {
     name:           rawName.replace(/^\(\d+\)\s*/, ''),
     seed,
     barthag:        prof.barthag        ?? ratingFallback,
-    roster_barthag: prof.roster_barthag ?? null,
-    coach_barthag:  prof.coach_barthag  ?? null,
+    elo_barthag:    prof.elo_barthag    ?? null,
+    ap_barthag:     prof.ap_barthag     ?? null,
     adj_oe:         prof.adj_oe         ?? null,
     adj_de:         prof.adj_de         ?? null,
     champ_prob:     prof.champ_prob     ?? null,
@@ -297,7 +297,7 @@ function mkTeam(id, rawName, seed, ratingFallback) {
 // (see bracketData / BRACKET_FILES), not a client-side recompute.
 function effectiveBarthag(team) {
   if (currentProbBase === 'torvik') return team.barthag;
-  const alt = currentProbBase === 'roster' ? team.roster_barthag : team.coach_barthag;
+  const alt = currentProbBase === 'elo' ? team.elo_barthag : team.ap_barthag;
   return alt ?? team.barthag;
 }
 
@@ -760,17 +760,21 @@ function probCls(pct) {
 // Applies to every approach, not just Chalk: Pool Optimizer / Exhaustive
 // Search / Region Beam Search each have a real precomputed bracket per
 // base (see BRACKET_FILES / scripts/prob_base_variants.py) — the same
-// construction algorithm actually run against roster_adj-/coach_adj-
-// adjusted round_probs instead of torvik, so switching bases can change
-// which team a given approach picks, not just what percentage is shown.
-// roster/coach are exploratory: tested against the production
-// meta_region_poolaware construction, both lost (MEMORY.md D19).
+// construction algorithm actually run against elo/ap_strength round_probs
+// instead of torvik, so switching bases can change which team a given
+// approach picks, not just what percentage is shown. elo/ap are fully
+// independent rating systems (not derived from torvik at all), unlike
+// the roster_adj/coach_adj lens this replaced 2026-08-15b — those rarely
+// moved a single pick for the 2026 field (small, capped adjustments to
+// Torvik's own round_probs). elo/ap disagree with Torvik on 20/68 and
+// 14/68 first-round favorites respectively; neither is separately
+// backtested as a standalone P(1st) strategy.
 // ──────────────────────────────────────────────────────────────────
 
 const PROB_BASE_DEFS = {
   torvik: { label: 'Torvik', note: 'The backtested base every approach’s published P(1st) is measured against.' },
-  roster: { label: 'Roster Talent', note: 'Swaps in roster_adj (top-5 WARP) round probabilities for every approach. Exploratory — lost against the production construction in backtest (MEMORY.md D19).' },
-  coach:  { label: 'Coach Experience', note: 'Swaps in coach_adj (prior NCAA tournament appearances) round probabilities for every approach. Exploratory — lost against the production construction in backtest (MEMORY.md D19).' },
+  elo:    { label: 'Elo Rating', note: 'Self-contained Elo rating from historical game results, independent of Torvik. Disagrees with Torvik on 20/68 first-round favorites this year — a real change in picks, not just displayed odds. Not separately backtested as a standalone strategy.' },
+  ap:     { label: 'AP Poll Strength', note: 'Final pre-tournament AP media poll converted to a rating — reflects human voter judgment, not computer efficiency stats. Disagrees with Torvik on 14/68 first-round favorites this year. Not separately backtested as a standalone strategy.' },
 };
 
 function setProbBase(base) {

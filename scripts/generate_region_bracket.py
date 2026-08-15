@@ -1,11 +1,11 @@
 """Generate the meta_region bracket for 2026 and export to docs/data/.
 
 Uses the region_top_n construction mode (region-level beam search) on the
-selected probability base (--prob-base torvik|roster|coach) — the same
+selected probability base (--prob-base torvik|elo|ap) — the same
 algorithm meta_region_poolaware is built on top of. Torvik is the default,
-backtested base (docs/app.js STRATEGIES['stat'], 8.0% P(1st)). roster/coach
+backtested base (docs/app.js STRATEGIES['stat'], 8.0% P(1st)). elo/ap
 are exploratory lenses on the same construction — see
-scripts/prob_base_variants.py and MEMORY.md D19.
+scripts/prob_base_variants.py.
 """
 
 import argparse
@@ -38,7 +38,7 @@ OUT_DIR = PROJECT_ROOT / "docs" / "data"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "roster", "coach"], default="torvik")
+    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap"], default="torvik")
     args = parser.parse_args()
 
     seeds, regions = load_seeds_and_regions(YEAR)
@@ -48,7 +48,7 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-    rating, round_probs = load_prob_base(args.prob_base, YEAR, seeds, torvik_rp, barthag)
+    rating, round_probs = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
 
     try:
         pick_dist = build_espn_pick_distribution(YEAR, seeds)
