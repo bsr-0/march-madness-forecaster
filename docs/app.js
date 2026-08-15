@@ -14,6 +14,17 @@
 //   Strong: meta_exhaustive        —  7.7% P(1st), 14-yr LOYO, p<0.001
 //   Seed baseline (random-ish):      3.1% P(1st)
 //
+// NOTE (2026-08-15): the 2026 tournament this page displays picks for
+// finished months ago (real champion: Michigan, beat UConn 69-63 —
+// see data/raw/historical/tournament_results_2026.json). This page is
+// now a replay/demo, not a live pick tool. The 14-yr figures above are
+// an accurate citation of the backtest that produced them (2011-2025,
+// excl. 2020); BACKTEST_YEARS in scripts/mc_pool_backtest.py has since
+// grown to 15 years (2011-2026 excl. 2020) now that 2026 is complete,
+// but re-validating the headline P(1st) numbers against that wider
+// window requires an approved backtest rerun (see memory/run_policy.md)
+// and hasn't been done — don't bump "14-yr" to "15-yr" here without one.
+//
 // ═══ HOW TO UPDATE AFTER A NEW SEASON ══════════════════════════
 //   1. Approve and run:  python scripts/mc_pool_backtest.py
 //   2. Identify the best strategy from the printed backtest report
@@ -789,9 +800,9 @@ function probCls(pct) {
 
 const PROB_BASE_DEFS = {
   torvik: { label: 'Torvik', note: 'The backtested base every approach’s published P(1st) is measured against.' },
-  elo:    { label: 'Elo Rating', note: 'Self-contained Elo rating from historical game results, independent of Torvik. Disagrees with Torvik on 20/68 first-round favorites this year — a real change in picks, not just displayed odds. Not separately backtested as a standalone strategy.' },
-  ap:     { label: 'AP Poll Strength', note: 'Final pre-tournament AP media poll converted to a rating — reflects human voter judgment, not computer efficiency stats. Disagrees with Torvik on 14/68 first-round favorites this year. Not separately backtested as a standalone strategy.' },
-  upset:  { label: 'Upset Hunter', note: 'Elo ratings pushed to maximum contrarian weighting — deliberately fades popular picks. Zero 1-seeds in this year’s Final Four. A single unvalidated "what if" build, not run through Pool Optimizer’s normal pool-simulation selection (which would correctly reject a near-0%-real-odds pick).' },
+  elo:    { label: 'Elo Rating', note: 'Self-contained Elo rating from historical game results, independent of Torvik. Disagrees with Torvik on 20/68 first-round favorites in the 2026 field — a real change in picks, not just displayed odds. Not separately backtested as a standalone strategy.' },
+  ap:     { label: 'AP Poll Strength', note: 'Final pre-tournament AP media poll converted to a rating — reflects human voter judgment, not computer efficiency stats. Disagrees with Torvik on 14/68 first-round favorites in the 2026 field. Not separately backtested as a standalone strategy.' },
+  upset:  { label: 'Upset Hunter', note: 'Elo ratings pushed to maximum contrarian weighting — deliberately fades popular picks. Zero 1-seeds in the 2026 Final Four this produces. A single unvalidated "what if" build, not run through Pool Optimizer’s normal pool-simulation selection (which would correctly reject a near-0%-real-odds pick).' },
 };
 
 function setProbBase(base) {

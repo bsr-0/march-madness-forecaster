@@ -3,7 +3,7 @@
 Uses the existing PoolCompetitionSimulator infrastructure to generate opponent
 brackets and score them against actual historical tournament outcomes.
 
-For each year (2011-2025, excluding 2020):
+For each year (2011-2026, excluding 2020):
   1. Sample N_MODEL_BRACKETS stochastic brackets from each mode's round
      probabilities (path-consistent random draws, NOT deterministic argmax)
   2. Generate opponent brackets from seed-based pick distributions
@@ -97,7 +97,7 @@ HIST_DIR = Path("data/raw/historical")
 # hold-before requires >=3 prior training years, so 2011 is the first valid test
 # year. 2020 excluded (COVID). 2012 lacks archived ESPN picks and will be skipped
 # at runtime by the per-year try/except. Matches unified_mode_evaluation.py.
-BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 14 years (2020 = COVID)
+BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 15 years (2020 = COVID)
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
 POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
