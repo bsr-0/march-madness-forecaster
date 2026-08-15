@@ -1,11 +1,12 @@
 """Generate the meta_region bracket for 2026 and export to docs/data/.
 
 Uses the region_top_n construction mode (region-level beam search) on the
-selected probability base (--prob-base torvik|elo|ap) — the same
+selected probability base (--prob-base torvik|elo|ap|upset) — the same
 algorithm meta_region_poolaware is built on top of. Torvik is the default,
 backtested base (docs/app.js STRATEGIES['stat'], 8.0% P(1st)). elo/ap
-are exploratory lenses on the same construction — see
-scripts/prob_base_variants.py.
+are exploratory lenses on the same construction; upset additionally
+forces risk_level=1.0 (max contrarian weighting) instead of the normal
+0.5 — see scripts/prob_base_variants.py.
 """
 
 import argparse
@@ -29,7 +30,7 @@ from scripts.mc_pool_backtest import (
     build_espn_pick_distribution,
     load_seeds_and_regions,
 )
-from scripts.prob_base_variants import load_prob_base, MODEL_LABELS
+from scripts.prob_base_variants import load_prob_base, MODEL_LABELS, RISK_LEVEL
 from src.optimization.bracket_construction import construct_bracket
 
 YEAR = 2026
@@ -38,7 +39,7 @@ OUT_DIR = PROJECT_ROOT / "docs" / "data"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap"], default="torvik")
+    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap", "upset"], default="torvik")
     args = parser.parse_args()
 
     seeds, regions = load_seeds_and_regions(YEAR)
@@ -61,7 +62,7 @@ def main():
         regions=regions,
         round_probs=round_probs,
         public_picks=pick_dist,
-        risk_level=0.5,
+        risk_level=RISK_LEVEL[args.prob_base],
         pool_size=30,
         scoring_system=dict(ESPN_SCORING),
     )

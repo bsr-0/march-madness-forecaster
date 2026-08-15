@@ -155,16 +155,16 @@ const BADGE_COLORS = {
 let bracketData = { pool: {}, exhaustive: {}, stat: {} };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let factorsData        = null;  // elo/ap barthag, see docs/data/team_factors.json
-let currentProbBase   = 'torvik';  // 'torvik' | 'elo' | 'ap' — applies to every approach
+let currentProbBase   = 'torvik';  // 'torvik' | 'elo' | 'ap' | 'upset' — applies to every approach
 let teamIndex        = {};      // team_id → { barthag, elo_barthag, ap_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
 let roundsCache   = {};         // "key_base" → computed rounds[]
 
 const BRACKET_FILES = {
-  pool:       { torvik: 'bracket_2026.json',           elo: 'bracket_2026_elo.json',           ap: 'bracket_2026_ap.json' },
-  exhaustive: { torvik: 'bracket_2026_exhaustive.json', elo: 'bracket_2026_exhaustive_elo.json', ap: 'bracket_2026_exhaustive_ap.json' },
-  stat:       { torvik: 'bracket_2026_region.json',     elo: 'bracket_2026_region_elo.json',     ap: 'bracket_2026_region_ap.json' },
+  pool:       { torvik: 'bracket_2026.json',           elo: 'bracket_2026_elo.json',           ap: 'bracket_2026_ap.json',           upset: 'bracket_2026_upset.json' },
+  exhaustive: { torvik: 'bracket_2026_exhaustive.json', elo: 'bracket_2026_exhaustive_elo.json', ap: 'bracket_2026_exhaustive_ap.json', upset: 'bracket_2026_exhaustive_upset.json' },
+  stat:       { torvik: 'bracket_2026_region.json',     elo: 'bracket_2026_region_elo.json',     ap: 'bracket_2026_region_ap.json',     upset: 'bracket_2026_region_upset.json' },
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -175,10 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-15b').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15b').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-15b').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-15b').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-15c').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15c').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-15c').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-15c').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -192,16 +192,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Elo/AP probability-base variants and the per-year points/factors
+  // Elo/AP/Upset probability-base variants and the per-year points/factors
   // panels are all nice-to-haves, not required to render the bracket picker
   // — fetch separately so a missing/broken file degrades gracefully (falls
   // back to torvik for a bracket variant, "no panel" for loyo/factors)
   // instead of blocking the whole page.
   const altFetches = [];
   for (const approach of ['pool', 'exhaustive', 'stat']) {
-    for (const base of ['elo', 'ap']) {
+    for (const base of ['elo', 'ap', 'upset']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15b`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15c`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -212,12 +212,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-15b').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-15c').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-15b').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-15c').then(r => r.json());
   } catch (err) {
     factors = null;
   }
@@ -297,8 +297,12 @@ function mkTeam(id, rawName, seed, ratingFallback) {
 // (see bracketData / BRACKET_FILES), not a client-side recompute.
 function effectiveBarthag(team) {
   if (currentProbBase === 'torvik') return team.barthag;
-  const alt = currentProbBase === 'elo' ? team.elo_barthag : team.ap_barthag;
-  return alt ?? team.barthag;
+  if (currentProbBase === 'ap') return team.ap_barthag ?? team.barthag;
+  // 'elo' and 'upset' share the same underlying rating (see
+  // scripts/prob_base_variants.py's UNDERLYING_BASE) — Chalk has no
+  // risk_level concept (seed-first, probability only breaks same-seed
+  // ties), so "upset" can't mean anything different for Chalk than elo.
+  return team.elo_barthag ?? team.barthag;
 }
 
 // Convert a pre-computed bracket JSON into the internal game format. Picks
@@ -764,17 +768,30 @@ function probCls(pct) {
 // instead of torvik, so switching bases can change which team a given
 // approach picks, not just what percentage is shown. elo/ap are fully
 // independent rating systems (not derived from torvik at all), unlike
-// the roster_adj/coach_adj lens this replaced 2026-08-15b — those rarely
+// the roster_adj/coach_adj lens this replaced 2026-08-15 — those rarely
 // moved a single pick for the 2026 field (small, capped adjustments to
 // Torvik's own round_probs). elo/ap disagree with Torvik on 20/68 and
 // 14/68 first-round favorites respectively; neither is separately
 // backtested as a standalone P(1st) strategy.
+//
+// "upset" (added same day): even elo/ap mostly kept Duke/Michigan/
+// Arizona in the Final Four — reasonable rating systems agree on who's
+// genuinely elite. Real Final Four variation needed risk_level (bracket_
+// construction.py's contrarian-weighting knob) pushed to max, on top of
+// elo's round_probs — verified against the real 2026 field: zero 1-seeds
+// in the Final Four, Miami (OH) as champion under Pool Optimizer/Region.
+// For Pool Optimizer specifically this bypasses the normal pool-
+// simulation candidate selection (see generate_poolaware_bracket.py) —
+// that selection correctly rejects near-0%-real-odds picks, which is
+// WHY it's the validated strategy, so "upset" is a direct, single-shot,
+// explicitly unvalidated "what if" construction instead.
 // ──────────────────────────────────────────────────────────────────
 
 const PROB_BASE_DEFS = {
   torvik: { label: 'Torvik', note: 'The backtested base every approach’s published P(1st) is measured against.' },
   elo:    { label: 'Elo Rating', note: 'Self-contained Elo rating from historical game results, independent of Torvik. Disagrees with Torvik on 20/68 first-round favorites this year — a real change in picks, not just displayed odds. Not separately backtested as a standalone strategy.' },
   ap:     { label: 'AP Poll Strength', note: 'Final pre-tournament AP media poll converted to a rating — reflects human voter judgment, not computer efficiency stats. Disagrees with Torvik on 14/68 first-round favorites this year. Not separately backtested as a standalone strategy.' },
+  upset:  { label: 'Upset Hunter', note: 'Elo ratings pushed to maximum contrarian weighting — deliberately fades popular picks. Zero 1-seeds in this year’s Final Four. A single unvalidated "what if" build, not run through Pool Optimizer’s normal pool-simulation selection (which would correctly reject a near-0%-real-odds pick).' },
 };
 
 function setProbBase(base) {

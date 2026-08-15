@@ -15,6 +15,21 @@ keeping every other candidate-generation detail (forced champs, risk
 sweeps, alt bases, pool-aware selection) identical — this is an
 exploratory lens on the SAME construction, not a claim it wins on P(1st).
 
+--prob-base upset does NOT go through the candidate-diversity + pool-
+simulation selection above — it bypasses that entirely for a single
+direct region_top_n(round_probs=elo, risk_level=1.0) construction. This
+is deliberate: the pool-simulation selection correctly measures each
+candidate's REAL chance of winning an actual pool, and a genuine
+Cinderella pick (e.g. a team with a <1% chance of winning it all) will
+score ~0% simulated P(1st) every time — that's not a bug, it's exactly
+why pool-simulation selection is the production mechanism. Feeding it
+only high-risk candidates just makes it pick the least-bad of a bad
+set, which is a worse experience than either its normal candidate pool
+or a bracket that's honestly built to explore the "what if" scenario
+directly. "upset" is that direct scenario: unvalidated, for exploring
+how differently the bracket looks if you deliberately fade the popular
+teams, not a claim about what would actually win a pool.
+
 Torvik output previously held stale output from a discontinued Elo+seed
 blend pipeline (generate_web_data.py) — see docs/app.js STRATEGIES['pool']
 for the UI-facing claim this file backs.
@@ -46,7 +61,7 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
     load_seeds_and_regions,
 )
-from scripts.prob_base_variants import load_prob_base, MODEL_LABELS
+from scripts.prob_base_variants import load_prob_base, MODEL_LABELS, RISK_LEVEL
 from src.optimization.bracket_construction import construct_bracket
 from src.prediction.massey_probabilities import load_massey_avg_barthag
 from src.prediction.seed_probabilities import build_seed_probabilities
@@ -88,7 +103,7 @@ def resolve_opponents(seeds):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap"], default="torvik")
+    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap", "upset"], default="torvik")
     args = parser.parse_args()
 
     seeds, regions = load_seeds_and_regions(YEAR)
@@ -99,6 +114,45 @@ def main():
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
     primary_rating, primary_rp = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
+
+    if args.prob_base == "upset":
+        # Bypass candidate-diversity + pool-simulation selection entirely —
+        # see the module docstring for why. Single direct construction at
+        # max contrarian weighting.
+        pick_dist, n_opponents, opponent_source = resolve_opponents(seeds)
+        best_picks, champion, _f4, _ev, _var = construct_bracket(
+            mode="region_top_n",
+            seeds=seeds,
+            regions=regions,
+            round_probs=primary_rp,
+            public_picks=pick_dist,
+            risk_level=RISK_LEVEL["upset"],
+            pool_size=n_opponents + 1,
+            scoring_system=dict(ESPN_SCORING),
+        )
+        best_rating = primary_rating
+        team_names = load_team_names()
+        rounds = build_bracket_json(seeds, regions, best_rating, primary_rp, best_picks, team_names, pick_dist)
+
+        out_path = OUT_DIR / "bracket_2026_upset.json"
+        output = {
+            "season": YEAR,
+            "generated_at": datetime.now().strftime("%Y-%m-%d"),
+            "model": f"{MODEL_LABELS['upset']} — Region Top-N, Single-Shot (not pool-simulation-selected)",
+            "n_simulations": 10000,
+            "opponent_source": opponent_source,
+            "rounds": rounds,
+        }
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump(output, f, indent=2)
+
+        print(f"Champion: {team_names.get(champion, champion)}")
+        print()
+        for rnd in rounds:
+            print(f"  {rnd['round_name']}: {len(rnd['games'])} games")
+        print(f"\nWritten to {out_path}")
+        return
 
     # (name, round_probs, rating_dict) — rating_dict is carried alongside each
     # prob base so the winning candidate's *own* ratings drive its displayed
