@@ -116,7 +116,7 @@ const STRATEGIES = [
       'Use this if you want a conventional, defensible bracket.',
     pick: (t1, t2) => {
       if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
-      return t1.barthag >= t2.barthag ? t1 : t2;   // tie-break
+      return effectiveBarthag(t1) >= effectiveBarthag(t2) ? t1 : t2;   // tie-break
     },
   },
 ];
@@ -149,12 +149,12 @@ let bracketData      = null;
 let exhaustiveData   = null;
 let regionData        = null;
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
-let factorsData        = null;  // roster/coach team factors, see docs/data/team_factors.json
-let currentFactor      = 'roster';
-let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
+let factorsData        = null;  // roster/coach barthag lenses, see docs/data/team_factors.json
+let currentProbModel    = 'torvik';  // 'torvik' | 'roster' | 'coach' — which barthag drives win_prob
+let teamIndex        = {};      // team_id → { barthag, roster_barthag, coach_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
-let roundsCache   = {};         // strategy key → computed rounds[]
+let roundsCache   = {};         // strategy key → computed rounds[] (cleared on probability-lens change)
 
 // ──────────────────────────────────────────────────────────────────
 // BOOT
@@ -164,10 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bracket, exhaustive, region, profiles, loyo;
   try {
     [bracket, exhaustive, region, profiles] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-13d').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-13d').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-13d').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-13d').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-14').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-14').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-14').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-14').then(r => r.json()),
     ]);
   } catch (err) {
     document.body.innerHTML =
@@ -181,12 +181,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // file degrades to "no panel" instead of blocking the whole page.
   let factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-13d').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-14').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-13d').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-14').then(r => r.json());
   } catch (err) {
     factors = null;
   }
@@ -207,10 +207,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       elo_rating: t.rating ?? null,
     };
   }
+  // Merge in the roster/coach barthag lenses (docs/data/team_factors.json),
+  // if the fetch above succeeded. Missing entries just fall back to torvik
+  // barthag in effectiveBarthag() — never a hard failure.
+  if (factorsData && factorsData.teams) {
+    for (const t of factorsData.teams) {
+      if (teamIndex[t.team_id]) {
+        teamIndex[t.team_id].roster_barthag = t.roster_barthag;
+        teamIndex[t.team_id].coach_barthag  = t.coach_barthag;
+      }
+    }
+  }
 
   renderStrategyStrip();
+  renderProbModelToggle();
   activateStrategy('pool');
-  renderFactorsPanel();
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -236,31 +247,53 @@ function mkTeam(id, rawName, seed, ratingFallback) {
   const prof = teamIndex[id] || {};
   return {
     id,
-    name:       rawName.replace(/^\(\d+\)\s*/, ''),
+    name:           rawName.replace(/^\(\d+\)\s*/, ''),
     seed,
-    barthag:    prof.barthag    ?? ratingFallback,
-    adj_oe:     prof.adj_oe     ?? null,
-    adj_de:     prof.adj_de     ?? null,
-    champ_prob: prof.champ_prob ?? null,
-    elo_rating: prof.elo_rating ?? null,
+    barthag:        prof.barthag        ?? ratingFallback,
+    roster_barthag: prof.roster_barthag ?? null,
+    coach_barthag:  prof.coach_barthag  ?? null,
+    adj_oe:         prof.adj_oe         ?? null,
+    adj_de:         prof.adj_de         ?? null,
+    champ_prob:     prof.champ_prob     ?? null,
+    elo_rating:     prof.elo_rating     ?? null,
   };
 }
 
+// The barthag value that drives displayed win probabilities, per the
+// selected probability lens (see renderProbModelToggle). Falls back to
+// torvik barthag when the lens has no data for a team (e.g. missing
+// roster/coach source data) — never a hard failure.
+function effectiveBarthag(team) {
+  if (currentProbModel === 'torvik') return team.barthag;
+  const alt = currentProbModel === 'roster' ? team.roster_barthag : team.coach_barthag;
+  return alt ?? team.barthag;
+}
+
 // Convert a pre-computed bracket JSON into the internal game format.
+// Picks always come from the JSON (the validated, backtested bracket) —
+// only win_prob/is_upset are recomputed when a non-torvik probability
+// lens is active, so the odds shown reflect the selected lens without
+// implying a different bracket was optimized under it.
 function precomputedRounds(data) {
   return data.rounds.map(round => ({
     round_name: round.round_name,
-    games: round.games.map(g => ({
-      round:   g.round,
-      region:  g.region,
-      team1:   mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating),
-      team2:   mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating),
-      win_prob: g.win_prob,
-      is_upset: g.is_upset,
-      precomputed_winner_id: g.winner_id,
-      team1_pool_pct: g.team1_pool_pct ?? null,
-      team2_pool_pct: g.team2_pool_pct ?? null,
-    })),
+    games: round.games.map(g => {
+      const team1 = mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating);
+      const team2 = mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating);
+      const usingAltLens = currentProbModel !== 'torvik';
+      const win_prob = usingAltLens ? log5(effectiveBarthag(team1), effectiveBarthag(team2)) : g.win_prob;
+      return {
+        round:   g.round,
+        region:  g.region,
+        team1,
+        team2,
+        win_prob,
+        is_upset: usingAltLens ? upsetCheck(team1, team2, win_prob) : g.is_upset,
+        precomputed_winner_id: g.winner_id,
+        team1_pool_pct: g.team1_pool_pct ?? null,
+        team2_pool_pct: g.team2_pool_pct ?? null,
+      };
+    }),
   }));
 }
 
@@ -278,14 +311,20 @@ const PRECOMPUTED_ROUNDS = {
 
 // Simulate the full bracket for a non-pool strategy from R64.
 function simulate(strategy) {
-  const r64 = bracketData.rounds[0].games.map(g => ({
-    round:    'Round of 64',
-    region:   g.region,
-    team1:    mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating),
-    team2:    mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating),
-    win_prob: g.win_prob,     // use model's R64 probabilities
-    is_upset: g.is_upset,
-  }));
+  const r64 = bracketData.rounds[0].games.map(g => {
+    const team1 = mkTeam(g.team1_id, g.team1, g.team1_seed, g.team1_rating);
+    const team2 = mkTeam(g.team2_id, g.team2, g.team2_seed, g.team2_rating);
+    const usingAltLens = currentProbModel !== 'torvik';
+    const win_prob = usingAltLens ? log5(effectiveBarthag(team1), effectiveBarthag(team2)) : g.win_prob;
+    return {
+      round:    'Round of 64',
+      region:   g.region,
+      team1,
+      team2,
+      win_prob,
+      is_upset: usingAltLens ? upsetCheck(team1, team2, win_prob) : g.is_upset,
+    };
+  });
 
   const allRounds = [{ round_name: 'Round of 64', games: r64 }];
 
@@ -305,7 +344,7 @@ function simulate(strategy) {
       for (let i = 0; i < prev.length; i += 2) {
         const w1 = pick(prev[i], strategy);
         const w2 = pick(prev[i + 1], strategy);
-        const wp = log5(w1.barthag, w2.barthag);
+        const wp = log5(effectiveBarthag(w1), effectiveBarthag(w2));
         const game = {
           round: roundName, region: reg,
           team1: w1, team2: w2,
@@ -339,7 +378,7 @@ function simulate(strategy) {
 }
 
 function mkGame(round, region, t1, t2, strategy) {
-  const wp = log5(t1.barthag, t2.barthag);
+  const wp = log5(effectiveBarthag(t1), effectiveBarthag(t2));
   return { round, region, team1: t1, team2: t2, win_prob: wp, is_upset: upsetCheck(t1, t2, wp) };
 }
 
@@ -356,7 +395,7 @@ function pick(game, strategy) {
   if (strategy.pick) {
     return strategy.pick(game.team1, game.team2, game.win_prob);
   }
-  return game.team1.barthag >= game.team2.barthag ? game.team1 : game.team2;
+  return effectiveBarthag(game.team1) >= effectiveBarthag(game.team2) ? game.team1 : game.team2;
 }
 
 // Get cached rounds for a strategy key.
@@ -678,69 +717,40 @@ function probCls(pct) {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// TEAM FACTORS PANEL
+// WIN PROBABILITY LENS
 //
 // roster_adj (top-5 WARP) and coach_adj (tournament experience) were
-// backtested 2026-08-13 and found statistically indistinguishable from
-// the base model on P(1st) — they don't change a bracket's odds. This
-// panel surfaces which teams they nudge, as an exploration/insight tool,
-// not a competing strategy.
+// backtested against the production bracket-construction algorithm
+// itself and lost (MEMORY.md D19) — they don't change which bracket an
+// approach recommends. This toggle lets a user view the SAME approach's
+// picks through an alternate win-probability lens: it recomputes the
+// displayed odds per matchup (and, for Chalk, same-seed tie-breaks) from
+// roster/coach-adjusted barthag instead of torvik, without changing
+// which team each approach actually picked.
 // ──────────────────────────────────────────────────────────────────
 
-const FACTOR_DEFS = {
-  roster: { label: 'Roster Talent', field: 'roster_e8_pct', context: t => `WARP z=${t.roster_warp_z >= 0 ? '+' : ''}${t.roster_warp_z.toFixed(1)}` },
-  coach:  { label: 'Coaching Experience', field: 'coach_e8_pct', context: t => `${t.coach_prior_apps} tourney apps` },
+const PROB_MODEL_DEFS = {
+  torvik: { label: 'Torvik', note: 'Backtested probability model — drives every approach’s actual picks.' },
+  roster: { label: 'Roster Talent', note: 'Nudges odds by top-5 WARP. Doesn’t change which bracket an approach recommends — see backtest note above.' },
+  coach:  { label: 'Coach Experience', note: 'Nudges odds by prior NCAA tournament appearances. Doesn’t change which bracket an approach recommends — see backtest note above.' },
 };
 
-function setFactor(key) {
-  currentFactor = key;
-  renderFactorsPanel();
+function setProbModel(key) {
+  currentProbModel = key;
+  roundsCache = {};  // win_prob depends on the lens now, not just the strategy key
+  renderProbModelToggle();
+  activateStrategy(currentKey);
 }
 
-function renderFactorsPanel() {
-  const toggleEl = document.getElementById('factors-toggle');
-  const noteEl   = document.getElementById('factors-note');
-  const listEl   = document.getElementById('factors-list');
-  if (!toggleEl || !listEl) return;
+function renderProbModelToggle() {
+  const toggleEl = document.getElementById('probmodel-toggle');
+  const noteEl   = document.getElementById('probmodel-note');
+  if (!toggleEl) return;
 
-  toggleEl.innerHTML = Object.entries(FACTOR_DEFS).map(([key, def]) => `
-    <button class="factors-toggle-btn${key === currentFactor ? ' active' : ''}"
-            onclick="setFactor('${key}')">${def.label}</button>
+  toggleEl.innerHTML = Object.entries(PROB_MODEL_DEFS).map(([key, def]) => `
+    <button class="probmodel-toggle-btn${key === currentProbModel ? ' active' : ''}"
+            onclick="setProbModel('${key}')">${def.label}</button>
   `).join('');
 
-  if (!factorsData) {
-    noteEl.textContent = '';
-    listEl.innerHTML = '<p style="color:var(--ink-faint);font-size:0.85rem;">Team factors data not available.</p>';
-    return;
-  }
-
-  noteEl.textContent = factorsData.note || '';
-
-  const def = FACTOR_DEFS[currentFactor];
-  const teams = factorsData.teams
-    .map(t => ({ ...t, delta: t[def.field] - t.baseline_e8_pct }))
-    .filter(t => t.delta > 0.01)
-    .sort((a, b) => b.delta - a.delta)
-    .slice(0, 10);
-
-  if (teams.length === 0) {
-    listEl.innerHTML = '<p style="color:var(--ink-faint);font-size:0.85rem;">No teams gain a meaningful edge from this factor this year.</p>';
-    return;
-  }
-
-  listEl.innerHTML = teams.map(t => `
-    <div class="factors-row">
-      <div class="factors-row-main">
-        <span class="team-seed ${seedCls(t.seed)}">${t.seed}</span>
-        <span class="factors-row-name">${t.team_name}</span>
-        <span class="factors-row-region">${t.region}</span>
-      </div>
-      <div class="factors-row-stats">
-        <span class="factors-row-base">${t.baseline_e8_pct.toFixed(1)}%</span>
-        <span>&rarr;</span>
-        <span class="factors-row-delta pos">+${t.delta.toFixed(2)}pp</span>
-      </div>
-      <span class="factors-row-context">${def.context(t)}</span>
-    </div>
-  `).join('');
+  if (noteEl) noteEl.textContent = PROB_MODEL_DEFS[currentProbModel].note;
 }
