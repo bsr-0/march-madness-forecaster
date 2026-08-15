@@ -7,15 +7,24 @@ diverse candidate brackets (forced 1-seed champions, risk sweeps, prob-base
 sweeps, exhaustive-champion sweeps), score each by simulating against a
 realistic opponent pool, and keep the highest binary-P(1st) candidate.
 
-This is THE production strategy (11.9% P(1st), 14-yr LOYO) and is what
-docs/data/bracket_2026.json is supposed to contain. It previously held stale
-output from a discontinued Elo+seed blend pipeline (generate_web_data.py) —
-see docs/app.js STRATEGIES['pool'] for the UI-facing claim this file backs.
+--prob-base torvik (default) is THE production strategy (11.9% P(1st),
+14-yr LOYO) and is what docs/data/bracket_2026.json is supposed to contain.
+--prob-base roster/coach swap the primary probability base (the "tv" slot)
+for roster_adj-/coach_adj-adjusted round_probs, keeping every other
+candidate-generation detail (forced champs, risk sweeps, alt bases, pool-
+aware selection) identical — this is an exploratory lens on the SAME
+construction, not a claim it wins: tested via 15-yr LOYO, both lost against
+the torvik baseline (MEMORY.md D19, 0/15 years ahead).
 
-Owns docs/data/bracket_2026.json. generate_web_data.py no longer writes this
-file — do not reintroduce that.
+Torvik output previously held stale output from a discontinued Elo+seed
+blend pipeline (generate_web_data.py) — see docs/app.js STRATEGIES['pool']
+for the UI-facing claim this file backs.
+
+Owns docs/data/bracket_2026*.json. generate_web_data.py no longer writes
+these files — do not reintroduce that.
 """
 
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -38,6 +47,7 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
     load_seeds_and_regions,
 )
+from scripts.prob_base_variants import load_prob_base, MODEL_LABELS
 from src.optimization.bracket_construction import construct_bracket
 from src.prediction.massey_probabilities import load_massey_avg_barthag
 from src.prediction.seed_probabilities import build_seed_probabilities
@@ -53,7 +63,7 @@ from src.simulation.pool_history_opponent_model import (
 )
 
 YEAR = 2026
-OUT_PATH = PROJECT_ROOT / "docs" / "data" / "bracket_2026.json"
+OUT_DIR = PROJECT_ROOT / "docs" / "data"
 PA_TRIALS = 500
 RISK_LEVELS = (0.1, 0.3, 0.5, 0.7, 0.9)
 
@@ -78,6 +88,10 @@ def resolve_opponents(seeds):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prob-base", choices=["torvik", "roster", "coach"], default="torvik")
+    args = parser.parse_args()
+
     seeds, regions = load_seeds_and_regions(YEAR)
     if not seeds:
         print(f"ERROR: no seeds found for {YEAR}")
@@ -85,12 +99,15 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+    primary_rating, primary_rp = load_prob_base(args.prob_base, YEAR, seeds, torvik_rp, barthag)
 
     # (name, round_probs, rating_dict) — rating_dict is carried alongside each
     # prob base so the winning candidate's *own* ratings drive its displayed
     # win_prob (via Log5), instead of every candidate showing generic Torvik
-    # barthag regardless of which base actually picked it.
-    prob_bases = [("tv", torvik_rp, barthag)]
+    # barthag regardless of which base actually picked it. Only the PRIMARY
+    # slot changes with --prob-base; alt bases (massey_avg) stay torvik-
+    # derived diversity candidates regardless, same as the production mode.
+    prob_bases = [(args.prob_base, primary_rp, primary_rating)]
     massey_barthag = load_massey_avg_barthag(YEAR, seeds, PROJECT_ROOT / "data")
     if massey_barthag is not None:
         prob_bases.append(
@@ -121,13 +138,13 @@ def main():
         except Exception as exc:
             print(f"  candidate '{label}' skipped: {exc}")
 
-    # (a) Forced 1-seed champions x region_top_n (torvik, risk=0.5)
+    # (a) Forced 1-seed champions x region_top_n (primary prob base, risk=0.5)
     for forced in one_seed_teams:
         try_add(
-            f"tv_champ={forced}",
-            barthag,
+            f"{args.prob_base}_champ={forced}",
+            primary_rating,
             mode="region_top_n",
-            round_probs=torvik_rp,
+            round_probs=primary_rp,
             risk_level=0.5,
             forced_champion=forced,
         )
@@ -170,14 +187,14 @@ def main():
             mode="region_top_n",
             seeds=seeds,
             regions=regions,
-            round_probs=torvik_rp,
+            round_probs=primary_rp,
             public_picks=pick_dist,
             risk_level=0.5,
             pool_size=n_opponents + 1,
             scoring_system=scoring,
         )
         best_label = "fallback"
-        best_rating = barthag
+        best_rating = primary_rating
     else:
         # Score each candidate via pool simulation (binary P(1st) estimator) —
         # mirrors mc_pool_backtest.py's meta_region_poolaware selection exactly.
@@ -226,19 +243,22 @@ def main():
     # whichever prob base drove this specific bracket's picks. pick_dist here
     # is already the real opponent field (pool history preferred over ESPN),
     # so it doubles as the pool-consensus annotation for display.
-    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names, pick_dist)
+    rounds = build_bracket_json(seeds, regions, best_rating, primary_rp, best_picks, team_names, pick_dist)
+
+    suffix = "" if args.prob_base == "torvik" else f"_{args.prob_base}"
+    out_path = OUT_DIR / f"bracket_2026{suffix}.json"
 
     output = {
         "season": YEAR,
         "generated_at": datetime.now().strftime("%Y-%m-%d"),
-        "model": "Region Top-N x Multi-Candidate Pool-Aware Selection (meta_region_poolaware)",
+        "model": f"{MODEL_LABELS[args.prob_base]} — Region Top-N x Multi-Candidate Pool-Aware Selection",
         "n_simulations": PA_TRIALS,
         "opponent_source": opponent_source,
         "rounds": rounds,
     }
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUT_PATH, "w") as f:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
 
     champion = best_picks.get("CHAMP")
@@ -246,7 +266,7 @@ def main():
     print()
     for rnd in rounds:
         print(f"  {rnd['round_name']}: {len(rnd['games'])} games")
-    print(f"\nWritten to {OUT_PATH}")
+    print(f"\nWritten to {out_path}")
 
 
 if __name__ == "__main__":
