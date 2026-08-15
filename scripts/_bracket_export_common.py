@@ -75,6 +75,12 @@ def resolve_pool_consensus(seeds: Dict[str, int], year: int) -> Tuple[Dict[str, 
 def build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names, pool_pick_dist=None):
     """Walk the picks dict and construct the full 6-round JSON structure.
 
+    round_probs drives each game's displayed win_prob (normalized against
+    the two teams' round_probs for that round — the same quantity the
+    construction algorithm's EV scorer compares) so the display can never
+    contradict the pick for reasons unrelated to strategic risk_level
+    trade-offs. barthag is only a fallback for degenerate/missing coverage.
+
     pool_pick_dist (if given) is a Dict[team_id, Dict[round_key, float]] of
     what fraction of the opponent field advanced that team past that round —
     used to annotate each game with what the field actually picked, alongside
@@ -114,7 +120,30 @@ def build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names, 
             name2 = team_names.get(t2, t2)
             rating1 = barthag.get(t1, 0.5)
             rating2 = barthag.get(t2, 0.5)
-            win_prob = round(_log5(rating1, rating2), 4)
+
+            # win_prob is derived from round_probs (the same quantity the
+            # construction algorithm's EV scorer actually compares — see
+            # _make_ev_scorer / _decide_winner in bracket_construction.py),
+            # not an independent Log5 on scalar ratings. Those two views can
+            # genuinely disagree: round_probs encode a team's probability of
+            # winning across its WHOLE bracket path (survival to this round
+            # included), while scalar-rating Log5 only answers "if these two
+            # teams played in isolation, who wins." A team can be the
+            # round_probs favorite (and get picked) while trailing in a
+            # naive head-to-head Log5 comparison, if its path here was
+            # otherwise stronger — visible under roster_adj/coach_adj, whose
+            # capped per-team adjustment factor is applied post-hoc to
+            # Torvik's already-simulated round_probs and can easily flip a
+            # close isolated matchup without flipping the larger structural
+            # gap that round_probs reflects. Falls back to scalar Log5 only
+            # if round_probs has no usable data for either team (e.g. a
+            # base with missing round_probs coverage).
+            rp1 = round_probs.get(t1, {}).get(rkey, 0.0)
+            rp2 = round_probs.get(t2, {}).get(rkey, 0.0)
+            if rp1 + rp2 > 1e-9:
+                win_prob = round(rp1 / (rp1 + rp2), 4)
+            else:
+                win_prob = round(_log5(rating1, rating2), 4)
 
             # Determine game key
             game_num = g_idx // 2 + 1
@@ -123,10 +152,23 @@ def build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names, 
                 game_key = f"R64_{region}_{seed1}v{seed2}"
             elif rkey in ("R32", "S16"):
                 region = regions.get(t1, regions.get(t2, ""))
-                # game_num resets per region; each region occupies 8 slots in R64
+                # region_game must reset to 1 at the start of every region's
+                # games within this round — bracket_construction.py's own
+                # key format (_walk_bracket / _enumerate_region_outcomes)
+                # is f"{rkey}_{region}_{game_within_region}", 1-indexed.
+                # games_per_region is the number of GAMES per region THIS
+                # round (4 for R32, 2 for S16) — half the number of teams
+                # entering the round per region (8, 4 respectively). This
+                # was previously off by one bit (used teams-per-region, not
+                # games-per-region), producing negative region_game numbers
+                # for every region but the first and silently falling
+                # through to the win_prob-guess fallback below for 12/16
+                # R32 games and 6/8 S16 games — i.e. most of the bracket
+                # outside the first region was never actually showing the
+                # optimizer's real pick. Fixed 2026-08-15.
                 region_idx = REGION_ORDER.index(region) if region in REGION_ORDER else 0
-                games_per_region_prev = 8 >> (ROUND_KEYS.index(rkey) - 1)  # 8→4→2
-                region_game = (g_idx // 2) - region_idx * games_per_region_prev + 1
+                games_per_region = 8 >> ROUND_KEYS.index(rkey)  # R32:4, S16:2
+                region_game = (g_idx // 2) - region_idx * games_per_region + 1
                 game_key = f"{rkey}_{region}_{region_game}"
             elif rkey == "E8":
                 region = regions.get(t1, regions.get(t2, ""))
