@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-13d">
+  <link rel="stylesheet" href="style.css?v=2026-08-14">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
@@ -30,6 +30,12 @@
       <p class="section-label">Pick your approach</p>
       <div class="strategy-strip" id="strategy-strip"></div>
       <div class="strategy-detail" id="strategy-detail"></div>
+
+      <div class="probmodel-row">
+        <span class="probmodel-label">Win probability lens</span>
+        <div class="probmodel-toggle" id="probmodel-toggle"></div>
+      </div>
+      <p class="probmodel-note" id="probmodel-note"></p>
     </section>
 
     <!-- Champion path -->
@@ -47,14 +53,6 @@
         <div class="round-tabs" id="round-tabs"></div>
       </div>
       <div class="bracket-body" id="bracket-body"></div>
-    </section>
-
-    <!-- Team factors -->
-    <section class="factors-section">
-      <p class="section-label">Team factors</p>
-      <div class="factors-toggle" id="factors-toggle"></div>
-      <p class="factors-note" id="factors-note"></p>
-      <div class="factors-list" id="factors-list"></div>
     </section>
 
     <!-- Performance note -->
@@ -75,6 +73,6 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
-  <script src="app.js?v=2026-08-13d"></script>
+  <script src="app.js?v=2026-08-14"></script>
 </body>
 </html>

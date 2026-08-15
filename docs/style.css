@@ -785,118 +785,57 @@ body {
  * ══════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════
- * TEAM FACTORS
+ * WIN PROBABILITY LENS
  * ══════════════════════════════════════════════════════════════════ */
 
-.factors-section {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-xl);
-  padding: 24px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
-  min-width: 0; /* .page-main column-flex child — see .path-section comment */
+.probmodel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
 }
 
-.factors-toggle {
+.probmodel-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+
+.probmodel-toggle {
   display: flex;
   gap: 8px;
-  margin: 10px 0 12px;
 }
 
-.factors-toggle-btn {
-  padding: 8px 16px;
+.probmodel-toggle-btn {
+  padding: 6px 14px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--line);
   background: rgba(255, 255, 255, 0.6);
   color: var(--ink-soft);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
 }
 
-.factors-toggle-btn.active {
+.probmodel-toggle-btn.active {
   border-color: var(--accent-sky);
   background: rgba(47, 94, 138, 0.12);
   color: var(--accent-sky);
 }
 
-.factors-note {
-  margin: 0 0 16px;
-  font-size: 0.8rem;
+.probmodel-note {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
   line-height: 1.55;
   color: var(--ink-faint);
   max-width: 60rem;
-}
-
-.factors-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.factors-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.factors-row-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-}
-
-.factors-row-name {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.factors-row-region {
-  font-size: 0.72rem;
-  color: var(--ink-faint);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.factors-row-stats {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-shrink: 0;
-  font-size: 0.8rem;
-}
-
-.factors-row-base {
-  color: var(--ink-faint);
-}
-
-.factors-row-delta {
-  font-weight: 700;
-  min-width: 3.4rem;
-  text-align: right;
-}
-
-.factors-row-delta.pos { color: var(--accent-green); }
-.factors-row-delta.neg { color: var(--ink-faint); }
-
-.factors-row-context {
-  font-size: 0.68rem;
-  color: var(--ink-faint);
-  min-width: 5.5rem;
-  text-align: right;
-  flex-shrink: 0;
 }
 
 .perf-section {

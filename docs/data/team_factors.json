@@ -1,7 +1,7 @@
 {
   "season": 2026,
-  "generated_at": "2026-08-14",
-  "note": "roster_adj and coach_adj are backtested-neutral on P(1st) (experiment_custom_20260813_222650.json) \u2014 these numbers highlight teams these factors favor, they do not represent a validated alternative strategy or change your odds of winning a pool.",
+  "generated_at": "2026-08-15",
+  "note": "roster_adj and coach_adj are backtested-neutral to negative on P(1st) \u2014 tried against the production bracket-construction algorithm itself and still lost (MEMORY.md D19). Selecting one below changes the win probability shown for each matchup, as an alternate lens on team strength \u2014 it does NOT change which bracket the selected approach recommends, and does not represent a validated way to win a pool.",
   "teams": [
     {
       "team_id": "duke",
@@ -15,7 +15,10 @@
       "roster_warp_z": 0.46,
       "coach_f4_pct": 28.29,
       "coach_e8_pct": 45.4,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.9781,
+      "roster_barthag": 0.9871,
+      "coach_barthag": 0.9916
     },
     {
       "team_id": "connecticut",
@@ -29,7 +32,10 @@
       "roster_warp_z": 0.32,
       "coach_f4_pct": 8.44,
       "coach_e8_pct": 19.57,
-      "coach_prior_apps": 7
+      "coach_prior_apps": 7,
+      "baseline_barthag": 0.9569,
+      "roster_barthag": 0.9629,
+      "coach_barthag": 0.9768
     },
     {
       "team_id": "michigan_state",
@@ -43,7 +49,10 @@
       "roster_warp_z": 0.01,
       "coach_f4_pct": 3.65,
       "coach_e8_pct": 10.21,
-      "coach_prior_apps": 27
+      "coach_prior_apps": 27,
+      "baseline_barthag": 0.9453,
+      "roster_barthag": 0.9454,
+      "coach_barthag": 0.9736
     },
     {
       "team_id": "kansas",
@@ -57,7 +66,10 @@
       "roster_warp_z": 0.37,
       "coach_f4_pct": 2.17,
       "coach_e8_pct": 6.05,
-      "coach_prior_apps": 26
+      "coach_prior_apps": 26,
+      "baseline_barthag": 0.9321,
+      "roster_barthag": 0.939,
+      "coach_barthag": 0.9601
     },
     {
       "team_id": "st__john_s__ny",
@@ -71,7 +83,10 @@
       "roster_warp_z": 0.32,
       "coach_f4_pct": 2.78,
       "coach_e8_pct": 7.54,
-      "coach_prior_apps": 23
+      "coach_prior_apps": 23,
+      "baseline_barthag": 0.941,
+      "roster_barthag": 0.9469,
+      "coach_barthag": 0.9692
     },
     {
       "team_id": "louisville",
@@ -85,7 +100,10 @@
       "roster_warp_z": -0.02,
       "coach_f4_pct": 2.13,
       "coach_e8_pct": 5.8,
-      "coach_prior_apps": 5
+      "coach_prior_apps": 5,
+      "baseline_barthag": 0.9347,
+      "roster_barthag": 0.9343,
+      "coach_barthag": 0.9514
     },
     {
       "team_id": "ucla",
@@ -99,7 +117,10 @@
       "roster_warp_z": 0.2,
       "coach_f4_pct": 0.51,
       "coach_e8_pct": 2.22,
-      "coach_prior_apps": 15
+      "coach_prior_apps": 15,
+      "baseline_barthag": 0.9036,
+      "roster_barthag": 0.9072,
+      "coach_barthag": 0.9287
     },
     {
       "team_id": "ohio_state",
@@ -113,7 +134,10 @@
       "roster_warp_z": 1.23,
       "coach_f4_pct": 0.53,
       "coach_e8_pct": 1.88,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.9088,
+      "roster_barthag": 0.9312,
+      "coach_barthag": 0.9088
     },
     {
       "team_id": "tcu",
@@ -127,7 +151,10 @@
       "roster_warp_z": -0.19,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.26,
-      "coach_prior_apps": 15
+      "coach_prior_apps": 15,
+      "baseline_barthag": 0.8308,
+      "roster_barthag": 0.8276,
+      "coach_barthag": 0.8538
     },
     {
       "team_id": "ucf",
@@ -141,7 +168,10 @@
       "roster_warp_z": -0.25,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.22,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.8118,
+      "roster_barthag": 0.8078,
+      "coach_barthag": 0.8208
     },
     {
       "team_id": "south_florida",
@@ -155,7 +185,10 @@
       "roster_warp_z": 1.14,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.23,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.8316,
+      "roster_barthag": 0.8506,
+      "coach_barthag": 0.8316
     },
     {
       "team_id": "northern_iowa",
@@ -169,7 +202,10 @@
       "roster_warp_z": -0.38,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 4
+      "coach_prior_apps": 4,
+      "baseline_barthag": 0.765,
+      "roster_barthag": 0.7592,
+      "coach_barthag": 0.7774
     },
     {
       "team_id": "california_baptist",
@@ -183,7 +219,10 @@
       "roster_warp_z": -0.66,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.6622,
+      "roster_barthag": 0.6534,
+      "coach_barthag": 0.6622
     },
     {
       "team_id": "north_dakota_state",
@@ -197,7 +236,10 @@
       "roster_warp_z": -0.03,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.6223,
+      "roster_barthag": 0.6219,
+      "coach_barthag": 0.6291
     },
     {
       "team_id": "furman",
@@ -211,7 +253,10 @@
       "roster_warp_z": -0.12,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.4557,
+      "roster_barthag": 0.4546,
+      "coach_barthag": 0.4588
     },
     {
       "team_id": "siena",
@@ -225,7 +270,10 @@
       "roster_warp_z": 0.52,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.4653,
+      "roster_barthag": 0.4701,
+      "coach_barthag": 0.4653
     },
     {
       "team_id": "arizona",
@@ -239,7 +287,10 @@
       "roster_warp_z": 0.6,
       "coach_f4_pct": 26.6,
       "coach_e8_pct": 42.98,
-      "coach_prior_apps": 4
+      "coach_prior_apps": 4,
+      "baseline_barthag": 0.9767,
+      "roster_barthag": 0.9885,
+      "coach_barthag": 0.9924
     },
     {
       "team_id": "purdue",
@@ -253,7 +304,10 @@
       "roster_warp_z": 0.35,
       "coach_f4_pct": 12.85,
       "coach_e8_pct": 25.81,
-      "coach_prior_apps": 17
+      "coach_prior_apps": 17,
+      "baseline_barthag": 0.9636,
+      "roster_barthag": 0.9705,
+      "coach_barthag": 0.9915
     },
     {
       "team_id": "gonzaga",
@@ -267,7 +321,10 @@
       "roster_warp_z": -0.83,
       "coach_f4_pct": 5.4,
       "coach_e8_pct": 13.15,
-      "coach_prior_apps": 25
+      "coach_prior_apps": 25,
+      "baseline_barthag": 0.9467,
+      "roster_barthag": 0.931,
+      "coach_barthag": 0.9751
     },
     {
       "team_id": "arkansas",
@@ -281,7 +338,10 @@
       "roster_warp_z": 1.27,
       "coach_f4_pct": 2.27,
       "coach_e8_pct": 7.1,
-      "coach_prior_apps": 24
+      "coach_prior_apps": 24,
+      "baseline_barthag": 0.9318,
+      "roster_barthag": 0.9554,
+      "coach_barthag": 0.9598
     },
     {
       "team_id": "wisconsin",
@@ -295,7 +355,10 @@
       "roster_warp_z": 0.87,
       "coach_f4_pct": 1.47,
       "coach_e8_pct": 4.62,
-      "coach_prior_apps": 7
+      "coach_prior_apps": 7,
+      "baseline_barthag": 0.9212,
+      "roster_barthag": 0.9373,
+      "coach_barthag": 0.9404
     },
     {
       "team_id": "brigham_young",
@@ -309,7 +372,10 @@
       "roster_warp_z": 2.21,
       "coach_f4_pct": 0.49,
       "coach_e8_pct": 1.61,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.8953,
+      "roster_barthag": 0.9311,
+      "coach_barthag": 0.9015
     },
     {
       "team_id": "miami__fl",
@@ -323,7 +389,10 @@
       "roster_warp_z": 1.34,
       "coach_f4_pct": 0.28,
       "coach_e8_pct": 1.27,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.8756,
+      "roster_barthag": 0.899,
+      "coach_barthag": 0.8756
     },
     {
       "team_id": "villanova",
@@ -337,7 +406,10 @@
       "roster_warp_z": 0.52,
       "coach_f4_pct": 0.24,
       "coach_e8_pct": 0.88,
-      "coach_prior_apps": 7
+      "coach_prior_apps": 7,
+      "baseline_barthag": 0.8871,
+      "roster_barthag": 0.8962,
+      "coach_barthag": 0.9055
     },
     {
       "team_id": "utah_state",
@@ -351,7 +423,10 @@
       "roster_warp_z": -0.5,
       "coach_f4_pct": 0.28,
       "coach_e8_pct": 1.21,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.8975,
+      "roster_barthag": 0.8886,
+      "coach_barthag": 0.9038
     },
     {
       "team_id": "missouri",
@@ -365,7 +440,10 @@
       "roster_warp_z": -0.49,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.45,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.8427,
+      "roster_barthag": 0.8344,
+      "coach_barthag": 0.8543
     },
     {
       "team_id": "nc_state",
@@ -379,7 +457,10 @@
       "roster_warp_z": 0.3,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 7
+      "coach_prior_apps": 7,
+      "baseline_barthag": 0.8773,
+      "roster_barthag": 0.8825,
+      "coach_barthag": 0.8955
     },
     {
       "team_id": "texas",
@@ -393,7 +474,10 @@
       "roster_warp_z": -1.05,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.56,
-      "coach_prior_apps": 13
+      "coach_prior_apps": 13,
+      "baseline_barthag": 0.8488,
+      "roster_barthag": 0.8309,
+      "coach_barthag": 0.8712
     },
     {
       "team_id": "high_point",
@@ -407,7 +491,10 @@
       "roster_warp_z": -0.48,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.7104,
+      "roster_barthag": 0.7036,
+      "coach_barthag": 0.7104
     },
     {
       "team_id": "hawaii",
@@ -421,7 +508,10 @@
       "roster_warp_z": -0.97,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.6483,
+      "roster_barthag": 0.6356,
+      "coach_barthag": 0.6527
     },
     {
       "team_id": "kennesaw_state",
@@ -435,7 +525,10 @@
       "roster_warp_z": -0.53,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.5286,
+      "roster_barthag": 0.5229,
+      "coach_barthag": 0.5286
     },
     {
       "team_id": "queens__nc",
@@ -449,7 +542,10 @@
       "roster_warp_z": -0.65,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.4354,
+      "roster_barthag": 0.4298,
+      "coach_barthag": 0.4354
     },
     {
       "team_id": "long_island_university",
@@ -463,7 +559,10 @@
       "roster_warp_z": 0.74,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.3548,
+      "roster_barthag": 0.3601,
+      "coach_barthag": 0.3548
     },
     {
       "team_id": "florida",
@@ -477,7 +576,10 @@
       "roster_warp_z": -0.64,
       "coach_f4_pct": 14.63,
       "coach_e8_pct": 29.06,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.971,
+      "roster_barthag": 0.9585,
+      "coach_barthag": 0.9844
     },
     {
       "team_id": "houston",
@@ -491,7 +593,10 @@
       "roster_warp_z": 0.59,
       "coach_f4_pct": 13.89,
       "coach_e8_pct": 26.64,
-      "coach_prior_apps": 21
+      "coach_prior_apps": 21,
+      "baseline_barthag": 0.9699,
+      "roster_barthag": 0.9814,
+      "coach_barthag": 0.999
     },
     {
       "team_id": "illinois",
@@ -505,7 +610,10 @@
       "roster_warp_z": -1.29,
       "coach_f4_pct": 11.44,
       "coach_e8_pct": 23.29,
-      "coach_prior_apps": 9
+      "coach_prior_apps": 9,
+      "baseline_barthag": 0.9668,
+      "roster_barthag": 0.9418,
+      "coach_barthag": 0.989
     },
     {
       "team_id": "nebraska",
@@ -519,7 +627,10 @@
       "roster_warp_z": 0.56,
       "coach_f4_pct": 1.61,
       "coach_e8_pct": 5.56,
-      "coach_prior_apps": 5
+      "coach_prior_apps": 5,
+      "baseline_barthag": 0.9336,
+      "roster_barthag": 0.944,
+      "coach_barthag": 0.9503
     },
     {
       "team_id": "vanderbilt",
@@ -533,7 +644,10 @@
       "roster_warp_z": 0.74,
       "coach_f4_pct": 3.51,
       "coach_e8_pct": 9.01,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.9492,
+      "roster_barthag": 0.9632,
+      "coach_barthag": 0.9596
     },
     {
       "team_id": "north_carolina",
@@ -547,7 +661,10 @@
       "roster_warp_z": 0.51,
       "coach_f4_pct": 0.31,
       "coach_e8_pct": 1.46,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.9009,
+      "roster_barthag": 0.91,
+      "coach_barthag": 0.9134
     },
     {
       "team_id": "saint_mary_s__ca",
@@ -561,7 +678,10 @@
       "roster_warp_z": 0.8,
       "coach_f4_pct": 0.39,
       "coach_e8_pct": 1.42,
-      "coach_prior_apps": 11
+      "coach_prior_apps": 11,
+      "baseline_barthag": 0.9016,
+      "roster_barthag": 0.9161,
+      "coach_barthag": 0.924
     },
     {
       "team_id": "clemson",
@@ -575,7 +695,10 @@
       "roster_warp_z": -1.65,
       "coach_f4_pct": 0.17,
       "coach_e8_pct": 0.77,
-      "coach_prior_apps": 8
+      "coach_prior_apps": 8,
+      "baseline_barthag": 0.8892,
+      "roster_barthag": 0.8598,
+      "coach_barthag": 0.9087
     },
     {
       "team_id": "iowa",
@@ -589,7 +712,10 @@
       "roster_warp_z": -0.85,
       "coach_f4_pct": 0.43,
       "coach_e8_pct": 1.53,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.9147,
+      "roster_barthag": 0.8991,
+      "coach_barthag": 0.9211
     },
     {
       "team_id": "texas_a_m",
@@ -603,7 +729,10 @@
       "roster_warp_z": -2.44,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.52,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.8729,
+      "roster_barthag": 0.838,
+      "coach_barthag": 0.879
     },
     {
       "team_id": "virginia_commonwealth",
@@ -617,7 +746,10 @@
       "roster_warp_z": -1.07,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.22,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.8378,
+      "roster_barthag": 0.8198,
+      "coach_barthag": 0.8436
     },
     {
       "team_id": "mcneese_state",
@@ -631,7 +763,10 @@
       "roster_warp_z": -0.85,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.762,
+      "roster_barthag": 0.749,
+      "coach_barthag": 0.762
     },
     {
       "team_id": "troy",
@@ -645,7 +780,10 @@
       "roster_warp_z": 1.17,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.5622,
+      "roster_barthag": 0.5754,
+      "coach_barthag": 0.5684
     },
     {
       "team_id": "pennsylvania",
@@ -659,7 +797,10 @@
       "roster_warp_z": -0.33,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 12
+      "coach_prior_apps": 12,
+      "baseline_barthag": 0.5238,
+      "roster_barthag": 0.5203,
+      "coach_barthag": 0.5372
     },
     {
       "team_id": "idaho",
@@ -673,7 +814,10 @@
       "roster_warp_z": -0.75,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.5458,
+      "roster_barthag": 0.5376,
+      "coach_barthag": 0.5458
     },
     {
       "team_id": "prairie_view",
@@ -687,7 +831,10 @@
       "roster_warp_z": 0.65,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.2453,
+      "roster_barthag": 0.2485,
+      "coach_barthag": 0.247
     },
     {
       "team_id": "lehigh",
@@ -701,7 +848,10 @@
       "roster_warp_z": 0.16,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.2418,
+      "roster_barthag": 0.2426,
+      "coach_barthag": 0.2445
     },
     {
       "team_id": "michigan",
@@ -715,7 +865,10 @@
       "roster_warp_z": -0.3,
       "coach_f4_pct": 30.96,
       "coach_e8_pct": 48.22,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.9807,
+      "roster_barthag": 0.9749,
+      "coach_barthag": 0.9943
     },
     {
       "team_id": "iowa_state",
@@ -729,7 +882,10 @@
       "roster_warp_z": 1.11,
       "coach_f4_pct": 10.67,
       "coach_e8_pct": 21.44,
-      "coach_prior_apps": 6
+      "coach_prior_apps": 6,
+      "baseline_barthag": 0.9642,
+      "roster_barthag": 0.9855,
+      "coach_barthag": 0.983
     },
     {
       "team_id": "virginia",
@@ -743,7 +899,10 @@
       "roster_warp_z": -3.22,
       "coach_f4_pct": 2.49,
       "coach_e8_pct": 7.08,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.9397,
+      "roster_barthag": 0.9021,
+      "coach_barthag": 0.9527
     },
     {
       "team_id": "alabama",
@@ -757,7 +916,10 @@
       "roster_warp_z": -0.95,
       "coach_f4_pct": 2.13,
       "coach_e8_pct": 5.77,
-      "coach_prior_apps": 8
+      "coach_prior_apps": 8,
+      "baseline_barthag": 0.9387,
+      "roster_barthag": 0.9209,
+      "coach_barthag": 0.9593
     },
     {
       "team_id": "texas_tech",
@@ -771,7 +933,10 @@
       "roster_warp_z": 2.77,
       "coach_f4_pct": 2.42,
       "coach_e8_pct": 6.22,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.9398,
+      "roster_barthag": 0.9774,
+      "coach_barthag": 0.9528
     },
     {
       "team_id": "tennessee",
@@ -785,7 +950,10 @@
       "roster_warp_z": -0.02,
       "coach_f4_pct": 2.81,
       "coach_e8_pct": 7.4,
-      "coach_prior_apps": 29
+      "coach_prior_apps": 29,
+      "baseline_barthag": 0.9422,
+      "roster_barthag": 0.9418,
+      "coach_barthag": 0.9705
     },
     {
       "team_id": "kentucky",
@@ -799,7 +967,10 @@
       "roster_warp_z": -0.56,
       "coach_f4_pct": 0.24,
       "coach_e8_pct": 1.0,
-      "coach_prior_apps": 3
+      "coach_prior_apps": 3,
+      "baseline_barthag": 0.8863,
+      "roster_barthag": 0.8763,
+      "coach_barthag": 0.8985
     },
     {
       "team_id": "georgia",
@@ -813,7 +984,10 @@
       "roster_warp_z": -0.82,
       "coach_f4_pct": 0.12,
       "coach_e8_pct": 0.63,
-      "coach_prior_apps": 1
+      "coach_prior_apps": 1,
+      "baseline_barthag": 0.8832,
+      "roster_barthag": 0.8686,
+      "coach_barthag": 0.8893
     },
     {
       "team_id": "saint_louis",
@@ -827,7 +1001,10 @@
       "roster_warp_z": -0.99,
       "coach_f4_pct": 0.12,
       "coach_e8_pct": 0.57,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.8734,
+      "roster_barthag": 0.8562,
+      "coach_barthag": 0.8734
     },
     {
       "team_id": "santa_clara",
@@ -841,7 +1018,10 @@
       "roster_warp_z": -0.39,
       "coach_f4_pct": 0.14,
       "coach_e8_pct": 0.72,
-      "coach_prior_apps": 8
+      "coach_prior_apps": 8,
+      "baseline_barthag": 0.8866,
+      "roster_barthag": 0.8796,
+      "coach_barthag": 0.9061
     },
     {
       "team_id": "southern_methodist",
@@ -855,7 +1035,10 @@
       "roster_warp_z": 2.36,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 6
+      "coach_prior_apps": 6,
+      "baseline_barthag": 0.857,
+      "roster_barthag": 0.8913,
+      "coach_barthag": 0.8737
     },
     {
       "team_id": "miami__oh",
@@ -869,7 +1052,10 @@
       "roster_warp_z": 0.28,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.7201,
+      "roster_barthag": 0.724,
+      "coach_barthag": 0.7201
     },
     {
       "team_id": "akron",
@@ -883,7 +1069,10 @@
       "roster_warp_z": 0.68,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 6
+      "coach_prior_apps": 6,
+      "baseline_barthag": 0.7737,
+      "roster_barthag": 0.7842,
+      "coach_barthag": 0.7888
     },
     {
       "team_id": "hofstra",
@@ -897,7 +1086,10 @@
       "roster_warp_z": 0.34,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.6959,
+      "roster_barthag": 0.7007,
+      "coach_barthag": 0.6959
     },
     {
       "team_id": "wright_state",
@@ -911,7 +1103,10 @@
       "roster_warp_z": -1.32,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.6029,
+      "roster_barthag": 0.587,
+      "coach_barthag": 0.6029
     },
     {
       "team_id": "tennessee_state",
@@ -925,7 +1120,10 @@
       "roster_warp_z": 0.66,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 0
+      "coach_prior_apps": 0,
+      "baseline_barthag": 0.3717,
+      "roster_barthag": 0.3766,
+      "coach_barthag": 0.3717
     },
     {
       "team_id": "maryland_baltimore_county",
@@ -939,7 +1137,10 @@
       "roster_warp_z": -0.51,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.4212,
+      "roster_barthag": 0.4169,
+      "coach_barthag": 0.4258
     },
     {
       "team_id": "howard",
@@ -953,7 +1154,10 @@
       "roster_warp_z": -0.03,
       "coach_f4_pct": 0.1,
       "coach_e8_pct": 0.1,
-      "coach_prior_apps": 2
+      "coach_prior_apps": 2,
+      "baseline_barthag": 0.3994,
+      "roster_barthag": 0.3992,
+      "coach_barthag": 0.4038
     }
   ]
 }
