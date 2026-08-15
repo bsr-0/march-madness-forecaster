@@ -64,6 +64,8 @@ jobs:
           python scripts/generate_region_bracket.py
           echo "=== Generating meta_exhaustive bracket (docs/data/bracket_2026_exhaustive.json) ==="
           python scripts/generate_exhaustive_bracket.py
+          echo "=== Generating real 2026 outcome for the retrospective panel (docs/data/actual_2026.json) ==="
+          python scripts/generate_actual_results.py
 
       - name: Build dashboard data
         run: |

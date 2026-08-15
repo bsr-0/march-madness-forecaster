@@ -496,6 +496,116 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+ * ACTUAL OUTCOME RETROSPECTIVE
+ * (the 2026 tournament already concluded — this grades a strategy's
+ * bracket against what actually happened)
+ * ══════════════════════════════════════════════════════════════════ */
+
+.actual-section {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.actual-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.actual-real,
+.actual-score {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.actual-real-label,
+.actual-score-sub {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.actual-real-value {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.actual-real-sub {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-left: 4px;
+}
+
+.actual-real-f4 {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.actual-score {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.actual-score-value {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-sky);
+}
+
+.actual-score-champ {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.actual-score-champ.hit  { color: var(--accent-green); }
+.actual-score-champ.miss { color: var(--accent); }
+
+.actual-note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+/* Per-game correct/incorrect verdict badge, shown once actual_2026.json
+   has loaded (see docs/app.js isPickCorrect). */
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.verdict-hit  { background: rgba(47, 122, 99, 0.14); color: var(--accent-green); }
+.verdict-miss { background: rgba(187, 77, 45, 0.14); color: var(--accent); }
+
+.game-card.verdict-wrong {
+  opacity: 0.82;
+}
+
+/* ══════════════════════════════════════════════════════════════════
  * BRACKET BOARD
  * ══════════════════════════════════════════════════════════════════ */
 

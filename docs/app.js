@@ -145,6 +145,11 @@ const ROUND_SHORT = {
 
 const REGIONS = ['East', 'West', 'South', 'Midwest'];
 
+// round_name (as used in a bracket JSON's rounds[]) → the key
+// docs/data/actual_2026.json's results_by_round uses. Matches ROUND_SHORT
+// except Championship → CHAMP (ESPN_SCORING's key, not "Champ").
+const ROUND_TO_ACTUAL_KEY = { ...ROUND_SHORT, 'Championship': 'CHAMP' };
+
 // Colors per strategy badge tone (inline styles avoid needing a CSS class per strategy)
 const BADGE_COLORS = {
   gold:    { bg: 'rgba(200,145,37,0.18)',  text: '#6b4800' },
@@ -166,6 +171,8 @@ const BADGE_COLORS = {
 let bracketData = { pool: {}, exhaustive: {}, stat: {} };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let factorsData        = null;  // elo/ap barthag, see docs/data/team_factors.json
+let actualData         = null;  // real 2026 outcome, see docs/data/actual_2026.json — the
+                                 // 2026 tournament already concluded, this is a replay
 let currentProbBase   = 'torvik';  // 'torvik' | 'elo' | 'ap' | 'upset' — applies to every approach
 let teamIndex        = {};      // team_id → { barthag, elo_barthag, ap_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
@@ -186,10 +193,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-15c').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15c').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-15c').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-15c').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-15d').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15d').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-15d').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-15d').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -212,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const approach of ['pool', 'exhaustive', 'stat']) {
     for (const base of ['elo', 'ap', 'upset']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15c`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15d`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -223,18 +230,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-15c').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-15d').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-15c').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-15d').then(r => r.json());
   } catch (err) {
     factors = null;
+  }
+  let actual;
+  try {
+    actual = await fetch('data/actual_2026.json?v=2026-08-15d').then(r => r.json());
+  } catch (err) {
+    actual = null;
   }
 
   loyoData       = loyo;
   factorsData    = factors;
+  actualData     = actual;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -484,6 +498,46 @@ function championPath(rounds, key) {
   return { champ, path };
 }
 
+// ── Actual-outcome grading (the 2026 tournament already happened — see
+// actualData / docs/data/actual_2026.json) ──
+
+// team_ids that actually won their game at this round, or null if we have
+// no real-outcome data (e.g. actual_2026.json failed to load).
+function actualWinnerSet(roundName) {
+  if (!actualData) return null;
+  const key = ROUND_TO_ACTUAL_KEY[roundName];
+  return key ? new Set(actualData.results_by_round[key] || []) : null;
+}
+
+// Did `winner` (a team object) actually win their real round-`roundName`
+// game? Returns null (unknown) rather than false when we have no data —
+// callers must treat null as "don't render a verdict", not "wrong".
+function isPickCorrect(winner, roundName) {
+  const winners = actualWinnerSet(roundName);
+  return winners ? winners.has(winner.id) : null;
+}
+
+// Score every pick in `rounds` against the real outcome. Returns null if
+// actual_2026.json isn't loaded. `points`/`maxPoints` use the same
+// ESPN_SCORING weights the backtest is validated against.
+function scoreAgainstActual(rounds, strategy) {
+  if (!actualData) return null;
+  let points = 0, maxPoints = 0, correct = 0, total = 0;
+  for (const round of rounds) {
+    const key = ROUND_TO_ACTUAL_KEY[round.round_name];
+    const winners = key ? actualWinnerSet(round.round_name) : null;
+    const perPick = key ? (actualData.scoring[key] || 0) : 0;
+    for (const game of round.games) {
+      if (!winners) continue;
+      total++;
+      maxPoints += perPick;
+      const winner = pick(game, strategy);
+      if (winners.has(winner.id)) { correct++; points += perPick; }
+    }
+  }
+  return { points, maxPoints, correct, total };
+}
+
 // ──────────────────────────────────────────────────────────────────
 // RENDERING
 // ──────────────────────────────────────────────────────────────────
@@ -497,6 +551,7 @@ function activateStrategy(key) {
 
   const rounds = getRounds(key);
   renderChampionPath(rounds, key);
+  renderActualPanel(rounds, key);
   renderRoundTabs(rounds);
   renderGames(rounds);
 }
@@ -629,6 +684,47 @@ function renderChampionPath(rounds, key) {
   el.innerHTML = champHTML + stepsHTML + '<div class="path-connector">→</div><div class="path-trophy">🏆</div>';
 }
 
+// ── Actual outcome panel ──
+// The 2026 tournament this page displays picks for finished months ago.
+// This renders how the currently-active strategy's bracket actually
+// scored against the real 2026 results — a retrospective, not a live
+// pick recommendation. Hides itself entirely if actual_2026.json didn't
+// load (degrades to the plain projected-picks view).
+
+function renderActualPanel(rounds, key) {
+  const section = document.getElementById('actual-section');
+  const el = document.getElementById('actual-panel');
+  if (!actualData) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const strategy = STRATEGIES.find(s => s.key === key);
+  const score = scoreAgainstActual(rounds, strategy);
+  const { champ } = championPath(rounds, key);
+  const champHit = champ && champ.id === actualData.champion_id;
+
+  el.innerHTML = `
+    <div class="actual-summary">
+      <div class="actual-real">
+        <div class="actual-real-label">Real 2026 champion</div>
+        <div class="actual-real-value">🏆 ${actualData.champion_name}
+          <span class="actual-real-sub">def. ${actualData.runner_up_name}</span>
+        </div>
+        <div class="actual-real-f4">Final Four: ${actualData.final_four_names.join(', ')}</div>
+      </div>
+      <div class="actual-score">
+        <div class="actual-score-value">${score.points} / ${score.maxPoints} pts</div>
+        <div class="actual-score-sub">${score.correct}/${score.total} picks correct</div>
+        <div class="actual-score-champ ${champHit ? 'hit' : 'miss'}">
+          ${champHit ? '✓ Picked the real champion' : `✗ Picked ${champ ? champ.name : '—'}, not ${actualData.champion_name}`}
+        </div>
+      </div>
+    </div>
+    <p class="actual-note">
+      The 2026 tournament ended months before this page was built — this is a graded replay of
+      <strong>${strategy.label}</strong>'s bracket against what actually happened, not a live prediction.
+    </p>`;
+}
+
 // ── Round tabs ──
 
 function renderRoundTabs(rounds) {
@@ -686,8 +782,15 @@ function gameCard(game, strategy) {
   const isUpsetPick = game.team1.seed !== game.team2.seed &&
     winner.id === (game.team1.seed > game.team2.seed ? game.team1.id : game.team2.id);
 
+  const correct = isPickCorrect(winner, game.round);
+  const verdictBadge = correct == null
+    ? ''
+    : correct
+      ? '<span class="verdict-badge verdict-hit" title="This pick actually happened">✓ correct</span>'
+      : '<span class="verdict-badge verdict-miss" title="This is not what actually happened">✗ missed</span>';
+
   return `
-    <div class="game-card${isUpsetPick ? ' upset' : ''}">
+    <div class="game-card${isUpsetPick ? ' upset' : ''}${correct === false ? ' verdict-wrong' : ''}">
       <div class="game-team${t1IsPick ? ' is-pick' : ' not-pick'}">
         <div class="game-team-main">
           <span class="team-seed ${seedCls(game.team1.seed)}">${game.team1.seed}</span>
@@ -718,6 +821,7 @@ function gameCard(game, strategy) {
       <div class="game-meta">
         <span>${game.region}</span>
         ${isUpsetPick ? '<span class="upset-badge">Upset pick</span>' : ''}
+        ${verdictBadge}
       </div>
     </div>`;
 }
