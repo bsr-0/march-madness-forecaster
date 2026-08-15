@@ -9,12 +9,11 @@ realistic opponent pool, and keep the highest binary-P(1st) candidate.
 
 --prob-base torvik (default) is THE production strategy (11.9% P(1st),
 14-yr LOYO) and is what docs/data/bracket_2026.json is supposed to contain.
---prob-base roster/coach swap the primary probability base (the "tv" slot)
-for roster_adj-/coach_adj-adjusted round_probs, keeping every other
-candidate-generation detail (forced champs, risk sweeps, alt bases, pool-
-aware selection) identical — this is an exploratory lens on the SAME
-construction, not a claim it wins: tested via 15-yr LOYO, both lost against
-the torvik baseline (MEMORY.md D19, 0/15 years ahead).
+--prob-base elo/ap swap the primary probability base (the "tv" slot) for
+a fully independent rating system (see scripts/prob_base_variants.py),
+keeping every other candidate-generation detail (forced champs, risk
+sweeps, alt bases, pool-aware selection) identical — this is an
+exploratory lens on the SAME construction, not a claim it wins on P(1st).
 
 Torvik output previously held stale output from a discontinued Elo+seed
 blend pipeline (generate_web_data.py) — see docs/app.js STRATEGIES['pool']
@@ -89,7 +88,7 @@ def resolve_opponents(seeds):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "roster", "coach"], default="torvik")
+    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap"], default="torvik")
     args = parser.parse_args()
 
     seeds, regions = load_seeds_and_regions(YEAR)
@@ -99,7 +98,7 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-    primary_rating, primary_rp = load_prob_base(args.prob_base, YEAR, seeds, torvik_rp, barthag)
+    primary_rating, primary_rp = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
 
     # (name, round_probs, rating_dict) — rating_dict is carried alongside each
     # prob base so the winning candidate's *own* ratings drive its displayed
