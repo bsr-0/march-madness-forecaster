@@ -175,10 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-14c').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-14c').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-14c').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-14c').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-15').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-15').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-15').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const approach of ['pool', 'exhaustive', 'stat']) {
     for (const base of ['roster', 'coach']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-14c`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -212,12 +212,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-14c').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-15').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-14c').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-15').then(r => r.json());
   } catch (err) {
     factors = null;
   }
