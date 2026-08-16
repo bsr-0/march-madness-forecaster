@@ -60,6 +60,27 @@ def sf(val, default):
         return default
 
 
+def _load_torvik_ff(year: int) -> Dict[str, dict] | None:
+    """Return the raw four_factors payload for `year`, preferring the
+    merged `torvik_{year}.json` (key "four_factors"), falling back to
+    the standalone `torvik_four_factors_{year}.json`. Returns None if
+    neither has FF data. Checks `data/raw/historical/` then `data/raw/`."""
+    for prefix in (HIST_DIR, DATA_DIR):
+        path = prefix / f"torvik_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            if "four_factors" in data:
+                return data["four_factors"]
+            break  # torvik_{year}.json exists but isn't migrated yet — fall through
+    for prefix in (HIST_DIR, DATA_DIR):
+        path = prefix / f"torvik_four_factors_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                return json.load(f)
+    return None
+
+
 def load_torvik_and_ff(year: int) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     """Load Torvik season stats and Four-Factors snapshot for `year`.
 
@@ -88,18 +109,14 @@ def load_torvik_and_ff(year: int) -> Tuple[Dict[str, dict], Dict[str, dict]]:
             break
 
     four_factors: Dict[str, dict] = {}
-    for prefix in (HIST_DIR, DATA_DIR):
-        path = prefix / f"torvik_four_factors_{year}.json"
-        if path.exists():
-            with open(path) as f:
-                ff_data = json.load(f)
-            if isinstance(ff_data, dict) and "teams" not in ff_data:
-                # dict-of-team-dicts with possible metadata mixed in
-                four_factors = {k: v for k, v in ff_data.items() if isinstance(v, dict)}
-            else:
-                teams_list = ff_data.get("teams", ff_data if isinstance(ff_data, list) else [])
-                four_factors = {t.get("team_id", ""): t for t in teams_list if t.get("team_id")}
-            break
+    ff_data = _load_torvik_ff(year)
+    if ff_data is not None:
+        if isinstance(ff_data, dict) and "teams" not in ff_data:
+            # dict-of-team-dicts with possible metadata mixed in
+            four_factors = {k: v for k, v in ff_data.items() if isinstance(v, dict)}
+        else:
+            teams_list = ff_data.get("teams", ff_data if isinstance(ff_data, list) else [])
+            four_factors = {t.get("team_id", ""): t for t in teams_list if t.get("team_id")}
 
     return torvik, four_factors
 

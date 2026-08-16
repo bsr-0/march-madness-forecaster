@@ -8,11 +8,10 @@ If noseed and SEED_PICK_RATES agree on most games, no opponent model
 change or contrarian sampling will help — the model IS the crowd.
 """
 
-import json
 import sys
 from collections import defaultdict
 from pathlib import Path
-from scripts._common import load_seeds_and_regions  # noqa: F401
+from scripts._common import _load_torvik_ff, load_seeds_and_regions  # noqa: F401
 
 import numpy as np
 
@@ -32,11 +31,7 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 
 
 def _load_team_stats(year):
-    path = HIST_DIR / f"torvik_four_factors_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        return json.load(f)
+    return _load_torvik_ff(year) or {}
 
 
 def build_first_round_matchups(seeds, regions):

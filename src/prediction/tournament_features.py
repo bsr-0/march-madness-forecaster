@@ -31,18 +31,28 @@ def load_four_factors(
     Returns (ft_rate_dict, to_margin_dict) keyed by canonical team ID.
     """
     data_root = Path(data_root)
-    primary = data_root / "raw" / f"torvik_four_factors_{year}.json"
-    fallback = data_root / "raw" / "historical" / f"torvik_four_factors_{year}.json"
 
-    if primary.exists():
-        path = primary
-    elif fallback.exists():
-        path = fallback
-    else:
-        raise FileNotFoundError(f"No four-factors file for {year} at {primary} or {fallback}")
+    # Prefer the merged torvik_{year}.json's "four_factors" sub-dict.
+    data = None
+    for merged_path in (data_root / "raw" / f"torvik_{year}.json", data_root / "raw" / "historical" / f"torvik_{year}.json"):
+        if merged_path.exists():
+            with open(merged_path) as f:
+                merged = json.load(f)
+            if "four_factors" in merged:
+                data = merged["four_factors"]
+            break
 
-    with open(path) as f:
-        data = json.load(f)
+    if data is None:
+        primary = data_root / "raw" / f"torvik_four_factors_{year}.json"
+        fallback = data_root / "raw" / "historical" / f"torvik_four_factors_{year}.json"
+        if primary.exists():
+            path = primary
+        elif fallback.exists():
+            path = fallback
+        else:
+            raise FileNotFoundError(f"No four-factors file for {year} at {primary} or {fallback}")
+        with open(path) as f:
+            data = json.load(f)
 
     canonical_set = set(canonical_ids)
     ft_rate: Dict[str, float] = {}

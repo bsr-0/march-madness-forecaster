@@ -138,7 +138,7 @@ class HistoricalDataPipeline:
                 if torvik_payload.get("teams"):
                     torvik_errors = validate_ratings_payload(torvik_payload)
                     self._assert_valid(f"torvik_{season}", torvik_errors)
-                    torvik_path = self._write_json(f"torvik_{season}.json", torvik_payload)
+                    torvik_path = self._write_json_preserving_ff(f"torvik_{season}.json", torvik_payload)
                     manifest["artifacts"][str(season)]["torvik_json"] = torvik_path
                     manifest["providers"][str(season)]["torvik_json"] = torvik_provider
                     manifest["validation_errors"][str(season)]["torvik_json"] = torvik_errors
@@ -559,6 +559,23 @@ class HistoricalDataPipeline:
         ctx[sub_key] = payload
         with open(path, "w") as f:
             json.dump(ctx, f, indent=2)
+        return str(path)
+
+    def _write_json_preserving_ff(self, filename: str, payload: Dict) -> str:
+        """Write `payload` to `filename`, preserving any existing
+        `four_factors`/`four_factors_snapshots` keys already on disk at
+        that path (this writer never populates those keys itself)."""
+        path = self.output_dir / filename
+        existing: Dict = {}
+        if path.exists():
+            with open(path) as f:
+                existing = json.load(f)
+        merged = dict(payload)
+        for k in ("four_factors", "four_factors_snapshots"):
+            if k in existing:
+                merged[k] = existing[k]
+        with open(path, "w") as f:
+            json.dump(merged, f, indent=2)
         return str(path)
 
     def _assert_valid(self, artifact_name: str, errors: List[str]) -> None:

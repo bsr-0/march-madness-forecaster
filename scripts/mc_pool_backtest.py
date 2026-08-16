@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Sequence, Tuple
-from scripts._common import load_tournament_results  # noqa: F401
+from scripts._common import _load_torvik_ff, load_tournament_results  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -449,13 +449,14 @@ def _validate_pretournament(data, filepath):
 
 
 def _load_team_stats(year):
-    """Load Torvik four-factors for noseed model (pre-tournament only)."""
-    path = HIST_DIR / f"torvik_four_factors_{year}.json"
-    if not path.exists():
+    """Load Torvik four-factors for noseed model (pre-tournament only).
+
+    Reads the merged `torvik_{year}.json` (key "four_factors") when
+    present, falling back to the standalone `torvik_four_factors_{year}.json`."""
+    data = _load_torvik_ff(year)
+    if data is None:
         return {}
-    with open(path) as f:
-        data = json.load(f)
-    _validate_pretournament(data, path)
+    _validate_pretournament(data, HIST_DIR / f"torvik_{year}.json")
     return data
 
 

@@ -24,7 +24,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from scripts._common import load_tournament_results  # noqa: F401
+from scripts._common import _load_torvik_ff, load_tournament_results  # noqa: F401
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
@@ -113,21 +113,16 @@ def load_team_stats(year: int) -> Dict[str, Dict]:
             stats[t["team_id"]] = t
 
     # Four factors (merge in)
-    ff_path = HIST_DIR / f"torvik_four_factors_{year}.json"
-    if not ff_path.exists():
-        ff_path = DATA_DIR / f"torvik_four_factors_{year}.json"
-    if ff_path.exists():
-        with open(ff_path) as f:
-            ff_data = json.load(f)
-        if isinstance(ff_data, dict) and "teams" not in ff_data:
-            for tid, ff in ff_data.items():
-                if tid in stats:
-                    for k, v in ff.items():
-                        if k.startswith("_"):
-                            continue
-                        stats[tid].setdefault(k, v)
-                else:
-                    stats[tid] = ff
+    ff_data = _load_torvik_ff(year)
+    if ff_data is not None and isinstance(ff_data, dict) and "teams" not in ff_data:
+        for tid, ff in ff_data.items():
+            if tid in stats:
+                for k, v in ff.items():
+                    if k.startswith("_"):
+                        continue
+                    stats[tid].setdefault(k, v)
+            else:
+                stats[tid] = ff
 
     return stats
 
