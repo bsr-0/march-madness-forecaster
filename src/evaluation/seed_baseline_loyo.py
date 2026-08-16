@@ -198,11 +198,11 @@ def load_ncaa_tournament_with_seeds(
             pass
 
     team_massey_composite: Dict[str, float] = {}
-    massey_cache_path = os.path.join(GAMES_DIR, f"external_massey_composite_{year}.json")
+    massey_cache_path = os.path.join(GAMES_DIR, f"external_ratings_{year}.json")
     if os.path.isfile(massey_cache_path):
         try:
             with open(massey_cache_path) as f:
-                massey_data = json.load(f)
+                massey_data = json.load(f).get("systems", {}).get("massey_composite", [])
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:

@@ -272,18 +272,18 @@ def _load_year_samples_incremental_core(
     _massey_loaded = False
     massey_cache_path = os.path.join(
         os.path.dirname(games_path),
-        f"external_massey_composite_{year}.json",
+        f"external_ratings_{year}.json",
     )
     if not os.path.isfile(massey_cache_path):
         massey_cache_path = os.path.join(
             os.path.dirname(games_path),
             "historical",
-            f"external_massey_composite_{year}.json",
+            f"external_ratings_{year}.json",
         )
     if os.path.isfile(massey_cache_path):
         try:
             with open(massey_cache_path, "r") as f:
-                massey_data = json.load(f)
+                massey_data = json.load(f).get("systems", {}).get("massey_composite", [])
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:
@@ -329,7 +329,7 @@ def _load_year_samples_incremental_core(
         logger.info(
             "FIX-MASSEY: Year %d has NO Massey composite data — "
             "diff_external_rating_composite will be 0.0 for all training "
-            "samples this year. Provide external_massey_composite_%d.json "
+            "samples this year. Provide external_ratings_%d.json "
             "or set kaggle_dir to enable.",
             year,
             year,

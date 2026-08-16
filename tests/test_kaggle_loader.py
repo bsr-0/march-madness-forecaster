@@ -408,9 +408,13 @@ class TestExternalRatingsFromMassey:
         # POM (60 teams) + massey_composite = 2
         assert n_cached == 2
 
-        # Verify the cache files were created
-        assert (tmp_path / "cache" / "external_POM_2025.json").exists()
-        assert (tmp_path / "cache" / "external_massey_composite_2025.json").exists()
+        # Verify the consolidated cache file was created with both systems
+        cache_path = tmp_path / "cache" / "external_ratings_2025.json"
+        assert cache_path.exists()
+        with open(cache_path) as f:
+            systems = json.load(f)["systems"]
+        assert "POM" in systems
+        assert "massey_composite" in systems
 
         # Verify the cached data is loadable
         loaded = loader._load_system("POM", 2025)

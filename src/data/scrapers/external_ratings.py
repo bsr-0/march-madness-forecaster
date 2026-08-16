@@ -103,36 +103,42 @@ class ExternalRatingsLoader:
     def __init__(self, cache_dir: str = "data/raw"):
         self.cache_dir = Path(cache_dir)
 
+    def _consolidated_path(self, year: int) -> Optional[Path]:
+        """Find external_ratings_{year}.json, checking cache_dir then cache_dir/historical/."""
+        for search_dir in [self.cache_dir, self.cache_dir / "historical"]:
+            path = search_dir / f"external_ratings_{year}.json"
+            if path.exists():
+                return path
+        return None
+
+    def _load_consolidated(self, year: int) -> Dict[str, List[Dict]]:
+        """Read {"systems": {name: [entries...]}} for a year, or {} if missing/corrupt."""
+        path = self._consolidated_path(year)
+        if path is None:
+            return {}
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+        systems = data.get("systems")
+        return systems if isinstance(systems, dict) else {}
+
     def load_all(self, year: int) -> Dict[str, Dict[str, ExternalRating]]:
         """Load all available external rating systems for a year.
 
-        First loads the 6 well-known systems by name, then discovers any
-        additional systems via glob (e.g. Massey Ordinal systems cached
-        in data/raw/historical/).
+        Reads the single consolidated external_ratings_{year}.json file — no
+        per-system files or directory globbing.
 
         Returns:
             Dict of system_name -> {team_id -> ExternalRating}
         """
         all_ratings: Dict[str, Dict[str, ExternalRating]] = {}
 
-        # 1. Load well-known systems by name (gets SYSTEM_WEIGHTS priority)
-        for system in self.SYSTEM_WEIGHTS:
-            ratings = self._load_system(system, year)
+        for system, entries in self._load_consolidated(year).items():
+            ratings = self._entries_to_ratings(system, entries)
             if ratings:
                 all_ratings[system] = ratings
-
-        # 2. Discover additional systems via glob (Massey Ordinals, etc.)
-        #    Checks both cache_dir and cache_dir/historical/
-        for search_dir in [self.cache_dir, self.cache_dir / "historical"]:
-            if not search_dir.is_dir():
-                continue
-            for path in search_dir.glob(f"external_*_{year}.json"):
-                system = path.stem.replace(f"_{year}", "").replace("external_", "")
-                if system in all_ratings:
-                    continue  # Already loaded (named system takes precedence)
-                ratings = self._load_system_from_path(system, path)
-                if ratings:
-                    all_ratings[system] = ratings
 
         if all_ratings:
             logger.info(
@@ -145,21 +151,14 @@ class ExternalRatingsLoader:
         return all_ratings
 
     def _load_system(self, system: str, year: int) -> Dict[str, ExternalRating]:
-        """Load a single rating system from cache, checking multiple dirs."""
-        for search_dir in [self.cache_dir, self.cache_dir / "historical"]:
-            path = search_dir / f"external_{system}_{year}.json"
-            if path.exists():
-                return self._load_system_from_path(system, path)
-        return {}
-
-    def _load_system_from_path(self, system: str, path: Path) -> Dict[str, ExternalRating]:
-        """Load a single rating system from a specific file path."""
-        try:
-            with open(path, "r") as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError):
+        """Load a single rating system for a year from the consolidated file."""
+        entries = self._load_consolidated(year).get(system)
+        if not entries:
             return {}
+        return self._entries_to_ratings(system, entries)
 
+    def _entries_to_ratings(self, system: str, data: List[Dict]) -> Dict[str, ExternalRating]:
+        """Convert a system's raw entry list into {team_id: ExternalRating}."""
         if not isinstance(data, list):
             return {}
 
@@ -340,12 +339,17 @@ class ExternalRatingsLoader:
         year: int,
         ratings: Dict[str, ExternalRating],
     ) -> None:
-        """Save ratings to cache."""
+        """Save ratings for one system/year into the consolidated cache file.
+
+        Read-merge-write: loads any existing external_ratings_{year}.json in
+        cache_dir, updates just this system's entry, and writes the whole
+        file back. Other systems already cached for this year are preserved.
+        """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        path = self.cache_dir / f"external_{system}_{year}.json"
-        data = []
+        path = self.cache_dir / f"external_ratings_{year}.json"
+        entries = []
         for r in ratings.values():
-            data.append(
+            entries.append(
                 {
                     "team_name": r.team_name,
                     "team_id": r.team_id,
@@ -354,8 +358,19 @@ class ExternalRatingsLoader:
                     "normalized": r.normalized,
                 }
             )
+
+        existing: Dict = {}
+        if path.exists():
+            try:
+                with open(path, "r") as f:
+                    existing = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                existing = {}
+        systems = existing.get("systems") if isinstance(existing.get("systems"), dict) else {}
+        systems[system] = entries
+
         with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump({"systems": systems}, f, indent=2)
 
     def populate_from_massey_ordinals(
         self,

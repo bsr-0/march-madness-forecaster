@@ -43,13 +43,13 @@ class TestExternalRatingsLoader:
         assert result == {}
 
     def test_load_system_from_cache(self, tmp_path):
-        """Load ratings from a cached JSON file."""
+        """Load ratings from the consolidated cache file."""
         data = [
             {"team_name": "Duke", "team_id": "duke", "rating": 25.0, "ranking": 1, "normalized": 0.98},
             {"team_name": "UNC", "team_id": "unc", "rating": 22.0, "ranking": 5, "normalized": 0.85},
         ]
-        cache_file = tmp_path / "external_kenpom_2025.json"
-        cache_file.write_text(json.dumps(data))
+        cache_file = tmp_path / "external_ratings_2025.json"
+        cache_file.write_text(json.dumps({"systems": {"kenpom": data}}))
 
         loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
         result = loader._load_system("kenpom", 2025)

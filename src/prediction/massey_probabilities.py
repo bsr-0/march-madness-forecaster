@@ -1,18 +1,19 @@
 """Massey source (catalog A5 ``massey_avg``).
 
 Loads the already-aggregated Massey composite rating
-(``data/raw/external_massey_composite_{year}.json``) and exposes it as
-a barthag-shaped probability source that slots into the same
+(``data/raw/external_ratings_{year}.json``'s ``systems.massey_composite``
+entry — consolidated 2026-08-16 from the former standalone
+``external_massey_composite_{year}.json`` file) and exposes it as a
+barthag-shaped probability source that slots into the same
 ``base_round_probs`` dispatch used by torvik / odds / elo.
 
 Why the composite (not per-system top-10 averaging):
 - The catalog's original spec was "average across top-10 most stable
   systems" but our composite file is *already* an ensemble rating
   across all systems Massey tracks. Same signal, cleaner source.
-- The per-system files (``external_POM_{year}.json``, etc.) exist and
-  would support the catalog's A6 ``massey_best`` walk-forward
-  Brier-selection approach — that's a separate phase of work deferred
-  for now (see STRATEGY_CATALOG.md A6).
+- The per-system entries (``systems.POM``, etc., same consolidated file)
+  exist and support the catalog's A6 ``massey_best`` walk-forward
+  Brier-selection approach (see ``massey_best_probabilities.py``).
 
 Team-ID bridge:
 - Massey uses its own abbreviated IDs (``abilene_chr``, ``mt_st_mary_s``,
@@ -96,13 +97,14 @@ def load_massey_avg_barthag(
     if data_root is None:
         data_root = Path(__file__).resolve().parent.parent.parent / "data"
 
-    path = Path(data_root) / "raw" / f"external_massey_composite_{year}.json"
+    path = Path(data_root) / "raw" / f"external_ratings_{year}.json"
     if not path.exists():
-        path = Path(data_root) / "raw" / "historical" / f"external_massey_composite_{year}.json"
+        path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
     if not path.exists():
         return None
 
-    raw = json.load(open(path))
+    consolidated = json.load(open(path))
+    raw = consolidated.get("systems", {}).get("massey_composite")
     if not isinstance(raw, list) or not raw:
         return None
 
@@ -143,10 +145,13 @@ def massey_coverage(year: int, canonical_ids: Iterable[str], data_root: Optional
     """
     if data_root is None:
         data_root = Path(__file__).resolve().parent.parent.parent / "data"
-    path = Path(data_root) / "raw" / f"external_massey_composite_{year}.json"
+    path = Path(data_root) / "raw" / f"external_ratings_{year}.json"
+    if not path.exists():
+        path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
     if not path.exists():
         return {"covered": 0, "total": len(list(canonical_ids)), "file_exists": 0}
-    raw = json.load(open(path))
+    consolidated = json.load(open(path))
+    raw = consolidated.get("systems", {}).get("massey_composite", [])
     canonical_set = frozenset(canonical_ids)
     covered = sum(1 for team in raw if _bridge_massey_id(team.get("team_id", ""), canonical_set) is not None)
     return {"covered": covered, "total": len(canonical_set), "file_exists": 1}

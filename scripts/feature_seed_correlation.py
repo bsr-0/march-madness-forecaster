@@ -86,21 +86,20 @@ def load_win_pct(year):
 
 def load_external_ratings(year):
     """Load external rating composite. Returns {team_id: avg_normalized_rating}."""
-    import glob as g
-
-    pattern = str(HIST_DIR / f"external_*_{year}.json")
-    files = g.glob(pattern)
-    if not files:
+    path = HIST_DIR / f"external_ratings_{year}.json"
+    if not path.exists():
         return {}
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+    systems = data.get("systems", {})
     team_ratings = {}
     team_counts = {}
-    for fpath in files:
-        try:
-            with open(fpath) as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError):
+    for items in systems.values():
+        if not isinstance(items, list):
             continue
-        items = data if isinstance(data, list) else []
         for item in items:
             tid = item.get("team_id")
             rating = item.get("normalized") or item.get("rating")
