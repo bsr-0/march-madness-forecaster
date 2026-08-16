@@ -407,12 +407,23 @@ _REGION_ALIASES = {
 
 
 def load_seeds_and_regions(year):
-    """Load seeds and regions from tournament_seeds_{year}.json."""
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}, {}
-    with open(path) as f:
-        data = json.load(f)
+    """Load seeds and regions for `year`.
+
+    Reads the consolidated `tournament_context_{year}.json` (key
+    "seeds") when present, falling back to the old
+    `tournament_seeds_{year}.json`."""
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("seeds")
+    if data is None:
+        path = HIST_DIR / f"tournament_seeds_{year}.json"
+        if not path.exists():
+            return {}, {}
+        with open(path) as f:
+            data = json.load(f)
     seeds = {}
     regions = {}
     if isinstance(data, dict) and "teams" in data:

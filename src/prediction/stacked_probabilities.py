@@ -81,11 +81,19 @@ _DEFAULT_RIDGE_ALPHA = 1.0
 
 def _load_seeds(year: int, data_root: Path) -> Dict[str, int]:
     """Load {team_id → seed} from tournament_seeds_{year}.json."""
-    path = data_root / "raw" / "historical" / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        data = json.load(f)
+    hist = data_root / "raw" / "historical"
+    ctx_path = hist / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("seeds")
+    if data is None:
+        path = hist / f"tournament_seeds_{year}.json"
+        if not path.exists():
+            return {}
+        with open(path) as f:
+            data = json.load(f)
     seeds: Dict[str, int] = {}
     if isinstance(data, dict) and "teams" in data:
         for t in data["teams"]:
@@ -180,11 +188,19 @@ def _load_all_base_barthag(
 
 def _load_tournament_games(year: int, data_root: Path) -> Optional[List[dict]]:
     """Load tournament games list for one year, or None if missing."""
-    path = data_root / "raw" / "historical" / f"tournament_results_{year}.json"
-    if not path.exists():
-        return None
-    with open(path) as f:
-        raw = json.load(f)
+    hist = data_root / "raw" / "historical"
+    ctx_path = hist / f"tournament_context_{year}.json"
+    raw = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        raw = ctx.get("results")
+    if raw is None:
+        path = hist / f"tournament_results_{year}.json"
+        if not path.exists():
+            return None
+        with open(path) as f:
+            raw = json.load(f)
     if isinstance(raw, dict) and "games" in raw:
         return raw["games"]
     if isinstance(raw, list):

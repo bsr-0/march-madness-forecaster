@@ -23,6 +23,7 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts._common import load_tournament_results
 from src.ml.calibration.post_processing import (
     BrierOptimalClipper,
     FavoriteLongshotBiasCorrector,
@@ -58,12 +59,7 @@ def seed_implied_prob(seed1: int, seed2: int) -> float:
 
 def load_tournament_games(year: int) -> List[Dict]:
     """Load tournament results, excluding First Four."""
-    path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        data = json.load(f)
-    games = data.get("games", data) if isinstance(data, dict) else data
+    games = load_tournament_results(year)
     # Exclude First Four play-in games
     return [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 

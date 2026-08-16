@@ -109,10 +109,17 @@ def _load_seeds_and_results(
         r64_games: list of game dicts from tournament_results with round_name == 'R64'
     """
     hist = data_root / "raw" / "historical"
+    ctx_path = hist / f"tournament_context_{year}.json"
+    ctx = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
 
     # Seeds
-    with open(hist / f"tournament_seeds_{year}.json") as f:
-        seed_data = json.load(f)
+    seed_data = ctx.get("seeds") if ctx else None
+    if seed_data is None:
+        with open(hist / f"tournament_seeds_{year}.json") as f:
+            seed_data = json.load(f)
     seeds = {}
     regions = {}
     for t in seed_data["teams"]:
@@ -120,8 +127,10 @@ def _load_seeds_and_results(
         regions[t["team_id"]] = t["region"]
 
     # Results
-    with open(hist / f"tournament_results_{year}.json") as f:
-        results_data = json.load(f)
+    results_data = ctx.get("results") if ctx else None
+    if results_data is None:
+        with open(hist / f"tournament_results_{year}.json") as f:
+            results_data = json.load(f)
     r64_games = [g for g in results_data["games"] if g["round_name"] == "R64"]
 
     return seeds, regions, r64_games

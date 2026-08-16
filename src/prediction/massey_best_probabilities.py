@@ -127,10 +127,17 @@ def _load_system_ratings(system: str, year: int, data_root: Path) -> Optional[Di
 
 def _load_tournament_games(year: int, data_root: Path) -> Optional[List[dict]]:
     """Load the games list for one tournament year, or None if missing."""
-    path = Path(data_root) / "raw" / "historical" / f"tournament_results_{year}.json"
-    if not path.exists():
-        return None
-    raw = json.load(open(path))
+    hist_dir = Path(data_root) / "raw" / "historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    raw = None
+    if ctx_path.exists():
+        ctx = json.load(open(ctx_path))
+        raw = ctx.get("results")
+    if raw is None:
+        path = hist_dir / f"tournament_results_{year}.json"
+        if not path.exists():
+            return None
+        raw = json.load(open(path))
     if isinstance(raw, dict) and "games" in raw:
         return raw["games"]
     if isinstance(raw, list):

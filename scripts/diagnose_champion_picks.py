@@ -20,11 +20,22 @@ DATA_ROOT = Path("data")
 
 
 def get_team_name(team_id, year):
-    """Try to resolve team_id to a readable name."""
-    teams_path = DATA_ROOT / "raw" / "historical" / f"teams_{year}.json"
-    if teams_path.exists():
-        with open(teams_path) as f:
-            teams = json.load(f)
+    """Try to resolve team_id to a readable name.
+
+    Reads the consolidated `tournament_context_{year}.json` (key
+    "teams") when present, falling back to the old `teams_{year}.json`."""
+    teams = None
+    ctx_path = DATA_ROOT / "raw" / "historical" / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        teams = ctx.get("teams")
+    if teams is None:
+        teams_path = DATA_ROOT / "raw" / "historical" / f"teams_{year}.json"
+        if teams_path.exists():
+            with open(teams_path) as f:
+                teams = json.load(f)
+    if teams is not None:
         if isinstance(teams, dict):
             return teams.get(str(team_id), str(team_id))
         if isinstance(teams, list):

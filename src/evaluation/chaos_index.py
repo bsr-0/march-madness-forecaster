@@ -86,7 +86,20 @@ class ChaosObservation:
 
 
 def _load_seeds(year: int, data_root: Path) -> List[dict]:
-    """Load tournament seeds from either storage layout used in this repo."""
+    """Load tournament seeds from either storage layout used in this repo.
+
+    Prefers the consolidated `tournament_context_{year}.json` (key
+    "seeds") under the historical directory when present, falling back
+    to the old per-type `tournament_seeds_{year}.json`."""
+    ctx_path = Path(data_root) / "raw" / "historical" / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        ctx = json.load(open(ctx_path))
+        if "seeds" in ctx:
+            raw = ctx["seeds"]
+            if isinstance(raw, dict) and "teams" in raw:
+                return raw["teams"]
+            if isinstance(raw, list):
+                return raw
     candidates = [
         Path(data_root) / "raw" / "historical" / f"tournament_seeds_{year}.json",
         Path(data_root) / "raw" / f"tournament_seeds_{year}.json",
@@ -142,9 +155,17 @@ def compute_actual_chaos(year: int, data_root: Path) -> ChaosObservation:
     """
     truth = load_ground_truth(year, data_root)
     # We have the F4 team ids but need their seeds — read tournament_results
-    # games directly for seed pairs.
-    p = Path(data_root) / "raw" / "historical" / f"tournament_results_{year}.json"
-    raw = json.load(open(p))
+    # games directly for seed pairs. Prefers the consolidated
+    # tournament_context_{year}.json (key "results") when present.
+    ctx_path = Path(data_root) / "raw" / "historical" / f"tournament_context_{year}.json"
+    raw = None
+    if ctx_path.exists():
+        ctx = json.load(open(ctx_path))
+        if "results" in ctx:
+            raw = ctx["results"]
+    if raw is None:
+        p = Path(data_root) / "raw" / "historical" / f"tournament_results_{year}.json"
+        raw = json.load(open(p))
     games = raw["games"] if isinstance(raw, dict) and "games" in raw else raw
     f4_seeds = []
     for g in games:

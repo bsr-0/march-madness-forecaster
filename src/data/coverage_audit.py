@@ -256,9 +256,30 @@ def _find_years(historical_dir: str) -> List[int]:
     return sorted(years)
 
 
+def _consolidated_subkey(path: str, sub_key: str, prefix: str) -> Optional[Dict]:
+    """Return `sub_key` from the sibling `tournament_context_{year}.json`
+    next to `path` (an old-style `{prefix}{year}.json` path), or None if
+    the consolidated file or that sub-key isn't there."""
+    fname = os.path.basename(path)
+    suffix = ".json"
+    if not (fname.startswith(prefix) and fname.endswith(suffix)):
+        return None
+    year_str = fname[len(prefix) : -len(suffix)]
+    ctx_path = os.path.join(os.path.dirname(path), f"tournament_context_{year_str}.json")
+    if not os.path.isfile(ctx_path):
+        return None
+    with open(ctx_path) as f:
+        ctx = json.load(f)
+    return ctx.get(sub_key)
+
+
 def audit_year(games_path: str, metrics_path: str, seeds_path: Optional[str]) -> Dict:
     games_payload = _load_json(games_path)
-    metrics_payload = _load_json(metrics_path)
+    # Prefer the consolidated tournament_context_{year}.json, falling back
+    # to the old per-type team_metrics_{year}.json / tournament_seeds_{year}.json.
+    metrics_payload = _consolidated_subkey(metrics_path, "team_metrics", "team_metrics_")
+    if metrics_payload is None:
+        metrics_payload = _load_json(metrics_path)
 
     cbbpy_map = _load_cbbpy_team_map()
     d1_cache: Dict[tuple, bool] = {}
@@ -272,8 +293,10 @@ def audit_year(games_path: str, metrics_path: str, seeds_path: Optional[str]) ->
             team_metrics[tid] = tm
 
     team_seeds: Dict[str, int] = {}
-    if seeds_path and os.path.exists(seeds_path):
+    seeds_payload = _consolidated_subkey(seeds_path, "seeds", "tournament_seeds_") if seeds_path else None
+    if seeds_payload is None and seeds_path and os.path.exists(seeds_path):
         seeds_payload = _load_json(seeds_path)
+    if seeds_payload:
         for entry in seeds_payload.get("teams", []):
             tid = _normalize_team_id(str(entry.get("team_id", "")))
             seed = int(entry.get("seed", 0))
@@ -416,7 +439,14 @@ def run_coverage_audit(
         metrics_path = os.path.join(historical_dir, f"team_metrics_{year}.json")
         seeds_path = os.path.join(historical_dir, f"tournament_seeds_{year}.json")
 
-        if not os.path.exists(games_path) or not os.path.exists(metrics_path):
+        # team_metrics may be available via the consolidated
+        # tournament_context_{year}.json even if the old per-type file is absent.
+        ctx_path = os.path.join(historical_dir, f"tournament_context_{year}.json")
+        has_metrics = os.path.exists(metrics_path)
+        if not has_metrics and os.path.isfile(ctx_path):
+            with open(ctx_path) as f:
+                has_metrics = "team_metrics" in json.load(f)
+        if not os.path.exists(games_path) or not has_metrics:
             continue
 
         year_result = audit_year(games_path, metrics_path, seeds_path)

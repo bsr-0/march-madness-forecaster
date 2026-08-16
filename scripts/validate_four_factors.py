@@ -163,12 +163,22 @@ def compute_boxscore_ff(year: int, cutoff_date: str) -> Dict[str, dict]:
 
 
 def get_tournament_seeds(year: int) -> Dict[str, int]:
-    """Load tournament seeds from teams file."""
-    path = HIST_DIR / f"teams_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        data = json.load(f)
+    """Load tournament seeds from teams file.
+
+    Reads the consolidated `tournament_context_{year}.json` (key
+    "teams") when present, falling back to the old `teams_{year}.json`."""
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("teams")
+    if data is None:
+        path = HIST_DIR / f"teams_{year}.json"
+        if not path.exists():
+            return {}
+        with open(path) as f:
+            data = json.load(f)
     return {t["team_id"]: t.get("seed", 0) for t in data.get("teams", []) if t.get("team_id")}
 
 

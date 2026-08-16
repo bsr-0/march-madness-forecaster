@@ -173,10 +173,19 @@ def _load_year_samples_incremental_core(
         return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
     # ── 2. Load auxiliary data (conference map, seeds, rosters) ────────
+    # Reads team metrics from the consolidated
+    # `tournament_context_{year}.json` (key "team_metrics") when present,
+    # falling back to the old `team_metrics_{year}.json`.
     conference_map = None
     try:
-        with open(metrics_path, "r") as f:
-            metrics_payload = json.load(f)
+        metrics_ctx_path = os.path.join(os.path.dirname(metrics_path), f"tournament_context_{year}.json")
+        metrics_payload = None
+        if os.path.isfile(metrics_ctx_path):
+            with open(metrics_ctx_path, "r") as f:
+                metrics_payload = json.load(f).get("team_metrics")
+        if metrics_payload is None:
+            with open(metrics_path, "r") as f:
+                metrics_payload = json.load(f)
         if isinstance(metrics_payload, dict):
             for tid, info in metrics_payload.items():
                 if isinstance(info, dict) and "conference" in info:
@@ -218,15 +227,31 @@ def _load_year_samples_incremental_core(
             year,
         )
 
-    # Tournament seeds
+    # Tournament seeds. Reads from the consolidated
+    # `tournament_context_{year}.json` (key "seeds") when present,
+    # falling back to the old `tournament_seeds_{year}.json` (checked
+    # in the same two directories as before).
     team_seeds: Dict[str, int] = {}
-    seeds_path = os.path.join(os.path.dirname(games_path), f"tournament_seeds_{year}.json")
-    if not os.path.isfile(seeds_path):
-        seeds_path = os.path.join(os.path.dirname(games_path), "historical", f"tournament_seeds_{year}.json")
-    if os.path.isfile(seeds_path):
+    games_dir_for_seeds = os.path.dirname(games_path)
+    ctx_path = os.path.join(games_dir_for_seeds, f"tournament_context_{year}.json")
+    if not os.path.isfile(ctx_path):
+        ctx_path = os.path.join(games_dir_for_seeds, "historical", f"tournament_context_{year}.json")
+    seeds_data = None
+    if os.path.isfile(ctx_path):
         try:
+            with open(ctx_path, "r") as f:
+                seeds_data = json.load(f).get("seeds")
+        except Exception:
+            seeds_data = None
+    if seeds_data is None:
+        seeds_path = os.path.join(games_dir_for_seeds, f"tournament_seeds_{year}.json")
+        if not os.path.isfile(seeds_path):
+            seeds_path = os.path.join(games_dir_for_seeds, "historical", f"tournament_seeds_{year}.json")
+        if os.path.isfile(seeds_path):
             with open(seeds_path, "r") as f:
                 seeds_data = json.load(f)
+    if seeds_data is not None:
+        try:
             # Handle both formats: list of entries or dict with "teams" key
             if isinstance(seeds_data, dict):
                 seeds_data = seeds_data.get("teams", [])

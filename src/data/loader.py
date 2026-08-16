@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -40,8 +41,18 @@ class DataLoader:
         Returns:
             List of Team objects (64 for a standard bracket)
         """
-        with open(file_path, "r") as f:
-            data = json.load(f)
+        data = None
+        path = Path(file_path)
+        year_match = re.match(r"teams_(\d{4})\.json$", path.name)
+        if year_match:
+            ctx_path = path.with_name(f"tournament_context_{year_match.group(1)}.json")
+            if ctx_path.exists():
+                with open(ctx_path, "r") as f:
+                    ctx = json.load(f)
+                data = ctx.get("teams")
+        if data is None:
+            with open(file_path, "r") as f:
+                data = json.load(f)
 
         raw_teams = data.get("teams", [])
 

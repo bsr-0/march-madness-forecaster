@@ -113,7 +113,7 @@ class HistoricalDataPipeline:
             )
             team_errors = validate_ratings_payload(team_payload, name_field="team_name")
             self._assert_valid(f"team_metrics_{season}", team_errors)
-            teams_path = self._write_json(f"team_metrics_{season}.json", team_payload)
+            teams_path = self._write_context_subkey(season, "team_metrics", team_payload)
 
             manifest["artifacts"][str(season)] = {
                 "historical_games_json": games_path,
@@ -147,7 +147,7 @@ class HistoricalDataPipeline:
             if self.config.include_tournament_context:
                 tournament_payload, tournament_provider = self._collect_tournament_context(season)
                 if tournament_payload.get("teams"):
-                    seeds_path = self._write_json(f"tournament_seeds_{season}.json", tournament_payload)
+                    seeds_path = self._write_context_subkey(season, "seeds", tournament_payload)
                     manifest["artifacts"][str(season)]["tournament_seeds_json"] = seeds_path
                     manifest["providers"][str(season)]["tournament_seeds_json"] = tournament_provider
                     manifest["validation_errors"][str(season)]["tournament_seeds_json"] = []
@@ -546,6 +546,19 @@ class HistoricalDataPipeline:
         path = self.output_dir / filename
         with open(path, "w") as f:
             json.dump(payload, f, indent=2)
+        return str(path)
+
+    def _write_context_subkey(self, season: int, sub_key: str, payload: Dict) -> str:
+        """Read-merge-write `payload` into `tournament_context_{season}.json`
+        under `sub_key`, preserving any other sub-keys already present."""
+        path = self.output_dir / f"tournament_context_{season}.json"
+        ctx: Dict = {}
+        if path.exists():
+            with open(path) as f:
+                ctx = json.load(f)
+        ctx[sub_key] = payload
+        with open(path, "w") as f:
+            json.dump(ctx, f, indent=2)
         return str(path)
 
     def _assert_valid(self, artifact_name: str, errors: List[str]) -> None:

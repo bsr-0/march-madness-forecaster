@@ -77,11 +77,18 @@ def compute_historical_seed_reach_rates(
     for year in range(min_year, max_year_exclusive):
         if year == 2020:
             continue
-        path = hist_dir / f"tournament_results_{year}.json"
-        if not path.exists():
-            continue
-        with open(path) as f:
-            raw = json.load(f)
+        ctx_path = hist_dir / f"tournament_context_{year}.json"
+        raw = None
+        if ctx_path.exists():
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+            raw = ctx.get("results")
+        if raw is None:
+            path = hist_dir / f"tournament_results_{year}.json"
+            if not path.exists():
+                continue
+            with open(path) as f:
+                raw = json.load(f)
         games = raw["games"] if isinstance(raw, dict) and "games" in raw else raw
 
         # Deduplicate (team_id, seed) within a year per round — one team can

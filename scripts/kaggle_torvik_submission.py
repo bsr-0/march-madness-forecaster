@@ -48,13 +48,32 @@ ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 TORVIK_CORRECTED_RECENT5_CONSERVATIVE = "torvik_corrected_recent5_conservative"
 
 
+def _load_context_subkey(year: int, sub_key: str, fallback_filename: str):
+    """Return sub-key data for `year`, preferring the consolidated
+    `tournament_context_{year}.json`, falling back to the old per-type
+    file if the consolidated file doesn't exist yet or lacks that
+    sub-key. Returns None if neither source has the data. Mirrors
+    scripts._common._load_context_subkey; duplicated here because this
+    module builds its paths directly rather than via scripts._common.HIST_DIR."""
+    hist_dir = REPO_ROOT / "data/raw/historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if sub_key in ctx:
+            return ctx[sub_key]
+    old_path = hist_dir / fallback_filename
+    if not old_path.exists():
+        return None
+    with open(old_path) as f:
+        return json.load(f)
+
+
 def load_tournament_seeds(year: int) -> dict[str, int]:
     """Load tournament seeds from tournament_results or seeds JSON."""
     # Try tournament results first (has actual games with seeds)
-    results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    if results_path.exists():
-        with open(results_path) as f:
-            data = json.load(f)
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    if data is not None:
         games = data.get("games", data) if isinstance(data, dict) else data
         seeds = {}
         for g in games:
@@ -63,10 +82,9 @@ def load_tournament_seeds(year: int) -> dict[str, int]:
         return seeds
 
     # Try seeds JSON
-    seeds_path = REPO_ROOT / f"data/raw/historical/tournament_seeds_{year}.json"
-    if seeds_path.exists():
-        with open(seeds_path) as f:
-            return json.load(f)
+    seeds_data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
+    if seeds_data is not None:
+        return seeds_data
 
     return {}
 
@@ -669,13 +687,11 @@ def _get_cached_womens_weights_for_year(
 
 def run_backtest(year: int, clip_lo: float, clip_hi: float, pp: PostProcessingPipeline | None = None) -> None:
     """Score torvik predictions against actual tournament results."""
-    results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    if not results_path.exists():
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    if data is None:
         print(f"ERROR: No tournament results for {year}")
         sys.exit(1)
 
-    with open(results_path) as f:
-        data = json.load(f)
     games = data.get("games", data) if isinstance(data, dict) else data
     # Exclude First Four
     games = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
@@ -848,12 +864,10 @@ def run_multi_year_backtest(
     all_brier, all_seed_brier = [], []
 
     for year in years:
-        results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-        if not results_path.exists():
+        data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+        if data is None:
             continue
 
-        with open(results_path) as f:
-            data = json.load(f)
         games = data.get("games", data) if isinstance(data, dict) else data
         games = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 
@@ -932,11 +946,9 @@ def run_ensemble_backtest(
     all_ens, all_torv, all_pipe, all_seed = [], [], [], []
 
     for year in years:
-        results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-        if not results_path.exists():
+        data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+        if data is None:
             continue
-        with open(results_path) as f:
-            data = json.load(f)
         games = data.get("games", data) if isinstance(data, dict) else data
         games = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 
@@ -1030,11 +1042,9 @@ def run_torvik_correction_backtest(
     all_corrected, all_blend, all_torvik, all_seed = [], [], [], []
 
     for year in years:
-        results_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-        if not results_path.exists():
+        data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+        if data is None:
             continue
-        with open(results_path) as f:
-            data = json.load(f)
         games = data.get("games", data) if isinstance(data, dict) else data
         games = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 
@@ -1161,12 +1171,10 @@ def run_combined_backtest(
 
     try:
         for year in years:
-            mens_games_path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-            if not mens_games_path.exists():
+            data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+            if data is None:
                 continue
 
-            with open(mens_games_path) as f:
-                data = json.load(f)
             mens_games = data.get("games", data) if isinstance(data, dict) else data
             mens_games = [g for g in mens_games if g.get("round_name", "") not in ("FF", "First Four")]
 

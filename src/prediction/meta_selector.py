@@ -457,16 +457,25 @@ def _load_year_data(
     import json
 
     hist_dir = data_root / "raw" / "historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    ctx = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
 
     # Seeds
-    with open(hist_dir / f"tournament_seeds_{year}.json") as f:
-        seeds_file = json.load(f)
+    seeds_file = ctx.get("seeds") if ctx else None
+    if seeds_file is None:
+        with open(hist_dir / f"tournament_seeds_{year}.json") as f:
+            seeds_file = json.load(f)
     seeds_raw = seeds_file["teams"] if isinstance(seeds_file, dict) and "teams" in seeds_file else seeds_file
     seeds = {t["team_id"]: t["seed"] for t in seeds_raw}
 
     # Tournament results (ground truth)
-    with open(hist_dir / f"tournament_results_{year}.json") as f:
-        games_file = json.load(f)
+    games_file = ctx.get("results") if ctx else None
+    if games_file is None:
+        with open(hist_dir / f"tournament_results_{year}.json") as f:
+            games_file = json.load(f)
     games = games_file["games"] if isinstance(games_file, dict) and "games" in games_file else games_file
 
     # Regions for bracket structure

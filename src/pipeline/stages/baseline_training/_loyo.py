@@ -1,5 +1,6 @@
 """Baseline model training — loyo module."""
 
+import json
 import logging
 import os
 import re
@@ -50,6 +51,19 @@ logger = logging.getLogger(__name__)
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+
+def _team_metrics_available(games_dir: str, year, metrics_path: str) -> bool:
+    """True if team_metrics data exists for `year`, either as the old
+    `team_metrics_{year}.json` (checked by `metrics_path`) or as the
+    "team_metrics" sub-key of the consolidated `tournament_context_{year}.json`."""
+    if os.path.isfile(metrics_path):
+        return True
+    ctx_path = os.path.join(games_dir, f"tournament_context_{year}.json")
+    if os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            return "team_metrics" in json.load(f)
+    return False
 
 
 def _run_loyo_validation(
@@ -171,7 +185,7 @@ def _run_loyo_validation(
         games_path = os.path.join(games_dir, f"historical_games_{year}.json")
         metrics_path = os.path.join(games_dir, f"team_metrics_{year}.json")
 
-        if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+        if not os.path.isfile(games_path) or not _team_metrics_available(games_dir, year, metrics_path):
             logger.info("LOYO: skipping year %d (missing data files)", year)
             continue
 

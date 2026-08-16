@@ -236,9 +236,16 @@ def load_pool_wisdom_ratings(
     espn_by_year = {}
     for py in pool_years:
         try:
-            seed_path = PROJECT_ROOT / f"data/raw/historical/tournament_seeds_{py}.json"
-            with open(seed_path) as f:
-                sd = json.load(f)
+            ctx_path = PROJECT_ROOT / f"data/raw/historical/tournament_context_{py}.json"
+            sd = None
+            if ctx_path.exists():
+                with open(ctx_path) as f:
+                    ctx = json.load(f)
+                sd = ctx.get("seeds")
+            if sd is None:
+                seed_path = PROJECT_ROOT / f"data/raw/historical/tournament_seeds_{py}.json"
+                with open(seed_path) as f:
+                    sd = json.load(f)
             py_seeds = {t["team_id"]: t["seed"] for t in sd["teams"]}
             seeds_by_year[py] = py_seeds
         except FileNotFoundError:

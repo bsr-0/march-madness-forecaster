@@ -66,18 +66,32 @@ MISSING_YEARS = {2020}
 
 
 def _available_years() -> list[int]:
-    years: list[int] = []
+    years: set[int] = set()
+    for p in _HIST_DIR.glob("tournament_context_*.json"):
+        try:
+            year = int(p.stem.split("_")[-1])
+        except ValueError:
+            continue
+        with p.open() as f:
+            if "results" in json.load(f):
+                years.add(year)
     for p in _HIST_DIR.glob("tournament_results_*.json"):
         try:
-            years.append(int(p.stem.split("_")[-1]))
+            years.add(int(p.stem.split("_")[-1]))
         except ValueError:
             continue
     return sorted(years)
 
 
 def _load(year: int) -> list[dict]:
-    with (_HIST_DIR / f"tournament_results_{year}.json").open() as f:
-        doc = json.load(f)
+    ctx_path = _HIST_DIR / f"tournament_context_{year}.json"
+    doc = None
+    if ctx_path.exists():
+        with ctx_path.open() as f:
+            doc = json.load(f).get("results")
+    if doc is None:
+        with (_HIST_DIR / f"tournament_results_{year}.json").open() as f:
+            doc = json.load(f)
     return doc["games"] if isinstance(doc, dict) else doc
 
 
@@ -117,11 +131,18 @@ def test_round_name_counts_match_era(year: int) -> None:
 
 
 def test_covid_year_file_absent() -> None:
-    """2020 was cancelled; a tournament_results_2020.json would be suspicious."""
+    """2020 was cancelled; tournament results data for 2020 would be suspicious."""
     for year in MISSING_YEARS:
         assert not (_HIST_DIR / f"tournament_results_{year}.json").exists(), (
             f"tournament_results_{year}.json exists but {year} tournament was cancelled."
         )
+        ctx_path = _HIST_DIR / f"tournament_context_{year}.json"
+        if ctx_path.exists():
+            with ctx_path.open() as f:
+                ctx = json.load(f)
+            assert "results" not in ctx, (
+                f"tournament_context_{year}.json has a 'results' key but {year} tournament was cancelled."
+            )
 
 
 def test_2026_has_canonical_counts() -> None:

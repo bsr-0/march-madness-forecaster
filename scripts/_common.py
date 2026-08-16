@@ -104,17 +104,35 @@ def load_torvik_and_ff(year: int) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     return torvik, four_factors
 
 
+def _load_context_subkey(year: int, sub_key: str, fallback_filename: str):
+    """Return sub-key data for `year`, preferring the consolidated
+    `tournament_context_{year}.json`, falling back to the old
+    per-type file if the consolidated file doesn't exist yet or lacks
+    that sub-key. Returns None if neither source has the data."""
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if sub_key in ctx:
+            return ctx[sub_key]
+    old_path = HIST_DIR / fallback_filename
+    if not old_path.exists():
+        return None
+    with open(old_path) as f:
+        return json.load(f)
+
+
 def load_tournament_results(year: int) -> List[Dict]:
     """Return the list of tournament games for `year`, or [] if the file
     is missing. Consolidates 7 near-identical copies (hashes d0ea/cd46/
     20174961 across backtest_by_round, backtest_ev_vs_kaggle,
     backtest_pool_value, ablation_seed_features, unified_mode_evaluation,
-    validate_e8_interactions, and mc_pool_backtest)."""
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
+    validate_e8_interactions, and mc_pool_backtest). Reads from the
+    consolidated `tournament_context_{year}.json` (key "results") when
+    present, falling back to the old `tournament_results_{year}.json`."""
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    if data is None:
         return []
-    with open(path) as f:
-        data = json.load(f)
     # Most callers expect the "games" list; mc_pool_backtest's variant
     # also tolerated a bare list at the top level — preserve that.
     if isinstance(data, dict):
@@ -127,12 +145,13 @@ def load_seeds(year: int) -> Dict[str, int]:
 
     Consolidates 5 copies (hashes a0163f59/742162dc/73b3e027/f086d8e6/
     4fa5ee80). The pool-value variant's dict-or-list schema tolerance
-    is kept (some legacy files store teams as a bare top-level list)."""
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
+    is kept (some legacy files store teams as a bare top-level list).
+    Reads from the consolidated `tournament_context_{year}.json` (key
+    "seeds") when present, falling back to the old
+    `tournament_seeds_{year}.json`."""
+    data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
+    if data is None:
         return {}
-    with open(path) as f:
-        data = json.load(f)
     teams = data.get("teams", data if isinstance(data, list) else [])
     return {t["team_id"]: t["seed"] for t in teams}
 
@@ -142,19 +161,42 @@ def load_seeds_and_regions(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
 
     Consolidates `diagnose_leverage` and `divergence_diagnostic`
     (identical hash 3e6441d1). `mc_pool_backtest.py` has its own
-    region-alias-aware variant and is NOT migrated to this helper."""
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}, {}
-    with open(path) as f:
-        data = json.load(f)
+    region-alias-aware variant and is NOT migrated to this helper.
+    Reads from the consolidated `tournament_context_{year}.json` (key
+    "seeds") when present, falling back to the old
+    `tournament_seeds_{year}.json`."""
+    data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
     seeds: Dict[str, int] = {}
     regions: Dict[str, str] = {}
+    if data is None:
+        return seeds, regions
     if isinstance(data, dict) and "teams" in data:
         for t in data["teams"]:
             seeds[t["team_id"]] = t["seed"]
             regions[t["team_id"]] = t.get("region", "")
     return seeds, regions
+
+
+def load_team_metrics(year: int) -> Dict[str, dict]:
+    """Return `team_id -> metrics-dict` mapping for `year`, or {} if
+    missing. Reads from the consolidated `tournament_context_{year}.json`
+    (key "team_metrics") when present, falling back to the old
+    `team_metrics_{year}.json`."""
+    data = _load_context_subkey(year, "team_metrics", f"team_metrics_{year}.json")
+    if data is None:
+        return {}
+    teams = data.get("teams", data if isinstance(data, list) else [])
+    return {t["team_id"]: t for t in teams if t.get("team_id")}
+
+
+def load_teams(year: int) -> List[Dict]:
+    """Return the raw `teams` list for `year`, or [] if missing. Reads
+    from the consolidated `tournament_context_{year}.json` (key "teams")
+    when present, falling back to the old `teams_{year}.json`."""
+    data = _load_context_subkey(year, "teams", f"teams_{year}.json")
+    if data is None:
+        return []
+    return data.get("teams", data if isinstance(data, list) else [])
 
 
 # ---------------------------------------------------------------------------

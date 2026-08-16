@@ -34,9 +34,37 @@ HIST_DIR = DATA_ROOT / "raw" / "historical"
 
 
 def _has_year_data(year: int) -> bool:
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx and "results" in ctx:
+            return True
     return (HIST_DIR / f"tournament_seeds_{year}.json").exists() and (
         HIST_DIR / f"tournament_results_{year}.json"
     ).exists()
+
+
+def _seeds_file_exists(year: int) -> bool:
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            if "seeds" in json.load(f):
+                return True
+    return (HIST_DIR / f"tournament_seeds_{year}.json").exists()
+
+
+def _load_seeds_raw(year: int) -> dict:
+    """Return the raw seeds document (`{"teams": [...]}` shape) for `year`,
+    preferring the consolidated `tournament_context_{year}.json`."""
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx:
+            return ctx["seeds"]
+    with open(HIST_DIR / f"tournament_seeds_{year}.json") as f:
+        return json.load(f)
 
 
 # Use 2025 as the default test year (most recent complete year)
@@ -48,8 +76,7 @@ NEEDS_DATA = pytest.mark.skipif(not _has_year_data(TEST_YEAR), reason=f"No data 
 def seeds_2025():
     if not _has_year_data(TEST_YEAR):
         pytest.skip("No data")
-    with open(HIST_DIR / f"tournament_seeds_{TEST_YEAR}.json") as f:
-        raw = json.load(f)
+    raw = _load_seeds_raw(TEST_YEAR)
     teams = raw["teams"] if isinstance(raw, dict) and "teams" in raw else raw
     return {t["team_id"]: t["seed"] for t in teams}
 
@@ -402,7 +429,7 @@ class TestTrainedSelector:
 
         # Check: not every R64 winner is a top-4 seed
         r64_winners = picks["R64"]
-        seeds_file = json.load(open(HIST_DIR / f"tournament_seeds_{TEST_YEAR}.json"))
+        seeds_file = _load_seeds_raw(TEST_YEAR)
         seeds_list = seeds_file["teams"] if isinstance(seeds_file, dict) and "teams" in seeds_file else seeds_file
         seeds_map = {t["team_id"]: t["seed"] for t in seeds_list}
         chalk_count = sum(1 for t in r64_winners if seeds_map.get(t, 16) <= 4)
@@ -546,13 +573,9 @@ class TestLoadMetaContext:
 
     @pytest.mark.skipif(not _has_year_data(TEST_YEAR), reason="Need test year data")
     def test_returns_all_context_keys(self):
-        seeds_path = HIST_DIR / f"tournament_seeds_{TEST_YEAR}.json"
-        if not seeds_path.exists():
+        if not _seeds_file_exists(TEST_YEAR):
             pytest.skip("No seeds file")
-        import json as _json
-
-        with open(seeds_path) as f:
-            seeds = _json.load(f)
+        seeds = _load_seeds_raw(TEST_YEAR)
         ctx = load_meta_context(TEST_YEAR, seeds, DATA_ROOT)
         for key in CONTEXT_KEYS:
             assert key in ctx, f"Missing context key: {key}"
@@ -789,10 +812,9 @@ class TestS2Features:
     def test_four_factors_loading(self):
         from src.prediction.tournament_features import load_four_factors
 
-        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
-        if not seeds_path.exists():
+        if not _seeds_file_exists(2025):
             pytest.skip("No 2025 data")
-        seed_data = json.loads(seeds_path.read_text())
+        seed_data = _load_seeds_raw(2025)
         team_ids = [t["team_id"] for t in seed_data["teams"]]
 
         ft_rate, to_margin = load_four_factors(2025, team_ids, Path("data"))
@@ -805,10 +827,9 @@ class TestS2Features:
     def test_conf_tourney_loading(self):
         from src.prediction.tournament_features import load_conf_tourney_champ
 
-        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
-        if not seeds_path.exists():
+        if not _seeds_file_exists(2025):
             pytest.skip("No 2025 data")
-        seed_data = json.loads(seeds_path.read_text())
+        seed_data = _load_seeds_raw(2025)
         team_ids = [t["team_id"] for t in seed_data["teams"]]
 
         result = load_conf_tourney_champ(2025, team_ids, Path("data"))
@@ -821,10 +842,9 @@ class TestS2Features:
     def test_ranking_momentum_loading(self):
         from src.prediction.tournament_features import load_ranking_momentum
 
-        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
-        if not seeds_path.exists():
+        if not _seeds_file_exists(2025):
             pytest.skip("No 2025 data")
-        seed_data = json.loads(seeds_path.read_text())
+        seed_data = _load_seeds_raw(2025)
         team_ids = [t["team_id"] for t in seed_data["teams"]]
 
         result = load_ranking_momentum(2025, team_ids, Path("data"))
@@ -845,10 +865,9 @@ class TestUpsetDetector:
     """Tests for the rule-based upset detector."""
 
     def _load_2025_field(self):
-        seeds_path = Path("data/raw/historical/tournament_seeds_2025.json")
-        if not seeds_path.exists():
+        if not _seeds_file_exists(2025):
             pytest.skip("No 2025 data")
-        seed_data = json.loads(seeds_path.read_text())
+        seed_data = _load_seeds_raw(2025)
         team_ids = [t["team_id"] for t in seed_data["teams"]]
         seeds = {t["team_id"]: t["seed"] for t in seed_data["teams"]}
         return team_ids, seeds

@@ -21,10 +21,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._bracket_export_common import load_team_names
+from scripts._common import load_tournament_results
 from scripts.mc_pool_backtest import ESPN_SCORING
 
 YEAR = 2026
-RESULTS_PATH = PROJECT_ROOT / "data" / "raw" / "historical" / f"tournament_results_{YEAR}.json"
 OUT_PATH = PROJECT_ROOT / "docs" / "data" / f"actual_{YEAR}.json"
 
 # Real results use "NCG" for the championship game; the bracket JSON /
@@ -34,9 +34,7 @@ ROUND_KEYS = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 
 
 def main():
-    with open(RESULTS_PATH) as f:
-        data = json.load(f)
-    games = data["games"]
+    games = load_tournament_results(YEAR)
 
     results_by_round = {k: [] for k in ROUND_KEYS}
     for game in games:
