@@ -1,0 +1,34 @@
+{
+  "window": "2024-2026",
+  "n_years": 3,
+  "diagnostic_only": true,
+  "contract": "--team-identity --opponent pool --n-opponents 30 --modes seed meta_region_poolaware meta_region meta_exhaustive --years 2024 2025 2026",
+  "generated": "2026-08-16",
+  "seed_baseline": { "p_first": 4.75, "mean_rank": 16.8, "best_rank": 11.4 },
+  "strategies": {
+    "pool": {
+      "p_first": 15.3,
+      "mean_rank": 11.5,
+      "best_rank": 11.5,
+      "wins_vs_seed_meanrank": 3,
+      "wins_vs_seed_bestrank": 2,
+      "note": "meta_region_poolaware: 15.3% P(1st) over 2024–2026 (n=3, diagnostic only — too few years for significance testing, stat tests skipped). Beats seed baseline (4.8%) on MeanRank all 3/3 years, BestRank 2/3."
+    },
+    "stat": {
+      "p_first": 11.3,
+      "mean_rank": 11.4,
+      "best_rank": 11.4,
+      "wins_vs_seed_meanrank": 3,
+      "wins_vs_seed_bestrank": 1,
+      "note": "meta_region: 11.3% P(1st) over 2024–2026 (n=3, diagnostic only). Beats seed baseline on MeanRank 3/3 years, BestRank 1/3."
+    },
+    "exhaustive": {
+      "p_first": 11.3,
+      "mean_rank": 11.4,
+      "best_rank": 11.4,
+      "wins_vs_seed_meanrank": 3,
+      "wins_vs_seed_bestrank": 1,
+      "note": "meta_exhaustive: 11.3% P(1st) over 2024–2026 (n=3, diagnostic only). Identical to Region Beam Search in this window — both picked Houston (2024, 2025) and Michigan (2026) as champion. Beats seed baseline on MeanRank 3/3 years, BestRank 1/3."
+    }
+  }
+}
