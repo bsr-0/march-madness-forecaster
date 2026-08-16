@@ -891,60 +891,6 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
- * PROBABILITY BASE TOGGLE
- * ══════════════════════════════════════════════════════════════════ */
-
-.probbase-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  flex-wrap: wrap;
-}
-
-.probbase-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-}
-
-.probbase-toggle {
-  display: flex;
-  gap: 8px;
-}
-
-.probbase-toggle-btn {
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--line);
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--ink-soft);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.probbase-toggle-btn.active {
-  border-color: var(--accent-sky);
-  background: rgba(47, 94, 138, 0.12);
-  color: var(--accent-sky);
-}
-
-.probbase-note {
-  margin: 8px 0 0;
-  font-size: 0.76rem;
-  line-height: 1.55;
-  color: var(--ink-faint);
-  max-width: 60rem;
-}
-
-/* ══════════════════════════════════════════════════════════════════
  * BACKTEST WINDOW TOGGLE
  * ══════════════════════════════════════════════════════════════════ */
 
@@ -952,7 +898,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 10px 0 8px;
+  margin: 18px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
   flex-wrap: wrap;
 }
 

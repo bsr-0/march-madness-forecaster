@@ -1,16 +1,11 @@
 """Generate the meta_exhaustive bracket for 2026 and export to docs/data/.
 
 Uses exhaustive_champion construction mode (tries all 64 possible champions,
-picks the bracket with the highest expected points) on the selected
-probability base (--prob-base torvik|elo|ap|upset). Torvik is the default,
-backtested base (docs/app.js STRATEGIES['exhaustive'], 7.7% P(1st)).
-elo/ap swap in a fully independent rating system; upset additionally
-forces risk_level=1.0 (max contrarian weighting) instead of the normal
-0.5 (see scripts/prob_base_variants.py) — exploratory, not a claim that
-any of the three beats Torvik on P(1st).
+picks the bracket with the highest expected points) on Torvik round
+probabilities — the backtested base (docs/app.js STRATEGIES['exhaustive'],
+6.2% P(1st), see MEMORY.md §3).
 """
 
-import argparse
 import json
 import sys
 from datetime import datetime
@@ -31,7 +26,6 @@ from scripts.mc_pool_backtest import (
     build_espn_pick_distribution,
     load_seeds_and_regions,
 )
-from scripts.prob_base_variants import load_prob_base, MODEL_LABELS, RISK_LEVEL
 from src.optimization.bracket_construction import construct_bracket
 
 YEAR = 2026
@@ -39,10 +33,6 @@ OUT_DIR = PROJECT_ROOT / "docs" / "data"
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap", "upset"], default="torvik")
-    args = parser.parse_args()
-
     seeds, regions = load_seeds_and_regions(YEAR)
     if not seeds:
         print(f"ERROR: no seeds found for {YEAR}")
@@ -50,7 +40,6 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-    rating, round_probs = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
 
     try:
         pick_dist = build_espn_pick_distribution(YEAR, seeds)
@@ -61,9 +50,9 @@ def main():
         mode="exhaustive_champion",
         seeds=seeds,
         regions=regions,
-        round_probs=round_probs,
+        round_probs=torvik_rp,
         public_picks=pick_dist,
-        risk_level=RISK_LEVEL[args.prob_base],
+        risk_level=0.5,
         pool_size=30,
         scoring_system=dict(ESPN_SCORING),
     )
@@ -72,15 +61,14 @@ def main():
     pool_pick_dist, opponent_source = resolve_pool_consensus(seeds, YEAR)
     print(f"  Opponent field for display: {opponent_source or 'unavailable'}")
 
-    rounds = build_bracket_json(seeds, regions, rating, round_probs, picks, team_names, pool_pick_dist)
+    rounds = build_bracket_json(seeds, regions, barthag, torvik_rp, picks, team_names, pool_pick_dist)
 
-    suffix = "" if args.prob_base == "torvik" else f"_{args.prob_base}"
-    out_path = OUT_DIR / f"bracket_2026_exhaustive{suffix}.json"
+    out_path = OUT_DIR / "bracket_2026_exhaustive.json"
 
     output = {
         "season": YEAR,
         "generated_at": datetime.now().strftime("%Y-%m-%d"),
-        "model": f"{MODEL_LABELS[args.prob_base]} — Exhaustive Champion Search",
+        "model": "Torvik Barthag — Exhaustive Champion Search",
         "n_simulations": 10000,
         "opponent_source": opponent_source,
         "rounds": rounds,
