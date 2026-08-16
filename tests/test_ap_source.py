@@ -33,6 +33,22 @@ def _load_2026_seeds():
     return {s["team_id"]: s["seed"] for s in seeds_raw}
 
 
+def _load_hist_seeds_raw(year: int) -> dict:
+    """Return the raw seeds document for `year`, preferring the
+    consolidated `tournament_context_{year}.json`."""
+    import json
+
+    hist_dir = DATA_ROOT / "raw" / "historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx:
+            return ctx["seeds"]
+    with open(hist_dir / f"tournament_seeds_{year}.json") as f:
+        return json.load(f)
+
+
 def test_load_ap_strength_barthag_2026_covers_field():
     """All 68 2026 teams should resolve to a barthag (ranked, voting, or seed fallback)."""
     seeds = _load_2026_seeds()
@@ -75,11 +91,9 @@ def test_load_ap_strength_barthag_returns_none_for_unsupported_year():
 def test_load_ap_strength_barthag_walk_forward_isolation():
     """load_ap_strength_barthag(year=2025) must produce 2025 values; year=2024 must
     produce 2024 values. They should not be identical (walk-forward sanity)."""
-    import json
-
-    raw_25 = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2025.json"))
+    raw_25 = _load_hist_seeds_raw(2025)
     seeds_25 = {s["team_id"]: s["seed"] for s in raw_25["teams"]}
-    raw_24 = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2024.json"))
+    raw_24 = _load_hist_seeds_raw(2024)
     seeds_24 = {s["team_id"]: s["seed"] for s in raw_24["teams"]}
 
     bar_25 = load_ap_strength_barthag(2025, seeds_25, seeds_25.keys(), DATA_ROOT)

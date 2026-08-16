@@ -26,7 +26,14 @@ DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
 
 
 def _load_2025_seeds():
-    raw = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2025.json"))
+    hist_dir = DATA_ROOT / "raw" / "historical"
+    ctx_path = hist_dir / "tournament_context_2025.json"
+    raw = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            raw = json.load(f).get("seeds")
+    if raw is None:
+        raw = json.load(open(hist_dir / "tournament_seeds_2025.json"))
     teams = raw["teams"] if isinstance(raw, dict) and "teams" in raw else raw
     return {t["team_id"]: t["seed"] for t in teams}
 

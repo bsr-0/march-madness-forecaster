@@ -54,7 +54,14 @@ def test_load_team_talent_walk_forward_isolation():
     # computed from a snapshot of just the 2025 file, not any later year.
     import json
 
-    raw = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2025.json"))
+    hist_dir = DATA_ROOT / "raw" / "historical"
+    ctx_path = hist_dir / "tournament_context_2025.json"
+    raw = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            raw = json.load(f).get("seeds")
+    if raw is None:
+        raw = json.load(open(hist_dir / "tournament_seeds_2025.json"))
     tourney_ids = {s["team_id"] for s in raw["teams"]}
     talent_2025 = load_team_talent(2025, tourney_ids, DATA_ROOT)
     # Spot check: at least one team got a positive WARP. (If we accidentally

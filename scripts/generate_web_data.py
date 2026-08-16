@@ -111,8 +111,13 @@ print("Loading data...")
 bracket_2026 = load(DATA / "raw" / "bracket_2026.json")
 torvik_2026 = load(DATA / "raw" / "torvik_2026.json")
 torvik_2025 = load(HIST / "torvik_2025.json")
-seeds_2025 = load(HIST / "tournament_seeds_2025.json")
-metrics_2025 = load(HIST / "team_metrics_2025.json")
+_ctx_2025 = load(HIST / "tournament_context_2025.json", required=False)
+seeds_2025 = _ctx_2025.get("seeds") if _ctx_2025 else None
+if seeds_2025 is None:
+    seeds_2025 = load(HIST / "tournament_seeds_2025.json")
+metrics_2025 = _ctx_2025.get("team_metrics") if _ctx_2025 else None
+if metrics_2025 is None:
+    metrics_2025 = load(HIST / "team_metrics_2025.json")
 metrics_2026_raw = load(DATA / "raw" / "team_metrics_2026.json", required=False)
 
 
