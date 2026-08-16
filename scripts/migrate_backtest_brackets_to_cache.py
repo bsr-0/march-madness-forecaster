@@ -54,6 +54,18 @@ def git_sha_short() -> str:
     return subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"], cwd=PROJECT_ROOT).decode().strip()
 
 
+def load_results(path: Path) -> dict:
+    """Load a tournament-results document from `path`.
+
+    `path` is a `tournament_context_{year}.json` (consolidated format,
+    "results" sub-key extracted) or an old-style `tournament_results_{year}.json`
+    (top-level `{"year", "games"}` shape) — both return the same shape."""
+    data = json.loads(path.read_text())
+    if path.name.startswith("tournament_context_"):
+        return data["results"]
+    return data
+
+
 def collect_team_names(bracket_files: list[Path], result_files: list[Path]) -> list[str]:
     names: set[str] = set()
     for path in bracket_files:
@@ -63,7 +75,7 @@ def collect_team_names(bracket_files: list[Path], result_files: list[Path]) -> l
                 for round_name in ROUND_ORDER:
                     names.update(bracket["picks"][round_name])
     for path in result_files:
-        data = json.loads(path.read_text())
+        data = load_results(path)
         for game in data["games"]:
             if game.get("round_name") == "FF":
                 continue
@@ -120,7 +132,10 @@ def winners_array(games: list[dict], lookup: dict[str, int]) -> np.ndarray:
 
 def main() -> None:
     bracket_files = sorted(SOURCE_DIR.glob("backtest_brackets_*.json"))
-    result_files = sorted(RESULTS_DIR.glob("tournament_results_*.json"))
+    result_files = [
+        p for p in sorted(RESULTS_DIR.glob("tournament_context_*.json")) if "results" in json.loads(p.read_text())
+    ]
+    result_files += sorted(RESULTS_DIR.glob("tournament_results_*.json"))
     if not bracket_files:
         raise SystemExit(f"no bracket files in {SOURCE_DIR}")
     if not result_files:
@@ -170,7 +185,7 @@ def main() -> None:
     # --- outcomes -------------------------------------------------------
     n_outcomes = 0
     for source in result_files:
-        data = json.loads(source.read_text())
+        data = load_results(source)
         year = int(data["year"])
         winners = winners_array(data["games"], lookup)
         entry = save_outcomes(

@@ -23,6 +23,22 @@ DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
 _TEAMS_PER_ROUND = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
 
 
+def _load_hist_seeds_raw(year: int) -> dict:
+    """Return the raw seeds document for `year`, preferring the
+    consolidated `tournament_context_{year}.json`."""
+    import json
+
+    hist_dir = DATA_ROOT / "raw" / "historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx:
+            return ctx["seeds"]
+    with open(hist_dir / f"tournament_seeds_{year}.json") as f:
+        return json.load(f)
+
+
 def test_load_coach_experience_2026_covers_tournament_field():
     """Bridge + Kaggle data → at least 60 of 68 2026 teams get an experience count."""
     import json
@@ -42,7 +58,7 @@ def test_load_coach_experience_walk_forward_isolation():
     """load_coach_experience(year=2025) must only cumulate Seasons strictly < 2025."""
     import json
 
-    raw = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2025.json"))
+    raw = _load_hist_seeds_raw(2025)
     tourney_ids = {s["team_id"] for s in raw["teams"]}
     exp_2025 = load_coach_experience(2025, tourney_ids, DATA_ROOT)
     # Sanity: at least one veteran coach should clear the 10-app threshold by 2024.
@@ -50,7 +66,7 @@ def test_load_coach_experience_walk_forward_isolation():
     assert any(a >= 10 for a in exp_2025.values()), "Expected at least one veteran coach (>=10 apps) in 2025 field"
     # The same lookup for 2011 should produce strictly smaller maximums than 2025
     # (more years of cumulation in 2025 than in 2011).
-    seeds_2011 = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2011.json"))
+    seeds_2011 = _load_hist_seeds_raw(2011)
     tourney_ids_2011 = {s["team_id"] for s in seeds_2011["teams"]}
     exp_2011 = load_coach_experience(2011, tourney_ids_2011, DATA_ROOT)
     assert max(exp_2025.values()) >= max(exp_2011.values()), (
@@ -72,7 +88,7 @@ def test_load_coach_experience_known_veteran_2025():
     """Spot-check: a known-veteran 2025 program (Michigan State, Izzo) has >15 prior apps."""
     import json
 
-    raw = json.load(open(DATA_ROOT / "raw" / "historical" / "tournament_seeds_2025.json"))
+    raw = _load_hist_seeds_raw(2025)
     tourney_ids = {s["team_id"] for s in raw["teams"]}
     exp = load_coach_experience(2025, tourney_ids, DATA_ROOT)
     # Find Michigan State by canonical id (likely 'michigan_state' or close).

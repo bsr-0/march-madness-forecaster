@@ -170,8 +170,14 @@ def load_pool_data():
 
 def load_actual_results():
     """Build dict of {round: set(bracket_team_ids)} for teams that won in each round."""
-    with open(ROOT / "data/raw/historical/tournament_results_2026.json") as f:
-        data = json.load(f)
+    ctx_path = ROOT / "data/raw/historical/tournament_context_2026.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            data = json.load(f).get("results")
+    if data is None:
+        with open(ROOT / "data/raw/historical/tournament_results_2026.json") as f:
+            data = json.load(f)
 
     actual = {rd: set() for rd in ROUND_ORDER}
 

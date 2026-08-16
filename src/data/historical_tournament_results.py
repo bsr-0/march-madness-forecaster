@@ -120,15 +120,18 @@ def save_tournament_results(
     year: int,
     data_dir: str = "data/raw/historical",
 ) -> None:
-    """Save tournament results to JSON for a given year."""
-    path = Path(data_dir) / f"tournament_results_{year}.json"
+    """Save tournament results into the consolidated
+    ``tournament_context_{year}.json`` (key "results"), read-merge-write
+    so any other sub-keys already present are preserved."""
+    path = Path(data_dir) / f"tournament_context_{year}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
+    ctx: dict = {}
+    if path.exists():
+        with open(path) as f:
+            ctx = json.load(f)
+    ctx["results"] = {"year": year, "games": [asdict(g) for g in games]}
     with open(path, "w") as f:
-        json.dump(
-            {"year": year, "games": [asdict(g) for g in games]},
-            f,
-            indent=2,
-        )
+        json.dump(ctx, f, indent=2)
     logger.info("Saved %d tournament games to %s", len(games), path)
 
 
@@ -137,6 +140,14 @@ def get_available_years(data_dir: str = "data/raw/historical") -> List[int]:
     years = set(_HARDCODED.keys())
     p = Path(data_dir)
     if p.is_dir():
+        for f in p.glob("tournament_context_*.json"):
+            try:
+                yr = int(f.stem.split("_")[-1])
+            except ValueError:
+                continue
+            with open(f) as cf:
+                if "results" in json.load(cf):
+                    years.add(yr)
         for f in p.glob("tournament_results_*.json"):
             try:
                 yr = int(f.stem.split("_")[-1])

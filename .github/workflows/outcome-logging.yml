@@ -89,7 +89,7 @@ jobs:
               for g in games_raw
           ]
           save_tournament_results(games, year)
-          print(f'Saved {len(games)} games to tournament_results_{year}.json')
+          print(f'Saved {len(games)} games to tournament_context_{year}.json')
           "
 
       - name: Run outcome logger
@@ -104,7 +104,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git add -N artifacts/outcome_log_*.json data/raw/historical/tournament_results_*.json
+          git add -N artifacts/outcome_log_*.json data/raw/historical/tournament_context_*.json
           if git diff --quiet HEAD; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -118,7 +118,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add artifacts/outcome_log_*.json data/raw/historical/tournament_results_*.json
+          git add artifacts/outcome_log_*.json data/raw/historical/tournament_context_*.json
           git commit -m "chore: update tournament outcome log ($(date -u +%Y-%m-%d))"
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create --fill --base main)
