@@ -1,6 +1,8 @@
 # Data Provenance & Leakage Audit
 
-Last updated: 2026-04-04
+Last updated: 2026-08-16 (corrected two stale "Backtest impact: None" claims for Massey
+Ordinals / External Ratings — both went live in `meta_region_poolaware` on 2026-04-24/25,
+after this doc's prior 2026-04-04 update; original content below otherwise unchanged)
 
 This document describes every data source used by the backtest and prediction
 pipeline, how each was acquired, what date filtering is applied, and the
@@ -22,8 +24,11 @@ is safe and what requires care.
 
 ## Backtest Data Sources
 
-The backtest (`scripts/mc_pool_backtest.py`) uses exactly **4 data sources** plus
-1 set of hardcoded constants. Nothing else.
+The backtest (`scripts/mc_pool_backtest.py`) uses **4 core data sources** plus
+1 set of hardcoded constants, plus 2 optional Massey-derived sources added
+2026-04-24/25 for `meta_region_poolaware`'s candidate diversity (see #6-7 below;
+moved here 2026-08-16 from "Pipeline-Only Data Sources" where they'd been
+miscategorized since going live).
 
 ### 1. Tournament Seeds
 
@@ -88,6 +93,26 @@ The backtest (`scripts/mc_pool_backtest.py`) uses exactly **4 data sources** plu
 | **Acquisition** | Hardcoded constants computed at module import from: (a) historical 1985-2025 seed win rates, (b) ESPN "Who Picked Whom" chalk bias calibration (2015-2024) |
 | **Date filter** | N/A — static constants |
 | **Risk** | **NONE** |
+
+### 6. Massey Composite (`external_massey_composite_{year}.json`)
+
+| Field | Value |
+|---|---|
+| **Content** | Composite meta-ranking aggregating 50+ ranking systems |
+| **Source** | Kaggle competition CSV (`MMasseyOrdinals.csv`, gitignored — too large to commit) |
+| **Acquisition** | `ExternalRatingsLoader.populate_from_massey_ordinals()` (`src/data/scrapers/external_ratings.py`), wired into `src/data/ingestion/historical_pipeline.py:299`, called once per season |
+| **Date filter** | `RankingDayNum <= max_day`, where `max_day` = Selection Sunday computed by `_compute_max_ranking_day()` in `kaggle_loader.py` from a hardcoded per-season date table; clamps + warns if a caller passes a later day |
+| **Used by** | `load_massey_avg_barthag()` (`src/prediction/massey_probabilities.py`, catalog A5) → `massey_avg` candidate base in `meta_region_poolaware`'s pool-aware sweep (`scripts/mc_pool_backtest.py` ~line 3184-3235) |
+| **Risk** | **LOW** — day guard is code-verified; no unit test directly asserts the cutoff exclusion behavior (a gap, not a known bug). Independently spot-checked 2026-08-16: across 6 backtest years (including all 4 where a Massey candidate was actually selected), the part of Massey's rating that disagrees with Torvik shows no correlation with actual tournament performance (ρ ≈ -0.22 to +0.03, none significant) — the signature you'd expect from real leakage is absent. |
+
+### 7. External Ratings — per-system (`external_{system}_{year}.json`)
+
+| Field | Value |
+|---|---|
+| **Content** | Individual ranking system ratings (POM/KenPom, MOR/Massey, SAG/Sagarin, etc.) |
+| **Source** | Same Massey Ordinals CSV, same `max_day` guard, split per `SystemName` |
+| **Used by** | `massey_best_probabilities.py` (catalog A6) walk-forward Brier-selects one system per test year using only years strictly before it, feeding the `mass_best` candidate base in `meta_region_poolaware` |
+| **Risk** | **LOW** — inherits Massey's Selection Sunday cap; same untested-cutoff gap as #6 |
 
 ---
 
@@ -173,24 +198,10 @@ These are used by the main prediction pipeline but **NOT by the backtest**.
 | **Risk** | **MEDIUM-HIGH** — contains post-tournament records (e.g., UConn 2024 shows 37-3 instead of pre-tournament 31-3) |
 | **Backtest impact** | None — not loaded by backtest |
 
-### Massey Ordinals (`external_massey_composite_{year}.json`)
-
-| Field | Value |
-|---|---|
-| **Content** | Composite meta-ranking aggregating 50+ ranking systems |
-| **Source** | Kaggle competition CSV (`MMasseyOrdinals.csv`) |
-| **Date filter** | `max_day` capped at Selection Sunday via `_compute_max_ranking_day()` in `kaggle_loader.py` |
-| **Risk** | **LOW** — day guard prevents post-Selection-Sunday rankings |
-| **Backtest impact** | None — not loaded by backtest |
-
-### External Ratings (`external_{system}_{year}.json`)
-
-| Field | Value |
-|---|---|
-| **Content** | Individual ranking system ratings (POM/KenPom, MOR/Massey, SAG/Sagarin, etc.) |
-| **Source** | Derived from Massey Ordinals with same `max_day` guard |
-| **Risk** | **LOW** — inherits Massey's Selection Sunday cap |
-| **Backtest impact** | None |
+> **Massey Ordinals / External Ratings moved 2026-08-16** — both now used by the backtest
+> (`meta_region_poolaware`'s `mass_avg`/`mass_best`/`tv_mass80` candidates, live since
+> 2026-04-24/25). See "Backtest Data Sources" #6-7 above; this doc's "NOT by the backtest"
+> framing for them was stale.
 
 ### KenPom (`data/kaggle/kenpom_barttorvik.json`)
 
