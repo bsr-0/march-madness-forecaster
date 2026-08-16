@@ -53,18 +53,14 @@ const STRATEGIES = [
     label: 'Pool Optimizer',
     subtitle: 'Best backtested model',
     description:
-      'Generates ~25 diverse candidate brackets and selects the one with the highest simulated P(win) ' +
-      'against a realistic pool field. The strongest strategy across 15 years of historical backtests — ' +
-      'outperforms the seed baseline every single year.',
+      'Simulates ~25 candidate brackets against a realistic pool field and picks the best one. ' +
+      'Strongest strategy in 15 years of backtests.',
     p_first: 11.3,          // ← update this after each backtest run
     badge: '11.3% P(1st)',
     badge_tone: 'gold',
     is_top: true,           // ← set to true for the current best model
     is_model: true,
-    backtest_note:
-      'Beats seed baseline 15/15 years. MeanRank t=9.2, p<0.0001 (Bonferroni-corrected). ' +
-      'Source: meta_region_poolaware, 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
-      'Bracket: docs/data/bracket_2026.json.',
+    backtest_note: '15/15 years beating seed, 15-yr backtest, N=31 pool.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026.json.
     // To swap to a new season's bracket, update the JSON file and re-deploy.
     pick: null,
@@ -73,38 +69,26 @@ const STRATEGIES = [
     key: 'exhaustive',
     label: 'Exhaustive Search',
     subtitle: 'Best champion by simulation',
-    description:
-      'Tests all 64 possible champions and builds the full bracket that maximizes expected pool points ' +
-      'for each. Picks whichever champion produces the highest-scoring bracket overall — more targeted ' +
-      'than regional beam search. Validated via the same 15-year walk-forward backtest as Pool Optimizer.',
+    description: 'Tests all 64 possible champions and picks whichever builds the highest-scoring bracket.',
     p_first: 6.2,
     badge: '~6.2% P(1st)',
     badge_tone: 'green',
     is_top: false,
     is_model: true,
-    backtest_note:
-      'meta_exhaustive: 6.2% P(1st), 8/15 years (right at the acceptance-gate boundary — see MEMORY.md §3). ' +
-      'Source: 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
-      'Bracket: docs/data/bracket_2026_exhaustive.json. Champion: Michigan (1-seed).',
+    backtest_note: '8/15 years beating seed (gate boundary), 15-yr backtest, N=31 pool. Champion: Michigan.',
     pick: null,
   },
   {
     key: 'stat',
     label: 'Region Beam Search',
     subtitle: 'Region-level construction',
-    description:
-      'Builds each region independently via beam search over Torvik round probabilities, then ' +
-      'assembles the Final Four and champion from the region winners. The algorithm ' +
-      'meta_region_poolaware is built on top of. Outperforms the seed baseline 8 out of 15 years.',
+    description: 'Builds each region independently via beam search, then assembles the champion from the winners.',
     p_first: 6.3,
     badge: '~6.3% P(1st)',
     badge_tone: 'green',
     is_top: false,
     is_model: true,
-    backtest_note:
-      'meta_region: 6.3% P(1st), 8/15 years (right at the acceptance-gate boundary — see MEMORY.md §3). ' +
-      'Source: 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
-      'Bracket: docs/data/bracket_2026_region.json.',
+    backtest_note: '8/15 years beating seed (gate boundary), 15-yr backtest, N=31 pool.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026_region.json.
     pick: null,
   },
@@ -112,18 +96,13 @@ const STRATEGIES = [
     key: 'chalk',
     label: 'Chalk',
     subtitle: 'Always the favorite',
-    description:
-      'Pick the lower seed (stronger team) in every game. Ties broken by Barthag rating. ' +
-      'Simple and safe — but historically equivalent to the seed baseline (~5% P(1st)) ' +
-      'and offers no differentiation in winner-take-all pools.',
+    description: 'Picks the lower seed every game. Simple and safe, but no edge in a winner-take-all pool.',
     p_first: null,
     badge: 'Traditional',
     badge_tone: 'neutral',
     is_top: false,
     is_model: false,
-    backtest_note:
-      'Similar to seed baseline (~4.9% P(1st)). No upside differentiation in winner-take-all pools. ' +
-      'Use this if you want a conventional, defensible bracket.',
+    backtest_note: 'Matches seed baseline (~4.9% P(1st)). No edge in winner-take-all pools.',
     pick: (t1, t2) => {
       if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
       return effectiveBarthag(t1) >= effectiveBarthag(t2) ? t1 : t2;   // tie-break
@@ -194,10 +173,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-16').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-16').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-16').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-16').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-16c').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-16c').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-16c').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-16c').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -220,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const approach of ['pool', 'exhaustive', 'stat']) {
     for (const base of ['elo', 'ap', 'upset']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-16`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-16c`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -231,24 +210,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-16').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-16c').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-16').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-16c').then(r => r.json());
   } catch (err) {
     factors = null;
   }
   let actual;
   try {
-    actual = await fetch('data/actual_2026.json?v=2026-08-16').then(r => r.json());
+    actual = await fetch('data/actual_2026.json?v=2026-08-16c').then(r => r.json());
   } catch (err) {
     actual = null;
   }
   let window3yr;
   try {
-    window3yr = await fetch('data/loyo_window_3yr.json?v=2026-08-16').then(r => r.json());
+    window3yr = await fetch('data/loyo_window_3yr.json?v=2026-08-16c').then(r => r.json());
   } catch (err) {
     window3yr = null;
   }
@@ -575,8 +554,8 @@ function activateStrategy(key) {
 // swaps the displayed P(1st)/badge/note; picks themselves are unaffected —
 // the backtest window doesn't change which bracket a strategy actually built.
 const WINDOW_DEFS = {
-  '15yr': { label: '15-Year (2011–2026)', note: 'Full walk-forward LOYO backtest, N=31 pool. Statistically validated — see MEMORY.md §3.' },
-  '3yr':  { label: '2024–2026 (3-yr)', note: 'Diagnostic only — n=3 is too small for the paired significance tests the 15-yr view runs. Useful for eyeballing recent form, not for picking a strategy on its own.' },
+  '15yr': { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
+  '3yr':  { label: '2024–2026 (3-yr)', note: 'Diagnostic only — too few years for significance testing.' },
 };
 
 function setWindow(key) {
@@ -661,8 +640,7 @@ function renderStrategyDetail() {
   const dataFn = OPPONENT_SOURCE_DATA[currentKey];
   const opponentSource = dataFn ? dataFn()?.opponent_source : null;
   const opponentHTML = opponentSource
-    ? `<p class="sd-opponent">"% of pool" on each pick below is from <strong>${opponentSource}</strong> — ` +
-      `what your actual opponents picked, independent of which model built this bracket.</p>`
+    ? `<p class="sd-opponent">"% of pool" below is from <strong>${opponentSource}</strong>.</p>`
     : '';
 
   el.innerHTML = `
@@ -702,9 +680,7 @@ function loyoPointsHTML(key) {
 
   return `
     <div class="loyo-points">
-      <p class="loyo-points-label">
-        ESPN points by holdout year (leave-one-year-out, real outcomes) — mean ${mean.toFixed(0)}
-      </p>
+      <p class="loyo-points-label">Points by year — mean ${mean.toFixed(0)}</p>
       <div class="loyo-points-scroll">
         <div class="loyo-points-row">${chips}</div>
       </div>
@@ -961,10 +937,10 @@ function probCls(pct) {
 // ──────────────────────────────────────────────────────────────────
 
 const PROB_BASE_DEFS = {
-  torvik: { label: 'Torvik', note: 'The backtested base every approach’s published P(1st) is measured against.' },
-  elo:    { label: 'Elo Rating', note: 'Self-contained Elo rating from historical game results, independent of Torvik. Disagrees with Torvik on 20/68 first-round favorites in the 2026 field — a real change in picks, not just displayed odds. Not separately backtested as a standalone strategy.' },
-  ap:     { label: 'AP Poll Strength', note: 'Final pre-tournament AP media poll converted to a rating — reflects human voter judgment, not computer efficiency stats. Disagrees with Torvik on 14/68 first-round favorites in the 2026 field. Not separately backtested as a standalone strategy.' },
-  upset:  { label: 'Upset Hunter', note: 'Elo ratings pushed to maximum contrarian weighting — deliberately fades popular picks. Zero 1-seeds in the 2026 Final Four this produces. A single unvalidated "what if" build, not run through Pool Optimizer’s normal pool-simulation selection (which would correctly reject a near-0%-real-odds pick).' },
+  torvik: { label: 'Torvik', note: 'The backtested base every approach is measured against.' },
+  elo:    { label: 'Elo Rating', note: 'Independent Elo rating. Disagrees with Torvik on 20/68 R1 favorites. Not separately backtested.' },
+  ap:     { label: 'AP Poll Strength', note: 'Human-voter poll, not efficiency stats. Disagrees with Torvik on 14/68 R1 favorites. Not separately backtested.' },
+  upset:  { label: 'Upset Hunter', note: 'Max-contrarian Elo weighting. Zero 1-seeds in its Final Four. Unvalidated "what if" build.' },
 };
 
 function setProbBase(base) {
