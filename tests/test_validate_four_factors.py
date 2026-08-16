@@ -77,9 +77,15 @@ def validation_results() -> dict:
 
 
 def _tournament_team_ids(year: int) -> set[str]:
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    with open(path) as f:
-        raw = json.load(f)
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    raw = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            raw = json.load(f).get("seeds")
+    if raw is None:
+        path = HIST_DIR / f"tournament_seeds_{year}.json"
+        with open(path) as f:
+            raw = json.load(f)
     teams = raw.get("teams", raw if isinstance(raw, list) else [])
     return {t["team_id"] for t in teams if t.get("team_id")}
 

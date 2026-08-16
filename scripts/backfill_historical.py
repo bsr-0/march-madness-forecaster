@@ -30,17 +30,44 @@ def _season_files(base_dir: Path, season: int) -> Tuple[Path, Path, Path]:
     return games, teams, seeds
 
 
+def _load_context_subkey(base_dir: Path, season: int, sub_key: str, fallback_filename: str):
+    """Return sub-key data for `season`, preferring the consolidated
+    `tournament_context_{season}.json`, falling back to the old
+    per-type file if the consolidated file doesn't exist yet or lacks
+    that sub-key. Returns None if neither source has the data."""
+    ctx_path = base_dir / f"tournament_context_{season}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if sub_key in ctx:
+            return ctx[sub_key]
+    old_path = base_dir / fallback_filename
+    if not old_path.exists():
+        return None
+    with open(old_path) as f:
+        return json.load(f)
+
+
 def _season_complete(base_dir: Path, season: int, require_tournament: bool) -> Tuple[bool, str]:
     games_path, teams_path, seeds_path = _season_files(base_dir, season)
-    required = [games_path, teams_path] + ([seeds_path] if require_tournament else [])
-    missing = [str(p) for p in required if not p.exists()]
+    if not games_path.exists():
+        return False, f"missing files: {games_path}"
+
+    teams_payload = _load_context_subkey(base_dir, season, "team_metrics", teams_path.name)
+    seeds_payload = (
+        _load_context_subkey(base_dir, season, "seeds", seeds_path.name) if require_tournament else {"teams": []}
+    )
+
+    missing = []
+    if teams_payload is None:
+        missing.append(str(teams_path))
+    if require_tournament and seeds_payload is None:
+        missing.append(str(seeds_path))
     if missing:
         return False, f"missing files: {', '.join(missing)}"
 
     try:
         games_payload = _load_json(games_path)
-        teams_payload = _load_json(teams_path)
-        seeds_payload = _load_json(seeds_path) if require_tournament else {"teams": []}
     except Exception as exc:
         return False, f"json parse failure: {exc}"
 

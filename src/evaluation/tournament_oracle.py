@@ -88,10 +88,21 @@ class PortfolioOracleReport:
 
 
 def load_ground_truth(year: int, data_root: Path) -> OracleGroundTruth:
-    """Derive F4 / finalists / champion from ``tournament_results_{year}.json``."""
-    path = Path(data_root) / "raw" / "historical" / f"tournament_results_{year}.json"
-    with open(path) as f:
-        raw = json.load(f)
+    """Derive F4 / finalists / champion from ``tournament_results_{year}.json``.
+
+    Prefers the consolidated ``tournament_context_{year}.json`` (key
+    "results") when present, falling back to the old per-type file."""
+    ctx_path = Path(data_root) / "raw" / "historical" / f"tournament_context_{year}.json"
+    raw = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "results" in ctx:
+            raw = ctx["results"]
+    if raw is None:
+        path = Path(data_root) / "raw" / "historical" / f"tournament_results_{year}.json"
+        with open(path) as f:
+            raw = json.load(f)
     games = raw["games"] if isinstance(raw, dict) and "games" in raw else raw
 
     f4_teams = set()

@@ -1004,6 +1004,13 @@ def _find_and_read_seeds_file(year: int):
     `_load_seeds` and `_load_regions` so both parsers read from the same
     source of truth.
     """
+    ctx_path = Path(f"data/raw/historical/tournament_context_{year}.json")
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx:
+            return ctx["seeds"]
+
     for path in [
         Path(f"data/raw/historical/tournament_seeds_{year}.json"),
         Path(f"data/raw/tournament_seeds_{year}.json"),

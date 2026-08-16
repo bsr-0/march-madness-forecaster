@@ -238,7 +238,7 @@ class RealDataCollector:
             payload = {"teams": teams}
             validation_errors["teams_json"] = validate_teams_payload(payload)
             self._assert_valid("teams_json", validation_errors["teams_json"])
-            out["teams_json"] = self._write(f"teams_{year}.json", payload)
+            out["teams_json"] = self._write_context_subkey(year, "teams", payload)
 
         torvik_payload: Optional[Dict] = None
         four_factors: Dict = {}
@@ -626,10 +626,17 @@ class RealDataCollector:
         try:
             from .validators import validate_team_id_consistency
 
-            _seeds_path = self.output_dir / f"tournament_seeds_{year}.json"
-            if _seeds_path.exists() and torvik_payload:
-                with open(_seeds_path) as _sf:
-                    _seeds_data = json.load(_sf)
+            _ctx_path = self.output_dir / f"tournament_context_{year}.json"
+            _seeds_data = None
+            if _ctx_path.exists():
+                with open(_ctx_path) as _cf:
+                    _seeds_data = json.load(_cf).get("seeds")
+            if _seeds_data is None:
+                _seeds_path = self.output_dir / f"tournament_seeds_{year}.json"
+                if _seeds_path.exists():
+                    with open(_seeds_path) as _sf:
+                        _seeds_data = json.load(_sf)
+            if _seeds_data is not None and torvik_payload:
                 _tid_errors = validate_team_id_consistency(_seeds_data, torvik_payload, year=year)
                 if _tid_errors:
                     validation_errors["team_id_consistency"] = _tid_errors
@@ -656,6 +663,19 @@ class RealDataCollector:
         with open(p, "w") as f:
             json.dump(payload, f, indent=2)
         return str(p)
+
+    def _write_context_subkey(self, year: int, sub_key: str, payload: Dict) -> str:
+        """Read-merge-write `payload` into `tournament_context_{year}.json`
+        under `sub_key`, preserving any other sub-keys already present."""
+        path = self.output_dir / f"tournament_context_{year}.json"
+        ctx: Dict = {}
+        if path.exists():
+            with open(path) as f:
+                ctx = json.load(f)
+        ctx[sub_key] = payload
+        with open(path, "w") as f:
+            json.dump(ctx, f, indent=2)
+        return str(path)
 
     def _merge_incremental_games(self, year: int, new_records: List[Dict]) -> List[Dict]:
         """Load existing historical games file and merge in new records."""

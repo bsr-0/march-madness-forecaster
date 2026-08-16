@@ -79,10 +79,18 @@ def load_tournament_results(
 
     Tries JSON file first, falls back to hardcoded data.
     """
-    path = Path(data_dir) / f"tournament_results_{year}.json"
-    if path.exists():
-        with open(path) as f:
-            data = json.load(f)
+    ctx_path = Path(data_dir) / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("results")
+    if data is None:
+        path = Path(data_dir) / f"tournament_results_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+    if data is not None:
         games = data if isinstance(data, list) else data.get("games", [])
         return [
             TournamentGame(

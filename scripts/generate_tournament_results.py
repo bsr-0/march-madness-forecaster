@@ -21,11 +21,17 @@ HIST_DIR = Path("data/raw/historical")
 
 def _load_seed_lookup(year: int):
     """Build (region, seed) -> team_id and team_name -> team_id lookups."""
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}, {}
-    with open(path) as f:
-        data = json.load(f)
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            data = json.load(f).get("seeds")
+    if data is None:
+        path = HIST_DIR / f"tournament_seeds_{year}.json"
+        if not path.exists():
+            return {}, {}
+        with open(path) as f:
+            data = json.load(f)
     rs_map = {}  # (region, seed) -> team_id
     name_map = {}  # lowercase team_name -> team_id
     for t in data.get("teams", []):
@@ -1057,9 +1063,14 @@ def main():
     for year, func in sorted(_YEAR_FUNCS.items()):
         _, nm = _load_seed_lookup(year)
         games = func(nm)
-        out_path = HIST_DIR / f"tournament_results_{year}.json"
+        out_path = HIST_DIR / f"tournament_context_{year}.json"
+        ctx = {}
+        if out_path.exists():
+            with open(out_path) as f:
+                ctx = json.load(f)
+        ctx["results"] = {"year": year, "games": games}
         with open(out_path, "w") as f:
-            json.dump({"year": year, "games": games}, f, indent=2)
+            json.dump(ctx, f, indent=2)
         print(f"  {year}: {len(games)} games -> {out_path}")
 
     print("\nDone. Run 'backtest-kaggle' to verify.")

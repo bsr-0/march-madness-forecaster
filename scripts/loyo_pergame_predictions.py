@@ -167,12 +167,23 @@ def _load_all_barthag_sources(
 
 
 def load_tournament_games(year: int) -> list[dict]:
-    """Load tournament results, excluding First Four."""
-    path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        data = json.load(f)
+    """Load tournament results, excluding First Four.
+
+    Reads the consolidated `tournament_context_{year}.json` (key
+    "results") when present, falling back to the old
+    `tournament_results_{year}.json`."""
+    ctx_path = REPO_ROOT / f"data/raw/historical/tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("results")
+    if data is None:
+        path = REPO_ROOT / f"data/raw/historical/tournament_results_{year}.json"
+        if not path.exists():
+            return []
+        with open(path) as f:
+            data = json.load(f)
     games = data.get("games", data) if isinstance(data, dict) else data
     return [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
 

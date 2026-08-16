@@ -92,11 +92,21 @@ def _norm_id(raw: str) -> str:
 
 
 def _load_seeds(year: int) -> Dict[str, int]:
-    path = os.path.join(GAMES_DIR, f"tournament_seeds_{year}.json")
-    if not os.path.isfile(path):
-        return {}
-    with open(path) as f:
-        data = json.load(f)
+    # Prefer the consolidated tournament_context_{year}.json (key
+    # "seeds") when present, falling back to the old
+    # tournament_seeds_{year}.json.
+    ctx_path = os.path.join(GAMES_DIR, f"tournament_context_{year}.json")
+    data = None
+    if os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("seeds")
+    if data is None:
+        path = os.path.join(GAMES_DIR, f"tournament_seeds_{year}.json")
+        if not os.path.isfile(path):
+            return {}
+        with open(path) as f:
+            data = json.load(f)
     if isinstance(data, dict):
         data = data.get("teams", [])
     seeds: Dict[str, int] = {}
@@ -141,7 +151,14 @@ def load_ncaa_tournament_with_seeds(
     metrics_path = os.path.join(GAMES_DIR, f"team_metrics_{year}.json")
     empty = (np.empty((0, feature_dim)), np.array([]), np.array([]), np.array([]))
 
-    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+    # team_metrics may be available via the consolidated
+    # tournament_context_{year}.json even if the old per-type file is absent.
+    ctx_path = os.path.join(GAMES_DIR, f"tournament_context_{year}.json")
+    has_metrics = os.path.isfile(metrics_path)
+    if not has_metrics and os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            has_metrics = "team_metrics" in json.load(f)
+    if not os.path.isfile(games_path) or not has_metrics:
         return empty
 
     # ── 1. Load game data ────────────────────────────────────────────
@@ -175,8 +192,17 @@ def load_ncaa_tournament_with_seeds(
     # ── 3. Load auxiliary data (conference map, Massey, rosters) ─────
     conference_map = None
     try:
-        with open(metrics_path) as f:
-            metrics_payload = json.load(f)
+        # Prefer the consolidated context file's "team_metrics" sub-key,
+        # falling back to the old team_metrics_{year}.json.
+        metrics_payload = None
+        if os.path.isfile(ctx_path):
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+            if "team_metrics" in ctx:
+                metrics_payload = ctx["team_metrics"]
+        if metrics_payload is None:
+            with open(metrics_path) as f:
+                metrics_payload = json.load(f)
         if isinstance(metrics_payload, dict):
             for tid, info in metrics_payload.items():
                 if isinstance(info, dict) and "conference" in info:
@@ -374,7 +400,13 @@ def _load_regular_season_data(
 
     games_path = os.path.join(GAMES_DIR, f"historical_games_{year}.json")
     metrics_path = os.path.join(GAMES_DIR, f"team_metrics_{year}.json")
-    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+    has_metrics = os.path.isfile(metrics_path)
+    if not has_metrics:
+        ctx_path = os.path.join(GAMES_DIR, f"tournament_context_{year}.json")
+        if os.path.isfile(ctx_path):
+            with open(ctx_path) as f:
+                has_metrics = "team_metrics" in json.load(f)
+    if not os.path.isfile(games_path) or not has_metrics:
         return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
     return load_year_samples_incremental(
         config,

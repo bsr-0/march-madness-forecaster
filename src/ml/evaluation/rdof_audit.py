@@ -1097,21 +1097,38 @@ class HoldoutEvaluator:
             try:
                 year = int(p.stem.split("_")[-1])
                 metrics_path = self.historical_dir / f"team_metrics_{year}.json"
-                if metrics_path.exists() and year != 2020:  # Exclude COVID year
+                has_metrics = metrics_path.exists()
+                if not has_metrics:
+                    ctx_path = self.historical_dir / f"tournament_context_{year}.json"
+                    if ctx_path.exists():
+                        with open(ctx_path) as f:
+                            has_metrics = "team_metrics" in json.load(f)
+                if has_metrics and year != 2020:  # Exclude COVID year
                     years.append(year)
             except ValueError:
                 continue
         return years
 
     def _load_year_data(self, year: int):
-        """Load games and metrics for a single year."""
+        """Load games and metrics for a single year.
+
+        Reads team metrics from the consolidated
+        ``tournament_context_{year}.json`` (key "team_metrics") when
+        present, falling back to the old `team_metrics_{year}.json`."""
         games_path = self.historical_dir / f"historical_games_{year}.json"
         metrics_path = self.historical_dir / f"team_metrics_{year}.json"
+        ctx_path = self.historical_dir / f"tournament_context_{year}.json"
 
         with open(games_path, "r") as f:
             games_payload = json.load(f)
-        with open(metrics_path, "r") as f:
-            metrics_payload = json.load(f)
+
+        metrics_payload = None
+        if ctx_path.exists():
+            with open(ctx_path, "r") as f:
+                metrics_payload = json.load(f).get("team_metrics")
+        if metrics_payload is None:
+            with open(metrics_path, "r") as f:
+                metrics_payload = json.load(f)
 
         return games_payload, metrics_payload
 
@@ -1142,22 +1159,36 @@ class HoldoutEvaluator:
             return conf_map
 
         # Fallback: team_metrics_{year}.json (rarely has conference).
+        # Reads from the consolidated `tournament_context_{year}.json`
+        # (key "team_metrics") when present, falling back to the old
+        # `team_metrics_{year}.json`.
         metrics_path = self.historical_dir / f"team_metrics_{year}.json"
-        if metrics_path.exists():
+        ctx_path = self.historical_dir / f"tournament_context_{year}.json"
+        mp = None
+        if ctx_path.exists():
+            try:
+                with open(ctx_path, "r") as f:
+                    mp = json.load(f).get("team_metrics")
+            except Exception:
+                mp = None
+        if mp is None and metrics_path.exists():
             try:
                 with open(metrics_path, "r") as f:
                     mp = json.load(f)
-                if isinstance(mp, dict):
-                    teams_list = mp.get("teams", [])
-                    if isinstance(teams_list, list):
-                        for tm in teams_list:
-                            conf = tm.get("conference")
-                            tid = str(tm.get("team_id", "")).lower().strip()
-                            tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
-                            if tid and conf:
-                                if conf_map is None:
-                                    conf_map = {}
-                                conf_map[tid] = conf
+            except Exception:
+                mp = None
+        if isinstance(mp, dict):
+            try:
+                teams_list = mp.get("teams", [])
+                if isinstance(teams_list, list):
+                    for tm in teams_list:
+                        conf = tm.get("conference")
+                        tid = str(tm.get("team_id", "")).lower().strip()
+                        tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
+                        if tid and conf:
+                            if conf_map is None:
+                                conf_map = {}
+                            conf_map[tid] = conf
             except Exception:
                 pass
 
@@ -1626,13 +1657,28 @@ class HoldoutEvaluator:
         # Coach tournament experience for holdout year.
         _ho_coach_apps = self._load_coach_experience(holdout_year)
 
-        # Seeds for holdout year.
+        # Seeds for holdout year. Reads from the consolidated
+        # `tournament_context_{year}.json` (key "seeds") when present,
+        # falling back to the old `tournament_seeds_{year}.json`.
         ho_seeds: Dict[str, int] = {}
-        ho_seeds_path = self.historical_dir / f"tournament_seeds_{holdout_year}.json"
-        if ho_seeds_path.is_file():
+        ho_ctx_path = self.historical_dir / f"tournament_context_{holdout_year}.json"
+        sd = None
+        if ho_ctx_path.is_file():
             try:
-                with open(ho_seeds_path, "r") as f:
-                    sd = json.load(f)
+                with open(ho_ctx_path, "r") as f:
+                    sd = json.load(f).get("seeds")
+            except Exception:
+                sd = None
+        if sd is None:
+            ho_seeds_path = self.historical_dir / f"tournament_seeds_{holdout_year}.json"
+            if ho_seeds_path.is_file():
+                try:
+                    with open(ho_seeds_path, "r") as f:
+                        sd = json.load(f)
+                except Exception:
+                    sd = None
+        if sd is not None:
+            try:
                 if isinstance(sd, list):
                     for entry in sd:
                         tid = entry.get("team_id", "")

@@ -153,6 +153,32 @@ class ExtendedHistoricalIngestor:
         path.write_text(json.dumps(data, indent=2, default=str))
         return str(path)
 
+    def _context_subkey_exists(self, year: int, sub_key: str, legacy_filename: str) -> bool:
+        """Check if `sub_key` data for `year` already exists, either in the
+        consolidated `tournament_context_{year}.json` or the old per-type
+        file (skip-if-exists logic spanning the migration window)."""
+        ctx_path = self.output_dir / f"tournament_context_{year}.json"
+        if ctx_path.exists():
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+            if sub_key in ctx:
+                if sub_key == "results" and "tournament_results" in legacy_filename:
+                    return len(ctx[sub_key].get("games", [])) > 0
+                return True
+        return self._artifact_exists(legacy_filename)
+
+    def _write_context_subkey(self, year: int, sub_key: str, payload: Dict) -> str:
+        """Read-merge-write `payload` into `tournament_context_{year}.json`
+        under `sub_key`, preserving any other sub-keys already present."""
+        ctx_path = self.output_dir / f"tournament_context_{year}.json"
+        ctx: Dict = {}
+        if ctx_path.exists():
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+        ctx[sub_key] = payload
+        ctx_path.write_text(json.dumps(ctx, indent=2, default=str))
+        return str(ctx_path)
+
     # ── Tournament Results ─────────────────────────────────────────────
 
     def _collect_tournament_results(self, manifest: Dict) -> None:
@@ -166,15 +192,16 @@ class ExtendedHistoricalIngestor:
             if year == 2020:
                 continue  # No tournament (COVID)
             filename = f"tournament_results_{year}.json"
-            if self._artifact_exists(filename):
+            if self._context_subkey_exists(year, "results", filename):
                 manifest.setdefault("skipped", {}).setdefault("tournament_results", []).append(year)
                 continue
 
             try:
                 results = scraper.scrape_tournament(year)
                 if results:
-                    self._write_json(
-                        filename,
+                    self._write_context_subkey(
+                        year,
+                        "results",
                         {
                             "season": year,
                             "source": "sports_reference",
@@ -257,7 +284,7 @@ class ExtendedHistoricalIngestor:
 
         for year in range(start, self.config.end_season + 1):
             filename = f"team_metrics_{year}.json"
-            if self._artifact_exists(filename):
+            if self._context_subkey_exists(year, "team_metrics", filename):
                 manifest.setdefault("skipped", {}).setdefault("team_stats", []).append(year)
                 continue
 
@@ -275,7 +302,7 @@ class ExtendedHistoricalIngestor:
                 if errors and self.config.strict_validation:
                     logger.warning("Team stats validation for %d: %s", year, errors)
 
-                self._write_json(filename, payload)
+                self._write_context_subkey(year, "team_metrics", payload)
                 manifest.setdefault("sources", {}).setdefault("team_stats", {})[str(year)] = len(teams)
                 logger.info("Team stats %d: %d teams", year, len(teams))
 

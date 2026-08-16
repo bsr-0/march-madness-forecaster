@@ -28,6 +28,12 @@ HIST_DIR = DATA_ROOT / "raw" / "historical"
 
 
 def _has_year_data(year: int) -> bool:
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx and "results" in ctx:
+            return True
     return (HIST_DIR / f"tournament_seeds_{year}.json").exists() and (
         HIST_DIR / f"tournament_results_{year}.json"
     ).exists()

@@ -101,9 +101,28 @@ def _load_json(path: Path):
         return json.load(f)
 
 
+def _load_context_subkey(historical_dir: Path, year: int, sub_key: str, fallback_filename: str):
+    """Return sub-key data for `year`, preferring the consolidated
+    `tournament_context_{year}.json`, falling back to the old per-type
+    file if the consolidated file doesn't exist yet or lacks that
+    sub-key. Returns None if neither source has the data."""
+    ctx_path = historical_dir / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        payload = _load_json(ctx_path)
+        if sub_key in payload:
+            return payload[sub_key]
+    fallback_path = historical_dir / fallback_filename
+    if not fallback_path.exists():
+        return None
+    return _load_json(fallback_path)
+
+
 def _load_conference_map(metrics_path: Path) -> Optional[Dict[str, str]]:
     try:
-        payload = _load_json(metrics_path)
+        year = int(metrics_path.stem.rsplit("_", 1)[-1])
+        payload = _load_context_subkey(metrics_path.parent, year, "team_metrics", metrics_path.name)
+        if payload is None:
+            raise FileNotFoundError(metrics_path)
     except Exception as exc:
         logger.debug("Conference map extraction failed from %s: %s", metrics_path, exc)
         return None
@@ -130,9 +149,9 @@ def _load_conference_map(metrics_path: Path) -> Optional[Dict[str, str]]:
 def _load_seed_map(year: int, historical_dir: Path, raw_dir: Path) -> Dict[str, int]:
     seed_map: Dict[str, int] = {}
 
-    seeds_path = historical_dir / f"tournament_seeds_{year}.json"
-    if seeds_path.exists():
-        payload = _load_json(seeds_path)
+    seeds_payload = _load_context_subkey(historical_dir, year, "seeds", f"tournament_seeds_{year}.json")
+    if seeds_payload is not None:
+        payload = seeds_payload
         teams = payload.get("teams", payload) if isinstance(payload, dict) else payload
         if isinstance(teams, list):
             for entry in teams:
@@ -267,7 +286,8 @@ def audit_year(
 ) -> Optional[YearAudit]:
     games_path = historical_dir / f"historical_games_{year}.json"
     metrics_path = historical_dir / f"team_metrics_{year}.json"
-    if not games_path.exists() or not metrics_path.exists():
+    metrics_available = _load_context_subkey(historical_dir, year, "team_metrics", metrics_path.name) is not None
+    if not games_path.exists() or not metrics_available:
         logger.info("Skipping %d: missing games/metrics files", year)
         return None
 

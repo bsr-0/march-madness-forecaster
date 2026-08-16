@@ -83,8 +83,14 @@ def _is_tourney_window(d: date) -> bool:
 
 def _load_expected_pairs(year: int) -> dict[frozenset[str], dict]:
     """Return {frozenset({t1, t2}): game_dict} for all main-bracket games."""
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    payload = json.loads(path.read_text())
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    payload = None
+    if ctx_path.exists():
+        ctx = json.loads(ctx_path.read_text())
+        payload = ctx.get("results")
+    if payload is None:
+        path = HIST_DIR / f"tournament_results_{year}.json"
+        payload = json.loads(path.read_text())
     games = payload.get("games", payload) if isinstance(payload, dict) else payload
     result: dict[frozenset[str], dict] = {}
     for g in games:

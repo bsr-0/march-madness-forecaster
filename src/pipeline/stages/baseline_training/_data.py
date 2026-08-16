@@ -1,5 +1,6 @@
 """Baseline model training — data module."""
 
+import json
 import logging
 import os
 
@@ -46,6 +47,19 @@ logger = logging.getLogger(__name__)
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+
+
+def _team_metrics_available(games_dir: str, year, metrics_path: str) -> bool:
+    """True if team_metrics data exists for `year`, either as the old
+    `team_metrics_{year}.json` (checked by `metrics_path`) or as the
+    "team_metrics" sub-key of the consolidated `tournament_context_{year}.json`."""
+    if os.path.isfile(metrics_path):
+        return True
+    ctx_path = os.path.join(games_dir, f"tournament_context_{year}.json")
+    if os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            return "team_metrics" in json.load(f)
+    return False
 
 
 def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort_keys, X_full, n_current_year_train):
@@ -179,7 +193,7 @@ def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort
         for yr in hist_years:
             gp = os.path.join(games_dir, f"historical_games_{yr}.json")
             mp = os.path.join(games_dir, f"team_metrics_{yr}.json")
-            if not os.path.exists(gp) or not os.path.exists(mp):
+            if not os.path.exists(gp) or not _team_metrics_available(games_dir, yr, mp):
                 logger.warning(
                     "Multi-year training: missing data for %d (games=%s, metrics=%s); skipping.",
                     yr,

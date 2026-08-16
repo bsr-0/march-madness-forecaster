@@ -207,9 +207,16 @@ ROUND_ORDER = ["r64", "r32", "s16", "e8", "f4", "champ"]
 
 def load_actual_results(year):
     """Build {round: set(team_ids)} of winners for each round."""
-    path = ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    with open(path) as f:
-        data = json.load(f)
+    ctx_path = ROOT / f"data/raw/historical/tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("results")
+    if data is None:
+        path = ROOT / f"data/raw/historical/tournament_results_{year}.json"
+        with open(path) as f:
+            data = json.load(f)
 
     actual = {rd: set() for rd in ROUND_ORDER}
 

@@ -299,7 +299,18 @@ class BacktestHarness:
                 p = self.historical_dir / pattern.format(year=year)
                 return str(p) if p.exists() else None
 
-            teams_json = _resolve("teams_{year}.json")
+            def _resolve_teams_json():
+                p = self.historical_dir / "teams_{year}.json".format(year=year)
+                if p.exists():
+                    return str(p)
+                ctx_path = self.historical_dir / f"tournament_context_{year}.json"
+                if ctx_path.exists():
+                    with open(ctx_path) as f:
+                        if "teams" in json.load(f):
+                            return str(p)
+                return None
+
+            teams_json = _resolve_teams_json()
             torvik_json = _resolve("torvik_{year}.json")
             roster_json = _resolve("cbbpy_rosters_{year}.json")
             games_json = _resolve("historical_games_{year}.json")

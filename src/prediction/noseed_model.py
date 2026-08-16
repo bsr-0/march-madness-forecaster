@@ -143,11 +143,19 @@ def _load_team_stats(year: int) -> dict:
 
 
 def _load_tournament_results(year: int) -> list:
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        return json.load(f).get("games", [])
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    data = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        data = ctx.get("results")
+    if data is None:
+        path = HIST_DIR / f"tournament_results_{year}.json"
+        if not path.exists():
+            return []
+        with open(path) as f:
+            data = json.load(f)
+    return data.get("games", [])
 
 
 class NoseedModel:

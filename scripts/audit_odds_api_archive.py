@@ -123,9 +123,22 @@ def _load_archive_paths() -> list[SnapshotSummary]:
     return snapshots
 
 
-def _load_tournament_pairs(season: int) -> set[tuple[str, str]]:
+def _load_tournament_results_payload(season: int) -> dict:
+    """Read tournament results for `season`, preferring the consolidated
+    `tournament_context_{season}.json` (key "results"), falling back to
+    the old `tournament_results_{season}.json`."""
+    ctx_path = HIST_DIR / f"tournament_context_{season}.json"
+    if ctx_path.exists():
+        ctx = json.loads(ctx_path.read_text())
+        payload = ctx.get("results")
+        if payload is not None:
+            return payload
     path = HIST_DIR / f"tournament_results_{season}.json"
-    payload = json.loads(path.read_text())
+    return json.loads(path.read_text())
+
+
+def _load_tournament_pairs(season: int) -> set[tuple[str, str]]:
+    payload = _load_tournament_results_payload(season)
     pairs = set()
     for game in payload["games"]:
         team1 = normalize_team_id(str(game["team1_id"]))
@@ -135,8 +148,7 @@ def _load_tournament_pairs(season: int) -> set[tuple[str, str]]:
 
 
 def _load_tournament_team_ids(season: int) -> set[str]:
-    path = HIST_DIR / f"tournament_results_{season}.json"
-    payload = json.loads(path.read_text())
+    payload = _load_tournament_results_payload(season)
     teams = set()
     for game in payload["games"]:
         teams.add(normalize_team_id(str(game["team1_id"])))

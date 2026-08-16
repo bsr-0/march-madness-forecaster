@@ -59,8 +59,22 @@ def _resolve_seed_id(raw_id: str, seed_ids_sorted: List[str]) -> Optional[str]:
 
 
 def _load_seeds(path: str) -> Dict[str, Dict[str, object]]:
-    with open(path, "r") as f:
-        payload = json.load(f)
+    # Prefer the consolidated tournament_context_{year}.json (key "seeds")
+    # when present, falling back to the old tournament_seeds_{year}.json.
+    payload = None
+    fname = os.path.basename(path)
+    prefix, suffix = "tournament_seeds_", ".json"
+    if fname.startswith(prefix) and fname.endswith(suffix):
+        year_str = fname[len(prefix) : -len(suffix)]
+        ctx_path = os.path.join(os.path.dirname(path), f"tournament_context_{year_str}.json")
+        if os.path.isfile(ctx_path):
+            with open(ctx_path, "r") as f:
+                ctx = json.load(f)
+            if "seeds" in ctx:
+                payload = ctx["seeds"]
+    if payload is None:
+        with open(path, "r") as f:
+            payload = json.load(f)
     teams = payload.get("teams", payload if isinstance(payload, list) else [])
     seed_info: Dict[str, Dict[str, object]] = {}
     for entry in teams:
@@ -84,8 +98,23 @@ def _load_team_strengths(
 ) -> Dict[str, float]:
     strengths: Dict[str, List[float]] = {}
     seed_ids_sorted = sorted(seed_info.keys(), key=len, reverse=True)
-    with open(metrics_path, "r") as f:
-        payload = json.load(f)
+    # Prefer the consolidated tournament_context_{year}.json (key
+    # "team_metrics") when present, falling back to the old
+    # team_metrics_{year}.json.
+    payload = None
+    fname = os.path.basename(metrics_path)
+    prefix, suffix = "team_metrics_", ".json"
+    if fname.startswith(prefix) and fname.endswith(suffix):
+        year_str = fname[len(prefix) : -len(suffix)]
+        ctx_path = os.path.join(os.path.dirname(metrics_path), f"tournament_context_{year_str}.json")
+        if os.path.isfile(ctx_path):
+            with open(ctx_path, "r") as f:
+                ctx = json.load(f)
+            if "team_metrics" in ctx:
+                payload = ctx["team_metrics"]
+    if payload is None:
+        with open(metrics_path, "r") as f:
+            payload = json.load(f)
     teams = payload.get("teams", [])
     if not isinstance(teams, list):
         return {}
@@ -227,7 +256,16 @@ def _score_year(
     seeds_path = os.path.join(historical_dir, f"tournament_seeds_{year}.json")
     metrics_path = os.path.join(historical_dir, f"team_metrics_{year}.json")
     games_path = os.path.join(historical_dir, f"historical_games_{year}.json")
-    if not (os.path.isfile(seeds_path) and os.path.isfile(metrics_path) and os.path.isfile(games_path)):
+    # Availability may come from the consolidated tournament_context_{year}.json
+    # even if the old per-type seeds/metrics files are absent.
+    ctx_path = os.path.join(historical_dir, f"tournament_context_{year}.json")
+    ctx_subkeys: set = set()
+    if os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            ctx_subkeys = set(json.load(f).keys())
+    has_seeds = "seeds" in ctx_subkeys or os.path.isfile(seeds_path)
+    has_metrics = "team_metrics" in ctx_subkeys or os.path.isfile(metrics_path)
+    if not (has_seeds and has_metrics and os.path.isfile(games_path)):
         return None
 
     seed_info = _load_seeds(seeds_path)

@@ -13,6 +13,7 @@ Implements Agent Directive V7 S2 (modular architecture decomposition).
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple
@@ -46,6 +47,19 @@ except ImportError:
     load_tournament_sigma_data = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
+
+
+def _team_metrics_available(games_dir: str, year, metrics_path: str) -> bool:
+    """True if team_metrics data exists for `year`, either as the old
+    `team_metrics_{year}.json` (checked by `metrics_path`) or as the
+    "team_metrics" sub-key of the consolidated `tournament_context_{year}.json`."""
+    if os.path.isfile(metrics_path):
+        return True
+    ctx_path = os.path.join(games_dir, f"tournament_context_{year}.json")
+    if os.path.isfile(ctx_path):
+        with open(ctx_path) as f:
+            return "team_metrics" in json.load(f)
+    return False
 
 
 def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
@@ -181,10 +195,11 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 nonlocal probs, outcomes, tourney_cal_count
                 games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
                 metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
-                if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+                metrics_ok = _team_metrics_available(games_dir, yr, metrics_path)
+                if not os.path.isfile(games_path) or not metrics_ok:
                     return (
                         0,
-                        f"files missing (games={os.path.isfile(games_path)}, metrics={os.path.isfile(metrics_path)})",
+                        f"files missing (games={os.path.isfile(games_path)}, metrics={metrics_ok})",
                     )
                 try:
                     yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(

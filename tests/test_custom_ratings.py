@@ -32,6 +32,22 @@ def _has_season_data(season: int) -> bool:
     return False
 
 
+def _load_seeds_raw(year: int) -> dict:
+    """Return the raw seeds document for `year`, preferring the
+    consolidated `tournament_context_{year}.json`."""
+    import json
+
+    hist_dir = DATA_ROOT / "raw" / "historical"
+    ctx_path = hist_dir / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        if "seeds" in ctx:
+            return ctx["seeds"]
+    with open(hist_dir / f"tournament_seeds_{year}.json") as f:
+        return json.load(f)
+
+
 @pytest.mark.skipif(not _has_season_data(TEST_SEASON), reason="Need Kaggle game data")
 class TestColleyRatings:
     def test_produces_ratings(self):
@@ -207,10 +223,7 @@ class TestConfTourneyDepth:
 @pytest.mark.skipif(not _has_season_data(TEST_SEASON), reason="Need Kaggle game data")
 class TestFieldChalkSignal:
     def test_returns_float_in_range(self):
-        import json
-
-        with open(f"data/raw/historical/tournament_seeds_{TEST_SEASON}.json") as f:
-            seeds_data = json.load(f)
+        seeds_data = _load_seeds_raw(TEST_SEASON)
         seeds_list = seeds_data.get("teams", seeds_data)
         seeds = {t["team_id"]: t["seed"] for t in seeds_list}
 
@@ -219,13 +232,10 @@ class TestFieldChalkSignal:
 
     def test_chalk_year_vs_upset_year(self):
         """2025 (strong 1-seeds) should have higher signal than 2016 (weak)."""
-        import json
-
         signals = {}
         for year in [2016, 2025]:
             try:
-                with open(f"data/raw/historical/tournament_seeds_{year}.json") as f:
-                    seeds_data = json.load(f)
+                seeds_data = _load_seeds_raw(year)
                 seeds_list = seeds_data.get("teams", seeds_data)
                 seeds = {t["team_id"]: t["seed"] for t in seeds_list}
                 signals[year] = compute_field_chalk_signal(year, seeds)

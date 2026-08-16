@@ -319,15 +319,30 @@ for year in range(2018, 2025):
     if year == 2020:  # No tournament
         continue
 
+    ctx_path = HIST / f"tournament_context_{year}.json"
+    ctx = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+
     results_path = HIST / f"tournament_results_{year}.json"
     seeds_path = HIST / f"tournament_seeds_{year}.json"
     torvik_path = HIST / f"torvik_{year}.json"
 
-    if not all(p.exists() for p in [results_path, seeds_path, torvik_path]):
+    results = ctx.get("results") if ctx else None
+    seeds = ctx.get("seeds") if ctx else None
+
+    if results is None and not results_path.exists():
+        continue
+    if seeds is None and not seeds_path.exists():
+        continue
+    if not torvik_path.exists():
         continue
 
-    results = load(results_path)
-    seeds = load(seeds_path)
+    if results is None:
+        results = load(results_path)
+    if seeds is None:
+        seeds = load(seeds_path)
     torvik = build_rating_lookup(load(torvik_path))
 
     games = results.get("games", [])
@@ -607,10 +622,17 @@ seed_matchup_stats = defaultdict(lambda: {"games": 0, "higher_seed_wins": 0})
 for year in range(2018, 2025):
     if year == 2020:
         continue
+    ctx_path = HIST / f"tournament_context_{year}.json"
+    results = None
+    if ctx_path.exists():
+        with open(ctx_path) as f:
+            ctx = json.load(f)
+        results = ctx.get("results")
     results_path = HIST / f"tournament_results_{year}.json"
-    if not results_path.exists():
-        continue
-    results = load(results_path)
+    if results is None:
+        if not results_path.exists():
+            continue
+        results = load(results_path)
     for g in results.get("games", []):
         s1 = g.get("team1_seed", 8)
         s2 = g.get("team2_seed", 8)

@@ -28,11 +28,25 @@ def _load_json(path: Path):
         return json.load(f)
 
 
-def _extract_seed_ids(year: int) -> set[str]:
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
+def _load_context_subkey(year: int, sub_key: str, fallback_filename: str):
+    """Return sub-key data for `year`, preferring the consolidated
+    `tournament_context_{year}.json`, falling back to the old per-type
+    file. Returns None if neither source has the data."""
+    ctx_path = HIST_DIR / f"tournament_context_{year}.json"
+    if ctx_path.exists():
+        ctx = _load_json(ctx_path)
+        if sub_key in ctx:
+            return ctx[sub_key]
+    path = HIST_DIR / fallback_filename
     if not path.exists():
+        return None
+    return _load_json(path)
+
+
+def _extract_seed_ids(year: int) -> set[str]:
+    data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
+    if data is None:
         return set()
-    data = _load_json(path)
     teams = data.get("teams", []) if isinstance(data, dict) else data
     return {normalize_team_id(t["team_id"]) for t in teams if isinstance(t, dict) and t.get("team_id")}
 
@@ -47,10 +61,9 @@ def _extract_torvik_ids(year: int) -> set[str]:
 
 
 def _extract_result_ids(year: int) -> set[str]:
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    if data is None:
         return set()
-    data = _load_json(path)
     ids = set()
     for g in data.get("games", []):
         if not isinstance(g, dict):
@@ -101,11 +114,14 @@ def test_normalize_team_id_idempotent():
 
     # Collect team IDs from torvik and seeds files for all years
     for year in range(2005, 2027):
-        for pattern in [f"torvik_{year}.json", f"tournament_seeds_{year}.json"]:
-            path = HIST_DIR / pattern
-            if not path.exists():
-                continue
-            data = _load_json(path)
+        torvik_path = HIST_DIR / f"torvik_{year}.json"
+        seeds_data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
+        candidates = []
+        if torvik_path.exists():
+            candidates.append(_load_json(torvik_path))
+        if seeds_data is not None:
+            candidates.append(seeds_data)
+        for data in candidates:
             teams = data.get("teams", []) if isinstance(data, dict) else data
             if isinstance(teams, list):
                 for t in teams:
@@ -174,10 +190,9 @@ def _expected_total(year: int):
 @pytest.mark.parametrize("year", ALL_YEARS)
 def test_tournament_results_completeness(year: int):
     """Each training/holdout year must have correct game count for its era."""
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    if data is None:
         pytest.skip(f"No tournament_results file for {year}")
-    data = _load_json(path)
     games = data.get("games", [])
     expected = _expected_total(year)
     assert len(games) == expected, f"{year}: Expected {expected} games, got {len(games)}"
@@ -193,9 +208,8 @@ def test_tournament_results_completeness(year: int):
 @pytest.mark.parametrize("year", [2016, 2017])
 def test_2016_2017_results_not_empty(year: int):
     """Guard against regression to placeholder files for 2016 and 2017."""
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    assert path.exists(), f"tournament_results_{year}.json missing"
-    data = _load_json(path)
+    data = _load_context_subkey(year, "results", f"tournament_results_{year}.json")
+    assert data is not None, f"tournament_results_{year}.json / tournament_context_{year}.json missing"
     games = data.get("games", [])
     expected = _expected_total(year)
     assert len(games) == expected, f"{year}: Must have {expected} games, got {len(games)} (placeholder regression?)"
