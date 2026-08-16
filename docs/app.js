@@ -172,6 +172,8 @@ let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_poin
 let factorsData        = null;  // elo/ap barthag, see docs/data/team_factors.json
 let actualData         = null;  // real 2026 outcome, see docs/data/actual_2026.json — the
                                  // 2026 tournament already concluded, this is a replay
+let window3yrData      = null;  // 2024-2026 backtest window, see docs/data/loyo_window_3yr.json
+let currentWindow      = '15yr';   // '15yr' | '3yr' — which backtest window's P(1st)/note to display
 let currentProbBase   = 'torvik';  // 'torvik' | 'elo' | 'ap' | 'upset' — applies to every approach
 let teamIndex        = {};      // team_id → { barthag, elo_barthag, ap_barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
@@ -244,10 +246,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     actual = null;
   }
+  let window3yr;
+  try {
+    window3yr = await fetch('data/loyo_window_3yr.json?v=2026-08-16').then(r => r.json());
+  } catch (err) {
+    window3yr = null;
+  }
 
   loyoData       = loyo;
   factorsData    = factors;
   actualData     = actual;
+  window3yrData  = window3yr;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -275,6 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderStrategyStrip();
   renderProbBaseToggle();
+  renderWindowToggle();
   activateStrategy('pool');
 });
 
@@ -555,14 +565,62 @@ function activateStrategy(key) {
   renderGames(rounds);
 }
 
+// ── Backtest window toggle ──
+//
+// STRATEGIES bakes in the 15-year (2011-2026) LOYO numbers as the default.
+// window3yrData (docs/data/loyo_window_3yr.json) holds a second, much
+// lower-power (n=3) cut over just 2024-2026 for comparing strategies on
+// the recent "meta" specifically — diagnostic only, too few years for the
+// paired significance tests the 15-yr view runs (see the note text). Only
+// swaps the displayed P(1st)/badge/note; picks themselves are unaffected —
+// the backtest window doesn't change which bracket a strategy actually built.
+const WINDOW_DEFS = {
+  '15yr': { label: '15-Year (2011–2026)', note: 'Full walk-forward LOYO backtest, N=31 pool. Statistically validated — see MEMORY.md §3.' },
+  '3yr':  { label: '2024–2026 (3-yr)', note: 'Diagnostic only — n=3 is too small for the paired significance tests the 15-yr view runs. Useful for eyeballing recent form, not for picking a strategy on its own.' },
+};
+
+function setWindow(key) {
+  currentWindow = key;
+  renderWindowToggle();
+  renderStrategyStrip();
+  renderStrategyDetail();
+}
+
+function renderWindowToggle() {
+  const toggleEl = document.getElementById('window-toggle');
+  const noteEl   = document.getElementById('window-note');
+  if (!toggleEl) return;
+
+  toggleEl.innerHTML = Object.entries(WINDOW_DEFS).map(([key, def]) => `
+    <button class="window-toggle-btn${key === currentWindow ? ' active' : ''}"
+            onclick="setWindow('${key}')">${def.label}</button>
+  `).join('');
+
+  if (noteEl) noteEl.textContent = WINDOW_DEFS[currentWindow].note;
+}
+
+// Resolve the P(1st)/badge/note to display for a strategy under the
+// currently selected backtest window. Falls back to the strategy's baked-in
+// 15-yr numbers if the 3-yr window has no entry for it (e.g. Chalk, which
+// isn't backtested as a standalone strategy in either window).
+function effectiveStrategyStats(key) {
+  const s = STRATEGIES.find(s => s.key === key);
+  if (currentWindow === '3yr' && window3yrData && window3yrData.strategies[key]) {
+    const w = window3yrData.strategies[key];
+    return { p_first: w.p_first, badge: `~${w.p_first}% P(1st)`, backtest_note: w.note };
+  }
+  return { p_first: s.p_first, badge: s.badge, backtest_note: s.backtest_note };
+}
+
 // ── Strategy strip ──
 
 function renderStrategyStrip() {
   const el = document.getElementById('strategy-strip');
   el.innerHTML = STRATEGIES.map(s => {
     const bc = BADGE_COLORS[s.badge_tone] || BADGE_COLORS.neutral;
-    const badgeHTML = s.badge
-      ? `<span class="strategy-badge" style="background:${bc.bg};color:${bc.text}">${s.badge}</span>`
+    const stats = effectiveStrategyStats(s.key);
+    const badgeHTML = stats.badge
+      ? `<span class="strategy-badge" style="background:${bc.bg};color:${bc.text}">${stats.badge}</span>`
       : '';
     const starHTML = s.is_top ? '<span class="strategy-star">★</span>' : '';
     return `
@@ -595,8 +653,9 @@ function renderStrategyDetail() {
     ? `<span class="sd-tag sd-tag-model">Model-backed</span>`
     : `<span class="sd-tag sd-tag-pref">Preference lens</span>`;
 
-  const perfHTML = s.p_first != null
-    ? `<span class="sd-perf" style="background:${bc.bg};color:${bc.text}">${s.p_first}% P(1st) historically</span>`
+  const stats = effectiveStrategyStats(s.key);
+  const perfHTML = stats.p_first != null
+    ? `<span class="sd-perf" style="background:${bc.bg};color:${bc.text}">${stats.p_first}% P(1st) historically</span>`
     : '';
 
   const dataFn = OPPONENT_SOURCE_DATA[currentKey];
@@ -609,7 +668,7 @@ function renderStrategyDetail() {
   el.innerHTML = `
     <div class="sd-row">${tagHTML}${perfHTML}</div>
     <p class="sd-desc">${s.description}</p>
-    <p class="sd-note">${s.backtest_note}</p>
+    <p class="sd-note">${stats.backtest_note}</p>
     ${opponentHTML}
     ${loyoPointsHTML(currentKey)}
   `;
