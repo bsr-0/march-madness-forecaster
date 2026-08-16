@@ -7,8 +7,8 @@
 - **Model accuracy is not the pool's bottleneck — don't pursue it for P(1st).** The Kaggle model (torvik_corrected) achieves BSS +0.133 (Brier=0.1305) and is at an architecture plateau — see `memory/project_kaggle_brier_pipeline.md`. Marginal Brier improvements don't translate to P(1st) gains; construction and selection dominate. **Do NOT pursue model accuracy improvements for pool purposes.**
 - **For Kaggle submissions:** BSS +0.133 is the current production baseline. Architecture ceiling reached (2026 upset-year anomaly blocks further gains with current feature set). See `memory/project_kaggle_brier_pipeline.md` before attempting Brier improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
-- **Current baseline:** 11.9% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 8.0% meta_region, 4.6% meta_gbm. Seed baseline: 3.1%. Permutation-validated: p=0.0076 after multiple comparison correction.
-- **Acceptance gate for any change:** P(1st) must improve across >=8/14 backtest years (N=31, team-identity scoring).
+- **Current baseline:** 11.3% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 6.3% meta_region, 4.6% meta_gbm. Seed baseline: 4.9%. Beats seed 15/15 backtest years (MeanRank t=9.2, p<0.0001, Bonferroni-corrected across 3 comparisons). Validated 2026-08-16 over the full 15-year window (2011-2026 excl. 2020, now that 2026 has concluded) — see `MEMORY.md` §3 "Pool backtest — production strategy validation" for the canonical run and what it supersedes (the prior 11.9%/14-yr/3.1%-seed figures).
+- **Acceptance gate for any change:** P(1st) must improve across >=8/15 backtest years (N=31 pool: 30 opponents + model bracket, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
 - **Before proposing any new strategy:** Read `memory/project_strategies_tested.md` for what's been tried and killed.
@@ -20,16 +20,21 @@
 
 The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + smart construction beats learned models + naive construction**. Region top-N beam search and exhaustive champion search using raw torvik round probabilities outperform the GBM meta-selector by 2x. GBM-predicted round probabilities fed into construction modes actually HURT — less calibrated than torvik.
 
-### Top Strategies (14-year LOYO, team-identity scoring, N=30 pool)
+### Top Strategies
+
+Rows marked ⁱⁱ were re-validated 2026-08-16 over the full 15-year window (2011-2026 excl. 2020, now
+that 2026 has concluded) under the canonical contract (`--team-identity --opponent pool --n-opponents 30
+--n-repeats 100`, see `MEMORY.md` §3). Unmarked rows still reflect the older 14-year (2011-2025 excl. 2020)
+bakeoff and haven't been rerun against the 15-year window — treat their exact figures as provisional.
 
 | Mode | Algorithm | P(1st) | MeanRank | Yrs>Seed | Status |
 |------|-----------|:------:|:--------:|:--------:|--------|
-| **meta_region_poolaware** | ~25 candidates × pool-aware selection | **11.9%** | **10.4** | **14/14** | **PRODUCTION — p=0.008** |
-| **meta_region** | Region top-N beam search on torvik probs | **8.0%** | **12.3** | **11/14** | **STRONG — p<0.001** |
-| **meta_exhaustive** | Exhaustive 64-champion search on torvik probs | **7.7%** | **12.6** | **11/14** | **STRONG — p<0.001** |
+| **meta_region_poolaware**ⁱⁱ | ~25 candidates × pool-aware selection | **11.3%** | **11.6** | **15/15** | **PRODUCTION — p<0.0001** |
+| **meta_region**ⁱⁱ | Region top-N beam search on torvik probs | **6.3%** | **12.9** | **8/15** | **right at gate boundary — see MEMORY.md §3** |
+| **meta_exhaustive**ⁱⁱ | Exhaustive 64-champion search on torvik probs | **6.2%** | **13.1** | **8/15** | **right at gate boundary — see MEMORY.md §3** |
 | meta_gbm_margin | XGB margin regression, per-game picks | 5.3% | 12.1 | 6/14 | Trending up (8.5% last 4 yrs) |
 | meta_gbm | LightGBM 39-feat, corrected context | 4.6% | 14.8 | 8/14 | Superseded by construction modes |
-| seed baseline | Stochastic seed-probability sampling | 3.1% | 18.5 | — | BASELINE |
+| seed baselineⁱⁱ | Stochastic seed-probability sampling | 4.9% | 17.1 | — | BASELINE |
 | meta_sa / meta_sa_chalk | SA construction ± chalk signal | 1-2% | ~28 | 0-3/14 | KILLED |
 
 ### Key Lessons from 14-Technique Bakeoff

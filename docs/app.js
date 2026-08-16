@@ -8,22 +8,21 @@
 // This is the single source of truth for what appears in the
 // strategy selector. Keep it accurate — it directly drives the UI.
 //
-// ═══ CURRENT BEST MODELS (2026-05-25) ═══════════════════════════
-//   Best:   meta_region_poolaware — 11.9% P(1st), 14-yr LOYO, p=0.008
-//   Strong: meta_region           —  8.0% P(1st), 14-yr LOYO, p<0.001
-//   Strong: meta_exhaustive        —  7.7% P(1st), 14-yr LOYO, p<0.001
-//   Seed baseline (random-ish):      3.1% P(1st)
+// ═══ CURRENT BEST MODELS (validated 2026-08-16, 15-yr LOYO) ═════
+//   Best:   meta_region_poolaware — 11.3% P(1st), 15-yr LOYO, 15/15 vs seed
+//   Strong: meta_region           —  6.3% P(1st), 15-yr LOYO, 8/15 vs seed
+//   Strong: meta_exhaustive        —  6.2% P(1st), 15-yr LOYO, 8/15 vs seed
+//   Seed baseline (random-ish):      4.9% P(1st)
+//   Canonical contract + full numbers: MEMORY.md §3 "Pool backtest —
+//   production strategy validation". Supersedes the old 14-yr/11.9%/
+//   3.1%-seed figures — those predate 2026 being added as a backtest
+//   year (BACKTEST_YEARS in scripts/mc_pool_backtest.py now spans
+//   15 years, 2011-2026 excl. 2020, now that 2026 has concluded).
 //
 // NOTE (2026-08-15): the 2026 tournament this page displays picks for
 // finished months ago (real champion: Michigan, beat UConn 69-63 —
 // see data/raw/historical/tournament_results_2026.json). This page is
-// now a replay/demo, not a live pick tool. The 14-yr figures above are
-// an accurate citation of the backtest that produced them (2011-2025,
-// excl. 2020); BACKTEST_YEARS in scripts/mc_pool_backtest.py has since
-// grown to 15 years (2011-2026 excl. 2020) now that 2026 is complete,
-// but re-validating the headline P(1st) numbers against that wider
-// window requires an approved backtest rerun (see memory/run_policy.md)
-// and hasn't been done — don't bump "14-yr" to "15-yr" here without one.
+// now a replay/demo, not a live pick tool.
 //
 // ═══ HOW TO UPDATE AFTER A NEW SEASON ══════════════════════════
 //   1. Approve and run:  python scripts/mc_pool_backtest.py
@@ -55,16 +54,16 @@ const STRATEGIES = [
     subtitle: 'Best backtested model',
     description:
       'Generates ~25 diverse candidate brackets and selects the one with the highest simulated P(win) ' +
-      'against a realistic pool field. The strongest strategy across 14 years of historical backtests — ' +
+      'against a realistic pool field. The strongest strategy across 15 years of historical backtests — ' +
       'outperforms the seed baseline every single year.',
-    p_first: 11.9,          // ← update this after each backtest run
-    badge: '11.9% P(1st)',
+    p_first: 11.3,          // ← update this after each backtest run
+    badge: '11.3% P(1st)',
     badge_tone: 'gold',
     is_top: true,           // ← set to true for the current best model
     is_model: true,
     backtest_note:
-      'Beats seed baseline 14/14 years. p = 0.008. ' +
-      'Source: meta_region_poolaware, 14-yr LOYO backtest, N≈30 pool. ' +
+      'Beats seed baseline 15/15 years. MeanRank t=9.2, p<0.0001 (Bonferroni-corrected). ' +
+      'Source: meta_region_poolaware, 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
       'Bracket: docs/data/bracket_2026.json.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026.json.
     // To swap to a new season's bracket, update the JSON file and re-deploy.
@@ -77,15 +76,15 @@ const STRATEGIES = [
     description:
       'Tests all 64 possible champions and builds the full bracket that maximizes expected pool points ' +
       'for each. Picks whichever champion produces the highest-scoring bracket overall — more targeted ' +
-      'than regional beam search. Validated via the same 14-year walk-forward backtest as Pool Optimizer.',
-    p_first: 7.7,
-    badge: '~7.7% P(1st)',
+      'than regional beam search. Validated via the same 15-year walk-forward backtest as Pool Optimizer.',
+    p_first: 6.2,
+    badge: '~6.2% P(1st)',
     badge_tone: 'green',
     is_top: false,
     is_model: true,
     backtest_note:
-      'meta_exhaustive: 7.7% P(1st), 11/14 years, p<0.001. ' +
-      'Source: 14-yr LOYO backtest, N≈30 pool. ' +
+      'meta_exhaustive: 6.2% P(1st), 8/15 years (right at the acceptance-gate boundary — see MEMORY.md §3). ' +
+      'Source: 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
       'Bracket: docs/data/bracket_2026_exhaustive.json. Champion: Michigan (1-seed).',
     pick: null,
   },
@@ -96,15 +95,15 @@ const STRATEGIES = [
     description:
       'Builds each region independently via beam search over Torvik round probabilities, then ' +
       'assembles the Final Four and champion from the region winners. The algorithm ' +
-      'meta_region_poolaware is built on top of. Outperforms the seed baseline 11 out of 14 years.',
-    p_first: 8.0,
-    badge: '~8% P(1st)',
+      'meta_region_poolaware is built on top of. Outperforms the seed baseline 8 out of 15 years.',
+    p_first: 6.3,
+    badge: '~6.3% P(1st)',
     badge_tone: 'green',
     is_top: false,
     is_model: true,
     backtest_note:
-      'meta_region: 8.0% P(1st), 11/14 years, p<0.001. ' +
-      'Source: 14-yr LOYO backtest, N≈30 pool. ' +
+      'meta_region: 6.3% P(1st), 8/15 years (right at the acceptance-gate boundary — see MEMORY.md §3). ' +
+      'Source: 15-yr LOYO backtest (2011-2026 excl. 2020), N=31 pool. ' +
       'Bracket: docs/data/bracket_2026_region.json.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026_region.json.
     pick: null,
@@ -115,7 +114,7 @@ const STRATEGIES = [
     subtitle: 'Always the favorite',
     description:
       'Pick the lower seed (stronger team) in every game. Ties broken by Barthag rating. ' +
-      'Simple and safe — but historically equivalent to the seed baseline (~3% P(1st)) ' +
+      'Simple and safe — but historically equivalent to the seed baseline (~5% P(1st)) ' +
       'and offers no differentiation in winner-take-all pools.',
     p_first: null,
     badge: 'Traditional',
@@ -123,7 +122,7 @@ const STRATEGIES = [
     is_top: false,
     is_model: false,
     backtest_note:
-      'Similar to seed baseline (~3.1% P(1st)). No upside differentiation in winner-take-all pools. ' +
+      'Similar to seed baseline (~4.9% P(1st)). No upside differentiation in winner-take-all pools. ' +
       'Use this if you want a conventional, defensible bracket.',
     pick: (t1, t2) => {
       if (t1.seed !== t2.seed) return t1.seed < t2.seed ? t1 : t2;
@@ -193,10 +192,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let profiles;
   try {
     const [poolTv, exhaustiveTv, regionTv, profilesRes] = await Promise.all([
-      fetch('data/bracket_2026.json?v=2026-08-15d').then(r => r.json()),
-      fetch('data/bracket_2026_exhaustive.json?v=2026-08-15d').then(r => r.json()),
-      fetch('data/bracket_2026_region.json?v=2026-08-15d').then(r => r.json()),
-      fetch('data/team_profiles.json?v=2026-08-15d').then(r => r.json()),
+      fetch('data/bracket_2026.json?v=2026-08-16').then(r => r.json()),
+      fetch('data/bracket_2026_exhaustive.json?v=2026-08-16').then(r => r.json()),
+      fetch('data/bracket_2026_region.json?v=2026-08-16').then(r => r.json()),
+      fetch('data/team_profiles.json?v=2026-08-16').then(r => r.json()),
     ]);
     bracketData.pool.torvik       = poolTv;
     bracketData.exhaustive.torvik = exhaustiveTv;
@@ -219,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   for (const approach of ['pool', 'exhaustive', 'stat']) {
     for (const base of ['elo', 'ap', 'upset']) {
       altFetches.push(
-        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-15d`)
+        fetch(`data/${BRACKET_FILES[approach][base]}?v=2026-08-16`)
           .then(r => r.json())
           .then(data => { bracketData[approach][base] = data; })
           .catch(() => { bracketData[approach][base] = null; })
@@ -230,18 +229,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let loyo, factors;
   try {
-    loyo = await fetch('data/loyo_points.json?v=2026-08-15d').then(r => r.json());
+    loyo = await fetch('data/loyo_points.json?v=2026-08-16').then(r => r.json());
   } catch (err) {
     loyo = null;
   }
   try {
-    factors = await fetch('data/team_factors.json?v=2026-08-15d').then(r => r.json());
+    factors = await fetch('data/team_factors.json?v=2026-08-16').then(r => r.json());
   } catch (err) {
     factors = null;
   }
   let actual;
   try {
-    actual = await fetch('data/actual_2026.json?v=2026-08-15d').then(r => r.json());
+    actual = await fetch('data/actual_2026.json?v=2026-08-16').then(r => r.json());
   } catch (err) {
     actual = null;
   }
