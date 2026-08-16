@@ -186,10 +186,10 @@ def _load_external_maps(
     spread: Dict[str, float] = {}
     multi: Dict = {}
 
-    cache_path = historical_dir / f"external_massey_composite_{year}.json"
+    cache_path = historical_dir / f"external_ratings_{year}.json"
     if cache_path.exists():
         try:
-            payload = _load_json(cache_path)
+            payload = _load_json(cache_path).get("systems", {}).get("massey_composite", [])
             for entry in payload:
                 if not isinstance(entry, dict):
                     continue

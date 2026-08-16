@@ -25,8 +25,10 @@ outcomes from years strictly < Y. Each test year's selection is
 computed in isolation.
 
 Data:
-- ``data/raw/historical/external_{SYSTEM}_{year}.json`` — 56+ systems,
-  22 years of coverage (2005-2026). Each file is a list of
+- ``data/raw/historical/external_ratings_{year}.json`` — consolidated
+  2026-08-16 from the former one-file-per-system-per-year layout. Each
+  year's file has a ``systems`` dict keyed by system name (56+ systems,
+  22 years of coverage, 2005-2026), each value a list of
   ``{team_id, team_name, rating, ranking, normalized}`` dicts.
   ``normalized`` is a [0, 1] scalar suitable for direct use as a
   barthag-equivalent.
@@ -42,7 +44,7 @@ actual outcome. Per-game ``brier = (P - y_actual)²``.
 from __future__ import annotations
 
 import json
-import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -87,16 +89,35 @@ def _pairwise_win_prob(norm_t1: float, norm_t2: float) -> float:
     return (norm_t1 - norm_t1 * norm_t2) / denom
 
 
-def _load_system_ratings(system: str, year: int, data_root: Path) -> Optional[Dict[str, float]]:
-    """Load {team_id: normalized_rating} for one (system, year) file."""
-    path = Path(data_root) / "raw" / "historical" / f"external_{system}_{year}.json"
+@lru_cache(maxsize=None)
+def _load_consolidated_ratings(year: int, data_root: Path) -> Dict[str, List[Dict]]:
+    """Read external_ratings_{year}.json's systems dict, or {} if missing/corrupt.
+
+    Cached: _cumulative_brier_per_system calls this once per (system, year)
+    pair across a walk-forward window, and each file holds every system for
+    that year (50-70+), so without caching every lookup would re-read and
+    re-parse the whole year's file just to pull one system out of it.
+    Callers must treat the returned dict as read-only — it's shared across
+    calls.
+    """
+    path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
     if not path.exists():
-        return None
-    raw = json.load(open(path))
-    if not isinstance(raw, list):
+        return {}
+    try:
+        raw = json.load(open(path))
+    except json.JSONDecodeError:
+        return {}
+    systems = raw.get("systems")
+    return systems if isinstance(systems, dict) else {}
+
+
+def _load_system_ratings(system: str, year: int, data_root: Path) -> Optional[Dict[str, float]]:
+    """Load {team_id: normalized_rating} for one (system, year)."""
+    entries = _load_consolidated_ratings(year, data_root).get(system)
+    if not isinstance(entries, list):
         return None
     result: Dict[str, float] = {}
-    for entry in raw:
+    for entry in entries:
         tid = entry.get("team_id")
         norm = entry.get("normalized")
         if tid and isinstance(norm, (int, float)):
@@ -161,24 +182,11 @@ def _score_system_on_year(
 
 
 def _list_available_systems_for_year(year: int, data_root: Path) -> List[str]:
-    """Every SYSTEM for which ``external_{SYSTEM}_{year}.json`` exists."""
-    hist_dir = Path(data_root) / "raw" / "historical"
-    if not hist_dir.exists():
-        return []
-    prefix = "external_"
-    suffix = f"_{year}.json"
-    systems: List[str] = []
-    pattern = re.compile(rf"^external_(.+?)_{year}\.json$")
-    for p in hist_dir.glob(f"{prefix}*{suffix}"):
-        m = pattern.match(p.name)
-        if m:
-            sys_name = m.group(1)
-            # Skip the composite (used by massey_avg) — massey_best is about
-            # single-system selection, not re-using the composite.
-            if sys_name == "massey_composite":
-                continue
-            systems.append(sys_name)
-    return systems
+    """Every SYSTEM with an entry in that year's consolidated ratings file."""
+    systems = _load_consolidated_ratings(year, data_root)
+    # Skip the composite (used by massey_avg) — massey_best is about
+    # single-system selection, not re-using the composite.
+    return [s for s in systems if s != "massey_composite"]
 
 
 def _cumulative_brier_per_system(
@@ -193,18 +201,11 @@ def _cumulative_brier_per_system(
     """
     # Gather the union of systems that appeared in any year before test_year.
     all_systems: set = set()
-    hist_dir = Path(data_root) / "raw" / "historical"
-    pattern = re.compile(r"^external_(.+?)_(\d{4})\.json$")
-    if hist_dir.exists():
-        for p in hist_dir.glob("external_*.json"):
-            m = pattern.match(p.name)
-            if not m:
-                continue
-            sys_name = m.group(1)
-            if sys_name == "massey_composite":
-                continue
-            year = int(m.group(2))
-            if year < test_year and year not in _EXCLUDED_YEARS:
+    for year in range(2005, test_year):
+        if year in _EXCLUDED_YEARS:
+            continue
+        for sys_name in _load_consolidated_ratings(year, data_root):
+            if sys_name != "massey_composite":
                 all_systems.add(sys_name)
 
     accum: Dict[str, Tuple[float, int]] = {}

@@ -14,6 +14,7 @@ outcomes from years strictly < Y. Each test year's selection is computed
 in isolation.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -98,9 +99,12 @@ def test_select_best_system_2026_returns_known_ranker():
     # the specific winner isn't what we're locking, just that it's plausible.
     assert isinstance(best, str)
     assert len(best) >= 2  # not an empty string
-    # Hard sanity: must be a system that exists in the 2026 file set.
-    ratings_path = DATA_ROOT / "raw" / "historical" / f"external_{best}_2026.json"
-    assert ratings_path.exists(), f"Selected system {best!r} must have a 2026 ratings file"
+    # Hard sanity: must be a system that exists in the 2026 consolidated file.
+    ratings_path = DATA_ROOT / "raw" / "historical" / "external_ratings_2026.json"
+    assert ratings_path.exists(), "external_ratings_2026.json must exist"
+    with open(ratings_path) as f:
+        systems = json.load(f)["systems"]
+    assert best in systems, f"Selected system {best!r} must have a 2026 entry in external_ratings_2026.json"
 
 
 def test_select_best_system_respects_min_games_threshold():
