@@ -51,30 +51,55 @@ class TorVikFFLookup:
         self._snapshots: list[tuple[str, dict]] = []
         self._load_snapshots()
 
-    def _load_snapshots(self) -> None:
-        """Scan for dated snapshot files and load them sorted by cutoff date."""
-        pattern = f"torvik_four_factors_{self._year}_*.json"
-        files = sorted(self._data_dir.glob(pattern))
+    def _filter_team_data(self, data: dict) -> dict[str, dict]:
+        """Index a snapshot payload by team_id, dropping metadata keys."""
+        team_data: dict[str, dict] = {}
+        for key, val in data.items():
+            if isinstance(val, dict) and any(k in val for k in FF_FIELDS[:2]):
+                team_data[key] = val
+        return team_data
 
-        for fpath in files:
-            m = _SNAPSHOT_RE.search(fpath.name)
-            if not m:
-                continue
-            date_str_raw = m.group(2)  # YYYYMMDD
-            # Convert to YYYY-MM-DD for string comparison with game_date
-            date_str = f"{date_str_raw[:4]}-{date_str_raw[4:6]}-{date_str_raw[6:8]}"
+    def _load_snapshots(self) -> None:
+        """Load dated snapshots sorted by cutoff date.
+
+        Prefers the merged `torvik_{year}.json`'s "four_factors_snapshots"
+        array when present, falling back to globbing the standalone dated
+        snapshot files."""
+        merged_path = self._data_dir / f"torvik_{self._year}.json"
+        merged_snapshots = None
+        if merged_path.exists():
             try:
-                with open(fpath) as f:
-                    data = json.load(f)
-                # Index by team_id for fast lookup
-                team_data: dict[str, dict] = {}
-                for key, val in data.items():
-                    if isinstance(val, dict) and any(k in val for k in FF_FIELDS[:2]):
-                        team_data[key] = val
-                if team_data:
-                    self._snapshots.append((date_str, team_data))
+                with open(merged_path) as f:
+                    merged = json.load(f)
+                if "four_factors_snapshots" in merged:
+                    merged_snapshots = merged["four_factors_snapshots"]
             except (json.JSONDecodeError, OSError) as e:
-                logger.warning("Failed to load snapshot %s: %s", fpath, e)
+                logger.warning("Failed to load %s: %s", merged_path, e)
+
+        if merged_snapshots is not None:
+            for entry in merged_snapshots:
+                team_data = self._filter_team_data(entry["data"])
+                if team_data:
+                    self._snapshots.append((entry["date"], team_data))
+        else:
+            pattern = f"torvik_four_factors_{self._year}_*.json"
+            files = sorted(self._data_dir.glob(pattern))
+
+            for fpath in files:
+                m = _SNAPSHOT_RE.search(fpath.name)
+                if not m:
+                    continue
+                date_str_raw = m.group(2)  # YYYYMMDD
+                # Convert to YYYY-MM-DD for string comparison with game_date
+                date_str = f"{date_str_raw[:4]}-{date_str_raw[4:6]}-{date_str_raw[6:8]}"
+                try:
+                    with open(fpath) as f:
+                        data = json.load(f)
+                    team_data = self._filter_team_data(data)
+                    if team_data:
+                        self._snapshots.append((date_str, team_data))
+                except (json.JSONDecodeError, OSError) as e:
+                    logger.warning("Failed to load snapshot %s: %s", fpath, e)
 
         self._snapshots.sort(key=lambda x: x[0])
         if self._snapshots:

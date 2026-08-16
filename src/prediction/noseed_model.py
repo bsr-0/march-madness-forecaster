@@ -114,6 +114,7 @@ def _load_team_stats(year: int) -> dict:
     silent look-ahead bias from contaminating training or prediction.
     """
     stats = {}
+    ff_data = None
     for prefix in [HIST_DIR, DATA_DIR]:
         torvik_path = prefix / f"torvik_{year}.json"
         if torvik_path.exists():
@@ -122,23 +123,30 @@ def _load_team_stats(year: int) -> dict:
             _validate_pretournament(data, torvik_path)
             for t in data.get("teams", []):
                 stats[t["team_id"]] = t
+            # Merged torvik_{year}.json already validated above — the nested
+            # "four_factors" sub-dict was written atomically alongside it by
+            # the same migration/rescrape run, so it needs no separate check.
+            if "four_factors" in data:
+                ff_data = data["four_factors"]
             break
 
-    for prefix in [HIST_DIR, DATA_DIR]:
-        ff_path = prefix / f"torvik_four_factors_{year}.json"
-        if ff_path.exists():
-            with open(ff_path) as f:
-                ff_data = json.load(f)
-            _validate_pretournament(ff_data, ff_path)
-            if isinstance(ff_data, dict) and "teams" not in ff_data:
-                for tid, ff in ff_data.items():
-                    if tid in stats:
-                        for k, v in ff.items():
-                            if not k.startswith("_"):
-                                stats[tid].setdefault(k, v)
-                    else:
-                        stats[tid] = ff
-            break
+    if ff_data is None:
+        for prefix in [HIST_DIR, DATA_DIR]:
+            ff_path = prefix / f"torvik_four_factors_{year}.json"
+            if ff_path.exists():
+                with open(ff_path) as f:
+                    ff_data = json.load(f)
+                _validate_pretournament(ff_data, ff_path)
+                break
+
+    if isinstance(ff_data, dict) and "teams" not in ff_data:
+        for tid, ff in ff_data.items():
+            if tid in stats:
+                for k, v in ff.items():
+                    if not k.startswith("_"):
+                        stats[tid].setdefault(k, v)
+            else:
+                stats[tid] = ff
     return stats
 
 

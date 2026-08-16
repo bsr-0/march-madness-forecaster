@@ -951,18 +951,32 @@ def _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir):
 
     from ..optimization.e8_matchup_scorer import apply_e8_adjustments, predict_e8_matchups
 
-    torvik_path = Path(data_dir) / f"torvik_four_factors_{year}.json"
-    if not torvik_path.exists():
-        torvik_path = Path(data_dir) / f"torvik_{year}.json"
-    if not torvik_path.exists():
-        logger.debug("No Torvik data for %d — skipping E8 adjustments", year)
-        return round_probs
+    # Prefer the merged torvik_{year}.json's "four_factors" sub-dict (same
+    # data the standalone torvik_four_factors_{year}.json used to carry).
+    merged_path = Path(data_dir) / f"torvik_{year}.json"
+    torvik_raw = None
+    if merged_path.exists():
+        try:
+            with open(merged_path) as f:
+                merged = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return round_probs
+        if isinstance(merged, dict) and "four_factors" in merged:
+            torvik_raw = merged["four_factors"]
 
-    try:
-        with open(torvik_path) as f:
-            torvik_raw = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return round_probs
+    if torvik_raw is None:
+        torvik_path = Path(data_dir) / f"torvik_four_factors_{year}.json"
+        if not torvik_path.exists():
+            torvik_path = merged_path
+        if not torvik_path.exists():
+            logger.debug("No Torvik data for %d — skipping E8 adjustments", year)
+            return round_probs
+
+        try:
+            with open(torvik_path) as f:
+                torvik_raw = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return round_probs
 
     # Build lightweight feature objects from Torvik data.
     team_features = {}

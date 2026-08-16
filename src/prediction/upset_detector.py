@@ -111,23 +111,40 @@ def _load_four_factors(year: int, data_root: Path) -> Dict[str, dict]:
     if key in _cache:
         return _cache[key]  # type: ignore[return-value]
 
-    candidates = [
-        data_root / "raw" / f"torvik_four_factors_{year}.json",
-        data_root / "raw" / "historical" / f"torvik_four_factors_{year}.json",
-    ]
-
+    meta_keys = {"data_type", "cutoff_date", "tournament_start", "n_teams"}
     result: Dict[str, dict] = {}
-    for path in candidates:
+
+    # Prefer the merged torvik_{year}.json's "four_factors" sub-dict.
+    merged_candidates = [
+        data_root / "raw" / f"torvik_{year}.json",
+        data_root / "raw" / "historical" / f"torvik_{year}.json",
+    ]
+    blob = None
+    for path in merged_candidates:
         if path.exists():
             with open(path) as f:
-                blob = json.load(f)
-            # Keys are metadata ('data_type', 'cutoff_date', ...) plus
-            # canonical team IDs mapped to factor dicts.
-            meta_keys = {"data_type", "cutoff_date", "tournament_start", "n_teams"}
-            for tid, val in blob.items():
-                if tid not in meta_keys and isinstance(val, dict):
-                    result[tid] = val
+                data = json.load(f)
+            if "four_factors" in data:
+                blob = data["four_factors"]
             break
+
+    if blob is None:
+        candidates = [
+            data_root / "raw" / f"torvik_four_factors_{year}.json",
+            data_root / "raw" / "historical" / f"torvik_four_factors_{year}.json",
+        ]
+        for path in candidates:
+            if path.exists():
+                with open(path) as f:
+                    blob = json.load(f)
+                break
+
+    if blob is not None:
+        # Keys are metadata ('data_type', 'cutoff_date', ...) plus
+        # canonical team IDs mapped to factor dicts.
+        for tid, val in blob.items():
+            if tid not in meta_keys and isinstance(val, dict):
+                result[tid] = val
 
     _cache[key] = result
     return result

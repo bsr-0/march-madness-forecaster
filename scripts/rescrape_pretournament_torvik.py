@@ -63,6 +63,24 @@ MONTHLY_CUTOFF_MMDD = [
 
 OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
 
+
+def _write_torvik_json_preserving_ff(path: Path, payload: dict) -> None:
+    """Write `payload` to `path` (a torvik_{year}.json), preserving any
+    existing `four_factors`/`four_factors_snapshots` keys already on disk
+    at that path. Used for the base-ratings write, which doesn't itself
+    carry four-factors data."""
+    existing = {}
+    if path.exists():
+        with open(path) as f:
+            existing = json.load(f)
+    merged = dict(payload)
+    for k in ("four_factors", "four_factors_snapshots"):
+        if k in existing:
+            merged[k] = existing[k]
+    with open(path, "w") as f:
+        json.dump(merged, f, indent=2)
+
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -523,7 +541,12 @@ def _monthly_cutoffs_for_year(year: int) -> list[date]:
 
 
 def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
-    """Write a dated FF snapshot file for the monthly scrape."""
+    """Merge a dated FF snapshot into torvik_{year}.json's
+    four_factors_snapshots array for the monthly scrape.
+
+    Requires torvik_{year}.json to already exist (from a prior base
+    scrape) since a monthly-only run has no `teams` payload to create
+    it from -- skips with a warning rather than crashing if absent."""
     ff_fields = (
         "effective_fg_pct",
         "turnover_rate",
@@ -534,10 +557,10 @@ def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
         "defensive_reb_rate",
         "opp_free_throw_rate",
     )
-    date_tag = cutoff.strftime("%Y%m%d")
+    date_str = cutoff.isoformat()
     payload = {
         "data_type": "pre_tournament",
-        "cutoff_date": cutoff.isoformat(),
+        "cutoff_date": date_str,
         "snapshot_type": "monthly",
         "n_teams": len(teams),
     }
@@ -549,12 +572,28 @@ def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
         if any(ff_entry[f] > 0 for f in ff_fields[:4]):
             payload[tid] = ff_entry
 
-    fname = f"torvik_four_factors_{year}_{date_tag}.json"
-    outpath = OUTPUT_DIR / fname
-    with open(outpath, "w") as f:
-        json.dump(payload, f, indent=2)
+    torvik_path = OUTPUT_DIR / f"torvik_{year}.json"
+    if not torvik_path.exists():
+        logger.warning(
+            "torvik_%d.json does not exist yet -- cannot merge monthly FF "
+            "snapshot (cutoff=%s). Run the base scrape for %d first.",
+            year,
+            cutoff,
+            year,
+        )
+        return
+
+    with open(torvik_path) as f:
+        base = json.load(f)
+    snapshots = [e for e in base.get("four_factors_snapshots", []) if e["date"] != date_str]
+    snapshots.append({"date": date_str, "data": payload})
+    snapshots.sort(key=lambda e: e["date"])
+    base["four_factors_snapshots"] = snapshots
+    with open(torvik_path, "w") as f:
+        json.dump(base, f, indent=2)
+
     n_teams = len(payload) - 4
-    logger.info("Wrote %s (%d teams, cutoff=%s)", outpath, n_teams, cutoff)
+    logger.info("Merged FF snapshot into %s (%d teams, cutoff=%s)", torvik_path, n_teams, cutoff)
 
 
 def _run_monthly_scrape(years: list[int], args) -> None:
@@ -643,8 +682,7 @@ def main():
             "scraped_at": date.today().isoformat(),
             "teams": teams,
         }
-        with open(outpath, "w") as f:
-            json.dump(payload, f, indent=2)
+        _write_torvik_json_preserving_ff(outpath, payload)
         logger.info("Wrote %s (%d teams, cutoff=%s)", outpath, len(teams), cutoff)
 
         # Also write to data/raw/ (pipeline's primary path) if that file exists
@@ -682,30 +720,29 @@ def main():
 
         n_ff_teams = len(ff_payload) - 4  # subtract metadata keys
         if n_ff_teams > 0:
-            for ff_dir in [OUTPUT_DIR, ROOT / "data" / "raw"]:
-                ff_path = ff_dir / f"torvik_four_factors_{year}.json"
-                if ff_dir.exists():
-                    with open(ff_path, "w") as f:
-                        json.dump(ff_payload, f, indent=2)
-                    logger.info("Wrote %s (%d teams)", ff_path, n_ff_teams)
+            # Historical tier: merge into torvik_{year}.json's "four_factors"
+            # key (read-merge-write, since outpath was just written above).
+            with open(outpath) as f:
+                enriched = json.load(f)
+            enriched["four_factors"] = ff_payload
+            with open(outpath, "w") as f:
+                json.dump(enriched, f, indent=2)
+            logger.info("Merged four_factors into %s (%d teams)", outpath, n_ff_teams)
+
+            # raw/ tier mirror stays a standalone file (out of scope for the
+            # torvik_{year}.json merge — same boundary as the base torvik mirror above).
+            raw_dir = ROOT / "data" / "raw"
+            if raw_dir.exists():
+                raw_ff_path = raw_dir / f"torvik_four_factors_{year}.json"
+                with open(raw_ff_path, "w") as f:
+                    json.dump(ff_payload, f, indent=2)
+                logger.info("Wrote %s (%d teams)", raw_ff_path, n_ff_teams)
         else:
             logger.warning(
                 "Year %d: 0 teams have four factors (JSON fallback has no FF) "
-                "— skipping four_factors file write to preserve existing data",
+                "— skipping four_factors write to preserve existing data",
                 year,
             )
-
-        # Also write to historical dir if it exists
-        hist_dir = ROOT / "data" / "raw" / "historical"
-        if hist_dir.exists():
-            for fname in [f"torvik_{year}.json", f"torvik_four_factors_{year}.json"]:
-                hist_path = hist_dir / fname
-                src_path = ROOT / "data" / "raw" / fname
-                if src_path.exists():
-                    with open(src_path) as sf:
-                        data = json.load(sf)
-                    with open(hist_path, "w") as hf:
-                        json.dump(data, hf, indent=2)
 
         success += 1
 

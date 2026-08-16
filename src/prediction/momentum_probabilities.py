@@ -113,9 +113,8 @@ def _find_snapshot_file(
     return None
 
 
-def _load_snapshot_margins(path: Path) -> Dict[str, float]:
-    """Return {team_id: four_factor_margin} for every team in the snapshot."""
-    raw = json.load(open(path))
+def _margins_from_snapshot_data(raw: dict) -> Dict[str, float]:
+    """Return {team_id: four_factor_margin} for every team in a snapshot payload."""
     margins: Dict[str, float] = {}
     for key, value in raw.items():
         if key in _SNAPSHOT_META_KEYS or not isinstance(value, dict):
@@ -126,6 +125,22 @@ def _load_snapshot_margins(path: Path) -> Dict[str, float]:
             # Skip teams with partial four-factor data.
             continue
     return margins
+
+
+def _load_snapshot_margins(path: Path) -> Dict[str, float]:
+    """Return {team_id: four_factor_margin} for every team in the snapshot."""
+    return _margins_from_snapshot_data(json.load(open(path)))
+
+
+def _find_snapshot_entry(snapshots: list, target_month: int) -> Optional[dict]:
+    """Return the first snapshot entry (``{"date", "data"}``) whose date's
+    month matches ``target_month``, mirroring ``_find_snapshot_file``'s
+    month-matching semantics against an in-memory list instead of files."""
+    for entry in snapshots:
+        month = int(entry["date"][5:7])
+        if month == target_month:
+            return entry
+    return None
 
 
 def load_team_momentum(
@@ -156,13 +171,28 @@ def load_team_momentum(
     if not canonical_set:
         return {}
 
-    jan_path = _find_snapshot_file(year, target_month=1, data_root=data_root)
-    mar_path = _find_snapshot_file(year, target_month=3, data_root=data_root)
-    if jan_path is None or mar_path is None:
-        return {}
+    jan_margins = None
+    mar_margins = None
 
-    jan_margins = _load_snapshot_margins(jan_path)
-    mar_margins = _load_snapshot_margins(mar_path)
+    merged_path = Path(data_root) / "raw" / "historical" / f"torvik_{year}.json"
+    if merged_path.exists():
+        with open(merged_path) as f:
+            merged = json.load(f)
+        snapshots = merged.get("four_factors_snapshots")
+        if snapshots:
+            jan_entry = _find_snapshot_entry(snapshots, target_month=1)
+            mar_entry = _find_snapshot_entry(snapshots, target_month=3)
+            if jan_entry is not None and mar_entry is not None:
+                jan_margins = _margins_from_snapshot_data(jan_entry["data"])
+                mar_margins = _margins_from_snapshot_data(mar_entry["data"])
+
+    if jan_margins is None or mar_margins is None:
+        jan_path = _find_snapshot_file(year, target_month=1, data_root=data_root)
+        mar_path = _find_snapshot_file(year, target_month=3, data_root=data_root)
+        if jan_path is None or mar_path is None:
+            return {}
+        jan_margins = _load_snapshot_margins(jan_path)
+        mar_margins = _load_snapshot_margins(mar_path)
 
     result: Dict[str, float] = {}
     for tid in canonical_set:

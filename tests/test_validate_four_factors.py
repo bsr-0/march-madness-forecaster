@@ -90,16 +90,37 @@ def _tournament_team_ids(year: int) -> set[str]:
     return {t["team_id"] for t in teams if t.get("team_id")}
 
 
+def _ff_snapshot_entries(year: int) -> list[dict]:
+    """Return sorted [{"date", "data"}, ...] for `year`'s FF snapshots.
+
+    Prefers the merged `torvik_{year}.json`'s "four_factors_snapshots"
+    array, falling back to globbing the standalone dated snapshot files."""
+    torvik_path = HIST_DIR / f"torvik_{year}.json"
+    if torvik_path.exists():
+        with open(torvik_path) as f:
+            data = json.load(f)
+        if "four_factors_snapshots" in data:
+            return data["four_factors_snapshots"]
+
+    entries = []
+    for path in sorted(HIST_DIR.glob(f"torvik_four_factors_{year}_*.json")):
+        date_raw = path.stem.rsplit("_", 1)[-1]
+        date_str = f"{date_raw[:4]}-{date_raw[4:6]}-{date_raw[6:8]}"
+        with open(path) as f:
+            entries.append({"date": date_str, "data": json.load(f)})
+    entries.sort(key=lambda e: e["date"])
+    return entries
+
+
 @pytest.mark.parametrize("year", PRODUCTION_YEARS)
 def test_torvik_ff_monthly_snapshots_present(year: int) -> None:
     """Every production year must have at least 4 monthly trank.php FF
     snapshots. Fewer than 4 suggests a scraping regression — the overlay
     in production training paths would fall back to local box-score
     computation for some game dates, silently losing FF precision."""
-    pattern = f"torvik_four_factors_{year}_*.json"
-    files = sorted(HIST_DIR.glob(pattern))
-    assert len(files) >= 4, (
-        f"{year}: only {len(files)} monthly Torvik FF snapshots "
+    entries = _ff_snapshot_entries(year)
+    assert len(entries) >= 4, (
+        f"{year}: only {len(entries)} monthly Torvik FF snapshots "
         f"(expected ≥ 4 covering Nov–Mar). Production training overlay "
         f"will regress to local fallback for uncovered game dates. "
         f"See COUNCIL_LESSONS.md §2 O2."
@@ -113,19 +134,17 @@ def test_pre_tournament_snapshot_covers_all_tournament_teams(year: int) -> None:
     tournament team's FF come from the less-precise local fallback,
     degrading the production FF signal at the most important prediction
     boundary."""
-    pattern = f"torvik_four_factors_{year}_*.json"
-    files = sorted(HIST_DIR.glob(pattern))
-    if not files:
+    entries = _ff_snapshot_entries(year)
+    if not entries:
         pytest.skip(f"no snapshots for {year} (covered by other test)")
-    # Most recent snapshot = last file alphabetically (dates in filenames)
-    with open(files[-1]) as f:
-        snapshot = json.load(f)
+    # Most recent snapshot = last entry, sorted by date.
+    snapshot = entries[-1]["data"]
     covered = {k for k, v in snapshot.items() if isinstance(v, dict) and "effective_fg_pct" in v}
     tournament_teams = _tournament_team_ids(year)
     missing = tournament_teams - covered
     assert not missing, (
         f"{year}: {len(missing)} tournament teams not in pre-tournament "
-        f"Torvik FF snapshot {files[-1].name}: {sorted(missing)[:10]}"
+        f"Torvik FF snapshot (date={entries[-1]['date']}): {sorted(missing)[:10]}"
     )
 
 

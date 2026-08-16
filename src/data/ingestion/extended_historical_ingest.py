@@ -179,6 +179,22 @@ class ExtendedHistoricalIngestor:
         ctx_path.write_text(json.dumps(ctx, indent=2, default=str))
         return str(ctx_path)
 
+    def _write_json_preserving_ff(self, filename: str, payload: Dict) -> str:
+        """Write `payload` to `filename`, preserving any existing
+        `four_factors`/`four_factors_snapshots` keys already on disk at
+        that path (this writer never populates those keys itself)."""
+        path = self.output_dir / filename
+        existing: Dict = {}
+        if path.exists():
+            with open(path) as f:
+                existing = json.load(f)
+        merged = dict(payload)
+        for k in ("four_factors", "four_factors_snapshots"):
+            if k in existing:
+                merged[k] = existing[k]
+        path.write_text(json.dumps(merged, indent=2, default=str))
+        return str(path)
+
     # ── Tournament Results ─────────────────────────────────────────────
 
     def _collect_tournament_results(self, manifest: Dict) -> None:
@@ -333,7 +349,7 @@ class ExtendedHistoricalIngestor:
                 result = providers.fetch_torvik_ratings(year)
                 teams = [t for t in result.records if isinstance(t, dict)]
                 if teams:
-                    self._write_json(filename, {"teams": teams})
+                    self._write_json_preserving_ff(filename, {"teams": teams})
                     manifest.setdefault("sources", {}).setdefault("torvik", {})[str(year)] = len(teams)
                     logger.info("Torvik %d: %d teams", year, len(teams))
                 else:
