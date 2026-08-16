@@ -140,6 +140,41 @@ Current numbers. If you're about to claim an improvement, it has to clear these.
 | LogLoss gate | < 0.56 | Training objective | `pipeline_freeze.json:121` |
 | Brier gate | 0.19 | Admission threshold | `pipeline_freeze.json:14` |
 
+### Pool backtest — production strategy validation (15 yrs 2011–2026 ex. 2020, N=31 pool: 30 opponents + model bracket)
+
+**Canonical, reproducible baseline — supersedes the ambiguous 11.9%/14-yr figure previously in CLAUDE.md.**
+Run with the "non-negotiable" contract from `STRATEGY_CATALOG.md` §Evaluation Contract:
+`--team-identity --opponent pool --n-opponents 30 --n-repeats 100`.
+
+| Mode | P(1st) | BestRank | MeanRank | MeanScr | Wins vs seed |
+|---|---|---|---|---|---|
+| **meta_region_poolaware** (production) | **11.3%** | 11.6 | 11.6 | 849 | **15/15** |
+| meta_region | 6.3% | 12.9 | 12.9 | 903 | 8/15 |
+| meta_exhaustive | 6.2% | 13.1 | 13.1 | 889 | 8/15 |
+| seed (baseline) | 4.9% | 11.8 | 17.1 | 698 | — |
+
+MeanRank seed vs meta_region_poolaware: t=9.219, p<0.0001 (Bonferroni-corrected across 3 comparisons).
+Source: `artifacts/backtest_runs/mc_pool_backtest_20260816_012851.txt` (2026-08-16).
+
+**Reconciles/supersedes:**
+- CLAUDE.md's "11.9% P(1st), 14/14 years, p=0.008" — that figure predates 2026 being added as a backtest
+  year and used a different `--modes` set; 11.3%/15-15 is the direct, reproducible update.
+- §2 D18/D19's "11.33%"/"11.20%" paired-baseline mentions — those numbers are corroborated by this run
+  (11.3%, same ballpark) but were logged as side context for other experiments, not as a canonical citation.
+- CLAUDE.md's "seed baseline 3.1%" — unsourced in this repo; the paired, same-methodology measurement here
+  is 4.9%. Treat 4.9% as current until a source for 3.1% turns up.
+- CLAUDE.md's "meta_region 8.0%, 11/14 years" and "meta_exhaustive 7.7%, 11/14 years" — under the
+  corrected `--n-opponents 30` contract (an earlier attempt at this rerun omitted that flag and silently
+  fell back to a 999-opponent pool for the 11 years without real pool-history data, producing a bogus
+  ~4% aggregate — see artifact `mc_pool_backtest_20260815_222620.txt` for the failed attempt), both land
+  at 6.2-6.3% and 8/15 — right at the `>=8/N` acceptance-gate boundary, down from the previously-cited
+  11/14 (79%) win rate. Real erosion, not a measurement artifact: consistent with 2026 being a hard upset
+  year (D18) landing in the sample for the first time.
+- `scripts/mc_pool_backtest.py`'s `main()` had a bug where `sys.exit(main())` received the raw results
+  list from `run_backtest()`, which Python's `sys.exit()` treats as an error message + exit code 1 even on
+  a fully successful run. Fixed 2026-08-16 (`main()` no longer returns the list) — prior "failed" exit
+  codes on this script are not evidence of an actual failure; check the printed aggregate table instead.
+
 ### Pool backtest — team-identity scoring (14 yrs 2011–2026 ex. 2012/2020, N=1000, 50 brackets × 50 repeats)
 
 | Mode | BestRank ↓ | MeanRank ↓ | P(1st) ↑ | P(top 5%) ↑ |

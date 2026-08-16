@@ -4226,7 +4226,7 @@ def main():
         print(f"[auto-log] writing run output to {log_path}")
 
     try:
-        return run_backtest(
+        run_backtest(
             years=args.years,
             n_opponents=args.n_opponents,
             n_repeats=args.n_repeats,

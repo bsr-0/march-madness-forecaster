@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-15d">
+  <link rel="stylesheet" href="style.css?v=2026-08-16">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
@@ -64,12 +64,13 @@
     <!-- Performance note -->
     <section class="perf-section">
       <p class="perf-note">
-        <strong>Pool Optimizer</strong> is validated via 14-year leave-one-year-out backtest (2011–2025, excl. 2020;
-        2026 has since concluded and is now itself one of 15 backtest years going forward).
-        Against a real N≈30 pool it achieves <strong>11.9% P(1st)</strong> vs a 3.1% seed baseline. p&thinsp;=&thinsp;0.008.
-        <strong>Exhaustive Search</strong> tests all 64 possible champions (~7.7% P(1st), p&thinsp;&lt;&thinsp;0.001).
-        <strong>Region Beam Search</strong> builds each region independently via beam search (~8% P(1st), p&thinsp;&lt;&thinsp;0.001).
-        <strong>Chalk</strong> (always the favorite) is a preference filter with no pool-backtest guarantee.
+        <strong>Pool Optimizer</strong> is validated via 15-year leave-one-year-out backtest (2011–2026, excl. 2020;
+        includes 2026 now that it has concluded). Against a real N=31 pool it achieves
+        <strong>11.3% P(1st)</strong> vs a 4.9% seed baseline, winning all 15/15 years (MeanRank p&thinsp;&lt;&thinsp;0.0001).
+        <strong>Exhaustive Search</strong> tests all 64 possible champions (~6.2% P(1st), 8/15 years — right at the
+        acceptance-gate boundary). <strong>Region Beam Search</strong> builds each region independently via beam
+        search (~6.3% P(1st), 8/15 years — same boundary). <strong>Chalk</strong> (always the favorite) is a
+        preference filter with no pool-backtest guarantee.
       </p>
     </section>
 
@@ -80,6 +81,6 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
-  <script src="app.js?v=2026-08-15d"></script>
+  <script src="app.js?v=2026-08-16"></script>
 </body>
 </html>
