@@ -175,6 +175,41 @@ Source: `artifacts/backtest_runs/mc_pool_backtest_20260816_012851.txt` (2026-08-
   a fully successful run. Fixed 2026-08-16 (`main()` no longer returns the list) — prior "failed" exit
   codes on this script are not evidence of an actual failure; check the printed aggregate table instead.
 
+### Leakage confidence for the 15-year production validation (2026-08-16)
+
+Prompted by a direct question ("are we 100% sure there's no leakage") after the 15-year rerun above.
+Audited every probability base that actually appears in `meta_region_poolaware`'s selected-candidate log
+across the 15 years (`tv`/Torvik, `blend`, `mass_avg`, `mass_best`, `tv_mass80`):
+
+- **Torvik** — strongest evidence. Every historical file carries `data_type`/`cutoff_date` metadata,
+  enforced by `_validate_pretournament()`; a dedicated corrective rescrape (`rescrape_pretournament_torvik.py`)
+  exists specifically because an earlier acquisition method was found to leak end-of-season data.
+- **Elo, market odds** — explicit same-year date-cutoff filtering in code (`elo_probabilities.py`,
+  `market_probabilities.py`).
+- **Cross-year model selection** (noseed model training, `massey_best`'s walk-forward system pick) —
+  `assert all(y < year for y in train_years)` in code, not just documentation.
+- **Massey composite/per-system** (`mass_avg`, `mass_best`, `tv_mass80` — together the majority of the raw
+  candidate pool by count, and the actually-selected bracket in 4/15 years: 2013, 2017, 2019, 2021) —
+  traced to Kaggle's `MMasseyOrdinals.csv` (gitignored, not missing — too large to commit), ingested via
+  `kaggle_loader.py`'s `_compute_max_ranking_day()` Selection-Sunday cutoff guard, wired into the real
+  `historical_pipeline.py` ingestion (not a one-off script). `docs/data-provenance-and-leakage-audit.md`
+  had stale "Backtest impact: None" rows for both — true when last touched 2026-04-04, false since
+  `massey_avg`/`massey_best` went live in the candidate pool 2026-04-24/25. Fixed 2026-08-16.
+- **Empirical cross-check**: if Massey's composite were contaminated with tournament results, teams it
+  rates more favorably than Torvik should systematically be the teams that actually won more games that
+  year. Tested across 6 years (all 4 Massey-selected years + 2 controls): correlation between
+  (Massey-rank-favor-over-Torvik) and (actual rounds won) is statistically indistinguishable from zero
+  (ρ = −0.22 to +0.03, none significant at p<0.05) — methodology validated by the same test on Torvik
+  alone, which correctly shows strong significant correlation (ρ = 0.52–0.79, p<0.0001) in every year.
+
+**Verdict: high confidence, not proof.** Genuinely open gaps: no unit test directly exercises the Massey
+day-cutoff exclusion (code-verified by reading, not test-verified); the raw `MMasseyOrdinals.csv` itself
+can't be inspected (gitignored); the opponent-field data sources (ESPN picks, pool history) weren't put
+through the same scrutiny (a different risk — simulated-competition realism, not model foreknowledge);
+the pool-aware MC selection code wasn't line-by-line audited beyond the date-cutoff question. Don't cite
+this as "leakage-free" — cite it as "the specific mechanisms checked came back clean, here's what wasn't
+checked."
+
 ### Pool backtest — team-identity scoring (14 yrs 2011–2026 ex. 2012/2020, N=1000, 50 brackets × 50 repeats)
 
 | Mode | BestRank ↓ | MeanRank ↓ | P(1st) ↑ | P(top 5%) ↑ |
