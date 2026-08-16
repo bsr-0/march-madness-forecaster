@@ -2,43 +2,18 @@
 
 Replicates the meta_region_poolaware candidate-generation + pool-simulation
 selection block from mc_pool_backtest.py (search "meta_region_poolaware") for
-a single live year instead of the 14-year LOYO backtest loop: build ~15-25
+a single live year instead of the 15-year LOYO backtest loop: build ~15-25
 diverse candidate brackets (forced 1-seed champions, risk sweeps, prob-base
 sweeps, exhaustive-champion sweeps), score each by simulating against a
 realistic opponent pool, and keep the highest binary-P(1st) candidate.
 
---prob-base torvik (default) is THE production strategy (11.9% P(1st),
-14-yr LOYO) and is what docs/data/bracket_2026.json is supposed to contain.
---prob-base elo/ap swap the primary probability base (the "tv" slot) for
-a fully independent rating system (see scripts/prob_base_variants.py),
-keeping every other candidate-generation detail (forced champs, risk
-sweeps, alt bases, pool-aware selection) identical — this is an
-exploratory lens on the SAME construction, not a claim it wins on P(1st).
+Torvik is THE production strategy (11.3% P(1st), 15-yr LOYO — see
+MEMORY.md §3) and is what docs/data/bracket_2026.json contains.
 
---prob-base upset does NOT go through the candidate-diversity + pool-
-simulation selection above — it bypasses that entirely for a single
-direct region_top_n(round_probs=elo, risk_level=1.0) construction. This
-is deliberate: the pool-simulation selection correctly measures each
-candidate's REAL chance of winning an actual pool, and a genuine
-Cinderella pick (e.g. a team with a <1% chance of winning it all) will
-score ~0% simulated P(1st) every time — that's not a bug, it's exactly
-why pool-simulation selection is the production mechanism. Feeding it
-only high-risk candidates just makes it pick the least-bad of a bad
-set, which is a worse experience than either its normal candidate pool
-or a bracket that's honestly built to explore the "what if" scenario
-directly. "upset" is that direct scenario: unvalidated, for exploring
-how differently the bracket looks if you deliberately fade the popular
-teams, not a claim about what would actually win a pool.
-
-Torvik output previously held stale output from a discontinued Elo+seed
-blend pipeline (generate_web_data.py) — see docs/app.js STRATEGIES['pool']
-for the UI-facing claim this file backs.
-
-Owns docs/data/bracket_2026*.json. generate_web_data.py no longer writes
-these files — do not reintroduce that.
+Owns docs/data/bracket_2026.json. generate_web_data.py no longer writes
+this file — do not reintroduce that.
 """
 
-import argparse
 import json
 import sys
 from datetime import datetime
@@ -61,7 +36,6 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
     load_seeds_and_regions,
 )
-from scripts.prob_base_variants import load_prob_base, MODEL_LABELS, RISK_LEVEL
 from src.optimization.bracket_construction import construct_bracket
 from src.prediction.massey_probabilities import load_massey_avg_barthag
 from src.prediction.seed_probabilities import build_seed_probabilities
@@ -102,10 +76,6 @@ def resolve_opponents(seeds):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prob-base", choices=["torvik", "elo", "ap", "upset"], default="torvik")
-    args = parser.parse_args()
-
     seeds, regions = load_seeds_and_regions(YEAR)
     if not seeds:
         print(f"ERROR: no seeds found for {YEAR}")
@@ -113,54 +83,12 @@ def main():
 
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
-    primary_rating, primary_rp = load_prob_base(args.prob_base, YEAR, seeds, regions, torvik_rp, barthag)
-
-    if args.prob_base == "upset":
-        # Bypass candidate-diversity + pool-simulation selection entirely —
-        # see the module docstring for why. Single direct construction at
-        # max contrarian weighting.
-        pick_dist, n_opponents, opponent_source = resolve_opponents(seeds)
-        best_picks, champion, _f4, _ev, _var = construct_bracket(
-            mode="region_top_n",
-            seeds=seeds,
-            regions=regions,
-            round_probs=primary_rp,
-            public_picks=pick_dist,
-            risk_level=RISK_LEVEL["upset"],
-            pool_size=n_opponents + 1,
-            scoring_system=dict(ESPN_SCORING),
-        )
-        best_rating = primary_rating
-        team_names = load_team_names()
-        rounds = build_bracket_json(seeds, regions, best_rating, primary_rp, best_picks, team_names, pick_dist)
-
-        out_path = OUT_DIR / "bracket_2026_upset.json"
-        output = {
-            "season": YEAR,
-            "generated_at": datetime.now().strftime("%Y-%m-%d"),
-            "model": f"{MODEL_LABELS['upset']} — Region Top-N, Single-Shot (not pool-simulation-selected)",
-            "n_simulations": 10000,
-            "opponent_source": opponent_source,
-            "rounds": rounds,
-        }
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w") as f:
-            json.dump(output, f, indent=2)
-
-        print(f"Champion: {team_names.get(champion, champion)}")
-        print()
-        for rnd in rounds:
-            print(f"  {rnd['round_name']}: {len(rnd['games'])} games")
-        print(f"\nWritten to {out_path}")
-        return
 
     # (name, round_probs, rating_dict) — rating_dict is carried alongside each
     # prob base so the winning candidate's *own* ratings drive its displayed
     # win_prob (via Log5), instead of every candidate showing generic Torvik
-    # barthag regardless of which base actually picked it. Only the PRIMARY
-    # slot changes with --prob-base; alt bases (massey_avg) stay torvik-
-    # derived diversity candidates regardless, same as the production mode.
-    prob_bases = [(args.prob_base, primary_rp, primary_rating)]
+    # barthag regardless of which base actually picked it.
+    prob_bases = [("tv", torvik_rp, barthag)]
     massey_barthag = load_massey_avg_barthag(YEAR, seeds, PROJECT_ROOT / "data")
     if massey_barthag is not None:
         prob_bases.append(
@@ -191,13 +119,13 @@ def main():
         except Exception as exc:
             print(f"  candidate '{label}' skipped: {exc}")
 
-    # (a) Forced 1-seed champions x region_top_n (primary prob base, risk=0.5)
+    # (a) Forced 1-seed champions x region_top_n (torvik, risk=0.5)
     for forced in one_seed_teams:
         try_add(
-            f"{args.prob_base}_champ={forced}",
-            primary_rating,
+            f"tv_champ={forced}",
+            barthag,
             mode="region_top_n",
-            round_probs=primary_rp,
+            round_probs=torvik_rp,
             risk_level=0.5,
             forced_champion=forced,
         )
@@ -240,14 +168,14 @@ def main():
             mode="region_top_n",
             seeds=seeds,
             regions=regions,
-            round_probs=primary_rp,
+            round_probs=torvik_rp,
             public_picks=pick_dist,
             risk_level=0.5,
             pool_size=n_opponents + 1,
             scoring_system=scoring,
         )
         best_label = "fallback"
-        best_rating = primary_rating
+        best_rating = barthag
     else:
         # Score each candidate via pool simulation (binary P(1st) estimator) —
         # mirrors mc_pool_backtest.py's meta_region_poolaware selection exactly.
@@ -296,15 +224,14 @@ def main():
     # whichever prob base drove this specific bracket's picks. pick_dist here
     # is already the real opponent field (pool history preferred over ESPN),
     # so it doubles as the pool-consensus annotation for display.
-    rounds = build_bracket_json(seeds, regions, best_rating, primary_rp, best_picks, team_names, pick_dist)
+    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names, pick_dist)
 
-    suffix = "" if args.prob_base == "torvik" else f"_{args.prob_base}"
-    out_path = OUT_DIR / f"bracket_2026{suffix}.json"
+    out_path = OUT_DIR / "bracket_2026.json"
 
     output = {
         "season": YEAR,
         "generated_at": datetime.now().strftime("%Y-%m-%d"),
-        "model": f"{MODEL_LABELS[args.prob_base]} — Region Top-N x Multi-Candidate Pool-Aware Selection",
+        "model": "Torvik Barthag — Region Top-N x Multi-Candidate Pool-Aware Selection",
         "n_simulations": PA_TRIALS,
         "opponent_source": opponent_source,
         "rounds": rounds,

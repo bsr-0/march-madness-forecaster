@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "generated_at": "2026-08-15",
+  "generated_at": "2026-08-16",
   "model": "Torvik Barthag \u2014 Region Top-N x Multi-Candidate Pool-Aware Selection",
   "n_simulations": 500,
   "opponent_source": "your pool history (N=31)",
