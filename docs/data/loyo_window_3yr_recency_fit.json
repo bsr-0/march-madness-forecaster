@@ -1,0 +1,21 @@
+{
+  "window": "2024-2026",
+  "n_years": 3,
+  "diagnostic_only": true,
+  "fitter": "src.optimization.recency_hparam_fitter:recency_fitter_3yr_pool30",
+  "contract": "--team-identity --opponent pool --n-opponents 30 --modes meta_region_poolaware --years 2024 2025 2026 --hparam-fitter src.optimization.recency_hparam_fitter:recency_fitter_3yr_pool30 --pa-trials 500",
+  "generated": "2026-08-17",
+  "per_year_fitted_alpha": {
+    "2024": 0.5,
+    "2025": 0.3,
+    "2026": 0.6
+  },
+  "strategies": {
+    "pool_recency_fit": {
+      "p_first": 14.0,
+      "mean_rank": 11.3,
+      "best_rank": 11.3,
+      "note": "meta_region_poolaware with recency-fitted blend_alpha (3yr window): 14.0% P(1st) vs static alpha=0.5 baseline (15.3%): -1.3pp. Diagnostic only \u2014 does not change the submitted bracket."
+    }
+  }
+}
