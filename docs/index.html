@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-16d">
+  <link rel="stylesheet" href="style.css?v=2026-08-17a">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
@@ -71,6 +71,31 @@
       </p>
     </section>
 
+    <!-- Team stats table -->
+    <section class="stats-table-section" id="stats-table-section" style="display:none">
+      <p class="section-label">Pre-tournament team stats</p>
+      <p class="stats-table-intro">
+        Torvik ratings for every tournament-qualified team, as they stood right before that year's tournament
+        started — the same numbers the models above are built on. Click a column to sort.
+      </p>
+      <div class="stats-controls">
+        <label class="stats-control">
+          <span>Year</span>
+          <select id="stats-year-select" onchange="setStatsYear(this.value)"></select>
+        </label>
+        <label class="stats-control stats-control-search">
+          <span>Search</span>
+          <input type="text" id="stats-search" placeholder="Team or conference…" oninput="setStatsSearch(this.value)">
+        </label>
+      </div>
+      <div class="stats-table-scroll">
+        <table class="stats-table" id="stats-table">
+          <thead id="stats-table-head"></thead>
+          <tbody id="stats-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 
   <footer class="site-footer">
@@ -78,6 +103,6 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
-  <script src="app.js?v=2026-08-16d"></script>
+  <script src="app.js?v=2026-08-17a"></script>
 </body>
 </html>
