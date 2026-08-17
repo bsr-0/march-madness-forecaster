@@ -844,6 +844,8 @@ class TestS2Features:
 
         if not _seeds_file_exists(2025):
             pytest.skip("No 2025 data")
+        if not Path("data/kaggle/MMasseyOrdinals.csv").exists():
+            pytest.skip("No Massey ordinals CSV (Kaggle competition data, not checked into git)")
         seed_data = _load_seeds_raw(2025)
         team_ids = [t["team_id"] for t in seed_data["teams"]]
 
