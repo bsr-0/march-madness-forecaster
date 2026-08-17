@@ -303,7 +303,7 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
 
 #### C3: `momentum`
 - **Status:** IMPLEMENTED (2026-04-25) — shipped as an ADJUSTMENT (not a base) for composability with every source × construction. 108 snapshot files cover 2008-2026. Team IDs in the four-factor snapshots match canonical tournament IDs directly — no bridge needed.
-- **Data:** `data/raw/historical/torvik_four_factors_{year}_{yyyymmdd}.json` — ~5 snapshots per year (Nov/Dec/Jan/Feb/Mar). Uses the January (~YYYY-01-31) and March (~YYYY-03-xx pre-tournament) snapshots for the trajectory delta.
+- **Data:** `data/raw/historical/torvik_{year}.json`'s `four_factors_snapshots` array (`{"date", "data"}` entries; consolidated 2026-08-16 from the former standalone `torvik_four_factors_{year}_{yyyymmdd}.json` files) — ~5 snapshots per year (Nov/Dec/Jan/Feb/Mar). Uses the January (~YYYY-01-31) and March (~YYYY-03-xx pre-tournament) snapshots for the trajectory delta.
 - **Schema note:** the snapshot files carry only the 8 raw four-factor stats (`effective_fg_pct` + opp, `turnover_rate` + opp, `offensive/defensive_reb_rate`, `free_throw_rate` + opp) — **not** `adj_efficiency_margin`. We synthesize a Dean-Oliver-weighted margin proxy.
 - **Algorithm:**
   1. For each team t, compute ``four_factor_margin(t)`` at January and March snapshots:
@@ -321,7 +321,7 @@ The `test_tier_configs_match_catalog_contract` test is the drift guard — if th
   - **Deliberate deviations from catalog spec:**
     - Spec called for `delta_eff = (march - january) / january` using Torvik's `adj_efficiency_margin`. But (a) `adj_efficiency_margin` isn't in the snapshot files — only 8 raw four-factor stats — so we use a Dean-Oliver-weighted proxy instead; (b) division by the January value blows up when it's near zero (mean of the distribution), so we switched to absolute delta with a calibrated `tanh_scale=10` multiplier.
     - Applied at round_probs level, not barthag (same pattern as the other adjustments).
-- **Walk-forward contract:** only reads `torvik_four_factors_{year}_*.json` for `{year}` — each test year's momentum is computed in isolation from its own Jan and Mar snapshots. No cross-year contamination.
+- **Walk-forward contract:** only reads `torvik_{year}.json`'s `four_factors_snapshots` for `{year}` — each test year's momentum is computed in isolation from its own Jan and Mar snapshots. No cross-year contamination.
 - **Fallback:** Missing January or March snapshot for a year → empty dict for that year → downstream resolver treats every team as delta=0 (no adjustment). Teams present in only one of the two snapshots → absent from result (same neutral fallback).
 - **2026 sanity:** 68/68 coverage. Top improvers: Howard (+0.064), Prairie View (+0.059), UMBC (+0.045) — small low-majors often have schedule-strength artifacts in the delta. Top decliners: Iowa (−0.052), NC State (−0.049), BYU (−0.047), Texas A&M (−0.047), Saint Louis (−0.045). `tanh` cap keeps extreme signals bounded either way.
 - **Years:** 2008-2026.

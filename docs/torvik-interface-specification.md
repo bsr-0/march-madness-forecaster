@@ -361,10 +361,15 @@ class TorVikValidationError(Exception):
 
 **Notes**:
 - `team_name` and `name` are BOTH present (some consumers read `name`, others `team_name`)
-- Four Factors may be `0.0` when CSV fallback was used (enriched later from `torvik_four_factors_{year}.json`)
+- Four Factors may be `0.0` when CSV fallback was used (enriched later from `torvik_{year}.json`'s `four_factors` key)
 - `enriched_stats` is optional sub-dict added by defensive FF enrichment
 
-### 6b. Four Factors file (`torvik_four_factors_{year}.json`)
+### 6b. Four Factors sub-object (`torvik_{year}.json`'s `"four_factors"` key)
+
+**Consolidated 2026-08-16**: this used to be a standalone `torvik_four_factors_{year}.json` file; it is
+now the `four_factors` top-level key inside `torvik_{year}.json`, with the exact same schema
+unchanged. Readers prefer this merged key, falling back to the old standalone file for any not-yet-migrated
+data (see `scripts/consolidate_torvik_four_factors.py`).
 
 ```json
 {

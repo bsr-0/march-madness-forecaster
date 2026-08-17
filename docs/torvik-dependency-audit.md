@@ -3,6 +3,12 @@
 **Date**: 2026-03-23
 **Scope**: Complete mapping of all files, classes, functions, data files, and configs that depend on the Torvik scraper/data pipeline.
 
+> **Stale as of 2026-08-16**: Section 4a's `torvik_four_factors_{year}.json` and the monthly
+> dated snapshot files were consolidated into `torvik_{year}.json` (keys `four_factors` and
+> `four_factors_snapshots`) and deleted from `data/raw/historical/`. See
+> `scripts/consolidate_torvik_four_factors.py` and `docs/torvik-interface-specification.md` §6b
+> for the current schema. Section 4b's `data/raw/` (non-historical) file inventory is unaffected.
+
 ---
 
 ## 1. Core Scraper Files (DELETE candidates)

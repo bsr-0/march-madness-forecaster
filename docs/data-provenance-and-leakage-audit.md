@@ -73,16 +73,15 @@ miscategorized since going live).
 
 | Field | Value |
 |---|---|
-| **Files** | `data/raw/torvik_four_factors_{year}.json` (symlinked from `data/raw/historical/`) |
-| **Years** | 2008-2019, 2021-2025 |
+| **Files** | `data/raw/historical/torvik_{year}.json`'s `four_factors` key (consolidated 2026-08-16 from the former standalone `torvik_four_factors_{year}.json`, which is now deleted; `data/raw/torvik_four_factors_{year}.json` remains a separate, unconsolidated raw-tier mirror, out of scope for this consolidation) |
+| **Years** | 2008-2019, 2021-2026 |
 | **Content** | Per-team Dean Oliver Four Factors: eFG%, TO%, ORB%, FTR (offense + defense) |
-| **Acquisition** | **Locally computed** from `historical_games_{year}.json` box score data |
-| **Script** | `scripts/compute_pretournament_four_factors.py` |
+| **Acquisition** | `scripts/rescrape_pretournament_torvik.py` — trank.php CSV with pre-tournament date filtering (primary), JSON endpoint fallback (ratings only, no FF) |
 | **Date filter** | `game_date < TOURNAMENT_START_DATES[year]` — same cutoff as barthag |
-| **Computation** | `eFG% = (FGM + 0.5*3PM) / FGA`, `TO% = TO / poss`, `ORB% = ORB / (ORB + opp_DRB)`, `FTR = FTA / FGA`, plus defensive mirrors |
-| **Metadata** | `data_type: "pre_tournament_computed"`, `cutoff_date`, `tournament_start` |
-| **Guard** | `_validate_pretournament()` in backtest |
+| **Metadata** | `data_type: "pre_tournament"`, `cutoff_date`, `tournament_start`, `n_teams` |
+| **Guard** | `_validate_pretournament()` (validated once at the outer `torvik_{year}.json` load; the nested `four_factors` sub-dict is trusted without a redundant second check since it's written atomically alongside the outer file) |
 | **Risk** | **LOW** — computed with date cutoff, validated at load time |
+| **Snapshots** | Monthly point-in-time snapshots (Nov/Dec/Jan/Feb/pre-tournament) live in the same file's `four_factors_snapshots` array (`{"date", "data"}` entries), consumed by the momentum adjustment (C3) and `TorVikFFLookup` — see `docs/torvik-interface-specification.md` §6b. |
 
 ### 5. Seed Pick Rates (hardcoded)
 
@@ -142,8 +141,7 @@ ESPN Scoreboard API (or sportsdataverse/cbbpy fallback)
 historical_games_{year}.json  [contains ALL games including tournament]
     ↓ filter: game_date < TOURNAMENT_START_DATES[year]
     ↓
-compute_pretournament_barthag.py    → torvik_{year}.json
-compute_pretournament_four_factors.py → torvik_four_factors_{year}.json
+rescrape_pretournament_torvik.py    → torvik_{year}.json (base ratings + "four_factors" + "four_factors_snapshots")
     ↓ validated by _validate_pretournament()
     ↓
 mc_pool_backtest.py  [uses only pre-tournament data]
