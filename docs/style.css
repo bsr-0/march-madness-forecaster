@@ -348,6 +348,20 @@ body {
   opacity: 0.55;
 }
 
+/* A year whose bar reflects a diagnostic counterfactual (e.g. the 3-yr
+   recency-fit window's re-optimized pick) rather than the actual submitted
+   bracket's real score — dashed outline + gold tint to flag it apart. */
+.loyo-chip-diagnostic .loyo-chip-bar {
+  background: var(--accent-gold);
+  opacity: 0.7;
+  outline: 1px dashed var(--accent-gold);
+  outline-offset: 1px;
+}
+
+.loyo-chip-diagnostic .loyo-chip-pts {
+  color: var(--accent-gold);
+}
+
 .loyo-chip-pts {
   font-size: 0.68rem;
   font-weight: 700;
