@@ -11,11 +11,28 @@
     "2026": 0.6
   },
   "strategies": {
-    "pool_recency_fit": {
+    "pool": {
       "p_first": 14.0,
       "mean_rank": 11.3,
       "best_rank": 11.3,
-      "note": "meta_region_poolaware with recency-fitted blend_alpha (3yr window): 14.0% P(1st) vs static alpha=0.5 baseline (15.3%): -1.3pp. Diagnostic only \u2014 does not change the submitted bracket."
+      "note": "meta_region_poolaware with recency-fitted blend_alpha (3yr window): 14.0% P(1st) vs static alpha=0.5 baseline (15.3%): -1.3pp. Diagnostic only — does not change the submitted bracket.",
+      "per_year_score": {
+        "2024": 850,
+        "2025": 1310,
+        "2026": 790
+      }
+    },
+    "stat": {
+      "p_first": 11.3,
+      "mean_rank": 11.4,
+      "best_rank": 11.4,
+      "note": "meta_region: 11.3% P(1st) over 2024–2026 (n=3, diagnostic only). Unaffected by blend_alpha — never uses the \"blend\" probability base, so picks and historic scores are identical regardless of window."
+    },
+    "exhaustive": {
+      "p_first": 11.3,
+      "mean_rank": 11.4,
+      "best_rank": 11.4,
+      "note": "meta_exhaustive: 11.3% P(1st) over 2024–2026 (n=3, diagnostic only). Unaffected by blend_alpha — never uses the \"blend\" probability base, so picks and historic scores are identical regardless of window. Identical to Region Beam Search in this window — both picked Houston (2024, 2025) and Michigan (2026) as champion."
     }
   }
 }

@@ -145,9 +145,8 @@ let bracketData = { pool: null, exhaustive: null, stat: null };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let actualData         = null;  // real 2026 outcome, see docs/data/actual_2026.json — the
                                  // 2026 tournament already concluded, this is a replay
-let window3yrData      = null;  // 2024-2026 backtest window, see docs/data/loyo_window_3yr.json
-let window3yrFitData   = null;  // 2024-2026 recency-fit diagnostic, see docs/data/loyo_window_3yr_recency_fit.json
-let currentWindow      = '15yr';   // '15yr' | '3yr' | '3yr_fit' — which backtest window's P(1st)/note to display
+let window3yrData      = null;  // 2024-2026 recency-fit backtest window, see docs/data/loyo_window_3yr_recency_fit.json
+let currentWindow      = '15yr';   // '15yr' | '3yr' — which backtest window's P(1st)/note to display
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -196,21 +195,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let window3yr;
   try {
-    window3yr = await fetch('data/loyo_window_3yr.json?v=2026-08-16d').then(r => r.json());
+    window3yr = await fetch('data/loyo_window_3yr_recency_fit.json?v=2026-08-17a').then(r => r.json());
   } catch (err) {
     window3yr = null;
-  }
-  let window3yrFit;
-  try {
-    window3yrFit = await fetch('data/loyo_window_3yr_recency_fit.json?v=2026-08-16d').then(r => r.json());
-  } catch (err) {
-    window3yrFit = null;
   }
 
   loyoData       = loyo;
   actualData     = actual;
   window3yrData  = window3yr;
-  window3yrFitData = window3yrFit;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -480,29 +472,24 @@ function activateStrategy(key) {
 // ── Backtest window toggle ──
 //
 // STRATEGIES bakes in the 15-year (2011-2026) LOYO numbers as the default.
-// window3yrData (docs/data/loyo_window_3yr.json) holds a second, much
-// lower-power (n=3) cut over just 2024-2026 for comparing strategies on
-// the recent "meta" specifically — diagnostic only, too few years for the
-// paired significance tests the 15-yr view runs (see the note text). For
-// the '3yr' window specifically, this only swaps the displayed P(1st)/
-// badge/note; picks themselves are unaffected — re-windowing which years
-// count doesn't change which bracket a strategy actually built, because
-// nothing about strategy selection varies by window size.
+// window3yrData (docs/data/loyo_window_3yr_recency_fit.json) holds a
+// second, much lower-power (n=3) cut over just 2024-2026. Unlike an earlier
+// version of this toggle, the '3yr' window is a genuine re-optimization,
+// not just a re-windowed display of the same 15-yr picks: the pool
+// strategy's blend_alpha hyperparameter is re-fit using only the most
+// recent 3 walk-forward years (src/optimization/recency_hparam_fitter.py),
+// scored via the same MC-pool-simulation P(1st) estimator production
+// selection uses. meta_region/meta_exhaustive never use the "blend"
+// probability base at all, so they're structurally unaffected and their
+// entries here are identical to what a 15-yr-style run over just these 3
+// years would show — only 'pool' actually differs.
 //
-// '3yr_fit' (docs/data/loyo_window_3yr_recency_fit.json) is a genuine
-// exception to that "picks unaffected" claim: it re-optimizes the pool
-// strategy's blend_alpha hyperparameter using only the most recent 3
-// walk-forward years (src/optimization/recency_hparam_fitter.py), scored
-// via the same MC-pool-simulation P(1st) estimator production selection
-// uses. Still diagnostic only — it does NOT change what bracket actually
+// Diagnostic only either way — it does NOT change what bracket actually
 // gets submitted (scripts/generate_poolaware_bracket.py, the live 2026
-// production script, is untouched and doesn't use the "blend" probability
-// base at all). Only the 'pool' strategy is affected, since meta_region and
-// meta_exhaustive never use the blend base either.
+// production script, is untouched).
 const WINDOW_DEFS = {
-  '15yr':    { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
-  '3yr':     { label: '2024–2026 (3-yr)', note: 'Diagnostic only — too few years for significance testing.' },
-  '3yr_fit': { label: '2024–2026 (3-yr, refit)', note: 'Diagnostic only — pool strategy re-optimized on the 3-yr window itself, not just re-windowed.' },
+  '15yr': { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
+  '3yr':  { label: '2024–2026 (3-yr, refit)', note: 'Diagnostic only — pool strategy re-optimized on the 3-yr window itself, too few years for significance testing.' },
 };
 
 function setWindow(key) {
@@ -531,18 +518,7 @@ function renderWindowToggle() {
 // isn't backtested as a standalone strategy in any window).
 function effectiveStrategyStats(key) {
   const s = STRATEGIES.find(s => s.key === key);
-  if (currentWindow === '3yr_fit' && window3yrFitData) {
-    // Only 'pool' (meta_region_poolaware) is affected by the recency-fit
-    // blend_alpha — meta_region/meta_exhaustive never use the "blend"
-    // probability base, so they fall back to the plain (unfit) 3-yr window
-    // below rather than to 15-yr, keeping the toggle internally consistent
-    // about which years are being described.
-    const fitEntry = window3yrFitData.strategies[`${key}_recency_fit`];
-    if (fitEntry) {
-      return { p_first: fitEntry.p_first, badge: `~${fitEntry.p_first}% P(1st)`, backtest_note: fitEntry.note };
-    }
-  }
-  if ((currentWindow === '3yr' || currentWindow === '3yr_fit') && window3yrData && window3yrData.strategies[key]) {
+  if (currentWindow === '3yr' && window3yrData && window3yrData.strategies[key]) {
     const w = window3yrData.strategies[key];
     return { p_first: w.p_first, badge: `~${w.p_first}% P(1st)`, backtest_note: w.note };
   }
@@ -615,7 +591,25 @@ function renderStrategyDetail() {
 // have scored against that year's real outcome, not a simulated proxy).
 function loyoPointsHTML(key) {
   if (!loyoData || !loyoData.points_by_strategy[key]) return '';
-  const pts = loyoData.points_by_strategy[key];
+  const pts = { ...loyoData.points_by_strategy[key] };
+
+  // Under the 3-yr (recency-fit) window, swap in the counterfactual
+  // per-year scores the recency-fitted bracket actually would have scored
+  // against each year's real outcome — not just a re-windowed view of the
+  // same production picks. Only years where the fitter's chosen blend_alpha
+  // differs from the production default (0.5) can actually differ; where it
+  // doesn't, the override value is identical to the production one anyway.
+  const overrideYears = new Set();
+  if (currentWindow === '3yr' && window3yrData) {
+    const perYear = (window3yrData.strategies[key] || {}).per_year_score;
+    if (perYear) {
+      for (const [y, v] of Object.entries(perYear)) {
+        pts[y] = v;
+        overrideYears.add(y);
+      }
+    }
+  }
+
   const years = loyoData.years.filter(y => pts[y] != null);
   if (years.length === 0) return '';
 
@@ -626,8 +620,12 @@ function loyoPointsHTML(key) {
   const chips = years.map(y => {
     const v = pts[y];
     const heightPct = Math.max(8, Math.round((v / max) * 100));
+    const diagFlag = overrideYears.has(y) ? ' loyo-chip-diagnostic' : '';
+    const title = overrideYears.has(y)
+      ? `${y}: ${v.toFixed(0)} pts (3-yr recency-fit diagnostic)`
+      : `${y}: ${v.toFixed(0)} pts`;
     return `
-      <div class="loyo-chip" title="${y}: ${v.toFixed(0)} pts">
+      <div class="loyo-chip${diagFlag}" title="${title}">
         <div class="loyo-chip-bar-track">
           <div class="loyo-chip-bar" style="height:${heightPct}%"></div>
         </div>
