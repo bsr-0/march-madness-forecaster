@@ -146,7 +146,8 @@ let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_poin
 let actualData         = null;  // real 2026 outcome, see docs/data/actual_2026.json — the
                                  // 2026 tournament already concluded, this is a replay
 let window3yrData      = null;  // 2024-2026 backtest window, see docs/data/loyo_window_3yr.json
-let currentWindow      = '15yr';   // '15yr' | '3yr' — which backtest window's P(1st)/note to display
+let window3yrFitData   = null;  // 2024-2026 recency-fit diagnostic, see docs/data/loyo_window_3yr_recency_fit.json
+let currentWindow      = '15yr';   // '15yr' | '3yr' | '3yr_fit' — which backtest window's P(1st)/note to display
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -199,10 +200,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     window3yr = null;
   }
+  let window3yrFit;
+  try {
+    window3yrFit = await fetch('data/loyo_window_3yr_recency_fit.json?v=2026-08-16d').then(r => r.json());
+  } catch (err) {
+    window3yrFit = null;
+  }
 
   loyoData       = loyo;
   actualData     = actual;
   window3yrData  = window3yr;
+  window3yrFitData = window3yrFit;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -475,12 +483,26 @@ function activateStrategy(key) {
 // window3yrData (docs/data/loyo_window_3yr.json) holds a second, much
 // lower-power (n=3) cut over just 2024-2026 for comparing strategies on
 // the recent "meta" specifically — diagnostic only, too few years for the
-// paired significance tests the 15-yr view runs (see the note text). Only
-// swaps the displayed P(1st)/badge/note; picks themselves are unaffected —
-// the backtest window doesn't change which bracket a strategy actually built.
+// paired significance tests the 15-yr view runs (see the note text). For
+// the '3yr' window specifically, this only swaps the displayed P(1st)/
+// badge/note; picks themselves are unaffected — re-windowing which years
+// count doesn't change which bracket a strategy actually built, because
+// nothing about strategy selection varies by window size.
+//
+// '3yr_fit' (docs/data/loyo_window_3yr_recency_fit.json) is a genuine
+// exception to that "picks unaffected" claim: it re-optimizes the pool
+// strategy's blend_alpha hyperparameter using only the most recent 3
+// walk-forward years (src/optimization/recency_hparam_fitter.py), scored
+// via the same MC-pool-simulation P(1st) estimator production selection
+// uses. Still diagnostic only — it does NOT change what bracket actually
+// gets submitted (scripts/generate_poolaware_bracket.py, the live 2026
+// production script, is untouched and doesn't use the "blend" probability
+// base at all). Only the 'pool' strategy is affected, since meta_region and
+// meta_exhaustive never use the blend base either.
 const WINDOW_DEFS = {
-  '15yr': { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
-  '3yr':  { label: '2024–2026 (3-yr)', note: 'Diagnostic only — too few years for significance testing.' },
+  '15yr':    { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
+  '3yr':     { label: '2024–2026 (3-yr)', note: 'Diagnostic only — too few years for significance testing.' },
+  '3yr_fit': { label: '2024–2026 (3-yr, refit)', note: 'Diagnostic only — pool strategy re-optimized on the 3-yr window itself, not just re-windowed.' },
 };
 
 function setWindow(key) {
@@ -505,11 +527,22 @@ function renderWindowToggle() {
 
 // Resolve the P(1st)/badge/note to display for a strategy under the
 // currently selected backtest window. Falls back to the strategy's baked-in
-// 15-yr numbers if the 3-yr window has no entry for it (e.g. Chalk, which
-// isn't backtested as a standalone strategy in either window).
+// 15-yr numbers if a given window has no entry for it (e.g. Chalk, which
+// isn't backtested as a standalone strategy in any window).
 function effectiveStrategyStats(key) {
   const s = STRATEGIES.find(s => s.key === key);
-  if (currentWindow === '3yr' && window3yrData && window3yrData.strategies[key]) {
+  if (currentWindow === '3yr_fit' && window3yrFitData) {
+    // Only 'pool' (meta_region_poolaware) is affected by the recency-fit
+    // blend_alpha — meta_region/meta_exhaustive never use the "blend"
+    // probability base, so they fall back to the plain (unfit) 3-yr window
+    // below rather than to 15-yr, keeping the toggle internally consistent
+    // about which years are being described.
+    const fitEntry = window3yrFitData.strategies[`${key}_recency_fit`];
+    if (fitEntry) {
+      return { p_first: fitEntry.p_first, badge: `~${fitEntry.p_first}% P(1st)`, backtest_note: fitEntry.note };
+    }
+  }
+  if ((currentWindow === '3yr' || currentWindow === '3yr_fit') && window3yrData && window3yrData.strategies[key]) {
     const w = window3yrData.strategies[key];
     return { p_first: w.p_first, badge: `~${w.p_first}% P(1st)`, backtest_note: w.note };
   }
