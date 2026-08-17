@@ -1983,6 +1983,73 @@ def _empty_year_outcome(year_arg, reason=None):
     }
 
 
+class _OpponentResolutionFailed(Exception):
+    """Raised by resolve_opponent_pick_distribution on an unrecoverable failure.
+
+    Callers must catch this and convert it into their own SKIP print +
+    early return — mirrors the embedded early-returns this branch had
+    before being extracted out of _run_one_year.
+    """
+
+
+def resolve_opponent_pick_distribution(year, seeds, n_opponents, opponent_source, pool_blend_weight=0.7):
+    """Resolve the opponent pick distribution for a backtest year.
+
+    pool: empirical pick distribution from pool_hist_results.json for this year;
+          pool_size is set to the actual pool's group size.
+          Falls back to ESPN if pool history is unavailable for the year.
+    espn: strict — missing archived picks raise FileNotFoundError.
+    seed: static SEED_PICK_RATES (year-agnostic fallback).
+
+    Returns (pick_dist, year_n_opponents, pool_chalk_noise_std).
+    Raises _OpponentResolutionFailed(message) on unrecoverable failure.
+    """
+    year_n_opponents = n_opponents  # may be overridden below for pool mode
+    pool_chalk_noise_std = 0.0  # bracket-level correlation for synthetic opponents
+    if opponent_source == "pool":
+        try:
+            pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
+            pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
+            year_n_opponents = group_size - 1  # pool size excludes model bracket
+        except (FileNotFoundError, KeyError):
+            # No pool history for this year — ESPN picks are year-specific
+            # (millions of entries, tournament-aware) so prefer them over our
+            # 105-bracket cross-year model. Behavioral model is last resort.
+            try:
+                pick_dist = build_espn_pick_distribution(year, seeds)
+                year_n_opponents = n_opponents
+            except FileNotFoundError:
+                # No ESPN data either — use cross-year behavioral model.
+                try:
+                    pick_dist, pool_chalk_noise_std = build_pool_behavioral_model(
+                        POOL_HIST_PATH, seeds, exclude_year=year
+                    )
+                    year_n_opponents = n_opponents
+                except Exception as exc:
+                    raise _OpponentResolutionFailed(f"no opponent data: {exc}") from exc
+    elif opponent_source == "pool_calibrated":
+        # Phase 1: pool behavioral model blended with ESPN for all years.
+        espn = _try_load_espn(year, seeds)
+        try:
+            pick_dist, pool_chalk_noise_std = build_blended_pool_opponent_model(
+                pool_history_path=POOL_HIST_PATH,
+                seeds=seeds,
+                year=year,
+                espn_pick_dist=espn,
+                pool_weight=pool_blend_weight,
+            )
+        except Exception as exc:
+            raise _OpponentResolutionFailed(f"pool_calibrated failed: {exc}") from exc
+    elif opponent_source == "espn":
+        try:
+            pick_dist = build_espn_pick_distribution(year, seeds)
+        except FileNotFoundError as exc:
+            raise _OpponentResolutionFailed(f"{exc}") from exc
+    else:
+        pick_dist = build_seed_pick_distribution(seeds)
+    return pick_dist, year_n_opponents, pool_chalk_noise_std
+
+
 def _run_one_year(
     year,
     n_opponents,
@@ -2090,57 +2157,13 @@ def _run_one_year(
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
 
     # Build opponent distribution (needed before leveraged mode).
-    # pool: empirical pick distribution from pool_hist_results.json for this year;
-    #       pool_size is set to the actual pool's group size.
-    #       Falls back to ESPN if pool history is unavailable for the year.
-    # espn: strict — missing archived picks raise FileNotFoundError.
-    # seed: static SEED_PICK_RATES (year-agnostic fallback).
-    year_n_opponents = n_opponents  # may be overridden below for pool mode
-    pool_chalk_noise_std = 0.0  # bracket-level correlation for synthetic opponents
-    if opponent_source == "pool":
-        try:
-            pool_brackets, group_size = load_pool_brackets(POOL_HIST_PATH, year)
-            pick_dist = build_pool_pick_distribution(pool_brackets, seeds)
-            year_n_opponents = group_size - 1  # pool size excludes model bracket
-        except (FileNotFoundError, KeyError):
-            # No pool history for this year — ESPN picks are year-specific
-            # (millions of entries, tournament-aware) so prefer them over our
-            # 105-bracket cross-year model. Behavioral model is last resort.
-            try:
-                pick_dist = build_espn_pick_distribution(year, seeds)
-                year_n_opponents = n_opponents
-            except FileNotFoundError:
-                # No ESPN data either — use cross-year behavioral model.
-                try:
-                    pick_dist, pool_chalk_noise_std = build_pool_behavioral_model(
-                        POOL_HIST_PATH, seeds, exclude_year=year
-                    )
-                    year_n_opponents = n_opponents
-                except Exception as exc:
-                    print(f"  {year:<6} SKIP — no opponent data: {exc}")
-                    return _empty_year_outcome(year, f"no opponent data: {exc}")
-    elif opponent_source == "pool_calibrated":
-        # Phase 1: pool behavioral model blended with ESPN for all years.
-        espn = _try_load_espn(year, seeds)
-        try:
-            pick_dist, pool_chalk_noise_std = build_blended_pool_opponent_model(
-                pool_history_path=POOL_HIST_PATH,
-                seeds=seeds,
-                year=year,
-                espn_pick_dist=espn,
-                pool_weight=pool_blend_weight,
-            )
-        except Exception as exc:
-            print(f"  {year:<6} SKIP — pool_calibrated failed: {exc}")
-            return _empty_year_outcome(year, f"pool_calibrated failed: {exc}")
-    elif opponent_source == "espn":
-        try:
-            pick_dist = build_espn_pick_distribution(year, seeds)
-        except FileNotFoundError as exc:
-            print(f"  {year:<6} SKIP — {exc}")
-            return _empty_year_outcome(year, f"{exc}")
-    else:
-        pick_dist = build_seed_pick_distribution(seeds)
+    try:
+        pick_dist, year_n_opponents, pool_chalk_noise_std = resolve_opponent_pick_distribution(
+            year, seeds, n_opponents, opponent_source, pool_blend_weight
+        )
+    except _OpponentResolutionFailed as exc:
+        print(f"  {year:<6} SKIP — {exc}")
+        return _empty_year_outcome(year, str(exc))
     pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
 
     # Load the empirical chalk-bias table once per year. Falls back to the
