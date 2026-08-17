@@ -152,6 +152,13 @@ let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
 let roundsCache   = {};         // key → computed rounds[]
 
+// Multi-year pre-tournament team stats table, see docs/data/team_stats_by_year.json
+let teamStatsData    = null;    // { years, generated, stats_by_year: { "2026": [row, ...], ... } }
+let statsCurrentYear = null;    // set to the most recent year once teamStatsData loads
+let statsSortColumn  = 't_rank';
+let statsSortDir     = 'asc';   // 'asc' | 'desc'
+let statsSearchQuery = '';
+
 // ──────────────────────────────────────────────────────────────────
 // BOOT
 // ──────────────────────────────────────────────────────────────────
@@ -199,10 +206,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     window3yr = null;
   }
+  let teamStats;
+  try {
+    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17a').then(r => r.json());
+  } catch (err) {
+    teamStats = null;
+  }
 
   loyoData       = loyo;
   actualData     = actual;
   window3yrData  = window3yr;
+  teamStatsData  = teamStats;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -218,6 +232,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderStrategyStrip();
   renderWindowToggle();
   activateStrategy('pool');
+
+  if (teamStatsData && teamStatsData.years && teamStatsData.years.length) {
+    statsCurrentYear = teamStatsData.years[teamStatsData.years.length - 1];
+    document.getElementById('stats-table-section').style.display = '';
+    renderStatsYearSelect();
+    renderStatsTable();
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -861,5 +882,115 @@ function probCls(pct) {
   if (pct >= 70) return 'high';
   if (pct >= 52) return 'mid';
   return 'low';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// TEAM STATS TABLE
+//
+// Multi-year pre-tournament Torvik stats browser, see
+// docs/data/team_stats_by_year.json (scripts/generate_team_stats_table.py).
+// Single source of truth for the table's columns — header, cell
+// rendering, and sorting all derive from this list.
+// ──────────────────────────────────────────────────────────────────
+
+const STATS_COLUMNS = [
+  { key: 'team_name',                 label: 'Team',        numeric: false },
+  { key: 'seed',                      label: 'Seed',         numeric: true },
+  { key: 'region',                    label: 'Region',       numeric: false },
+  { key: 'conference',                label: 'Conf',          numeric: false },
+  { key: 't_rank',                    label: 'Rank',          numeric: true },
+  { key: 'barthag',                   label: 'Barthag',       numeric: true, fmt: v => v.toFixed(3) },
+  { key: 'adj_offensive_efficiency',  label: 'Adj OE',        numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'adj_defensive_efficiency',  label: 'Adj DE',        numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'adj_tempo',                 label: 'Tempo',         numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'effective_fg_pct',          label: 'eFG%',          numeric: true, fmt: pct },
+  { key: 'turnover_rate',             label: 'TO%',           numeric: true, fmt: pct },
+  { key: 'offensive_reb_rate',        label: 'OReb%',         numeric: true, fmt: pct },
+  { key: 'free_throw_rate',           label: 'FTRate',        numeric: true, fmt: pct },
+  { key: 'opp_effective_fg_pct',      label: 'Opp eFG%',      numeric: true, fmt: pct },
+  { key: 'opp_turnover_rate',         label: 'Opp TO%',       numeric: true, fmt: pct },
+  { key: 'defensive_reb_rate',        label: 'DReb%',         numeric: true, fmt: pct },
+  { key: 'opp_free_throw_rate',       label: 'Opp FTRate',    numeric: true, fmt: pct },
+];
+
+function pct(v) { return `${(v * 100).toFixed(1)}%`; }
+
+function renderStatsYearSelect() {
+  const el = document.getElementById('stats-year-select');
+  if (!el || !teamStatsData) return;
+  el.innerHTML = teamStatsData.years.map(y =>
+    `<option value="${y}"${y === statsCurrentYear ? ' selected' : ''}>${y}</option>`
+  ).join('');
+}
+
+function setStatsYear(year) {
+  statsCurrentYear = Number(year);
+  renderStatsTable();
+}
+
+function sortStatsBy(column) {
+  if (statsSortColumn === column) {
+    statsSortDir = statsSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    statsSortColumn = column;
+    statsSortDir = STATS_COLUMNS.find(c => c.key === column).numeric ? 'asc' : 'asc';
+  }
+  renderStatsTable();
+}
+
+function setStatsSearch(query) {
+  statsSearchQuery = query.trim().toLowerCase();
+  renderStatsTable();
+}
+
+function filterStatsRows(rows, query) {
+  if (!query) return rows;
+  return rows.filter(r =>
+    (r.team_name || '').toLowerCase().includes(query) ||
+    (r.conference || '').toLowerCase().includes(query)
+  );
+}
+
+function sortStatsRows(rows, column, dir) {
+  const sorted = [...rows].sort((a, b) => {
+    const av = a[column], bv = b[column];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;   // nulls sort last regardless of direction
+    if (bv == null) return -1;
+    if (av < bv) return -1;
+    if (av > bv) return 1;
+    return 0;
+  });
+  if (dir === 'desc') sorted.reverse();
+  return sorted;
+}
+
+function renderStatsTable() {
+  if (!teamStatsData || statsCurrentYear == null) return;
+  const headEl = document.getElementById('stats-table-head');
+  const bodyEl = document.getElementById('stats-table-body');
+  if (!headEl || !bodyEl) return;
+
+  headEl.innerHTML = `<tr>${STATS_COLUMNS.map(col => {
+    const active = col.key === statsSortColumn;
+    const arrow = active ? (statsSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable${active ? ' active' : ''}${col.numeric ? ' numeric' : ''}"
+                onclick="sortStatsBy('${col.key}')">${col.label}${arrow}</th>`;
+  }).join('')}</tr>`;
+
+  const yearRows = teamStatsData.stats_by_year[String(statsCurrentYear)] || [];
+  const filtered = filterStatsRows(yearRows, statsSearchQuery);
+  const sorted = sortStatsRows(filtered, statsSortColumn, statsSortDir);
+
+  if (sorted.length === 0) {
+    bodyEl.innerHTML = `<tr><td colspan="${STATS_COLUMNS.length}" class="stats-empty">No teams match “${statsSearchQuery}”.</td></tr>`;
+    return;
+  }
+
+  bodyEl.innerHTML = sorted.map(row => `<tr>${STATS_COLUMNS.map(col => {
+    const v = row[col.key];
+    const display = v == null ? '—' : (col.fmt ? col.fmt(v) : v);
+    return `<td class="${col.numeric ? 'numeric' : ''}">${display}</td>`;
+  }).join('')}</tr>`).join('');
 }
 

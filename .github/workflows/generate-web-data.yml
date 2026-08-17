@@ -55,6 +55,12 @@ jobs:
           echo "=== Generating web data ==="
           python scripts/generate_web_data.py
 
+      - name: Generate multi-year team stats table
+        run: |
+          set -euo pipefail
+          echo "=== Generating team stats table (docs/data/team_stats_by_year.json) ==="
+          python scripts/generate_team_stats_table.py
+
       - name: Generate pool-aware, region, and exhaustive brackets
         run: |
           set -euo pipefail
