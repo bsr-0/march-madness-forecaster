@@ -8,10 +8,10 @@
 // This is the single source of truth for what appears in the
 // strategy selector. Keep it accurate — it directly drives the UI.
 //
-// ═══ CURRENT BEST MODELS (validated 2026-08-16, 15-yr LOYO) ═════
-//   Best:   meta_region_poolaware — 11.3% P(1st), 15-yr LOYO, 15/15 vs seed
-//   Strong: meta_region           —  6.3% P(1st), 15-yr LOYO, 8/15 vs seed
-//   Strong: meta_exhaustive        —  6.2% P(1st), 15-yr LOYO, 8/15 vs seed
+// ═══ CURRENT BEST MODELS (re-validated 2026-08-18, 15-yr LOYO) ═════
+//   Best:   meta_region_poolaware — 11.2% P(1st), 15-yr LOYO, 15/15 vs seed
+//   Strong: meta_region           —  6.3% P(1st), 15-yr LOYO, 14/15 vs seed (MeanRank)
+//   Strong: meta_exhaustive        —  6.2% P(1st), 15-yr LOYO, 14/15 vs seed (MeanRank)
 //   Seed baseline (random-ish):      4.9% P(1st)
 //   Canonical contract + full numbers: MEMORY.md §3 "Pool backtest —
 //   production strategy validation". Supersedes the old 14-yr/11.9%/
@@ -55,8 +55,8 @@ const STRATEGIES = [
     description:
       'Simulates ~25 candidate brackets against a realistic pool field and picks the best one. ' +
       'Strongest strategy in 15 years of backtests.',
-    p_first: 11.3,          // ← update this after each backtest run
-    badge: '11.3% P(1st)',
+    p_first: 11.2,          // ← update this after each backtest run
+    badge: '11.2% P(1st)',
     badge_tone: 'gold',
     is_top: true,           // ← set to true for the current best model
     is_model: true,
@@ -75,7 +75,7 @@ const STRATEGIES = [
     badge_tone: 'green',
     is_top: false,
     is_model: true,
-    backtest_note: '8/15 years beating seed (gate boundary), 15-yr backtest, N=31 pool. Champion: Michigan.',
+    backtest_note: '14/15 years beating seed on MeanRank, 15-yr backtest, N=31 pool. Champion: Michigan.',
     pick: null,
   },
   {
@@ -88,7 +88,7 @@ const STRATEGIES = [
     badge_tone: 'green',
     is_top: false,
     is_model: true,
-    backtest_note: '8/15 years beating seed (gate boundary), 15-yr backtest, N=31 pool.',
+    backtest_note: '14/15 years beating seed on MeanRank, 15-yr backtest, N=31 pool.',
     // Pre-computed picks: pick === null means use winner_id from bracket_2026_region.json.
     pick: null,
   },
