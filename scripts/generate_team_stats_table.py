@@ -25,7 +25,25 @@ Deliberately excluded: data/raw/torvik_shooting_{year}.json (3PT%/FT%).
 docs/data-provenance-and-leakage-audit.md classifies the 2008-2025 shooting
 files as post-tournament player stats with "no date filtering possible" —
 only 2026 is verified pre-tournament. A column clean in 1 of 16 years and
-contaminated in the rest is worse than no column.
+contaminated in the rest is worse than no column. Shooting splits ARE built
+below, from a different, leakage-safe source — see family (4).
+
+  4. Kaggle regular-season box scores (data/kaggle/MRegularSeasonDetailedResults.csv)
+     — 3PT rate/pct, opponent 3PT defense, assist-to-turnover ratio, steal+block
+     ("havoc") rate, and true road/neutral win rate. This file contains ZERO
+     NCAA tournament games (they live in a separate Kaggle file), so unlike the
+     Torvik shooting files it is pre-tournament by construction with no date
+     filtering needed — the same property `overtime_rate` already relies on.
+  5. Kaggle coach history (data/kaggle/MTeamCoaches.csv +
+     MNCAATourneyCompactResults.csv) — each coach's cumulative NCAA tournament
+     games/wins BEFORE the season in question. Strictly backward-looking: a
+     coach's record going into year Y only counts seasons < Y, so a first-time
+     tournament coach reads 0 games / 0 wins, never their own upcoming result.
+
+Still not buildable: clutch/late-game splits and blown-lead rate need
+play-by-play, and there is no play-by-play anywhere in this repository —
+only final scores and box-score totals. Coach experience above is as close
+as the data gets to a "big-game readiness" signal.
 """
 
 import csv
@@ -184,6 +202,29 @@ def build_roster_stats(year: int, canonical_ids):
     return out
 
 
+def _kaggle_norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _load_kaggle_team_map(canonical_ids) -> dict[str, str]:
+    """Kaggle numeric TeamID (as string) -> canonical team_id, via MTeamSpellings.
+
+    Shared by every Kaggle-sourced builder below so the name-normalization
+    logic exists in exactly one place.
+    """
+    spellings = KAGGLE_DIR / "MTeamSpellings.csv"
+    if not spellings.exists():
+        return {}
+    canonical_by_norm = {_kaggle_norm(c): c for c in canonical_ids}
+    kaggle_to_canonical: dict[str, str] = {}
+    with open(spellings, encoding="latin-1") as f:
+        for r in csv.DictReader(f):
+            canonical = canonical_by_norm.get(_kaggle_norm(r["TeamNameSpelling"]))
+            if canonical is not None:
+                kaggle_to_canonical[r["TeamID"]] = canonical
+    return kaggle_to_canonical
+
+
 def build_overtime_rate(year: int, canonical_ids):
     """Share of regular-season games that went to overtime.
 
@@ -197,20 +238,9 @@ def build_overtime_rate(year: int, canonical_ids):
     score totals. Those columns are not buildable, full stop.
     """
     results = KAGGLE_DIR / "MRegularSeasonDetailedResults.csv"
-    spellings = KAGGLE_DIR / "MTeamSpellings.csv"
-    if not results.exists() or not spellings.exists():
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    if not results.exists() or not kaggle_to_canonical:
         return {}
-
-    def norm(s):
-        return re.sub(r"[^a-z0-9]", "", s.lower())
-
-    kaggle_to_canonical = {}
-    canonical_by_norm = {norm(c): c for c in canonical_ids}
-    with open(spellings, encoding="latin-1") as f:
-        for r in csv.DictReader(f):
-            canonical = canonical_by_norm.get(norm(r["TeamNameSpelling"]))
-            if canonical is not None:
-                kaggle_to_canonical[r["TeamID"]] = canonical
 
     games: dict[str, int] = {}
     ot: dict[str, int] = {}
@@ -227,6 +257,189 @@ def build_overtime_rate(year: int, canonical_ids):
                 if went_ot:
                     ot[team] = ot.get(team, 0) + 1
     return {t: {"overtime_rate": round(ot.get(t, 0) / n, 4)} for t, n in games.items() if n}
+
+
+def build_kaggle_box_profile(year: int, canonical_ids):
+    """Shooting profile and defensive pressure from the regular-season box score.
+
+    All from `MRegularSeasonDetailedResults` — pre-tournament by construction,
+    same as `build_overtime_rate` above.
+
+      three_pt_rate       — share of field-goal attempts that were threes
+      three_pt_pct        — 3PM / 3PA
+      opp_three_pt_pct    — opponents' 3PM / 3PA against this team (defense)
+      ast_to_ratio        — assists per turnover (ball security / court vision;
+                             distinct from Torvik's turnover_rate, which is
+                             turnovers alone with no assist context)
+      havoc_rate          — (steals + blocks) per game (defensive disruption;
+                             Torvik's four factors have no steal/block signal)
+      true_road_win_pct   — win rate in true-road + neutral-site games only,
+                             using `WLoc`. Torvik's ratings are already
+                             opponent-adjusted, so this isn't strength — it's
+                             whether a team's results hold up away from home,
+                             a proxy for tournament (all-neutral-site) readiness.
+    """
+    results = KAGGLE_DIR / "MRegularSeasonDetailedResults.csv"
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    if not results.exists() or not kaggle_to_canonical:
+        return {}
+
+    acc: dict[str, dict[str, float]] = {}
+
+    def team_acc(t):
+        return acc.setdefault(
+            t, {"fga": 0, "fgm3": 0, "fga3": 0, "opp_fgm3": 0, "opp_fga3": 0,
+                "ast": 0, "to": 0, "stl": 0, "blk": 0, "games": 0,
+                "away_neutral_games": 0, "away_neutral_wins": 0}
+        )
+
+    with open(results) as f:
+        for r in csv.DictReader(f):
+            if int(r["Season"]) != year:
+                continue
+            wt = kaggle_to_canonical.get(r["WTeamID"])
+            lt = kaggle_to_canonical.get(r["LTeamID"])
+            wloc = r["WLoc"]  # location of the WINNER: H/A/N
+            lloc = {"H": "A", "A": "H", "N": "N"}[wloc]
+
+            if wt is not None:
+                a = team_acc(wt)
+                a["fga"] += int(r["WFGA"])
+                a["fgm3"] += int(r["WFGM3"])
+                a["fga3"] += int(r["WFGA3"])
+                a["opp_fgm3"] += int(r["LFGM3"])
+                a["opp_fga3"] += int(r["LFGA3"])
+                a["ast"] += int(r["WAst"])
+                a["to"] += int(r["WTO"])
+                a["stl"] += int(r["WStl"])
+                a["blk"] += int(r["WBlk"])
+                a["games"] += 1
+                if wloc in ("A", "N"):
+                    a["away_neutral_games"] += 1
+                    a["away_neutral_wins"] += 1
+            if lt is not None:
+                a = team_acc(lt)
+                a["fga"] += int(r["LFGA"])
+                a["fgm3"] += int(r["LFGM3"])
+                a["fga3"] += int(r["LFGA3"])
+                a["opp_fgm3"] += int(r["WFGM3"])
+                a["opp_fga3"] += int(r["WFGA3"])
+                a["ast"] += int(r["LAst"])
+                a["to"] += int(r["LTO"])
+                a["stl"] += int(r["LStl"])
+                a["blk"] += int(r["LBlk"])
+                a["games"] += 1
+                if lloc in ("A", "N"):
+                    a["away_neutral_games"] += 1
+
+    out = {}
+    for t, a in acc.items():
+        if not a["games"]:
+            continue
+        out[t] = {
+            "three_pt_rate": round(a["fga3"] / a["fga"], 4) if a["fga"] else None,
+            "three_pt_pct": round(a["fgm3"] / a["fga3"], 4) if a["fga3"] else None,
+            "opp_three_pt_pct": round(a["opp_fgm3"] / a["opp_fga3"], 4) if a["opp_fga3"] else None,
+            "ast_to_ratio": round(a["ast"] / a["to"], 4) if a["to"] else None,
+            "havoc_rate": round((a["stl"] + a["blk"]) / a["games"], 4),
+            "true_road_win_pct": (
+                round(a["away_neutral_wins"] / a["away_neutral_games"], 4)
+                if a["away_neutral_games"] else None
+            ),
+        }
+    return out
+
+
+_coach_history_cache = None
+
+
+def _load_coach_tourney_history():
+    """Cache of every coach's per-season NCAA tournament games/wins, 1985-2025.
+
+    Loaded once and memoized — every `build_coach_experience(year, ...)` call
+    just slices the same in-memory structure, rather than re-reading two CSVs
+    per year across 17 years.
+
+    Returns `(coach_of_record, per_coach_season_games, per_coach_season_wins)`:
+      coach_of_record[(season, kaggle_team_id)] -> coach_name — the coach with
+        the latest LastDayNum that season, i.e. the one who took the team into
+        the postseason (handles in-season coaching changes correctly).
+      per_coach_season_{games,wins}[coach_name][season] -> count, from
+        MNCAATourneyCompactResults attributed via coach_of_record.
+    """
+    global _coach_history_cache
+    if _coach_history_cache is not None:
+        return _coach_history_cache
+
+    coaches_path = KAGGLE_DIR / "MTeamCoaches.csv"
+    tourney_path = KAGGLE_DIR / "MNCAATourneyCompactResults.csv"
+    if not coaches_path.exists() or not tourney_path.exists():
+        _coach_history_cache = ({}, {}, {})
+        return _coach_history_cache
+
+    coach_of_record: dict[tuple[int, str], str] = {}
+    best_last_day: dict[tuple[int, str], int] = {}
+    with open(coaches_path) as f:
+        for r in csv.DictReader(f):
+            key = (int(r["Season"]), r["TeamID"])
+            last_day = int(r["LastDayNum"])
+            if last_day >= best_last_day.get(key, -1):
+                best_last_day[key] = last_day
+                coach_of_record[key] = r["CoachName"]
+
+    per_coach_season_games: dict[str, dict[int, int]] = {}
+    per_coach_season_wins: dict[str, dict[int, int]] = {}
+    with open(tourney_path) as f:
+        for r in csv.DictReader(f):
+            season = int(r["Season"])
+            wcoach = coach_of_record.get((season, r["WTeamID"]))
+            lcoach = coach_of_record.get((season, r["LTeamID"]))
+            if wcoach:
+                per_coach_season_games.setdefault(wcoach, {})[season] = (
+                    per_coach_season_games.setdefault(wcoach, {}).get(season, 0) + 1
+                )
+                per_coach_season_wins.setdefault(wcoach, {})[season] = (
+                    per_coach_season_wins.setdefault(wcoach, {}).get(season, 0) + 1
+                )
+            if lcoach:
+                per_coach_season_games.setdefault(lcoach, {})[season] = (
+                    per_coach_season_games.setdefault(lcoach, {}).get(season, 0) + 1
+                )
+
+    _coach_history_cache = (coach_of_record, per_coach_season_games, per_coach_season_wins)
+    return _coach_history_cache
+
+
+def build_coach_experience(year: int, canonical_ids):
+    """Each team's head coach and that coach's tournament track record BEFORE this year.
+
+    Strictly backward-looking: only seasons < `year` count toward
+    `coach_prior_tourney_games`/`_wins`, so a coach's own upcoming result in
+    `year` can never leak into their "experience" going into it. A coach with
+    zero prior tournament games reads `coach_first_tourney: True` — this is the
+    closest the data gets to the "big-game readiness" signal the shooting/PBP
+    columns can't provide.
+    """
+    coach_of_record, per_coach_games, per_coach_wins = _load_coach_tourney_history()
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    if not coach_of_record or not kaggle_to_canonical:
+        return {}
+
+    canonical_to_kaggle = {v: k for k, v in kaggle_to_canonical.items()}
+    out = {}
+    for canonical, kaggle_id in canonical_to_kaggle.items():
+        coach = coach_of_record.get((year, kaggle_id))
+        if coach is None:
+            continue
+        prior_games = sum(n for s, n in per_coach_games.get(coach, {}).items() if s < year)
+        prior_wins = sum(n for s, n in per_coach_wins.get(coach, {}).items() if s < year)
+        out[canonical] = {
+            "coach_name": coach,
+            "coach_prior_tourney_games": prior_games,
+            "coach_prior_tourney_wins": prior_wins,
+            "coach_first_tourney": prior_games == 0,
+        }
+    return out
 
 
 def _torvik_meta(year: int) -> dict:
@@ -378,6 +591,8 @@ def build_year_rows(year: int) -> list[dict]:
     outcomes = build_tournament_outcomes(year)
     rosters = build_roster_stats(year, set(torvik))
     overtime = build_overtime_rate(year, set(torvik))
+    box_profile = build_kaggle_box_profile(year, set(torvik))
+    coach = build_coach_experience(year, set(torvik))
 
     rows = []
     for team_id, seed in seeds.items():
@@ -411,6 +626,30 @@ def build_year_rows(year: int) -> list[dict]:
         )
         row.update(rosters.get(tv_id, {"returning_minutes_pct": None, "freshman_minutes_pct": None}))
         row.update(overtime.get(tv_id, {"overtime_rate": None}))
+        row.update(
+            box_profile.get(
+                tv_id,
+                {
+                    "three_pt_rate": None,
+                    "three_pt_pct": None,
+                    "opp_three_pt_pct": None,
+                    "ast_to_ratio": None,
+                    "havoc_rate": None,
+                    "true_road_win_pct": None,
+                },
+            )
+        )
+        row.update(
+            coach.get(
+                tv_id,
+                {
+                    "coach_name": None,
+                    "coach_prior_tourney_games": None,
+                    "coach_prior_tourney_wins": None,
+                    "coach_first_tourney": None,
+                },
+            )
+        )
         row.update(outcomes.get(team_id, {"outcome_finish": None, "outcome_rounds_won": None}))
         rows.append(row)
 

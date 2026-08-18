@@ -965,10 +965,25 @@ const STATS_COLUMNS = [
   // before March, so these are pre-tournament (see build_roster_stats).
   { key: 'returning_minutes_pct',     label: 'Returning%',    numeric: true, fmt: pct },
   { key: 'freshman_minutes_pct',      label: 'Frosh%',        numeric: true, fmt: pct },
+  // Shooting profile and defensive pressure from the Kaggle regular-season
+  // box score (MRegularSeasonDetailedResults) — contains zero NCAA tournament
+  // games, so pre-tournament by construction; no date filter needed.
+  { key: 'three_pt_rate',             label: '3PT Rate',      numeric: true, fmt: pct },
+  { key: 'three_pt_pct',              label: '3P%',           numeric: true, fmt: pct },
+  { key: 'opp_three_pt_pct',          label: 'Opp 3P%',       numeric: true, fmt: pct },
+  { key: 'ast_to_ratio',              label: 'Ast/TO',        numeric: true, fmt: v => v.toFixed(2) },
+  { key: 'havoc_rate',                label: 'Havoc/G',       numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'true_road_win_pct',         label: 'Road/Neut W%',  numeric: true, fmt: pct },
   // Program tournament history to date. Backward-looking only (prior years,
   // never the current one), so this IS pre-tournament information.
   { key: 'hist_residual',             label: 'Hist Resid',    numeric: true, fmt: signed2 },
   { key: 'hist_appearances',          label: 'Prior App',     numeric: true },
+  // Head coach's tournament track record BEFORE this season (Kaggle
+  // MTeamCoaches + MNCAATourneyCompactResults). Strictly backward-looking —
+  // this year's own result is never included.
+  { key: 'coach_name',                label: 'Coach',         numeric: false, fmt: v => v.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
+  { key: 'coach_prior_tourney_games', label: 'Coach G',       numeric: true },
+  { key: 'coach_prior_tourney_wins',  label: 'Coach W',       numeric: true },
   // Post-hoc tournament result — NOT knowable before the tournament. Flagged
   // `outcome: true` so the renderer can visually fence it off from every
   // column above it (see .stats-table .outcome in style.css).
