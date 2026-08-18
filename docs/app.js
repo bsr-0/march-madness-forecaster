@@ -159,6 +159,13 @@ let statsSortColumn  = 't_rank';
 let statsSortDir     = 'asc';   // 'asc' | 'desc'
 let statsSearchQuery = '';
 
+// Pairwise tournament matchups, see docs/data/matchups_by_year.json
+let matchupData        = null;   // { years, generated, matchups_by_year: { "2026": [game, ...] } }
+let matchupYear        = null;
+let matchupSortColumn  = 'fav_seed';
+let matchupSortDir     = 'asc';
+let matchupSearchQuery = '';
+
 // ──────────────────────────────────────────────────────────────────
 // BOOT
 // ──────────────────────────────────────────────────────────────────
@@ -208,15 +215,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let teamStats;
   try {
-    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17d').then(r => r.json());
+    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17e').then(r => r.json());
   } catch (err) {
     teamStats = null;
+  }
+  let matchups;
+  try {
+    matchups = await fetch('data/matchups_by_year.json?v=2026-08-17e').then(r => r.json());
+  } catch (err) {
+    matchups = null;
   }
 
   loyoData       = loyo;
   actualData     = actual;
   window3yrData  = window3yr;
   teamStatsData  = teamStats;
+  matchupData    = matchups;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -239,6 +253,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderStatsYearSelect();
     renderStatsTable();
   }
+
+  if (matchupData && matchupData.years && matchupData.years.length) {
+    matchupYear = matchupData.years[matchupData.years.length - 1];
+    document.getElementById('matchup-table-section').style.display = '';
+    renderMatchupYearSelect();
+    renderMatchupTable();
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -250,9 +271,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // visible, so switching tabs is instant with no re-fetch.
 // ──────────────────────────────────────────────────────────────────
 
+const PAGE_TABS = ['bracket', 'stats', 'matchups'];
+
 function setActiveTab(tab) {
-  document.getElementById('tab-bracket').style.display = tab === 'bracket' ? '' : 'none';
-  document.getElementById('tab-stats').style.display = tab === 'stats' ? '' : 'none';
+  PAGE_TABS.forEach(name => {
+    const el = document.getElementById(`tab-${name}`);
+    if (el) el.style.display = name === tab ? '' : 'none';
+  });
   document.querySelectorAll('.page-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
@@ -935,6 +960,11 @@ const STATS_COLUMNS = [
   { key: 'close_game_rate',           label: 'Close%',        numeric: true, fmt: pct },
   { key: 'close_game_win_rate',       label: 'Close W%',      numeric: true, fmt: pct },
   { key: 'losses_to_weaker_rate',     label: 'Bad Loss%',     numeric: true, fmt: pct },
+  { key: 'overtime_rate',             label: 'OT%',           numeric: true, fmt: pct },
+  // Roster composition. Class and prior-roster membership are settled long
+  // before March, so these are pre-tournament (see build_roster_stats).
+  { key: 'returning_minutes_pct',     label: 'Returning%',    numeric: true, fmt: pct },
+  { key: 'freshman_minutes_pct',      label: 'Frosh%',        numeric: true, fmt: pct },
   // Program tournament history to date. Backward-looking only (prior years,
   // never the current one), so this IS pre-tournament information.
   { key: 'hist_residual',             label: 'Hist Resid',    numeric: true, fmt: signed2 },
@@ -1037,3 +1067,105 @@ function renderStatsTable() {
   }).join('')}</tr>`).join('');
 }
 
+
+// ──────────────────────────────────────────────────────────────────
+// MATCHUP TABLE
+//
+// Pairwise tournament matchups, see docs/data/matchups_by_year.json
+// (scripts/generate_matchup_table.py). Same interaction model as the team
+// stats table above — year select, search, click-to-sort — but the rows are
+// GAMES rather than teams, because "my offense vs your defense" is a
+// property of a pair and has no meaning as a per-team column.
+// ──────────────────────────────────────────────────────────────────
+
+const MATCHUP_COLUMNS = [
+  { key: 'round',                 label: 'Round',      numeric: false },
+  { key: 'region',                label: 'Region',     numeric: false },
+  { key: 'fav_seed',              label: 'Favourite',  numeric: false,
+    get: r => `(${r.fav_seed}) ${r.fav}`, sortKey: 'fav_seed' },
+  { key: 'dog_seed',              label: 'Underdog',   numeric: false,
+    get: r => `(${r.dog_seed}) ${r.dog}`, sortKey: 'dog_seed' },
+  { key: 'barthag_diff',          label: 'Barthag Δ',  numeric: true, fmt: v => v.toFixed(3) },
+  { key: 'fav_off_vs_dog_def',    label: 'Fav O vs Dog D', numeric: true, fmt: signed1 },
+  { key: 'dog_off_vs_fav_def',    label: 'Dog O vs Fav D', numeric: true, fmt: signed1 },
+  { key: 'fav_efg_vs_dog_def',    label: 'Fav eFG edge',   numeric: true, fmt: signedPct },
+  { key: 'dog_efg_vs_fav_def',    label: 'Dog eFG edge',   numeric: true, fmt: signedPct },
+  { key: 'fav_to_vs_dog_press',   label: 'Fav TO vs Press', numeric: true, fmt: signedPct },
+  { key: 'dog_to_vs_fav_press',   label: 'Dog TO vs Press', numeric: true, fmt: signedPct },
+  { key: 'fav_oreb_vs_dog_dreb',  label: 'Fav OReb edge',  numeric: true, fmt: signedPct },
+  { key: 'dog_oreb_vs_fav_dreb',  label: 'Dog OReb edge',  numeric: true, fmt: signedPct },
+  { key: 'tempo_diff',            label: 'Tempo Δ',    numeric: true, fmt: signed1 },
+  { key: 'fav_margin_sd',         label: 'Fav SD',     numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'dog_margin_sd',         label: 'Dog SD',     numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'fav_close_win_pct',     label: 'Fav Close W%', numeric: true, fmt: pct },
+  { key: 'dog_close_win_pct',     label: 'Dog Close W%', numeric: true, fmt: pct },
+  { key: 'result_winner',         label: 'Winner',     numeric: false, outcome: true },
+  { key: 'result_score',          label: 'Score',      numeric: false, outcome: true },
+  { key: 'result_margin',         label: 'Margin',     numeric: true,  outcome: true },
+  { key: 'result_upset',          label: 'Upset',      numeric: false, outcome: true,
+    get: r => (r.result_upset == null ? null : (r.result_upset ? 'Upset' : '')) },
+];
+
+function signedPct(v) { return `${v > 0 ? '+' : ''}${(v * 100).toFixed(1)}%`; }
+
+function renderMatchupYearSelect() {
+  const el = document.getElementById('matchup-year-select');
+  if (!el || !matchupData) return;
+  el.innerHTML = matchupData.years.map(y =>
+    `<option value="${y}"${y === matchupYear ? ' selected' : ''}>${y}</option>`
+  ).join('');
+}
+
+function setMatchupYear(year) { matchupYear = Number(year); renderMatchupTable(); }
+
+function sortMatchupBy(column) {
+  if (matchupSortColumn === column) {
+    matchupSortDir = matchupSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    matchupSortColumn = column;
+    matchupSortDir = 'asc';
+  }
+  renderMatchupTable();
+}
+
+function setMatchupSearch(query) { matchupSearchQuery = query.trim().toLowerCase(); renderMatchupTable(); }
+
+function filterMatchupRows(rows, query) {
+  if (!query) return rows;
+  return rows.filter(r =>
+    [r.fav, r.dog, r.round, r.region].some(v => (v || '').toLowerCase().includes(query))
+  );
+}
+
+function renderMatchupTable() {
+  if (!matchupData || matchupYear == null) return;
+  const headEl = document.getElementById('matchup-table-head');
+  const bodyEl = document.getElementById('matchup-table-body');
+  if (!headEl || !bodyEl) return;
+
+  const firstOutcome = MATCHUP_COLUMNS.findIndex(c => c.outcome);
+  const cls = (col, i) =>
+    `${col.numeric ? ' numeric' : ''}${col.outcome ? ' outcome' : ''}${i === firstOutcome ? ' outcome-start' : ''}`;
+
+  headEl.innerHTML = `<tr>${MATCHUP_COLUMNS.map((col, i) => {
+    const sortOn = col.sortKey || col.key;
+    const active = sortOn === matchupSortColumn;
+    const arrow = active ? (matchupSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable${active ? ' active' : ''}${cls(col, i)}"
+                onclick="sortMatchupBy('${sortOn}')">${col.label}${arrow}</th>`;
+  }).join('')}</tr>`;
+
+  const yearRows = matchupData.matchups_by_year[String(matchupYear)] || [];
+  const sorted = sortStatsRows(filterMatchupRows(yearRows, matchupSearchQuery), matchupSortColumn, matchupSortDir);
+
+  if (sorted.length === 0) {
+    bodyEl.innerHTML = `<tr><td colspan="${MATCHUP_COLUMNS.length}" class="stats-empty">No games match “${matchupSearchQuery}”.</td></tr>`;
+    return;
+  }
+
+  bodyEl.innerHTML = sorted.map(row => `<tr${row.result_upset ? ' class="upset-row"' : ''}>${MATCHUP_COLUMNS.map((col, i) => {
+    const v = col.get ? col.get(row) : row[col.key];
+    const display = v == null ? '—' : (col.fmt ? col.fmt(v) : v);
+    return `<td class="${cls(col, i).trim()}">${display}</td>`;
+  }).join('')}</tr>`).join('');
+}

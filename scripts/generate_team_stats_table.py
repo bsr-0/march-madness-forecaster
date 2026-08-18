@@ -28,7 +28,10 @@ only 2026 is verified pre-tournament. A column clean in 1 of 16 years and
 contaminated in the rest is worse than no column.
 """
 
+import csv
 import json
+import math
+import re
 import statistics
 import sys
 from datetime import datetime, timezone
@@ -40,6 +43,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from scripts._common import HIST_DIR, load_seeds_and_regions, load_torvik_and_ff, load_tournament_results
 from src.data.normalize import bridge_cbbpy_id
 
+KAGGLE_DIR = PROJECT_ROOT / "data" / "kaggle"
 OUT = PROJECT_ROOT / "docs" / "data"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -112,6 +116,121 @@ FINISH_ON_LOSS = {
     "F4": "Final Four",
     "NCG": "Runner-up",
 }
+
+
+def _num(v) -> float:
+    """Coerce to a finite float, mapping None/NaN/garbage to 0.0.
+
+    `or 0` is not enough here: NaN is truthy, so a NaN minutes figure would
+    sail through and poison the sum. Python's json.dump then writes a bare
+    `NaN` literal, which json.load happily reads back but every browser
+    rejects as invalid JSON — a failure only visible in the browser.
+    """
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return f if math.isfinite(f) else 0.0
+
+
+def build_roster_stats(year: int, canonical_ids):
+    """Roster composition: share of minutes from returners and from freshmen.
+
+    `returning_minutes_pct` is the share of this season's minutes played by
+    players who were on the SAME team's roster the previous season (matched
+    on player_id, which is stable year to year). `freshman_minutes_pct` is
+    the share played by `eligibility_year == 1`.
+
+    Provenance caveat, stated plainly: every `cbbpy_rosters_*.json` carries
+    the same scrape timestamp, so for 2010-2025 the per-player minute
+    averages are full-season figures that include that year's tournament
+    games (2026's snapshot is genuinely mid-February, pre-tournament).
+
+    That is a milder problem here than it would be for, say, a shooting
+    percentage — which is why the shooting files are excluded outright while
+    these are kept. Both inputs to these ratios are pre-tournament facts: a
+    player's class and whether he was on last year's roster are settled long
+    before March. Only the weighting shifts, and because the metric uses
+    minutes-PER-GAME rather than season totals, playing four extra games
+    barely moves a rotation share. The contamination is second-order on the
+    weights, not first-order on the quantity itself.
+    """
+    path = HIST_DIR / f"cbbpy_rosters_{year}.json"
+    prev_path = HIST_DIR / f"cbbpy_rosters_{year - 1}.json"
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        teams = json.load(f).get("teams", [])
+
+    prior_ids: dict[str, set] = {}
+    if prev_path.exists():
+        with open(prev_path) as f:
+            for t in json.load(f).get("teams", []):
+                prior_ids[t["team_id"]] = {p.get("player_id") for p in t.get("players", [])}
+
+    out = {}
+    for t in teams:
+        raw_id = t["team_id"]
+        canonical = raw_id if raw_id in canonical_ids else bridge_cbbpy_id(raw_id, canonical_ids)
+        if canonical is None or canonical in out:
+            continue
+        players = t.get("players", [])
+        total = sum(_num(p.get("minutes_per_game")) for p in players)
+        if total <= 0:
+            continue
+        returners = prior_ids.get(raw_id, set())
+        ret = sum(_num(p.get("minutes_per_game")) for p in players if p.get("player_id") in returners)
+        frosh = sum(_num(p.get("minutes_per_game")) for p in players if p.get("eligibility_year") == 1)
+        out[canonical] = {
+            "returning_minutes_pct": round(ret / total, 4) if returners else None,
+            "freshman_minutes_pct": round(frosh / total, 4),
+        }
+    return out
+
+
+def build_overtime_rate(year: int, canonical_ids):
+    """Share of regular-season games that went to overtime.
+
+    A clutch proxy from Kaggle's box-score file. `MRegularSeasonDetailedResults`
+    contains no NCAA tournament games at all (those live in a separate file),
+    so this is pre-tournament by construction.
+
+    This is as close to "late-game performance" as the repo's data supports:
+    genuine clutch splits and blown-lead rate need play-by-play, and there is
+    no play-by-play anywhere in this repository — only final scores and box
+    score totals. Those columns are not buildable, full stop.
+    """
+    results = KAGGLE_DIR / "MRegularSeasonDetailedResults.csv"
+    spellings = KAGGLE_DIR / "MTeamSpellings.csv"
+    if not results.exists() or not spellings.exists():
+        return {}
+
+    def norm(s):
+        return re.sub(r"[^a-z0-9]", "", s.lower())
+
+    kaggle_to_canonical = {}
+    canonical_by_norm = {norm(c): c for c in canonical_ids}
+    with open(spellings, encoding="latin-1") as f:
+        for r in csv.DictReader(f):
+            canonical = canonical_by_norm.get(norm(r["TeamNameSpelling"]))
+            if canonical is not None:
+                kaggle_to_canonical[r["TeamID"]] = canonical
+
+    games: dict[str, int] = {}
+    ot: dict[str, int] = {}
+    with open(results) as f:
+        for r in csv.DictReader(f):
+            if int(r["Season"]) != year:
+                continue
+            went_ot = int(r["NumOT"]) > 0
+            for side in ("WTeamID", "LTeamID"):
+                team = kaggle_to_canonical.get(r[side])
+                if team is None:
+                    continue
+                games[team] = games.get(team, 0) + 1
+                if went_ot:
+                    ot[team] = ot.get(team, 0) + 1
+    return {t: {"overtime_rate": round(ot.get(t, 0) / n, 4)} for t, n in games.items() if n}
 
 
 def _torvik_meta(year: int) -> dict:
@@ -278,6 +397,8 @@ def build_year_rows(year: int) -> list[dict]:
     t_ranks = {tid: t.get("t_rank") for tid, t in torvik.items()}
     reg = build_regular_season_stats(year, set(torvik), t_ranks, meta.get("tournament_start"))
     outcomes = build_tournament_outcomes(year)
+    rosters = build_roster_stats(year, set(torvik))
+    overtime = build_overtime_rate(year, set(torvik))
 
     rows = []
     for team_id, seed in seeds.items():
@@ -309,6 +430,8 @@ def build_year_rows(year: int) -> list[dict]:
                 },
             )
         )
+        row.update(rosters.get(tv_id, {"returning_minutes_pct": None, "freshman_minutes_pct": None}))
+        row.update(overtime.get(tv_id, {"overtime_rate": None}))
         row.update(outcomes.get(team_id, {"outcome_finish": None, "outcome_rounds_won": None}))
         rows.append(row)
 
@@ -396,7 +519,7 @@ def main() -> None:
 
     out_path = OUT / "team_stats_by_year.json"
     with open(out_path, "w") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f, indent=2, allow_nan=False)  # NaN/Infinity are not valid JSON
         f.write("\n")
     print(f"\nWrote {out_path} ({len(payload['years'])} years)")
 

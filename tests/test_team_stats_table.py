@@ -187,3 +187,25 @@ def test_2020_absent_and_year_span():
     years = data["years"]
     assert 2020 not in years, "2020 has no tournament and must not appear"
     assert min(years) >= 2010 and max(years) <= 2026
+
+
+@pytest.mark.parametrize("path", ["docs/data/team_stats_by_year.json", "docs/data/matchups_by_year.json"])
+def test_artifact_is_strict_json(path):
+    """Artifacts must be valid JSON by the spec, not just by Python's reader.
+
+    Python writes bare `NaN`/`Infinity` literals for non-finite floats and
+    reads them straight back, so a Python-only check passes while every
+    browser refuses the file with "Unexpected token 'N'". This happened for
+    real: a NaN minutes-per-game value silently broke the whole stats table
+    in the browser while every Python test stayed green. Rejecting the
+    non-standard constants here is what actually guards the front end.
+    """
+    p = Path(path)
+    if not p.exists():
+        pytest.skip(f"{path} not generated")
+
+    def reject(const):
+        raise AssertionError(f"{path} contains non-standard JSON constant {const!r}")
+
+    with open(p) as f:
+        json.load(f, parse_constant=reject)

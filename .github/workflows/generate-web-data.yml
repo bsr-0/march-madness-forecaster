@@ -60,6 +60,8 @@ jobs:
           set -euo pipefail
           echo "=== Generating team stats table (docs/data/team_stats_by_year.json) ==="
           python scripts/generate_team_stats_table.py
+          echo "=== Generating pairwise matchup table (docs/data/matchups_by_year.json) ==="
+          python scripts/generate_matchup_table.py
 
       - name: Generate pool-aware, region, and exhaustive brackets
         run: |

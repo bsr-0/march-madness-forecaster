@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-17d">
+  <link rel="stylesheet" href="style.css?v=2026-08-17e">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
@@ -25,6 +25,7 @@
     <nav class="page-tabs" id="page-tabs">
       <button class="page-tab-btn active" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
       <button class="page-tab-btn" data-tab="stats" onclick="setActiveTab('stats')">Team Stats</button>
+      <button class="page-tab-btn" data-tab="matchups" onclick="setActiveTab('matchups')">Matchups</button>
     </nav>
 
     <div class="tab-panel" id="tab-bracket">
@@ -112,6 +113,38 @@
 
     </div>
 
+    <div class="tab-panel" id="tab-matchups" style="display:none">
+
+      <!-- Pairwise tournament matchup table -->
+      <section class="stats-table-section" id="matchup-table-section" style="display:none">
+        <p class="section-label">Tournament matchups</p>
+        <p class="stats-table-intro">
+          Every tournament game, with the pre-tournament stat crossings that actually decide them — my offense
+          against your defense, my ball security against your pressure, my offensive glass against your
+          defensive glass. These are properties of a <em>pair</em> of teams, so they can't live in the per-team
+          table. Differences are favourite-minus-underdog, so positive always favours the higher seed. Click a
+          column to sort; the <strong class="stats-outcome-key">gold columns</strong> are the result.
+        </p>
+        <div class="stats-controls">
+          <label class="stats-control">
+            <span>Year</span>
+            <select id="matchup-year-select" onchange="setMatchupYear(this.value)"></select>
+          </label>
+          <label class="stats-control stats-control-search">
+            <span>Search</span>
+            <input type="text" id="matchup-search" placeholder="Team, round or region…" oninput="setMatchupSearch(this.value)">
+          </label>
+        </div>
+        <div class="stats-table-scroll">
+          <table class="stats-table" id="matchup-table">
+            <thead id="matchup-table-head"></thead>
+            <tbody id="matchup-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
   </main>
 
   <footer class="site-footer">
@@ -119,6 +152,6 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
-  <script src="app.js?v=2026-08-17d"></script>
+  <script src="app.js?v=2026-08-17e"></script>
 </body>
 </html>
