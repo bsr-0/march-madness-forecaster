@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let teamStats;
   try {
-    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17a').then(r => r.json());
+    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17c').then(r => r.json());
   } catch (err) {
     teamStats = null;
   }
@@ -928,9 +928,24 @@ const STATS_COLUMNS = [
   { key: 'opp_turnover_rate',         label: 'Opp TO%',       numeric: true, fmt: pct },
   { key: 'defensive_reb_rate',        label: 'DReb%',         numeric: true, fmt: pct },
   { key: 'opp_free_throw_rate',       label: 'Opp FTRate',    numeric: true, fmt: pct },
+  // Regular-season volatility, computed from the pre-tournament game log.
+  { key: 'games_played',              label: 'G',             numeric: true },
+  { key: 'reg_season_margin_avg',     label: 'Margin',        numeric: true, fmt: signed1 },
+  { key: 'reg_season_margin_std',     label: 'Margin SD',     numeric: true, fmt: v => v.toFixed(1) },
+  { key: 'close_game_rate',           label: 'Close%',        numeric: true, fmt: pct },
+  { key: 'close_game_win_rate',       label: 'Close W%',      numeric: true, fmt: pct },
+  { key: 'losses_to_weaker_rate',     label: 'Bad Loss%',     numeric: true, fmt: pct },
+  // Post-hoc tournament result — NOT knowable before the tournament. Flagged
+  // `outcome: true` so the renderer can visually fence it off from every
+  // column above it (see .stats-table .outcome in style.css).
+  { key: 'outcome_finish',            label: 'Finish',        numeric: false, outcome: true },
+  { key: 'outcome_rounds_won',        label: 'Wins',          numeric: true,  outcome: true },
+  { key: 'outcome_vs_seed_delta',     label: 'vs Seed',       numeric: true,  outcome: true, fmt: signed2 },
 ];
 
 function pct(v) { return `${(v * 100).toFixed(1)}%`; }
+function signed1(v) { return `${v > 0 ? '+' : ''}${v.toFixed(1)}`; }
+function signed2(v) { return `${v > 0 ? '+' : ''}${v.toFixed(2)}`; }
 
 function renderStatsYearSelect() {
   const el = document.getElementById('stats-year-select');
@@ -988,10 +1003,17 @@ function renderStatsTable() {
   const bodyEl = document.getElementById('stats-table-body');
   if (!headEl || !bodyEl) return;
 
-  headEl.innerHTML = `<tr>${STATS_COLUMNS.map(col => {
+  // The first `outcome` column gets a divider so the post-hoc block is
+  // unmistakably fenced off from the pre-tournament columns.
+  const firstOutcome = STATS_COLUMNS.findIndex(c => c.outcome);
+  const cls = (col, i) =>
+    `${col.numeric ? ' numeric' : ''}${col.outcome ? ' outcome' : ''}${i === firstOutcome ? ' outcome-start' : ''}`;
+
+  headEl.innerHTML = `<tr>${STATS_COLUMNS.map((col, i) => {
     const active = col.key === statsSortColumn;
     const arrow = active ? (statsSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-    return `<th class="sortable${active ? ' active' : ''}${col.numeric ? ' numeric' : ''}"
+    const title = col.outcome ? ' title="Tournament result — known only after the fact, not a pre-tournament stat"' : '';
+    return `<th class="sortable${active ? ' active' : ''}${cls(col, i)}"${title}
                 onclick="sortStatsBy('${col.key}')">${col.label}${arrow}</th>`;
   }).join('')}</tr>`;
 
@@ -1004,10 +1026,10 @@ function renderStatsTable() {
     return;
   }
 
-  bodyEl.innerHTML = sorted.map(row => `<tr>${STATS_COLUMNS.map(col => {
+  bodyEl.innerHTML = sorted.map(row => `<tr>${STATS_COLUMNS.map((col, i) => {
     const v = row[col.key];
     const display = v == null ? '—' : (col.fmt ? col.fmt(v) : v);
-    return `<td class="${col.numeric ? 'numeric' : ''}">${display}</td>`;
+    return `<td class="${cls(col, i).trim()}">${display}</td>`;
   }).join('')}</tr>`).join('');
 }
 
