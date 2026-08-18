@@ -148,13 +148,30 @@ Run with the "non-negotiable" contract from `STRATEGY_CATALOG.md` §Evaluation C
 
 | Mode | P(1st) | BestRank | MeanRank | MeanScr | Wins vs seed |
 |---|---|---|---|---|---|
-| **meta_region_poolaware** (production) | **11.3%** | 11.6 | 11.6 | 849 | **15/15** |
-| meta_region | 6.3% | 12.9 | 12.9 | 903 | 8/15 |
-| meta_exhaustive | 6.2% | 13.1 | 13.1 | 889 | 8/15 |
-| seed (baseline) | 4.9% | 11.8 | 17.1 | 698 | — |
+| **meta_region_poolaware** (production) | **11.2%** | 11.4 | 11.4 | 860 | **15/15** |
+| meta_region | 6.3% | 12.9 | 12.9 | 897 | 14/15 |
+| meta_exhaustive | 6.2% | 13.1 | 13.1 | 884 | 14/15 |
+| seed (baseline) | 4.9% | 11.8 | 17.1 | 695 | — |
 
-MeanRank seed vs meta_region_poolaware: t=9.219, p<0.0001 (Bonferroni-corrected across 3 comparisons).
-Source: `artifacts/backtest_runs/mc_pool_backtest_20260816_012851.txt` (2026-08-16).
+MeanRank seed vs meta_region_poolaware: t=11.002, p<0.0001 (Bonferroni-corrected across 3 comparisons).
+Source: `artifacts/backtest_runs/mc_pool_backtest_20260818_154207.txt` (2026-08-18).
+
+**Re-measured 2026-08-18 against REPAIRED ground truth.** The previous run
+(`mc_pool_backtest_20260816_012851.txt`) was scored against
+`tournament_context_*.json` files containing 8 transposed games across 6 of these
+15 years — see `memory/tournament_results_ground_truth_defect.md`. The headline
+barely moved: P(1st) 11.33% -> 11.20%, MeanRank 11.6 -> 11.4, and significance
+strengthened (t 9.219 -> 11.002). meta_region and meta_exhaustive P(1st) and
+ranks are byte-identical across the two runs; only MeanScr shifted. So the
+published baseline was robust to the defect — the correction is a
+correctness/provenance win, not a performance revision.
+
+The "Wins vs seed" column is the **MeanRank** paired-test win count (15/15,
+14/15, 14/15 — unchanged by the repair). Note the prior table recorded 8/15 for
+meta_region/meta_exhaustive, which matches neither the MeanRank count (14/15)
+nor the BestRank count (5/15) in either artifact; its provenance is unclear and
+it should not be cited until someone reproduces it. The BestRank test remains
+non-significant for all three modes (p_adj 0.07-0.92).
 
 **Reconciles/supersedes:**
 - CLAUDE.md's "11.9% P(1st), 14/14 years, p=0.008" — that figure predates 2026 being added as a backtest
