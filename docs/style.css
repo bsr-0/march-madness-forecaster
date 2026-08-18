@@ -1235,3 +1235,16 @@ body {
 .stats-outcome-key {
   color: var(--accent-gold);
 }
+
+/* A game the lower seed won. Tinted across the whole row so upsets are
+   scannable at a glance without hunting the result column. */
+.stats-table tbody tr.upset-row td {
+  background: rgba(187, 77, 45, 0.06);
+}
+
+.stats-table tbody tr.upset-row td.outcome {
+  background: rgba(187, 77, 45, 0.13);
+  color: var(--accent-deep);
+  font-style: normal;
+  font-weight: 700;
+}
