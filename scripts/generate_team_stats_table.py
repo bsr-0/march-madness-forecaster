@@ -41,7 +41,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._common import HIST_DIR, load_seeds_and_regions, load_torvik_and_ff, load_tournament_results
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import resolve_cbbpy_bridge
 
 KAGGLE_DIR = PROJECT_ROOT / "data" / "kaggle"
 OUT = PROJECT_ROOT / "docs" / "data"
@@ -69,21 +69,6 @@ _SEEDS_TO_TORVIK_ALIASES = {
     "sam_houston": "sam_houston_state",
     "southern_miss": "southern_mississippi",
     "umass": "massachusetts",
-}
-
-_EXTRA_CBBPY_ALIASES = {
-    "unlv_rebels": "nevada_las_vegas",
-    "usc_trojans": "southern_california",
-    "lsu_tigers": "louisiana_state",
-    "ole_miss_rebels": "mississippi",
-    "loyola_chicago_ramblers": "loyola__il",
-    "loyola_maryland_greyhounds": "loyola_md",
-    "ualbany_great_danes": "albany__ny",
-    "charleston_cougars": "college_of_charleston",
-    "app_state_mountaineers": "appalachian_state",
-    "mount_st_mary_s_mountaineers": "mount_st__mary_s",
-    "sam_houston_bearkats": "sam_houston_state",
-    "southern_miss_golden_eagles": "southern_mississippi",
 }
 
 STAT_FIELDS = (
@@ -168,14 +153,25 @@ def build_roster_stats(year: int, canonical_ids):
             for t in json.load(f).get("teams", []):
                 prior_ids[t["team_id"]] = {p.get("player_id") for p in t.get("players", [])}
 
+    # Weight the bridge by total rotation minutes so that when two schools'
+    # cbbpy IDs collide on one canonical team, the real D1 roster wins. The
+    # plain first-write-wins this replaced handed the ID to whichever roster
+    # happened to come first in the file.
+    minutes = {
+        t["team_id"]: sum(_num(p.get("minutes_per_game")) for p in t.get("players", []))
+        for t in teams
+        if t.get("team_id")
+    }
+    bridge_map = resolve_cbbpy_bridge(minutes, canonical_ids)
+
     out = {}
     for t in teams:
         raw_id = t["team_id"]
-        canonical = raw_id if raw_id in canonical_ids else bridge_cbbpy_id(raw_id, canonical_ids)
-        if canonical is None or canonical in out:
+        canonical = bridge_map.get(raw_id)
+        if canonical is None:
             continue
         players = t.get("players", [])
-        total = sum(_num(p.get("minutes_per_game")) for p in players)
+        total = minutes[raw_id]
         if total <= 0:
             continue
         returners = prior_ids.get(raw_id, set())
@@ -255,17 +251,10 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
     with open(path) as f:
         games = json.load(f).get("games", [])
 
-    # --- Build the cbbpy -> canonical map, then de-duplicate it. ---------
-    # bridge_cbbpy_id falls back to longest-prefix matching, which happily
-    # maps non-D1 schools onto a D1 team whose name they start with:
-    # "virginia_union_panthers" -> "virginia", "arkansas_tech_wonder_boys" ->
-    # "arkansas". Left alone that folds a D2 team's blowout losses into a
-    # tournament team's volatility numbers.
-    #
-    # Disambiguate by schedule length: in a D1 game log the real team plays a
-    # full ~30-game season while an impostor appears once or twice. Measured
-    # on 2026 the gap is 28-33 games vs 1-4, so "most games wins" separates
-    # them with a wide margin.
+    # Resolve the whole log at once, weighted by schedule length, so a non-D1
+    # school that merely starts with a D1 school's name does not fold its
+    # blowout losses into that team's volatility. `canonical_ids` here is the
+    # full Torvik D1 list, which doubles as the disambiguating universe.
     appearances: dict[str, int] = {}
     for g in games:
         for key in ("team1_id", "team2_id"):
@@ -273,17 +262,7 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
             if raw:
                 appearances[raw] = appearances.get(raw, 0) + 1
 
-    candidates: dict[str, list[str]] = {}
-    for raw in appearances:
-        alias = _EXTRA_CBBPY_ALIASES.get(raw)
-        canonical = alias if (alias is not None and alias in canonical_ids) else bridge_cbbpy_id(raw, canonical_ids)
-        if canonical is not None:
-            candidates.setdefault(canonical, []).append(raw)
-
-    bridge_map: dict[str, str] = {}
-    for canonical, raws in candidates.items():
-        winner = max(raws, key=lambda r: appearances[r])
-        bridge_map[winner] = canonical
+    bridge_map = resolve_cbbpy_bridge(appearances, canonical_ids)
 
     def bridge(raw_id):
         return bridge_map.get(raw_id)

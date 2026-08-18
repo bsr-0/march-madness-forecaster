@@ -13,7 +13,7 @@ and asserts we now cover every tournament team (vs 17/68 before the bridge).
 import json
 from pathlib import Path
 
-from src.data.normalize import _CBBPY_EDGE_CASES, bridge_cbbpy_id
+from src.data.normalize import _CBBPY_EDGE_CASES, bridge_cbbpy_id, resolve_cbbpy_bridge
 
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
 
@@ -103,3 +103,94 @@ def test_bridge_does_not_collide_on_shared_prefixes():
     # cbbpy IDs for each (from _CBBPY_EDGE_CASES)
     assert bridge_cbbpy_id("miami_hurricanes", canonical) == "miami__fl"
     assert bridge_cbbpy_id("miami_oh_redhawks", canonical) == "miami__oh"
+
+
+def test_resolve_bridge_drops_lower_division_impostors():
+    """A non-D1 school sharing a D1 name prefix must not claim the canonical ID.
+
+    ``virginia_union_panthers`` (Division II) prefix-matches ``virginia``
+    exactly the way ``virginia_cavaliers`` does, so per-ID bridging hands
+    both of them the same canonical team. ``resolve_cbbpy_bridge`` breaks the
+    tie on weight — the real team dominates any dataset built from D1 games
+    or rosters — and drops the loser entirely so callers' ``.get()`` misses it.
+    """
+    canonical = {"virginia", "arkansas"}
+    weights = {
+        "virginia_cavaliers": 31,
+        "virginia_union_panthers": 2,
+        "arkansas_razorbacks": 33,
+        "arkansas_tech_wonder_boys": 1,
+        "montana_state_bobcats": 30,  # bridges nowhere
+    }
+    resolved = resolve_cbbpy_bridge(weights, canonical)
+    assert resolved == {"virginia_cavaliers": "virginia", "arkansas_razorbacks": "arkansas"}
+    assert resolved.get("virginia_union_panthers") is None
+
+
+def test_resolve_bridge_is_deterministic_on_tied_weights():
+    """Equal weights must not make the winner depend on dict ordering."""
+    canonical = {"virginia"}
+    forward = resolve_cbbpy_bridge({"virginia_cavaliers": 5, "virginia_union_panthers": 5}, canonical)
+    reverse = resolve_cbbpy_bridge({"virginia_union_panthers": 5, "virginia_cavaliers": 5}, canonical)
+    assert forward == reverse
+
+
+def test_resolve_bridge_keeps_exact_matches():
+    """An ID that is already canonical still resolves to itself."""
+    resolved = resolve_cbbpy_bridge({"duke": 30, "duke_blue_devils": 1}, {"duke"})
+    assert resolved == {"duke": "duke"}
+
+
+def test_resolve_bridge_uses_universe_to_separate_d1_schools():
+    """Another D1 school must not claim a canonical ID just because the target
+    set is a subset of D1.
+
+    ``alabama_state_hornets`` prefix-matches ``alabama`` whenever
+    ``alabama_state`` is missing from the set being matched against — which is
+    exactly what happens when the target set is the 68 tournament teams. It is
+    not rescuable by weighting: Alabama State played more games than Alabama in
+    2026. Only the full D1 universe fixes it.
+    """
+    tourney = {"alabama"}
+    universe = {"alabama", "alabama_state", "alabama_a_m"}
+    weights = {
+        "alabama": 31,
+        "alabama_state_hornets": 32,  # deliberately outweighs the real team
+        "alabama_a_m_bulldogs": 31,
+    }
+    assert resolve_cbbpy_bridge(weights, tourney, universe=universe) == {"alabama": "alabama"}
+    # Without the universe the heavier impostor wins — the bug this guards.
+    assert resolve_cbbpy_bridge(weights, tourney) == {"alabama_state_hornets": "alabama"}
+
+
+def test_edge_cases_cover_teams_the_prefix_fallback_cannot_reach():
+    """Teams whose cbbpy name shares no prefix with the canonical ID.
+
+    Each of these was found by sweeping every seeded team in 2011-2026 for ones
+    that bridge to nothing. ``ole_miss_rebels`` is the important one: before it
+    was listed, ``mississippi`` prefix-matched ``mississippi_state_bulldogs``
+    and Ole Miss silently ran on Mississippi State's roster and game log.
+    """
+    cases = {
+        "ole_miss_rebels": "mississippi",
+        "lsu_tigers": "louisiana_state",
+        "usc_trojans": "southern_california",
+        "unlv_rebels": "nevada_las_vegas",
+        "ualbany_great_danes": "albany__ny",
+        "charleston_cougars": "college_of_charleston",
+        "loyola_chicago_ramblers": "loyola__il",
+        "loyola_maryland_greyhounds": "loyola_md",
+        "app_state_mountaineers": "appalachian_state",
+        "mount_st_mary_s_mountaineers": "mount_st__mary_s",
+    }
+    for cbbpy_id, expected in cases.items():
+        assert bridge_cbbpy_id(cbbpy_id, {expected}) == expected, cbbpy_id
+
+    # Ole Miss must win "mississippi" over Mississippi State even when both
+    # are present and the state school carries more data.
+    resolved = resolve_cbbpy_bridge(
+        {"ole_miss_rebels": 31, "mississippi_state_bulldogs": 34},
+        {"mississippi"},
+        universe={"mississippi", "mississippi_state"},
+    )
+    assert resolved == {"ole_miss_rebels": "mississippi"}

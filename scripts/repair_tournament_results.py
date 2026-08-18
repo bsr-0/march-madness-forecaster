@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._common import HIST_DIR
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import resolve_cbbpy_bridge
 
 ROUNDS = ("R64", "R32", "S16", "E8", "F4", "NCG")
 YEARS = [y for y in range(2010, 2027) if y != 2020]
@@ -50,12 +50,20 @@ def _game_log_result(year: int, a: str, b: str):
         canonical = {t["team_id"] for t in json.load(f)["teams"]}
     with open(gpath) as f:
         games = json.load(f).get("games", [])
-    cache: dict = {}
+
+    # Resolve the whole log at once so a lower-division school that shares a
+    # D1 school's name prefix cannot impersonate it (see
+    # memory/cbbpy_team_id_bridge_defect.md). `canonical` is already the full
+    # Torvik D1 list, which doubles as the disambiguating universe.
+    appearances: dict[str, int] = {}
+    for g in games:
+        for key in ("team1_id", "team2_id"):
+            if g.get(key):
+                appearances[g[key]] = appearances.get(g[key], 0) + 1
+    bridge_map = resolve_cbbpy_bridge(appearances, canonical)
 
     def bridge(x):
-        if x not in cache:
-            cache[x] = bridge_cbbpy_id(x, canonical)
-        return cache[x]
+        return bridge_map.get(x)
 
     for g in games:
         t1, t2 = bridge(g.get("team1_id", "")), bridge(g.get("team2_id", ""))

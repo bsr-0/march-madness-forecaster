@@ -19,7 +19,7 @@ test year's adjustment is computed in isolation.
 
 cbbpy team IDs (e.g., ``abilene_christian_wildcats``) are bridged to the
 canonical Torvik / seeds ID scheme via
-``src.data.normalize.bridge_cbbpy_id`` — the same bridge used by the Elo
+``src.data.normalize.resolve_cbbpy_bridge`` — the same bridge used by the Elo
 and volatile sources (catalog phase 1b7).
 """
 
@@ -30,7 +30,7 @@ import statistics
 from pathlib import Path
 from typing import Dict, Iterable
 
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import load_d1_team_ids, resolve_cbbpy_bridge
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 # round_probs[team][rnd] = P(team WINS its rnd game), per
@@ -104,13 +104,24 @@ def load_team_talent(
     if not teams:
         return {}
 
+    # Resolve the bridge across the whole roster file at once, against the full
+    # D1 field and weighted by each roster's total player-games. Bridging one
+    # ID at a time against the 68 tournament teams hands "alabama_state_hornets"
+    # the canonical "alabama", and the loop below is last-write-wins, so
+    # Alabama's WARP would simply be overwritten by Alabama State's.
+    weights = {
+        team["team_id"]: sum((p.get("games_played") or 0) for p in (team.get("players") or []))
+        for team in teams
+        if team.get("team_id")
+    }
+    bridge = resolve_cbbpy_bridge(
+        weights, canonical_set, universe=load_d1_team_ids(year, data_root)
+    )
+
     talent: Dict[str, float] = {}
     for team in teams:
-        cbbpy_id = team.get("team_id")
-        if not cbbpy_id:
-            continue
-        canonical = bridge_cbbpy_id(cbbpy_id, canonical_set)
-        if canonical is None or canonical not in canonical_set:
+        canonical = bridge.get(team.get("team_id"))
+        if canonical is None:
             continue
         top5 = _team_top5_warp(team.get("players") or [])
         if top5 is not None:
