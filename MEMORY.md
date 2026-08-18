@@ -173,6 +173,12 @@ nor the BestRank count (5/15) in either artifact; its provenance is unclear and
 it should not be cited until someone reproduces it. The BestRank test remains
 non-significant for all three modes (p_adj 0.07-0.92).
 
+**Unaffected by the 2026-08-18 cbbpy team-ID bridge fix.** That fix corrected 70% of
+`volatile` and 15% of `roster_adj` values across these same 15 years (see
+`memory/cbbpy_team_id_bridge_defect.md`), but none of the three modes above consume
+those sources — `meta_region_poolaware` runs on `tv`/`mass_avg`/`mass_best`/`blend`/
+`tv_mass80`. This baseline does not need re-running on account of it.
+
 **Reconciles/supersedes:**
 - CLAUDE.md's "11.9% P(1st), 14/14 years, p=0.008" — that figure predates 2026 being added as a backtest
   year and used a different `--modes` set; 11.3%/15-15 is the direct, reproducible update.

@@ -1,7 +1,7 @@
 """Elo source (catalog A4).
 
 Self-contained Elo computation from regular-season game results, bridged
-to canonical tournament team IDs via ``src.data.normalize.bridge_cbbpy_id``
+to canonical tournament team IDs via ``src.data.normalize.resolve_cbbpy_bridge``
 so the output slots into the same ``base_round_probs`` dispatch that
 torvik / odds / spread_power already use.
 
@@ -42,7 +42,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import load_d1_team_ids, resolve_cbbpy_bridge
 
 _ELO_START = 1500.0
 _ELO_K = 38.0  # catalog A4 spec
@@ -148,16 +148,18 @@ def load_elo_barthag(
     if not elo_by_cbbpy:
         return None
 
-    # Bridge each cbbpy ID to canonical. Only keep mappings whose target
-    # is a tournament team. If multiple cbbpy IDs bridge to the same
-    # canonical (shouldn't happen but defensive), keep the highest-Elo one.
-    canonical_elo: Dict[str, float] = {}
-    for cbbpy_id, rating in elo_by_cbbpy.items():
-        canonical = bridge_cbbpy_id(cbbpy_id, canonical_ids)
-        if canonical is None:
-            continue
-        if canonical not in canonical_elo or rating > canonical_elo[canonical]:
-            canonical_elo[canonical] = rating
+    # Bridge every cbbpy ID at once rather than one at a time. Against the 68
+    # tournament teams alone, the bridge's prefix fallback routes other D1
+    # schools onto a seeded team ("alabama_state_hornets" -> "alabama"), so
+    # this needs the full D1 field to disambiguate. Rating doubles as the
+    # collision weight, preserving this function's original highest-Elo
+    # tiebreak; verified a no-op across all 1020 team-years of 2011-2026.
+    bridge = resolve_cbbpy_bridge(
+        elo_by_cbbpy, canonical_ids, universe=load_d1_team_ids(year, data_root)
+    )
+    canonical_elo: Dict[str, float] = {
+        canonical: elo_by_cbbpy[raw] for raw, canonical in bridge.items()
+    }
 
     # Build the output, using the seed-based fallback for unresolved teams.
     result: Dict[str, float] = {}

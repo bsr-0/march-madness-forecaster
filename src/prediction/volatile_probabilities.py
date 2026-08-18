@@ -36,7 +36,7 @@ import statistics
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import load_d1_team_ids, resolve_cbbpy_bridge
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 # round_probs[team][rnd] = P(team WINS its rnd game) — see the identical
@@ -74,7 +74,7 @@ def load_team_volatility(
 
     For each team in ``canonical_ids``, pull its game-by-game point margins
     from ``historical_games_{year}.json`` (bridging cbbpy IDs via
-    ``src.data.normalize.bridge_cbbpy_id``), compute the standard deviation
+    ``src.data.normalize.resolve_cbbpy_bridge``), compute the standard deviation
     of margins, and normalize by the league max. Teams with fewer than
     ``min_games`` games get the neutral 0.5 fallback — no volatility signal
     either way.
@@ -101,17 +101,38 @@ def load_team_volatility(
     raw = json.load(open(games_path))
     games = raw["games"] if isinstance(raw, dict) and "games" in raw else raw
 
+    def in_window(g) -> bool:
+        if cutoff is not None and g.get("date") and g["date"] >= cutoff:
+            return False  # tournament game
+        return g.get("team1_score") is not None and g.get("team2_score") is not None
+
+    # Resolve the bridge over the whole game log first, against the full D1
+    # field and weighted by games played. Bridging game-by-game against the
+    # 68 tournament teams instead pours other schools' margins into a real
+    # team's list — Alabama State's and Alabama A&M's into Alabama's, Virginia
+    # Lynchburg's into Virginia's. See `resolve_cbbpy_bridge` for why the
+    # universe and the weight each fix a different half of that.
+    appearances: Dict[str, int] = {}
+    for g in games:
+        if not in_window(g):
+            continue
+        for key in ("team1_id", "team2_id"):
+            raw = g.get(key)
+            if raw:
+                appearances[raw] = appearances.get(raw, 0) + 1
+    bridge = resolve_cbbpy_bridge(
+        appearances, canonical_set, universe=load_d1_team_ids(year, data_root)
+    )
+
     # Accumulate point margins per canonical team ID.
     margins: Dict[str, list] = {tid: [] for tid in canonical_set}
     for g in games:
-        if cutoff is not None and g.get("date") and g["date"] >= cutoff:
-            continue  # skip tournament games
-        s1 = g.get("team1_score")
-        s2 = g.get("team2_score")
-        if s1 is None or s2 is None:
+        if not in_window(g):
             continue
-        t1 = bridge_cbbpy_id(g["team1_id"], canonical_set)
-        t2 = bridge_cbbpy_id(g["team2_id"], canonical_set)
+        s1 = g["team1_score"]
+        s2 = g["team2_score"]
+        t1 = bridge.get(g["team1_id"])
+        t2 = bridge.get(g["team2_id"])
         if t1 is not None:
             margins[t1].append(s1 - s2)
         if t2 is not None:

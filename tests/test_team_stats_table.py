@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from scripts._common import load_tournament_results
-from src.data.normalize import bridge_cbbpy_id
+from src.data.normalize import resolve_cbbpy_bridge
 
 ARTIFACT = Path("docs/data/team_stats_by_year.json")
 HIST = Path("data/raw/historical")
@@ -51,7 +51,7 @@ def test_no_tournament_games_in_pre_tournament_window(year):
     Matches on (team pair, exact score pair), so it catches a bad date
     filter regardless of how the game log spells its dates.
     """
-    from scripts.generate_team_stats_table import _EXTRA_CBBPY_ALIASES, _torvik_meta
+    from scripts.generate_team_stats_table import _torvik_meta
 
     games_path = HIST / f"historical_games_{year}.json"
     if not games_path.exists():
@@ -69,16 +69,18 @@ def test_no_tournament_games_in_pre_tournament_window(year):
     }
     assert ncaa, f"{year} has no tournament results to check against"
 
-    cache: dict[str, str | None] = {}
-
-    def bridge(raw):
-        if raw not in cache:
-            alias = _EXTRA_CBBPY_ALIASES.get(raw)
-            cache[raw] = alias if (alias and alias in canonical) else bridge_cbbpy_id(raw, canonical)
-        return cache[raw]
-
     with open(games_path) as f:
         log = json.load(f).get("games", [])
+
+    appearances: dict[str, int] = {}
+    for g in log:
+        for key in ("team1_id", "team2_id"):
+            if g.get(key):
+                appearances[g[key]] = appearances.get(g[key], 0) + 1
+    bridge_map = resolve_cbbpy_bridge(appearances, canonical)
+
+    def bridge(raw):
+        return bridge_map.get(raw)
 
     leaked = []
     for g in log:

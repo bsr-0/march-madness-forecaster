@@ -377,6 +377,23 @@ _CBBPY_EDGE_CASES: dict[str, str] = {
     "smu_mustangs": "southern_methodist",
     "st_john_s_red_storm": "st__john_s__ny",
     "vcu_rams": "virginia_commonwealth",
+    # Found 2026-08-18 by sweeping every seeded team across 2011-2026 for ones
+    # that bridge to nothing. Each was previously either silently absent or
+    # — worse — served another school's data via the prefix fallback: Ole Miss
+    # was reading Mississippi State's roster.
+    "app_state_mountaineers": "appalachian_state",
+    "charleston_cougars": "college_of_charleston",
+    "loyola_chicago_ramblers": "loyola__il",
+    "loyola_maryland_greyhounds": "loyola_md",
+    "lsu_tigers": "louisiana_state",
+    # The MAAC school in Maryland, not "mount_saint_mary_ny_knights".
+    "mount_st_mary_s_mountaineers": "mount_st__mary_s",
+    "ole_miss_rebels": "mississippi",
+    "ualbany_great_danes": "albany__ny",
+    "unlv_rebels": "nevada_las_vegas",
+    "usc_trojans": "southern_california",
+    "sam_houston_bearkats": "sam_houston_state",
+    "southern_miss_golden_eagles": "southern_mississippi",
 }
 
 
@@ -387,7 +404,7 @@ def bridge_cbbpy_id(cbbpy_id: str, canonical_ids: Iterable[str]) -> str | None:
       1. **Exact match** — the cbbpy ID is already canonical (happens for teams
          whose names Torvik spells the same way, e.g. ``duke`` and ``duke``).
       2. **Edge-case alias** — explicit mapping in ``_CBBPY_EDGE_CASES`` for
-         the 12 teams where cbbpy diverges materially (UConn/BYU/SMU/...).
+         the teams where cbbpy diverges materially (UConn/BYU/SMU/LSU/...).
       3. **Longest-prefix match** — find the longest element of
          ``canonical_ids`` that is a prefix of ``cbbpy_id`` followed by ``_``.
          This catches the bulk of cases: ``illinois_fighting_illini`` →
@@ -416,7 +433,90 @@ def bridge_cbbpy_id(cbbpy_id: str, canonical_ids: Iterable[str]) -> str | None:
         return edge
     # Longest-prefix fallback: sort candidates by length descending so the
     # most specific prefix wins (north_carolina_state before north_carolina).
+    #
+    # CAUTION: this is only as good as `canonical_ids` is complete. Any school
+    # whose name begins with a canonical ID also matches, and if the ID that
+    # would out-match it is absent from the set, it wins. Passing the 68
+    # tournament teams rather than the full D1 list therefore routes
+    # "alabama_state_hornets" onto "alabama" — on 2026 that hits 19 of the 68.
+    # To bridge a whole collection rather than one known ID, use
+    # `resolve_cbbpy_bridge` below and give it the D1 universe.
     for canonical in sorted(canonical_set, key=len, reverse=True):
         if cbbpy_id.startswith(canonical + "_"):
             return canonical
     return None
+
+
+def load_d1_team_ids(year: int, data_root) -> frozenset[str]:
+    """Canonical IDs for every D1 team in a season, for use as a bridge universe.
+
+    Returns an empty set if the Torvik file for the year is missing — callers
+    should treat that as "no universe available" and fall back to bridging
+    against their target set directly.
+    """
+    path = Path(data_root) / "raw" / "historical" / f"torvik_{year}.json"
+    if not path.exists():
+        return frozenset()
+    with open(path) as f:
+        teams = json.load(f).get("teams") or []
+    return frozenset(t["team_id"] for t in teams if t.get("team_id"))
+
+
+def resolve_cbbpy_bridge(weighted_ids, canonical_ids, universe=None) -> dict[str, str]:
+    """Bridge a whole collection of cbbpy IDs, resolving prefix collisions.
+
+    `bridge_cbbpy_id` maps one ID at a time against one target set, which
+    produces two distinct classes of wrong answer when the target set is a
+    subset of D1 (e.g. the 68 tournament teams):
+
+    1. **Other D1 schools.** `alabama_state_hornets` prefix-matches the
+       canonical `alabama` because `alabama_state` is not in the target set to
+       out-match it. Measured on 2026, 19 of 68 tournament teams collect at
+       least one such ID, and the impostor often carries *more* data than the
+       real team (Alabama State played 32 games to Alabama's 31), so no
+       amount of weighting saves you.
+    2. **Non-D1 schools.** `virginia_lynchburg_dragons` prefix-matches
+       `virginia` and appears in no canonical set at all. 13 of 68 tournament
+       teams collect one of these.
+
+    Each class needs its own fix, so this applies both:
+
+    * Bridging against `universe` (the full D1 team list) rather than the
+      target set lets longest-prefix do its job — `alabama_state_hornets`
+      matches `alabama_state`, which is simply not a tournament team, so it
+      drops out. This is what kills class 1, and nothing else does.
+    * Whatever survives into a single canonical ID is then resolved by
+      weight, largest wins. Class 2 impostors are genuinely tiny in a D1
+      dataset — across all 13 collisions in 2026 the real team led by at
+      least 2.9x on roster player-games and 3.1x on games played — so this
+      is decisive rather than a coin flip.
+
+    Args:
+        weighted_ids: mapping of cbbpy ID -> weight. Use whatever measures
+            "how much of this dataset belongs to this ID": games played,
+            total player-games, roster size. Larger wins; ties break on the
+            ID string so the result never depends on dict ordering.
+        canonical_ids: the canonical IDs to bridge onto.
+        universe: the full D1 canonical ID set for the season (see
+            `load_d1_team_ids`). Optional but strongly recommended — without
+            it, class-1 collisions above are unfixable.
+
+    Returns:
+        `{cbbpy_id: canonical_id}` containing only the winning ID per
+        canonical. IDs that bridge nowhere, that bridge outside
+        `canonical_ids`, or that lost a collision are absent — so a plain
+        `.get()` on the result drops impostors.
+    """
+    target = frozenset(canonical_ids)
+    match_against = frozenset(universe) | target if universe else target
+
+    candidates: dict[str, list[str]] = {}
+    for raw in weighted_ids:
+        canonical = bridge_cbbpy_id(raw, match_against)
+        if canonical in target:
+            candidates.setdefault(canonical, []).append(raw)
+
+    return {
+        max(raws, key=lambda r: (weighted_ids[r], r)): canonical
+        for canonical, raws in candidates.items()
+    }
