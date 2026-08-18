@@ -53,7 +53,7 @@ Populated by `python -m scripts.run_experiment --oracle <year>`. A **positive ga
 | 2025 | Chalk | 4/4 | 3/4 (f4_first_tv) | +150 | +280 |
 | 2026 | Mixed | 4/4 (f4_first_tv) | 1/4 | +610 | +830 |
 
-**Observation (open, not yet locked):** ranker gap correlates with regime — chaos / deep-upset years see the largest gaps (2023: +820 torvik; 2026: +830 f4_first_tv). Chalk years have small gaps (2025 + small on both modes). Direction matches MEMORY.md §3 open diagnostic ("opponent-model mis-specification impacts P(1st) reliability in edge years").
+**Observation (open, not yet locked):** ranker gap correlates with regime — chaos / deep-upset years see the largest gaps (2023: +820 torvik; 2026: +830 f4_first_tv). Chalk years have small gaps (2025 + small on both modes). Direction matches the open diagnostic that opponent-model mis-specification impacts P(1st) reliability in edge years (see `FINDINGS.md` §3, O6 calibration finding).
 
 Sample size is too small to promote this to a Locked Decision — reopen after 2027 tournament if the pattern holds (Chaos year → large gap; Chalk year → small gap).
 

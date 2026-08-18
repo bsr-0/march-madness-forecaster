@@ -1,7 +1,10 @@
 # Ground-truth defect: 8 transposed games in tournament_context_{year}.json
 
-**Investigated 2026-08-18. Confirmed. NOT yet fixed — fixing changes backtest
-ground truth and therefore every recorded baseline, so it needs a decision.**
+**Investigated and FIXED 2026-08-18.** The repair moved P(1st) only
+11.3%→11.2% (MeanRank 11.6→11.4, significance strengthened t 9.219→11.002) —
+a provenance correction, not a performance revision. CLAUDE.md's current
+baseline table reflects the repaired ground truth. The analysis below is kept
+for the record of what was wrong and why the fix was low-risk.
 
 Run `python3 scripts/audit_tournament_results.py` to reproduce.
 
@@ -80,22 +83,14 @@ against the field, the recorded numbers **may understate** true P(1st). That is
 a hypothesis about direction, not a measurement — quantifying it requires a
 backtest re-run.
 
-## Why this is not fixed yet — decision needed
+## Resolution (was: "not fixed yet — decision needed")
 
-Correcting the data is a two-line-per-game edit, but it **invalidates every
-recorded baseline**: the 11.3% P(1st), MeanRank 11.6, "15/15 years beating
-seed", the p<0.0001 significance claim (`MEMORY.md` §3), the numbers baked into
-`docs/app.js`, and the strategy comparison table in `CLAUDE.md`. All were
-measured against the corrupted truth for 6 of 15 years.
-
-So a fix is really a three-part job:
-1. Correct the eight games (and optionally 2025's loser identity).
-2. Re-run the canonical 15-year backtest — which needs explicit approval per
-   `memory/run_policy.md`.
-3. Update every published figure that moves.
-
-**Do not** do (1) without (2) and (3), or the repo will carry numbers that match
-neither the old truth nor the new one.
+This section originally flagged the fix as a three-part job requiring
+approval before running: (1) correct the eight games, (2) re-run the
+canonical 15-year backtest, (3) update every published figure that moves.
+All three happened 2026-08-18 — CLAUDE.md's baseline table, `docs/app.js`,
+and this repo's other published figures now reflect the repaired ground
+truth (11.2% P(1st), 15/15 years, p<0.0001).
 
 ## Guardrail
 

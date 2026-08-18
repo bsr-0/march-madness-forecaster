@@ -7,7 +7,7 @@
 - **Model accuracy is not the pool's bottleneck — don't pursue it for P(1st).** The Kaggle model (torvik_corrected) achieves BSS +0.133 (Brier=0.1305) and is at an architecture plateau — see `memory/project_kaggle_brier_pipeline.md`. Marginal Brier improvements don't translate to P(1st) gains; construction and selection dominate. **Do NOT pursue model accuracy improvements for pool purposes.**
 - **For Kaggle submissions:** BSS +0.133 is the current production baseline. Architecture ceiling reached (2026 upset-year anomaly blocks further gains with current feature set). See `memory/project_kaggle_brier_pipeline.md` before attempting Brier improvements.
 - **P(1st) of the submitted bracket is the only metric that pays out.** Pool is winner-take-all, single entry, ~30 people.
-- **Current baseline:** 11.2% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 6.3% meta_region, 4.6% meta_gbm. Seed baseline: 4.9%. Beats seed 15/15 backtest years (MeanRank t=11.0, p<0.0001, Bonferroni-corrected across 3 comparisons). Re-validated 2026-08-18 against repaired ground truth (8 transposed games fixed — see `memory/tournament_results_ground_truth_defect.md`; the repair moved P(1st) only 11.3%->11.2%) over the full 15-year window (2011-2026 excl. 2020, now that 2026 has concluded) — see `MEMORY.md` §3 "Pool backtest — production strategy validation" for the canonical run and what it supersedes (the prior 11.9%/14-yr/3.1%-seed figures).
+- **Current baseline:** 11.2% P(1st) via `meta_region_poolaware` (generate ~25 diverse candidate brackets, simulate each against opponent field, select highest P(1st)). Up from 6.3% meta_region, 4.6% meta_gbm. Seed baseline: 4.9%. Beats seed 15/15 backtest years (MeanRank t=11.0, p<0.0001, Bonferroni-corrected across 3 comparisons). Re-validated 2026-08-18 against repaired ground truth (8 transposed games fixed — see `memory/tournament_results_ground_truth_defect.md`; the repair moved P(1st) only 11.3%->11.2%) over the full 15-year window (2011-2026 excl. 2020, now that 2026 has concluded). Canonical run contract: `--team-identity --opponent pool --n-opponents 30 --n-repeats 100`. Source: `artifacts/backtest_runs/mc_pool_backtest_20260818_154207.txt`. This table is the canonical figure — earlier 11.9%/14-yr/3.1%-seed citations are stale and superseded.
 - **Acceptance gate for any change:** P(1st) must improve across >=8/15 backtest years (N=31 pool: 30 opponents + model bracket, team-identity scoring).
 - **Do NOT optimize** MeanRank, P(top25%), or MeanScore — they don't pay out in winner-take-all.
 - **Before implementing any new strategy:** Read `memory/project_testing_protocol.md` for the 5-file checklist, significance testing gates, available data sources, and iteration workflow.
@@ -16,7 +16,7 @@
 
 ## Architectural Direction: Construction-First (2026-05-01)
 
-**READ BEFORE ANY BRACKET CONSTRUCTION WORK.** Full details in `memory/project_meta_selector_pivot.md` and `docs/session-summaries/session-20260501-193935.md`.
+**READ BEFORE ANY BRACKET CONSTRUCTION WORK.** Full details in `memory/project_meta_selector_pivot.md` and `FINDINGS.md` §1-3 (the 14-technique bakeoff and selection-problem history).
 
 The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + smart construction beats learned models + naive construction**. Region top-N beam search and exhaustive champion search using raw torvik round probabilities outperform the GBM meta-selector by 2x. GBM-predicted round probabilities fed into construction modes actually HURT — less calibrated than torvik.
 
@@ -24,14 +24,14 @@ The 14-technique bakeoff (2026-05-01) proved that **calibrated probabilities + s
 
 Rows marked ⁱⁱ were re-validated 2026-08-16 over the full 15-year window (2011-2026 excl. 2020, now
 that 2026 has concluded) under the canonical contract (`--team-identity --opponent pool --n-opponents 30
---n-repeats 100`, see `MEMORY.md` §3). Unmarked rows still reflect the older 14-year (2011-2025 excl. 2020)
+--n-repeats 100`). Unmarked rows still reflect the older 14-year (2011-2025 excl. 2020)
 bakeoff and haven't been rerun against the 15-year window — treat their exact figures as provisional.
 
 | Mode | Algorithm | P(1st) | MeanRank | Yrs>Seed | Status |
 |------|-----------|:------:|:--------:|:--------:|--------|
 | **meta_region_poolaware**ⁱⁱ | ~25 candidates × pool-aware selection | **11.2%** | **11.4** | **15/15** | **PRODUCTION — p<0.0001** |
-| **meta_region**ⁱⁱ | Region top-N beam search on torvik probs | **6.3%** | **12.9** | **8/15** | **right at gate boundary — see MEMORY.md §3** |
-| **meta_exhaustive**ⁱⁱ | Exhaustive 64-champion search on torvik probs | **6.2%** | **13.1** | **8/15** | **right at gate boundary — see MEMORY.md §3** |
+| **meta_region**ⁱⁱ | Region top-N beam search on torvik probs | **6.3%** | **12.9** | **8/15** | **right at gate boundary — real erosion vs the 14-yr figure below, not a measurement artifact (2026 is a hard upset year)** |
+| **meta_exhaustive**ⁱⁱ | Exhaustive 64-champion search on torvik probs | **6.2%** | **13.1** | **8/15** | **right at gate boundary — same note as meta_region** |
 | meta_gbm_margin | XGB margin regression, per-game picks | 5.3% | 12.1 | 6/14 | Trending up (8.5% last 4 yrs) |
 | meta_gbm | LightGBM 39-feat, corrected context | 4.6% | 14.8 | 8/14 | Superseded by construction modes |
 | seed baselineⁱⁱ | Stochastic seed-probability sampling | 4.9% | 17.1 | — | BASELINE |
@@ -71,7 +71,7 @@ The v1→v2 fix was literally one line: `weight = float(pts)` instead of `pts * 
 
 The pre-pivot stochastic regime emits 50 brackets per strategy and selects 1 via a ranker. Two ceilings were measured against that pipeline:
 - **"Oracle best-of-50: ~9% P(1st)"** (North Star section above).
-- **"Mean 8.08-rank gap between MC ranker pick and oracle-best-of-50"** (MEMORY.md §3 council 64 row, 2026-04-25).
+- **"Mean 8.08-rank gap between MC ranker pick and oracle-best-of-50"** (see `FINDINGS.md` §2 "irreducible selection noise finding", 2026-04-25).
 
 Both numbers are **regime-specific to stochastic-50-then-select**. The post-pivot deterministic meta-learner regime emits ONE bracket per model — there is no within-strategy candidate pool and no selection step, so neither ceiling applies. The deterministic-regime ceiling has not been measured. The theoretical upper bound is P(1st) ≈ 100% (a perfect-knowledge bracket wins).
 
@@ -257,14 +257,11 @@ Do **not** "fix" divergence by `git pull` (without --rebase) or `git
 merge` — both create merge commits that violate the linear-history
 invariant. The local config above prevents this by default.
 
-## Workflow Reference
+## Pipeline Phases
 
-**`WORKFLOW.md`** contains the streamlined 6-phase build diagram for this project:
-Data Foundation → Feature Engineering → Model Selection → Calibration → Simulation → Optimization.
+Six-phase build: Data Foundation → Feature Engineering → Model Selection → Calibration → Simulation → Optimization. The pool optimizer (this project's actual edge — see North Star above) lives in Phase 6, downstream of read-only probabilities from Phase 4 and simulation advancement rates from Phase 5.
 
-- **Read it first** when onboarding to a new session — it's the fastest way to understand what this project does and why each piece exists.
-- **Keep it updated** when making structural changes (new pipeline stages, model changes, added/removed features, new data sources). If your work changes the pipeline architecture, update `WORKFLOW.md` to reflect the current state before marking the task complete.
-- **Use it for planning** — when the user asks for new features or refactors, reference the workflow phases to identify where changes fit and what downstream stages are affected.
+For historical context on why the pipeline looks the way it does (dead ends, defects found/fixed, architectural pivots), see `FINDINGS.md` — the consolidated findings doc that replaced the project's old scattered audit/council-report documentation (2026-08-18).
 
 ---
 
@@ -279,8 +276,8 @@ ground.
 
 ## 1. Pre-Work
 
-### Consult MEMORY.md First
-Before proposing model changes, new features, experiments, or pool-strategy alternatives, read `MEMORY.md`. It indexes locked decisions, dead-ends already measured, and current baselines. If your instinct contradicts it, cite the row and ask — do not re-litigate settled questions.
+### Consult Memory First
+Before proposing model changes, new features, experiments, or pool-strategy alternatives, read `FINDINGS.md` (dead-ends, defects, and architectural history) and check the auto-memory system's project notes (`memory/project_*.md`, referenced throughout this file). If your instinct contradicts a settled finding, cite it and ask — do not re-litigate settled questions.
 
 ### Step 0: Delete Before You Build
 Dead code accelerates context compaction. Before ANY structural refactor on
