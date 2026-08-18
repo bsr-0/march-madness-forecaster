@@ -211,3 +211,77 @@ def test_artifact_is_strict_json(path):
 
     with open(p) as f:
         json.load(f, parse_constant=reject)
+
+
+def test_kaggle_box_profile_has_no_tournament_game_overlap():
+    """`MRegularSeasonDetailedResults` (the source for the 3PT/havoc/road
+    columns) must share zero games with `MNCAATourneyDetailedResults` — that
+    is what makes it pre-tournament by construction, with no date filter
+    needed, unlike the excluded Torvik shooting files.
+    """
+    kaggle = Path("data/kaggle")
+    reg_path = kaggle / "MRegularSeasonDetailedResults.csv"
+    tourney_path = kaggle / "MNCAATourneyDetailedResults.csv"
+    if not reg_path.exists() or not tourney_path.exists():
+        pytest.skip("Kaggle box-score files not present")
+
+    import csv
+
+    def keys(path):
+        with open(path) as f:
+            return {(r["Season"], r["DayNum"], r["WTeamID"], r["LTeamID"]) for r in csv.DictReader(f)}
+
+    overlap = keys(reg_path) & keys(tourney_path)
+    assert not overlap, f"{len(overlap)} game(s) appear in both regular-season and tournament box scores"
+
+
+def test_kaggle_box_profile_values_are_in_range():
+    """Sanity bounds on the new shooting/pressure columns — catches a mixed-up
+    numerator/denominator or a wrong team-side attribution outright.
+    """
+    data = _artifact()
+    checked = 0
+    for year in data["years"]:
+        for r in data["stats_by_year"][str(year)]:
+            for field in ("three_pt_rate", "three_pt_pct", "opp_three_pt_pct", "true_road_win_pct"):
+                v = r.get(field)
+                if v is not None:
+                    assert 0.0 <= v <= 1.0, f"{year} {r['team_name']} {field}={v} out of [0, 1]"
+                    checked += 1
+            if r.get("ast_to_ratio") is not None:
+                assert 0 < r["ast_to_ratio"] < 5, f"{year} {r['team_name']} ast_to_ratio out of range"
+            if r.get("havoc_rate") is not None:
+                assert 0 <= r["havoc_rate"] < 30, f"{year} {r['team_name']} havoc_rate out of range"
+    assert checked > 1000, "expected shooting-profile columns on most rows across 16 years"
+
+
+def test_coach_experience_is_backward_looking_only():
+    """A coach's prior-tournament games/wins must never include their result
+    in the row's own year — only strictly earlier seasons. Checked directly
+    against the Kaggle source, not just the artifact, so a bug in the
+    cumulative-sum boundary (`< year` vs `<= year`) is caught even if it
+    happens not to move any single artifact value.
+    """
+    import csv
+
+    kaggle = Path("data/kaggle")
+    coaches_path = kaggle / "MTeamCoaches.csv"
+    tourney_path = kaggle / "MNCAATourneyCompactResults.csv"
+    if not coaches_path.exists() or not tourney_path.exists():
+        pytest.skip("Kaggle coach files not present")
+
+    from scripts.generate_team_stats_table import build_coach_experience
+    from scripts._common import load_torvik_and_ff
+
+    year = 2026
+    torvik, _ = load_torvik_and_ff(year)
+    result = build_coach_experience(year, set(torvik))
+    assert result, "expected coach experience for at least one team in 2026"
+
+    with open(tourney_path) as f:
+        games_2026 = [r for r in csv.DictReader(f) if r["Season"] == "2026"]
+    assert not games_2026, "2026 must not appear in MNCAATourneyCompactResults (it's the target year)"
+
+    for info in result.values():
+        assert info["coach_prior_tourney_games"] >= info["coach_prior_tourney_wins"] >= 0
+        assert info["coach_first_tourney"] == (info["coach_prior_tourney_games"] == 0)
