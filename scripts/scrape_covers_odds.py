@@ -44,7 +44,7 @@ BASE_URL = "https://www.covers.com/sports/ncaab/matchups"
 
 def _parse_game_text(full_text: str, summary: str, game_date: str, season: int) -> dict | None:
     """Parse a game article's text into structured odds data."""
-    lines = [l.strip() for l in full_text.split("\n") if l.strip()]
+    lines = [ln.strip() for ln in full_text.split("\n") if ln.strip()]
 
     header = lines[0] if lines else ""
     match = re.match(r"^(.+?)\s+@\s+(.+?)(?:\s+\(N\))?$", header, re.IGNORECASE)

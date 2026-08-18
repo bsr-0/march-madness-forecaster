@@ -233,18 +233,25 @@ These are used by the main prediction pipeline but **NOT by the backtest**.
 
 ## Deleted / Purged Files
 
-The following contaminated files were deleted as part of the zero-tolerance
-leakage cleanup:
+> **Corrected 2026-08-18 — this section was stale.** It claimed 47 files were
+> removed; on inspection 4 of the 5 categories are **present on disk**. Either
+> the deletion never happened or the files were later regenerated. The table
+> below records what is actually there now, and — the part that matters — what
+> reads it. Presence is not leakage; *being read* is.
 
-| Files | Count | Reason |
+| Files | On disk now | Status |
 |---|---|---|
-| `torvik_shooting_{2008-2025}.json` (raw + historical) | 36 | Post-tournament player stats, no date filtering possible |
-| `torvik_2020.json`, `torvik_four_factors_2020.json` (raw + historical) | 4 | COVID year — no tournament, no metadata |
-| `torvik_{2005,2006,2007}.json` (raw) | 3 | Broken symlinks, no game data to recompute |
-| `torvik_four_factors_{2005,2006,2007}.json` (raw) | 3 | No game data to recompute |
-| `data/raw/historical/torvik_2026.json` | 1 | `generated_at: 2026-03-18` — post-tournament start |
+| `torvik_shooting_*.json` | **present** (22 raw, 18 historical) | Full-season, no `data_type`/`cutoff_date`. **Not read by the backtest**, and deliberately excluded from `scripts/generate_team_stats_table.py`. The endpoint cannot be date-filtered — verified 2026-08-18, see `memory/next_steps_pretournament_player_data.md`. |
+| `torvik_2020.json`, `torvik_four_factors_2020.json` | **present** (raw + historical) | No metadata. Moot: 2020 has no tournament and is excluded from `BACKTEST_YEARS`. |
+| `torvik_{2005,2006,2007}.json` (raw) | **present** | Pre-date-guard era. Outside the 2011+ backtest window. |
+| `torvik_four_factors_{2005,2006,2007}.json` (raw) | absent | Genuinely gone. |
+| `data/raw/historical/torvik_2026.json` | **present — and clean** | This is a *regenerated* file, not the contaminated one described previously. It now carries `data_type: pre_tournament` with `cutoff_date: 2026-03-16` against `tournament_start: 2026-03-17`, i.e. fetched through the date-filtered `trank.php?begin=&end=` window. `scraped_at: 2026-04-06` is after the tournament, but the *data* is date-bounded — which is the whole point of that window. |
 
-**Total: 47 contaminated files removed.**
+**Net:** no contaminated file is currently read by the backtest, but the
+"deleted" framing was wrong and should not be relied on. All 16
+`torvik_{year}.json` files in `historical/` carry
+`cutoff_date == tournament_start - 1 day`, which is the actual guarantee worth
+citing.
 
 ---
 
