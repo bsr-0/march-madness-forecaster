@@ -737,11 +737,11 @@
         "region": "South",
         "team1_id": "nevada",
         "team1_seed": 7,
-        "team1_score": 73,
+        "team1_score": 75,
         "team2_id": "cincinnati",
         "team2_seed": 2,
-        "team2_score": 75,
-        "team1_won": false
+        "team2_score": 73,
+        "team1_won": true
       },
       {
         "year": 2018,

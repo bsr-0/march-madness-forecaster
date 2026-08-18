@@ -1097,11 +1097,11 @@
         "region": "South",
         "team1_id": "marquette",
         "team1_seed": 2,
-        "team1_score": 78,
+        "team1_score": 81,
         "team2_id": "colorado",
         "team2_seed": 10,
-        "team2_score": 81,
-        "team1_won": false
+        "team2_score": 77,
+        "team1_won": true
       },
       {
         "year": 2024,

@@ -1133,11 +1133,11 @@
         "region": "East",
         "team1_id": "duke",
         "team1_seed": 1,
-        "team1_score": 68,
+        "team1_score": 67,
         "team2_id": "michigan_state",
         "team2_seed": 2,
-        "team2_score": 67,
-        "team1_won": true
+        "team2_score": 68,
+        "team1_won": false
       },
       {
         "year": 2019,
@@ -1301,11 +1301,11 @@
         "region": "Midwest",
         "team1_id": "houston",
         "team1_seed": 3,
-        "team1_score": 62,
+        "team1_score": 58,
         "team2_id": "kentucky",
         "team2_seed": 2,
-        "team2_score": 58,
-        "team1_won": true
+        "team2_score": 62,
+        "team1_won": false
       },
       {
         "year": 2019,

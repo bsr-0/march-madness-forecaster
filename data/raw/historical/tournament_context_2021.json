@@ -1121,11 +1121,11 @@
         "region": "East",
         "team1_id": "ucla",
         "team1_seed": 11,
-        "team1_score": 51,
+        "team1_score": 88,
         "team2_id": "alabama",
         "team2_seed": 2,
-        "team2_score": 88,
-        "team1_won": false
+        "team2_score": 78,
+        "team1_won": true
       },
       {
         "year": 2021,

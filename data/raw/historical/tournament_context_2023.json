@@ -896,8 +896,8 @@
         "team1_score": 65,
         "team2_id": "duke",
         "team2_seed": 5,
-        "team2_score": 66,
-        "team1_won": false
+        "team2_score": 52,
+        "team1_won": true
       },
       {
         "year": 2023,

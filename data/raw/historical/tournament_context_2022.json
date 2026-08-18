@@ -749,11 +749,11 @@
         "region": "West",
         "team1_id": "gonzaga",
         "team1_seed": 1,
-        "team1_score": 82,
+        "team1_score": 68,
         "team2_id": "arkansas",
         "team2_seed": 4,
-        "team2_score": 68,
-        "team1_won": true
+        "team2_score": 74,
+        "team1_won": false
       },
       {
         "year": 2022,
@@ -905,11 +905,11 @@
         "region": "East",
         "team1_id": "purdue",
         "team1_seed": 3,
-        "team1_score": 69,
+        "team1_score": 81,
         "team2_id": "texas",
         "team2_seed": 6,
-        "team2_score": 81,
-        "team1_won": false
+        "team2_score": 71,
+        "team1_won": true
       },
       {
         "year": 2022,
