@@ -1147,6 +1147,27 @@ body {
   padding: 24px 12px !important;
 }
 
+/* Post-hoc tournament-result columns. Everything to the left of these was
+   knowable before the tournament tipped off; these were not. Tinted and
+   fenced with a divider so the distinction is impossible to miss. */
+.stats-table .outcome-start {
+  border-left: 2px solid var(--accent-gold);
+}
+
+.stats-table td.outcome {
+  background: rgba(200, 145, 37, 0.07);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.stats-table th.outcome {
+  color: var(--accent-gold);
+}
+
+.stats-table tbody tr:hover td.outcome {
+  background: rgba(200, 145, 37, 0.14);
+}
+
 /* ══════════════════════════════════════════════════════════════════
  * SCROLLBARS
  * ══════════════════════════════════════════════════════════════════ */
@@ -1209,4 +1230,8 @@ body {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+}
+
+.stats-outcome-key {
+  color: var(--accent-gold);
 }
