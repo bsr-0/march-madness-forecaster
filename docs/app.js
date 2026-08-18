@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let teamStats;
   try {
-    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17c').then(r => r.json());
+    teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17d').then(r => r.json());
   } catch (err) {
     teamStats = null;
   }
@@ -935,6 +935,10 @@ const STATS_COLUMNS = [
   { key: 'close_game_rate',           label: 'Close%',        numeric: true, fmt: pct },
   { key: 'close_game_win_rate',       label: 'Close W%',      numeric: true, fmt: pct },
   { key: 'losses_to_weaker_rate',     label: 'Bad Loss%',     numeric: true, fmt: pct },
+  // Program tournament history to date. Backward-looking only (prior years,
+  // never the current one), so this IS pre-tournament information.
+  { key: 'hist_residual',             label: 'Hist Resid',    numeric: true, fmt: signed2 },
+  { key: 'hist_appearances',          label: 'Prior App',     numeric: true },
   // Post-hoc tournament result — NOT knowable before the tournament. Flagged
   // `outcome: true` so the renderer can visually fence it off from every
   // column above it (see .stats-table .outcome in style.css).

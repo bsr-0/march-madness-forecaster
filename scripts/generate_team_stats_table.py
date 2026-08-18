@@ -339,6 +339,42 @@ def attach_seed_deltas(stats_by_year: dict) -> dict:
     return {seed: round(v, 3) for seed, v in sorted(expected.items())}
 
 
+def attach_historical_residual(stats_by_year: dict) -> None:
+    """Add `hist_residual` — a program's tournament over/under-performance to date.
+
+    For team T in year Y: the mean of T's `outcome_vs_seed_delta` across its
+    tournament appearances in years STRICTLY BEFORE Y. Because it only ever
+    looks backwards, this is genuinely pre-tournament information — unlike
+    the `outcome_*` block it sits alongside the other stat columns.
+
+    This is the "does a program's March history tell you anything beyond its
+    current seed and strength?" question, expressed as a residual rather than
+    a raw count of Final Fours (which would just re-encode program strength).
+
+    `hist_appearances` carries the sample size, which matters a lot here: the
+    dataset starts in 2010, so early years have little or no prior history
+    and a single appearance makes for a very noisy residual.
+
+    The per-seed baseline inside `outcome_vs_seed_delta` is pooled across all
+    years rather than walked forward. It is a structural constant (a 1-seed
+    averages ~3.3 wins, a fact established over decades and not by this
+    16-year window) and carries no team-specific information, so it leaks
+    nothing about the team whose residual is being computed — while a
+    walk-forward baseline would make 2011-2013 unusable.
+    """
+    history: dict[str, list[float]] = {}
+    for year in sorted(stats_by_year, key=int):
+        rows = stats_by_year[year]
+        # Read history BEFORE folding this year in, so a team never sees itself.
+        for r in rows:
+            past = history.get(r["team_id"], [])
+            r["hist_appearances"] = len(past)
+            r["hist_residual"] = round(statistics.fmean(past), 2) if past else None
+        for r in rows:
+            if r.get("outcome_vs_seed_delta") is not None:
+                history.setdefault(r["team_id"], []).append(r["outcome_vs_seed_delta"])
+
+
 def main() -> None:
     stats_by_year = {}
     for year in YEARS:
@@ -349,6 +385,7 @@ def main() -> None:
             print(f"  {year}: {len(rows)} teams ({with_reg} with game-log stats)")
 
     expected_by_seed = attach_seed_deltas(stats_by_year)
+    attach_historical_residual(stats_by_year)
 
     payload = {
         "years": sorted(int(y) for y in stats_by_year),

@@ -155,6 +155,33 @@ def test_rates_are_in_unit_interval():
                     assert 0.0 <= v <= 1.0, f"{year} {r['team_name']}: {field}={v} outside [0,1]"
 
 
+def test_historical_residual_is_backward_looking_only():
+    """`hist_residual` must never see the current year or the future.
+
+    The earliest year has no prior tournaments in the dataset, so every row
+    must show zero prior appearances; and a team's appearance count must
+    grow monotonically over time, never shrink.
+    """
+    data = _artifact()
+    years = sorted(data["stats_by_year"], key=int)
+
+    for r in data["stats_by_year"][years[0]]:
+        assert r["hist_appearances"] == 0, f"{years[0]} {r['team_name']}: has prior history before the dataset starts"
+        assert r["hist_residual"] is None
+
+    seen: dict[str, int] = {}
+    for year in years:
+        for r in data["stats_by_year"][year]:
+            prior = seen.get(r["team_id"], 0)
+            assert r["hist_appearances"] == prior, (
+                f"{year} {r['team_name']}: hist_appearances={r['hist_appearances']} but "
+                f"{prior} prior appearance(s) in the dataset"
+            )
+            assert (r["hist_residual"] is None) == (r["hist_appearances"] == 0)
+            if r.get("outcome_vs_seed_delta") is not None:
+                seen[r["team_id"]] = prior + 1
+
+
 def test_2020_absent_and_year_span():
     data = _artifact()
     years = data["years"]
