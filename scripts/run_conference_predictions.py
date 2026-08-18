@@ -741,6 +741,11 @@ def generate_dashboard(all_results: dict, output_path: str):
     logger.info("Dashboard saved to %s", output_path)
 
 
+def _winner_indicator(name: str, is_winner: bool) -> str:
+    """Bold a team name when it won the game."""
+    return f'<strong class="winner">{name}</strong>' if is_winner else name
+
+
 def _build_html(data, power_confs, mid_major_confs, small_confs):
     """Build the complete HTML dashboard."""
 
@@ -769,13 +774,10 @@ def _build_html(data, power_confs, mid_major_confs, small_confs):
             games_html = ""
             for g in rnd["games"]:
                 upset_class = " upset" if g["is_upset"] else ""
-                winner_indicator = lambda name, is_winner: (
-                    f'<strong class="winner">{name}</strong>' if is_winner else name
-                )
-                t1_display = winner_indicator(
+                t1_display = _winner_indicator(
                     f"({g['team1_seed']}) {g['team1_name']}", g["winner_name"] == g["team1_name"]
                 )
-                t2_display = winner_indicator(
+                t2_display = _winner_indicator(
                     f"({g['team2_seed']}) {g['team2_name']}", g["winner_name"] == g["team2_name"]
                 )
 
