@@ -1,14 +1,14 @@
 # Next steps: pre-tournament player data (minutes, shooting, clutch)
 
-**Written 2026-08-17. Everything below needs network access — none of it could be
-run from the session that wrote it (egress to `barttorvik.com` is blocked, 403 at
-the proxy).**
+**Updated 2026-08-18 after the decisive test came back. Step 1 is ANSWERED — the
+Torvik player endpoint is a dead end. The live route is Step 2 (cbbpy box-score
+re-aggregation).**
 
 ## Why this exists
 
-Three would-be table columns are currently either missing or carrying a
-provenance caveat, all for the same reason: the underlying player-level data was
-scraped **after** the tournament, so it includes tournament games.
+Three would-be table columns are missing or carry a provenance caveat, all for
+the same reason: the player-level data was scraped **after** the tournament, so
+it includes tournament games.
 
 | Column | State today | Blocker |
 |---|---|---|
@@ -16,115 +16,87 @@ scraped **after** the tournament, so it includes tournament games.
 | `returning_minutes_pct`, `freshman_minutes_pct` | **shipped, with caveat** | `cbbpy_rosters_*.json` all share one scrape date (2026-02-21); 2010-2025 minutes are full-season |
 | blown-lead rate / clutch splits | **not built** | no play-by-play stored |
 
-The fix for the first two is the same: get the same numbers from a
-**date-bounded** fetch. The plumbing already exists and is proven — `trank.php`
-takes `begin`/`end`, which is exactly why all 16 `torvik_{year}.json` files carry
-`cutoff_date == tournament_start - 1 day` while the shooting files don't.
-
 ---
 
-## Step 1 — Does `getadvstats.php` honour `begin`/`end`? (30 minutes, decisive)
+## Step 1 — Torvik player CSV date window: TESTED, DOES NOT WORK ❌
 
-This is the whole ballgame. Column **[4]** of that CSV is *Minutes percentage*,
-and columns 15/19/20 are FT%/3PM/3PA — so one working query fixes minutes **and**
-shooting for every historical year at once.
+The hypothesis was that `getadvstats.php` might honour `begin`/`end` the way its
+sibling `trank.php` demonstrably does (which is why all 16 `torvik_{year}.json`
+files carry `cutoff_date == tournament_start - 1 day`). Column [4] of the player
+CSV is Minutes percentage and 15/19/20 are FT%/3PM/3PA, so one working query
+would have fixed minutes *and* shooting for every historical year at once.
 
-`_fetch_player_csv` in `src/data/scrapers/torvik.py` now **attempts** the dated
-URL, sanity-checks the response with `_looks_like_player_csv`, and falls back to
-unfiltered if it doesn't work — recording which path won in
-`_player_csv_date_filtered[year]`. So the test is just: run it and read the log.
+**Result (2026-08-18):**
 
-```bash
-# Fastest possible answer — compare row counts with and without the window.
-curl -s "https://barttorvik.com/getadvstats.php?year=2024&csv=1" | wc -l
-curl -s "https://barttorvik.com/getadvstats.php?year=2024&csv=1&begin=20231101&end=20240318" | wc -l
+```
+getadvstats.php?year=2024&csv=1                             -> md5 ccefee275c62…, 5002 rows
+getadvstats.php?year=2024&csv=1&begin=20231101&end=20240318 -> md5 ccefee275c62…, 5002 rows
 ```
 
-**Interpreting it:**
-- **Different row counts, or same rows with smaller games-played values** → the
-  window works. Go to Step 2.
-- **Byte-identical output** → the param is ignored. The endpoint is full-season
-  only. Go to Step 3.
+Byte-identical. Max games-played is **41 in both** — a genuine pre-tournament cut
+would top out near 34. The params are silently ignored.
 
-Then confirm the code path agrees:
+**The pre-existing docstring warning on `_shooting_from_player_csv` was right.**
+The speculative attempt-with-fallback that was briefly added to
+`_fetch_player_csv` has been reverted (it would have burned an extra 45s-timeout
+request per year, forever, to always fall back). The finding is now recorded in
+that docstring so nobody re-litigates it.
 
-```bash
-python3 -c "
-import logging; logging.basicConfig(level=logging.INFO)
-from src.data.scrapers.torvik import BartTorvikScraper
-s = BartTorvikScraper()
-s.fetch_shooting_stats(2024)
-print('date filtered:', s._player_csv_date_filtered)
-"
-```
+**Also worth knowing:** the verification command originally written here could
+never have worked. `_check_tournament_date_guard` **always raises** `LeakageError`
+for any live scrape where `today >= TOURNAMENT_START_DATES[year]`, so
+`fetch_shooting_stats(2024)` in 2026 is refused by design — that guard is working
+correctly and should not be worked around. It also means live scrapes are
+pre-tournament *by construction*, which is how the 2026 file earned its
+legitimate stamp (fetched 2026-03-16, one day before tip-off). The contaminated
+2008-2025 files predate the guard.
 
-Look for `[torvik] player CSV date-filtered 20231101..20240318 for 2024`.
+Corollary: **Torvik cannot retroactively supply pre-tournament player data for
+any past season.** The only Torvik path to a clean season is to scrape it before
+that year's tournament starts — i.e. going forward, not backward.
 
-> The old docstring on `_shooting_from_player_csv` asserted this endpoint does
-> **not** support date filtering. The code never actually passed the params, so
-> treat that as an untested assumption, not a finding. Step 1 settles it either
-> way — and if the assumption turns out to be right, say so and delete this doc's
-> Step 2.
-
-## Step 2 — If the window works
-
-1. **Re-scrape shooting for every year**, then confirm the stamp is real. The
-   provenance stamp is no longer hard-coded: `fetch_shooting_stats` now writes
-   `data_type: pre_tournament` **only** when the dated fetch succeeded, and
-   `full_season_unfiltered` otherwise. Any file still saying
-   `full_season_unfiltered` did not get a clean fetch — do not ship it.
-2. **Add the shooting columns** to `scripts/generate_team_stats_table.py`
-   (`three_pt_pct`, `ft_pct`), gated on `data_type == "pre_tournament"` per year
-   so a partial re-scrape can't silently mix clean and dirty years.
-3. **Add a real minutes source.** Column [4] is a per-player minutes percentage;
-   aggregate it per team to replace the roster-derived
-   `returning_minutes_pct` / `freshman_minutes_pct` weights, or at minimum to
-   cross-check them.
-4. Update `docs/data-provenance-and-leakage-audit.md` — its table still lists the
-   shooting files as deleted, which is wrong; they are present on disk.
-
-## Step 3 — If the window does NOT work (fallback, certain but slow)
+## Step 2 — cbbpy box-score re-aggregation (the route that works)
 
 `cbbpy_rosters_{year}.json` is **not a primary source**. It is an aggregate over
 per-game box-score rows (`source: cbbpy_schedule_boxscore`, ~117-138k rows per
-season), and `src/data/scrapers/cbbpy_rosters.py::_collect_rows_via_schedule`
-already walks the season date by date via `_season_dates(year)`.
+season), built by `src/data/scrapers/cbbpy_rosters.py`. The per-game rows are the
+thing that makes a date cutoff possible.
 
-So: bound that walk at `TOURNAMENT_START_DATES[year]` and re-aggregate. That
-yields genuinely pre-tournament minutes for every year with no new data source.
+1. **Check whether box rows carry a usable game date.** `_collect_rows_via_schedule`
+   already walks `_season_dates(year)` day by day, so the schedule path can be
+   bounded trivially. The faster `season_endpoint` path (which is what every
+   current file used — `collection_mode: season_endpoint`) returns the whole
+   season in one call, so there the cutoff has to be applied to the **rows** after
+   fetch. If rows only carry `game_id`, join through the schedule to get dates.
+2. **Bound at `TOURNAMENT_START_DATES[year]`** and re-aggregate minutes.
+3. **Do one year first** and diff against the current file before committing to a
+   full run — expect returning/freshman shares to move only slightly, since these
+   are composition ratios (see `build_roster_stats` docstring for why the current
+   caveat is second-order).
+4. Cost: a full rate-limited re-scrape, ~6k games/season × 16 seasons. Budget an
+   overnight run.
 
-- Cost: a full rate-limited re-scrape, ~6k games/season × 16 seasons. Budget an
-  overnight run; do one year first and diff against the current file.
-- The season-endpoint fast path (`collection_mode: season_endpoint`) returns the
-  whole season at once, so the date filter has to be applied to the **rows**
-  after fetch, not to the request. Check whether box rows carry a usable game
-  date; if they only carry `game_id`, join through the schedule.
+Same mechanism would give genuinely pre-tournament shooting splits, since box
+scores carry FGM/FGA/3PM/3PA/FTM/FTA — which would finally unblock the
+`three_pt_pct`/`ft_pct` columns that had to be dropped.
 
-## Step 4 — Optional: blown-lead rate becomes possible
+## Step 3 — Optional: blown-lead rate becomes possible
 
-I previously told the user clutch/blown-lead columns were unbuildable "full
-stop". That was too strong, and worth correcting here: no play-by-play is
-**stored**, but the scraper can **fetch** it. `cbbpy_rosters.py` reads
-`CBBPY_ROSTER_ENABLE_PBP` and has a `pbp_rows` collection path that is simply
-never switched on (`raw_pbp_rows` is unset in every roster file).
+No play-by-play is **stored**, but the scraper can **fetch** it:
+`cbbpy_rosters.py` reads `CBBPY_ROSTER_ENABLE_PBP` and has a `pbp_rows`
+collection path that is simply never switched on (`raw_pbp_rows` unset in every
+roster file). If PBP comes back usable, blown-lead rate, largest-lead-surrendered
+and real late-game splits all become computable.
 
-```bash
-CBBPY_ROSTER_ENABLE_PBP=1 python3 -c "
-from src.data.scrapers.cbbpy_rosters import ...  # see fetch_rosters(year)
-"
-```
-
-If PBP comes back usable, blown-lead rate, largest-lead-surrendered, and real
-late-game splits all become computable. Treat this as a separate project — it is
-a much bigger scrape and a new storage schema, not a column addition.
+Treat as a separate project — much bigger scrape, new storage schema.
 
 ---
 
 ## Guardrails
 
-- **Do not** relabel any file `pre_tournament` by hand. The stamp is now derived
-  from whether the dated fetch actually succeeded; hand-editing it re-creates
-  exactly the bug that produced today's contaminated shooting files.
+- **Do not** work around `_check_tournament_date_guard`. It is the thing keeping
+  live scrapes honest, and it is why 2026 is clean.
+- **Do not** relabel any file `pre_tournament` by hand.
 - **Do not** widen `src/data/normalize.py::_CBBPY_EDGE_CASES` to fix ID joins for
   these tables. That dict feeds three production probability bases (Elo A4,
   roster_adj C2, volatile); changing it can move backtest results without going
@@ -132,8 +104,8 @@ a much bigger scrape and a new storage schema, not a column addition.
   `scripts/generate_team_stats_table.py`.
 - **Always** verify a regenerated artifact in a browser, not just in Python.
   Python's `json` reads bare `NaN` back happily; browsers reject the whole file.
-  `tests/test_team_stats_table.py::test_artifact_is_strict_json` now guards this,
-  but the browser check is what caught it.
+  `tests/test_team_stats_table.py::test_artifact_is_strict_json` guards this now,
+  but a browser check is what caught it.
 - Re-run after any regeneration:
   ```bash
   python3 scripts/generate_team_stats_table.py
@@ -144,15 +116,20 @@ a much bigger scrape and a new storage schema, not a column addition.
 
 ## Known-open, unrelated to the above
 
-- **`tournament_context_*.json` has nine transposed games** across eight years
-  (a team recorded as losing twice, which single-elimination forbids) — e.g. 2018
-  has Cincinnati beating Nevada in the R32 while also showing Nevada in the Sweet
-  16; Nevada really won 75-73. The stats table works around it by deriving
-  outcomes from round *appearance*, and `generate_team_stats_table.py` prints a
-  `SOURCE DATA BUG` line per case. **This same file is the backtest's ground
-  truth** (`build_actual_outcome`), so those nine games may be scored wrong
-  there too. Worth an audit; not yet investigated.
+- **`tournament_context_*.json` has nine transposed games** across eight years (a
+  team recorded as losing twice, which single-elimination forbids) — e.g. 2018 has
+  Cincinnati beating Nevada in the R32 while also showing Nevada in the Sweet 16;
+  Nevada really won 75-73. The stats table works around it by deriving outcomes
+  from round *appearance*, and `generate_team_stats_table.py` prints a
+  `SOURCE DATA BUG` line per case. **This same file is the backtest's ground truth**
+  (`build_actual_outcome`), so those nine games may be scored wrong there too.
+  Highest-value open item here; not yet investigated.
 - 2025 First Four: the source has San Diego St. in both the FF and the R64, so
   SDSU and North Carolina have their `outcome_finish` labels swapped for that
   year. `outcome_rounds_won` is 0 for both either way, so numeric columns are
   unaffected.
+- **Egress from Claude Code web sessions is blocked for all general internet
+  hosts** (the proxy refuses CONNECT with 403 — verified against `example.com`,
+  not just barttorvik). No scraper in this repo can reach its source from those
+  sessions; scraping work has to run locally or the environment's network policy
+  has to be widened.
