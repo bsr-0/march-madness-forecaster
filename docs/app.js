@@ -242,6 +242,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ──────────────────────────────────────────────────────────────────
+// PAGE TABS
+//
+// Top-level tabs: "Bracket Picker" (the existing strategy/bracket UI) and
+// "Team Stats" (the multi-year stats table). Client-side show/hide only —
+// both tabs' DOM is always built at boot, this just toggles which one is
+// visible, so switching tabs is instant with no re-fetch.
+// ──────────────────────────────────────────────────────────────────
+
+function setActiveTab(tab) {
+  document.getElementById('tab-bracket').style.display = tab === 'bracket' ? '' : 'none';
+  document.getElementById('tab-stats').style.display = tab === 'stats' ? '' : 'none';
+  document.querySelectorAll('.page-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────
 // BRACKET ENGINE
 //
 // All strategies share the same internal game format:

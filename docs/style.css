@@ -105,6 +105,48 @@ body {
   gap: 36px;
 }
 
+/* ── Page tabs ── */
+
+.page-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.page-tab-btn {
+  padding: 10px 20px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--ink-faint);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: transform 0.16s, border-color 0.16s, background 0.16s, color 0.16s;
+}
+
+.page-tab-btn:hover {
+  transform: translateY(-1px);
+  color: var(--ink);
+}
+
+.page-tab-btn.active {
+  background: linear-gradient(135deg, var(--ink) 0%, #2f3f4a 100%);
+  border-color: transparent;
+  color: #fffaf0;
+}
+
+/* Each tab's content column — same flex/gap as .page-main so switching
+   tabs doesn't change section spacing, plus the min-width:0 fix (see
+   .strategy-section/.stats-table-section) since it's now the flex-item
+   layer between .page-main and any horizontally-scrollable section. */
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  min-width: 0;
+}
+
 /* ── Section label (small uppercase kicker above each section) ── */
 .section-label {
   margin: 0 0 12px;

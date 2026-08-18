@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-17a">
+  <link rel="stylesheet" href="style.css?v=2026-08-17b">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
@@ -22,79 +22,92 @@
 
   <main class="page-main">
 
-    <!-- Strategy selector -->
-    <section class="strategy-section">
-      <p class="section-label">Pick your approach</p>
-      <div class="strategy-strip" id="strategy-strip"></div>
-      <div class="strategy-detail" id="strategy-detail"></div>
+    <nav class="page-tabs" id="page-tabs">
+      <button class="page-tab-btn active" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
+      <button class="page-tab-btn" data-tab="stats" onclick="setActiveTab('stats')">Team Stats</button>
+    </nav>
 
-      <div class="window-row">
-        <span class="window-label">Backtest window</span>
-        <div class="window-toggle" id="window-toggle"></div>
-      </div>
-      <p class="window-note" id="window-note"></p>
-    </section>
+    <div class="tab-panel" id="tab-bracket">
 
-    <!-- Champion path -->
-    <section class="path-section">
-      <p class="section-label">Modeled path to the title</p>
-      <div class="path-scroll">
-        <div class="path-flow" id="path-flow"></div>
-      </div>
-    </section>
+      <!-- Strategy selector -->
+      <section class="strategy-section">
+        <p class="section-label">Pick your approach</p>
+        <div class="strategy-strip" id="strategy-strip"></div>
+        <div class="strategy-detail" id="strategy-detail"></div>
 
-    <!-- Actual outcome retrospective -->
-    <section class="actual-section" id="actual-section" style="display:none">
-      <p class="section-label">How it actually went</p>
-      <div class="actual-panel" id="actual-panel"></div>
-    </section>
+        <div class="window-row">
+          <span class="window-label">Backtest window</span>
+          <div class="window-toggle" id="window-toggle"></div>
+        </div>
+        <p class="window-note" id="window-note"></p>
+      </section>
 
-    <!-- Bracket board -->
-    <section class="bracket-section">
-      <div class="bracket-header">
-        <p class="section-label">Bracket board</p>
-        <div class="round-tabs" id="round-tabs"></div>
-      </div>
-      <div class="bracket-body" id="bracket-body"></div>
-    </section>
+      <!-- Champion path -->
+      <section class="path-section">
+        <p class="section-label">Modeled path to the title</p>
+        <div class="path-scroll">
+          <div class="path-flow" id="path-flow"></div>
+        </div>
+      </section>
 
-    <!-- Performance note -->
-    <section class="perf-section">
-      <p class="perf-note">
-        <strong>Pool Optimizer</strong> is validated via 15-year leave-one-year-out backtest (2011–2026, excl. 2020;
-        includes 2026 now that it has concluded). Against a real N=31 pool it achieves
-        <strong>11.3% P(1st)</strong> vs a 4.9% seed baseline, winning all 15/15 years (MeanRank p&thinsp;&lt;&thinsp;0.0001).
-        <strong>Exhaustive Search</strong> tests all 64 possible champions (~6.2% P(1st), 8/15 years — right at the
-        acceptance-gate boundary). <strong>Region Beam Search</strong> builds each region independently via beam
-        search (~6.3% P(1st), 8/15 years — same boundary). <strong>Chalk</strong> (always the favorite) is a
-        preference filter with no pool-backtest guarantee.
-      </p>
-    </section>
+      <!-- Actual outcome retrospective -->
+      <section class="actual-section" id="actual-section" style="display:none">
+        <p class="section-label">How it actually went</p>
+        <div class="actual-panel" id="actual-panel"></div>
+      </section>
 
-    <!-- Team stats table -->
-    <section class="stats-table-section" id="stats-table-section" style="display:none">
-      <p class="section-label">Pre-tournament team stats</p>
-      <p class="stats-table-intro">
-        Torvik ratings for every tournament-qualified team, as they stood right before that year's tournament
-        started — the same numbers the models above are built on. Click a column to sort.
-      </p>
-      <div class="stats-controls">
-        <label class="stats-control">
-          <span>Year</span>
-          <select id="stats-year-select" onchange="setStatsYear(this.value)"></select>
-        </label>
-        <label class="stats-control stats-control-search">
-          <span>Search</span>
-          <input type="text" id="stats-search" placeholder="Team or conference…" oninput="setStatsSearch(this.value)">
-        </label>
-      </div>
-      <div class="stats-table-scroll">
-        <table class="stats-table" id="stats-table">
-          <thead id="stats-table-head"></thead>
-          <tbody id="stats-table-body"></tbody>
-        </table>
-      </div>
-    </section>
+      <!-- Bracket board -->
+      <section class="bracket-section">
+        <div class="bracket-header">
+          <p class="section-label">Bracket board</p>
+          <div class="round-tabs" id="round-tabs"></div>
+        </div>
+        <div class="bracket-body" id="bracket-body"></div>
+      </section>
+
+      <!-- Performance note -->
+      <section class="perf-section">
+        <p class="perf-note">
+          <strong>Pool Optimizer</strong> is validated via 15-year leave-one-year-out backtest (2011–2026, excl. 2020;
+          includes 2026 now that it has concluded). Against a real N=31 pool it achieves
+          <strong>11.3% P(1st)</strong> vs a 4.9% seed baseline, winning all 15/15 years (MeanRank p&thinsp;&lt;&thinsp;0.0001).
+          <strong>Exhaustive Search</strong> tests all 64 possible champions (~6.2% P(1st), 8/15 years — right at the
+          acceptance-gate boundary). <strong>Region Beam Search</strong> builds each region independently via beam
+          search (~6.3% P(1st), 8/15 years — same boundary). <strong>Chalk</strong> (always the favorite) is a
+          preference filter with no pool-backtest guarantee.
+        </p>
+      </section>
+
+    </div>
+
+    <div class="tab-panel" id="tab-stats" style="display:none">
+
+      <!-- Team stats table -->
+      <section class="stats-table-section" id="stats-table-section" style="display:none">
+        <p class="section-label">Pre-tournament team stats</p>
+        <p class="stats-table-intro">
+          Torvik ratings for every tournament-qualified team, as they stood right before that year's tournament
+          started — the same numbers the models above are built on. Click a column to sort.
+        </p>
+        <div class="stats-controls">
+          <label class="stats-control">
+            <span>Year</span>
+            <select id="stats-year-select" onchange="setStatsYear(this.value)"></select>
+          </label>
+          <label class="stats-control stats-control-search">
+            <span>Search</span>
+            <input type="text" id="stats-search" placeholder="Team or conference…" oninput="setStatsSearch(this.value)">
+          </label>
+        </div>
+        <div class="stats-table-scroll">
+          <table class="stats-table" id="stats-table">
+            <thead id="stats-table-head"></thead>
+            <tbody id="stats-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
 
   </main>
 
@@ -103,6 +116,6 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
-  <script src="app.js?v=2026-08-17a"></script>
+  <script src="app.js?v=2026-08-17b"></script>
 </body>
 </html>
