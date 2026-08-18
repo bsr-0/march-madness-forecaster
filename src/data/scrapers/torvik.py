@@ -364,6 +364,9 @@ class BartTorvikScraper:
 
         # In-memory cache for player CSV to avoid duplicate fetches
         self._player_csv_cache: Dict[int, str] = {}
+        # year -> was the cached player CSV fetched with a pre-tournament
+        # date window? Drives the provenance stamp on shooting output.
+        self._player_csv_date_filtered: Dict[int, bool] = {}
 
         # Circuit breakers for each endpoint family
         cb_kwargs: Dict[str, Optional[str]] = {}
@@ -902,7 +905,16 @@ class BartTorvikScraper:
             for k in junk_keys:
                 del shooting[k]
                 logger.debug("Removed junk shooting entry: %s", k)
-            shooting["data_type"] = "pre_tournament"
+            # Stamp provenance from what actually happened, not from hope.
+            # This used to hard-code "pre_tournament" even when the fetch had
+            # no date window at all, which is how full-season shooting files
+            # ended up wearing a pre-tournament label.
+            if self._player_csv_date_filtered.get(year):
+                _, end_str = self._get_pre_tournament_date_range(year)
+                shooting["data_type"] = "pre_tournament"
+                shooting["cutoff_date"] = f"{end_str[:4]}-{end_str[4:6]}-{end_str[6:]}" if end_str else None
+            else:
+                shooting["data_type"] = "full_season_unfiltered"
             shooting["data_as_of"] = date.today().isoformat()
             self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
         return shooting
@@ -942,12 +954,70 @@ class BartTorvikScraper:
         if year in self._player_csv_cache:
             return self._player_csv_cache[year]
 
+        # Try the pre-tournament date window first. The sibling endpoint
+        # trank.php demonstrably honours begin/end (every torvik_{year}.json
+        # carries cutoff_date == tournament_start - 1 because of it), but
+        # whether getadvstats.php does has never actually been tested from
+        # this codebase — the old docstring here asserted it does not, while
+        # the code never passed the params. So: attempt it, verify the
+        # response is usable, and fall back to unfiltered if it isn't.
+        #
+        # This matters because column [4] of this CSV is Minutes percentage.
+        # If the window works, it is the cheapest route to pre-tournament
+        # minutes and shooting splits for every historical year.
+        begin = end = None
+        try:
+            begin, end = self._get_pre_tournament_date_range(year)
+        except ValueError as exc:
+            # Missing TOURNAMENT_START_DATES entry. Unfiltered data is still
+            # useful for a display table; it just must not be labelled
+            # pre-tournament. Record that and carry on.
+            logger.warning("[torvik] no pre-tournament window for %d: %s", year, exc)
+
+        text = None
+        if begin and end:
+            dated_url = f"{self.BASE_URL}/getadvstats.php?year={year}&csv=1&begin={begin}&end={end}"
+            try:
+                with self._cb_csv():
+                    response = self._get_with_retry(dated_url, timeout=45)
+                candidate = response.text
+                if self._looks_like_player_csv(candidate):
+                    self._player_csv_date_filtered[year] = True
+                    self._player_csv_cache[year] = candidate
+                    logger.info("[torvik] player CSV date-filtered %s..%s for %d", begin, end, year)
+                    return candidate
+                logger.warning(
+                    "[torvik] getadvstats.php returned unusable data with begin/end for %d "
+                    "— falling back to unfiltered (NOT pre-tournament)",
+                    year,
+                )
+            except CircuitBreakerOpen:
+                raise
+            except Exception as exc:
+                logger.warning("[torvik] date-filtered player CSV failed for %d (%s) — falling back", year, exc)
+
         url = f"{self.BASE_URL}/getadvstats.php?year={year}&csv=1"
         with self._cb_csv():
             response = self._get_with_retry(url, timeout=45)
         text = response.text
+        self._player_csv_date_filtered[year] = False
         self._player_csv_cache[year] = text
         return text
+
+    @staticmethod
+    def _looks_like_player_csv(text: str) -> bool:
+        """Cheap sanity check that a player-CSV response is actually usable.
+
+        Guards against the endpoint answering a begin/end request with an
+        error page, an empty body, or a truncated result — any of which would
+        otherwise be silently cached and aggregated into nonsense.
+        """
+        if not text or len(text) < 1000:
+            return False
+        rows = [ln for ln in text.splitlines() if ln.strip()]
+        if len(rows) < 100:  # a D1 season has thousands of player rows
+            return False
+        return rows[0].count(",") >= 20  # the documented layout has 68 columns
 
     @staticmethod
     def _normalize_team_name_to_id(name: str) -> str:
@@ -1074,8 +1144,11 @@ class BartTorvikScraper:
     def _shooting_from_player_csv(self, year: int) -> Dict[str, Dict]:
         """Compute team-level shooting splits from the player CSV endpoint.
 
-        WARNING: This endpoint does NOT support date filtering. Player stats
-        include tournament games if scraped post-tournament.
+        Date filtering is ATTEMPTED (see ``_fetch_player_csv``) and the
+        result is recorded, so the caller can label provenance honestly. If
+        the window is not honoured the data is full-season and gets stamped
+        ``data_type: full_season_unfiltered`` — do not treat such a file as
+        pre-tournament.
 
         Returns dict compatible with ``_parse_shooting_page`` output::
 
