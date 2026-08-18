@@ -116,18 +116,18 @@ Treat as a separate project — much bigger scrape, new storage schema.
 
 ## Known-open, unrelated to the above
 
-- **`tournament_context_*.json` has nine transposed games** across eight years (a
-  team recorded as losing twice, which single-elimination forbids) — e.g. 2018 has
-  Cincinnati beating Nevada in the R32 while also showing Nevada in the Sweet 16;
-  Nevada really won 75-73. The stats table works around it by deriving outcomes
-  from round *appearance*, and `generate_team_stats_table.py` prints a
-  `SOURCE DATA BUG` line per case. **This same file is the backtest's ground truth**
-  (`build_actual_outcome`), so those nine games may be scored wrong there too.
-  Highest-value open item here; not yet investigated.
-- 2025 First Four: the source has San Diego St. in both the FF and the R64, so
-  SDSU and North Carolina have their `outcome_finish` labels swapped for that
-  year. `outcome_rounds_won` is 0 for both either way, so numeric columns are
-  unaffected.
+- **`tournament_context_*.json` ground-truth defect — INVESTIGATED 2026-08-18.**
+  Eight games record the wrong winner across 6 backtest years, each confirmed
+  against an independent scrape; the backtest reads these as ground truth, so
+  280 points of ESPN scoring sit on the wrong team. Full findings, the verified
+  corrections, and why it is not yet repaired:
+  `memory/tournament_results_ground_truth_defect.md`. Reproduce with
+  `python3 scripts/audit_tournament_results.py`. **Needs a decision** — fixing
+  it invalidates every recorded baseline and requires a backtest re-run.
+- 2025 First Four: the source names San Diego St. as the R64 loser when UNC
+  actually played that game. No backtest impact (only winners are scored, and
+  the winner is correct); it swaps SDSU's and UNC's `outcome_finish` labels in
+  the stats table, with `outcome_rounds_won` 0 for both either way.
 - **Egress from Claude Code web sessions is blocked for all general internet
   hosts** (the proxy refuses CONNECT with 403 — verified against `example.com`,
   not just barttorvik). No scraper in this repo can reach its source from those
