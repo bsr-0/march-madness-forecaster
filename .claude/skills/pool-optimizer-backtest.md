@@ -42,7 +42,7 @@ pytest -m "not slow"              # Skip long-running tests
 
 ## Architecture Map
 
-### Pipeline Phases (from WORKFLOW.md)
+### Pipeline Phases
 ```
 Data Foundation → Feature Engineering → Model Selection → Calibration → Simulation → Optimization
 ```
@@ -157,8 +157,8 @@ from the stochastic-50-bracket regime and do NOT bound the deterministic
 meta-learner regime:
 
 - "Oracle best-of-50: ~9% P(1st)" (CLAUDE.md North Star).
-- "Mean 8.08-rank gap, MC ranker vs oracle best-of-50" (MEMORY.md §3
-  council 64 row, 2026-04-25; `scripts/noise_floor_ceiling.py`).
+- "Mean 8.08-rank gap, MC ranker vs oracle best-of-50" (`FINDINGS.md` §2
+  "irreducible selection noise finding", 2026-04-25; `scripts/noise_floor_ceiling.py`).
 
 Both are gaps between a *ranker selecting from a 50-bracket portfolio* and
 the oracle-best of that same portfolio. The deterministic meta-learner

@@ -207,9 +207,9 @@ def test_walk_forward_contract(self, test_year):
 
 ---
 
-## Current Production Strategy (2026-05-02)
+## Current Production Strategy (updated 2026-08-18)
 
-**`meta_region_poolaware` = 11.9% P(1st)** (14-year LOYO, N=30 pool, p=0.008 after multiple comparison correction).
+**`meta_region_poolaware` = 11.2% P(1st)** (15-year LOYO 2011-2026 excl. 2020, N=31 pool: 30 opponents + model bracket, canonical contract `--team-identity --opponent pool --n-opponents 30 --n-repeats 100`, MeanRank t=11.0 p<0.0001 Bonferroni-corrected). This supersedes the earlier 11.9%/14-year figure — see CLAUDE.md's "Architectural Direction" table for the current authoritative numbers, and `FINDINGS.md` for full history.
 
 ### How It Works
 1. Generate ~25 diverse candidate brackets per year:
@@ -222,14 +222,14 @@ def test_walk_forward_contract(self, test_year):
 3. Select the candidate with highest P(1st) against the field
 
 ### Key Insight
-Optimizing P(beat field) instead of E[points] is a fundamentally different objective that broke through the 8% E[points]-based ceiling. The GBM learned model (4.6%) is worse than raw probability-based construction (8.0%), which is worse than pool-aware selection over diverse candidates (11.9%).
+Optimizing P(beat field) instead of E[points] is a fundamentally different objective that broke through the earlier E[points]-based ceiling. The GBM learned model (4.6%) is worse than raw probability-based construction (meta_region 6.3%, meta_exhaustive 6.2% under the current 15-year contract), which is worse than pool-aware selection over diverse candidates (11.2%).
 
 ### Strategy Evolution
 ```
-seed baseline          3.1%  → starting point
+seed baseline          4.9%  → starting point (current 15-yr contract)
 meta_gbm               4.6%  → learned model (superseded)
-meta_region             8.0%  → construction > learned models
-meta_region_poolaware  11.9%  → opponent-aware selection (current best)
+meta_region             6.3%  → construction > learned models
+meta_region_poolaware  11.2%  → opponent-aware selection (current best)
 ```
 
 ---
@@ -237,7 +237,7 @@ meta_region_poolaware  11.9%  → opponent-aware selection (current best)
 ## Anti-Patterns to Avoid
 
 1. **Mocking optimizer internals.** Use synthetic but structurally valid data (real seeds, real scoring rules).
-2. **Optimizing game prediction accuracy.** BSS=0 is the field-wide ceiling. 14 Kaggle/academic techniques tested — none beat raw probability-based construction. The edge is in construction + opponent modeling.
+2. **Optimizing game prediction accuracy.** BSS=0 is the field-wide ceiling. 14 Kaggle/academic techniques tested — none beat raw probability-based construction. The edge is in construction + opponent modeling. (Detail: `FINDINGS.md` §2, "Mean 8.08-rank gap, MC ranker vs oracle-best-of-50" — `scripts/noise_floor_ceiling.py`.)
 3. **Feeding GBM probabilities into construction modes.** Proven to hurt — GBM probs are less calibrated than torvik. Don't combine them.
 4. **Fitting pool hyperparameters on all years.** Always walk-forward: fit on years < test_year.
 5. **SA construction.** Fundamentally broken at 1-2% P(1st). Do not revisit.
@@ -248,8 +248,12 @@ meta_region_poolaware  11.9%  → opponent-aware selection (current best)
 
 ---
 
-## Next Steps (prioritized)
+## Do Not Re-Propose (all tried, all killed — see FINDINGS.md §3 for detail)
 
-1. **Improve opponent model** — use 105 real pool brackets (2023-2026) from `data/pool_history/pool_hist_results.json` as behavioral prior instead of generic ESPN picks
-2. **More candidate diversity** — more blend ratios, walk-forward Massey best-system selection
-3. **Upset specialist as poolaware candidate** — add upset-adjusted brackets to candidate pool (specialist alone was null, but as one of ~25 candidates it might be selected in specific years)
+These were the natural next steps as of 2026-05-02 and were all subsequently tested and killed. Do not re-dispatch work on any of them without new evidence:
+
+1. **Real-pool-history opponent model** (seed-walk transfer of actual 2023-2026 brackets as behavioral prior) — killed 2026-05-18, **−5.6pp regression** (6.27% vs 11.9% baseline at the time). ESPN national pick distribution remains a better opponent model than translated real brackets.
+2. **More candidate diversity** (more blend ratios, denser risk grids, per-region independent construction, walk-forward Massey best-system selection) — killed across multiple independent attempts 2026-05-18, consistently null. New candidates were selected 0/15 or near-0/15 years; the ~25-candidate pool is calibrated against the fixed 200-trial inner MC budget, and unselected candidates add pure noise.
+3. **Upset specialist as poolaware candidate** — killed 2026-05-03. Selected in only 1/15 years and hurt P(1st) by ~2pp when added.
+
+If work resumes on the pool-strategy frontier, the honest state (per CLAUDE.md and `FINDINGS.md`) is that 11.2% is judged the ceiling for the current `meta_region_poolaware` architecture. A genuinely new lever (not a variant of the above) is needed to move past it — e.g. new external data sources rather than more construction/selection tuning.

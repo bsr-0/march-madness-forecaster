@@ -35,7 +35,7 @@ Fine to do without explicit approval:
 
 1. Ship the strategy (module + tests + registry + catalog update).
 2. Run **unit tests only** (`pytest tests/...`) to verify the addition works.
-3. Update `STRATEGY_CATALOG.md` Implementation Status + Build Order to reflect the addition.
+3. Update CLAUDE.md's strategy comparison table to reflect the addition.
 4. **Stop.** Report permutation count delta. Wait for human approval before any `--tier budget` invocation.
 
 ## When a run IS authorized
@@ -49,7 +49,7 @@ If the signal is ambiguous ("what's next?" / "keep going" / "sure"), assume it i
 
 ## Why this is in `memory/` and not just inline
 
-Per the project's `memory/` convention (see `MEMORY.md`), settled policy lives here as a persistent source of truth. Inline CLAUDE.md notes can be trimmed during auto-compaction; this file survives and is discoverable.
+Settled policy lives here as a persistent source of truth, separate from CLAUDE.md. Inline CLAUDE.md notes can be trimmed during auto-compaction; this file survives and is discoverable.
 
 If this policy is ever reversed or amended, append a dated row to the table below — do not edit existing rows.
 

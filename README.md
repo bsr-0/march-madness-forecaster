@@ -41,32 +41,21 @@ march-madness optimize-pool --year 2026 --pool-size 30
 march-madness optimize-pool --year 2026 --pool-size 30 --payout winner_take_all
 march-madness optimize-pool --year 2026 --pool-size 100 --payout top_3
 
-# Backtest-recommended: torvik probabilities + champion-first construction
-# (best BestRnk across 13-year backtest — see POOL_STRATEGY_RECOMMENDATION.md)
+# Production strategy: pool-aware selection over ~25 diverse candidate brackets
+# (current baseline 11.2% P(1st), 15-year backtest — see CLAUDE.md for the full table)
 march-madness optimize-pool --year 2026 --pool-size 30 \
-  --mode torvik --construction-mode champ_first
-
-# Aggressive contrarian: best P(1st) at 0.20% (10× seed baseline)
-march-madness optimize-pool --year 2026 --pool-size 30 \
-  --mode torvik --construction-mode e8_first
+  --mode meta_region_poolaware
 
 # If you have your pool's prior-year brackets, use them instead of ESPN aggregate
 # (calibrates opponent model to your actual pool's tendencies)
 march-madness optimize-pool --year 2026 --pool-size 30 \
   --pool-history data/pool_hist_results.json
 
-# Run the full MC pool backtest (13 years, all modes — takes ~30 min)
+# Run the full MC pool backtest (15 years, all modes — takes ~30 min)
 python scripts/mc_pool_backtest.py
 ```
 
-**Construction mode guide** (from `POOL_STRATEGY_RECOMMENDATION.md`):
-
-| Mode | Best for | P(1st) |
-|------|----------|--------|
-| `champ_first` | Balanced: best BestRnk + MeanRnk | 0.06% |
-| `e8_first` | Max upside in winner-take-all pools | 0.20% |
-| `f4_first` | Consistency | 0.16% |
-| `forward_greedy` | Default / conservative | — |
+See `CLAUDE.md`'s "Architectural Direction" section for the current strategy comparison table and why `meta_region_poolaware` (pool-aware selection over diverse candidates) beats simpler construction modes like `champ_first`/`e8_first`/`f4_first`.
 
 ## Maintenance
 
@@ -150,4 +139,4 @@ pytest           # run tests
 ruff check src/  # lint
 ```
 
-See `WORKFLOW.md` for the full pipeline diagram and `POOL_STRATEGY_RECOMMENDATION.md` for pool strategy backtest results.
+See `CLAUDE.md` for the current pool strategy baseline and `FINDINGS.md` for the project's dead-end ledger and architectural history.
