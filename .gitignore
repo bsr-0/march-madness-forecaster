@@ -62,3 +62,12 @@ data/raw/backups/
 htmlcov/
 .coverage
 data/kaggle/MMasseyOrdinals.csv
+
+# Raw play-by-play payloads: multi-GB per season (2026 alone is ~1.9 GB),
+# far past GitHub's 100 MB file limit. Regenerate with
+# scripts/backfill_pbp_history.py; the small derived feature files
+# (clutch_features_*, shooting_features_*, player_minutes_*) are committed
+# instead, since those are what the pipeline actually consumes.
+data/raw/historical/pbp_*.json
+data/raw/historical/_narrow_schema_backup/
+data/raw/historical/_pbp_backfill*.log

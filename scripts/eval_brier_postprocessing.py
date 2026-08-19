@@ -58,10 +58,18 @@ def seed_implied_prob(seed1: int, seed2: int) -> float:
 
 
 def load_tournament_games(year: int) -> List[Dict]:
-    """Load tournament results, excluding First Four."""
+    """Load tournament results, excluding First Four, oriented better-seed-first.
+
+    The stored files are largely winner-first (see
+    src/data/game_orientation.py), so orientation here keeps every
+    probability-vs-outcome comparison downstream honest.
+    """
+    from src.data.game_orientation import orient_result_games
+
     games = load_tournament_results(year)
     # Exclude First Four play-in games
-    return [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
+    kept = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
+    return orient_result_games(kept)
 
 
 def load_model_predictions(year: int) -> Optional[Dict[str, float]]:
