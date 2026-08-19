@@ -36,6 +36,7 @@ jobs:
             "docs/data/validation_2025.json"
             "docs/data/model_metrics.json"
             "docs/data/team_profiles.json"
+            "docs/data/ml_backtest.json"
           )
           for f in "${REQUIRED_FILES[@]}"; do
             if [ ! -f "$f" ]; then

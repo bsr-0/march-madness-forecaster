@@ -390,20 +390,6 @@ body {
   opacity: 0.55;
 }
 
-/* A year whose bar reflects a diagnostic counterfactual (e.g. the 3-yr
-   recency-fit window's re-optimized pick) rather than the actual submitted
-   bracket's real score — dashed outline + gold tint to flag it apart. */
-.loyo-chip-diagnostic .loyo-chip-bar {
-  background: var(--accent-gold);
-  opacity: 0.7;
-  outline: 1px dashed var(--accent-gold);
-  outline-offset: 1px;
-}
-
-.loyo-chip-diagnostic .loyo-chip-pts {
-  color: var(--accent-gold);
-}
-
 .loyo-chip-pts {
   font-size: 0.68rem;
   font-weight: 700;
@@ -947,53 +933,13 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
- * BACKTEST WINDOW TOGGLE
+ * BACKTEST WINDOW NOTE
  * ══════════════════════════════════════════════════════════════════ */
 
-.window-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0 8px;
+.window-note {
+  margin: 18px 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--line);
-  flex-wrap: wrap;
-}
-
-.window-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-}
-
-.window-toggle {
-  display: flex;
-  gap: 8px;
-}
-
-.window-toggle-btn {
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--line);
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--ink-soft);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.window-toggle-btn.active {
-  border-color: var(--accent-sky);
-  background: rgba(47, 94, 138, 0.12);
-  color: var(--accent-sky);
-}
-
-.window-note {
-  margin: 8px 0 0;
   font-size: 0.76rem;
   line-height: 1.55;
   color: var(--ink-faint);
@@ -1247,4 +1193,239 @@ body {
   color: var(--accent-deep);
   font-style: normal;
   font-weight: 700;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ * MODEL ACCURACY TAB
+ * ══════════════════════════════════════════════════════════════════ */
+
+.bt-section {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* ── Headline metric cards ── */
+
+.bt-headline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 20px 0 18px;
+}
+
+.bt-card {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--ink-faint);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.bt-card-good { border-left-color: var(--accent-green); }
+.bt-card-bad  { border-left-color: var(--accent); }
+.bt-card-flat { border-left-color: var(--accent-gold); }
+
+.bt-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.bt-card-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-card-sub {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-card-hint {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ── Plain-language summary ── */
+
+.bt-callout {
+  background: rgba(200, 145, 37, 0.09);
+  border: 1px solid rgba(200, 145, 37, 0.32);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+.bt-callout p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.62;
+  color: var(--ink);
+}
+
+.bt-note {
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: var(--ink-faint);
+  margin: 12px 0 0;
+}
+
+/* ── Table accents ── */
+
+.bt-pos { color: var(--accent-green); font-weight: 700; }
+.bt-neg { color: var(--accent);       font-weight: 700; }
+.bt-dim { color: var(--ink-faint); }
+
+.stats-table tbody tr.bt-row-prod td { background: rgba(200, 145, 37, 0.10); }
+
+.bt-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(200, 145, 37, 0.2);
+  color: #6b4800;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+
+/* ── Per-year diverging skill chart ── */
+
+.bt-year-chart {
+  display: flex;
+  gap: 5px;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding: 8px 0 2px;
+}
+
+.bt-year {
+  flex: 1 0 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.bt-year-up, .bt-year-dn {
+  height: 48px;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  justify-content: center;
+}
+
+.bt-year-dn { align-items: flex-start; }
+
+.bt-year-axis {
+  width: 100%;
+  height: 1px;
+  background: var(--panel-border);
+}
+
+.bt-year-bar {
+  width: 62%;
+  min-width: 10px;
+  border-radius: 3px 3px 0 0;
+}
+
+.bt-year-pos { background: var(--accent-green); }
+.bt-year-neg { background: var(--accent); border-radius: 0 0 3px 3px; }
+
+.bt-year-label {
+  font-size: 0.66rem;
+  color: var(--ink-faint);
+  margin-top: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Calibration ── */
+
+.bt-calib {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding: 8px 0 2px;
+}
+
+.bt-calib-bin {
+  flex: 1 0 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.bt-calib-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 84px;
+}
+
+.bt-calib-bar {
+  width: 14px;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+
+.bt-calib-pred { background: var(--accent-sky); }
+.bt-calib-act  { background: var(--accent-gold); }
+
+.bt-calib-x {
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-calib-n {
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* ── Caveats ── */
+
+.bt-caveats {
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+
+.bt-caveats li {
+  font-size: 0.86rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  margin-bottom: 11px;
+}
+
+.bt-caveats strong { color: var(--ink); }
+
+@media (max-width: 640px) {
+  .bt-section { padding: 20px 16px; }
+  .bt-card-value { font-size: 1.5rem; }
 }

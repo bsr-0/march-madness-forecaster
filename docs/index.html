@@ -26,6 +26,7 @@
       <button class="page-tab-btn active" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
       <button class="page-tab-btn" data-tab="stats" onclick="setActiveTab('stats')">Team Stats</button>
       <button class="page-tab-btn" data-tab="matchups" onclick="setActiveTab('matchups')">Matchups</button>
+      <button class="page-tab-btn" data-tab="backtest" onclick="setActiveTab('backtest')">Model Accuracy</button>
     </nav>
 
     <div class="tab-panel" id="tab-bracket">
@@ -36,11 +37,7 @@
         <div class="strategy-strip" id="strategy-strip"></div>
         <div class="strategy-detail" id="strategy-detail"></div>
 
-        <div class="window-row">
-          <span class="window-label">Backtest window</span>
-          <div class="window-toggle" id="window-toggle"></div>
-        </div>
-        <p class="window-note" id="window-note"></p>
+        <p class="window-note">Full 15-year backtest (2011–2026), N=31 pool. Statistically validated.</p>
       </section>
 
       <!-- Champion path -->
@@ -144,6 +141,127 @@
             <tbody id="matchup-table-body"></tbody>
           </table>
         </div>
+      </section>
+
+    </div>
+
+    <div class="tab-panel" id="tab-backtest" style="display:none">
+
+      <section class="bt-section">
+        <p class="section-label">How accurate is the model, really?</p>
+        <p class="stats-table-intro">
+          Out-of-sample results from leave-one-year-out backtesting: for every tournament, the model is
+          trained without that year and then asked to predict it cold. Every number below is computed from
+          <code>artifacts/loyo_pergame_predictions.json</code> by
+          <code>scripts/generate_ml_backtest_data.py</code> — model and baseline are scored on the
+          <em>same games</em>, so the comparison is like-for-like. Nothing on this page is hand-entered.
+        </p>
+
+        <div class="bt-headline" id="bt-headline"></div>
+        <div class="bt-callout" id="bt-callout"></div>
+      </section>
+
+      <section class="bt-section">
+        <p class="section-label">Every model tested, against the seed baseline</p>
+        <p class="stats-table-intro">
+          Brier score is the headline metric (lower is better — it rewards being confident
+          <em>and</em> right). <strong>BSS</strong> is skill relative to the seed baseline: positive means
+          better than simply trusting seeds, 0 means no better, negative means worse. The baseline is a
+          genuinely strong opponent — higher seeds win about
+          <strong id="bt-favrate"></strong> of tournament games.
+        </p>
+        <div class="stats-table-scroll">
+          <table class="stats-table" id="bt-models-table">
+            <thead id="bt-models-head"></thead>
+            <tbody id="bt-models-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bt-section">
+        <p class="section-label">Year by year</p>
+        <p class="stats-table-intro">
+          Skill is not consistent across years. Bars above the line are years the model beat the seed
+          baseline; bars below are years it lost to it.
+        </p>
+        <div class="bt-year-chart" id="bt-year-chart"></div>
+        <p class="bt-note" id="bt-year-note"></p>
+      </section>
+
+      <section class="bt-section">
+        <p class="section-label">By round</p>
+        <p class="stats-table-intro">
+          Where the edge actually comes from — and where it disappears. Note the accuracy columns in the
+          late rounds.
+        </p>
+        <div class="stats-table-scroll">
+          <table class="stats-table" id="bt-rounds-table">
+            <thead id="bt-rounds-head"></thead>
+            <tbody id="bt-rounds-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bt-section" id="bt-market-section">
+        <p class="section-label">Versus the betting market</p>
+        <p class="stats-table-intro" id="bt-market-intro"></p>
+        <div class="stats-table-scroll">
+          <table class="stats-table" id="bt-market-table">
+            <thead id="bt-market-head"></thead>
+            <tbody id="bt-market-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="bt-section">
+        <p class="section-label">Calibration</p>
+        <p class="stats-table-intro">
+          When the model says 70%, does it happen 70% of the time? Each bar compares predicted probability
+          against what actually occurred in that bucket. Sparse buckets are noisy — the game counts matter
+          as much as the bars.
+        </p>
+        <div class="bt-calib" id="bt-calib"></div>
+        <p class="bt-note" id="bt-calib-note"></p>
+      </section>
+
+      <section class="bt-section">
+        <p class="section-label">Caveats — read before trusting any of the above</p>
+        <ul class="bt-caveats">
+          <li>
+            <strong>These numbers depend on a bug fix, and older figures elsewhere may not include it.</strong>
+            Tournament results were stored <em>winner-first</em> — every 2005–2015 game listed the winning
+            team first, and 90.2% of all games did. Scored in that order a model is graded against a ~90%
+            base rate instead of the real
+            <strong id="bt-favrate-2"></strong>, which silently ruins accuracy and calibration figures and
+            teaches any correction layer a bias that does not exist. Games are now re-oriented to an
+            outcome-independent convention (better seed first) at the data-loading boundary. Brier, log
+            loss and BSS are mathematically unaffected by that flip, so older Brier figures remain valid —
+            but any previously published accuracy, calibration or correction-layer result predating the fix
+            should be treated as suspect.
+          </li>
+          <li>
+            <strong>Researcher degrees of freedom are not fully audited.</strong> Hyperparameters were tuned
+            while observing backtest results on these same years, and no multiple-testing correction is
+            applied across the ~150 Brier evaluations per fit. Genuine out-of-sample performance is
+            therefore likely <em>somewhat worse</em> than shown.
+          </li>
+          <li>
+            <strong>Sample sizes are small where it matters most.</strong> 63 games per tournament, and the
+            late rounds are tiny — a single Final Four is 2 games. Round-level and year-level numbers should
+            be read as indicative, not decisive.
+          </li>
+          <li>
+            <strong>The optimization target was held-out Brier, not BSS.</strong> The model was selected to
+            minimize Brier; its skill-over-baseline was measured afterward, not optimized for.
+          </li>
+          <li>
+            <strong>This is prediction accuracy, not pool performance.</strong> This project's actual edge is
+            bracket construction and selection, not forecasting games — every model family tested converges
+            to roughly zero skill over the seed baseline, which is why production runs a 7-feature logistic
+            regression rather than anything more elaborate. The Bracket Picker tab's P(1st) numbers come from
+            a separate pool-simulation backtest and are not comparable to the metrics here.
+          </li>
+        </ul>
       </section>
 
     </div>
