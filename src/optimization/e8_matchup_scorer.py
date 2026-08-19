@@ -28,11 +28,12 @@ from typing import Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 _SIGNAL_WEIGHTS = {
-    "turnover_interaction": 0.25,
-    "rebounding_interaction": 0.20,
-    "tempo_exploitation": 0.20,
-    "three_point_interaction": 0.15,
-    "coach_e8_experience": 0.20,
+    "turnover_interaction": 0.22,
+    "rebounding_interaction": 0.17,
+    "tempo_exploitation": 0.17,
+    "three_point_interaction": 0.12,
+    "coach_e8_experience": 0.17,
+    "clutch_composure_interaction": 0.15,
 }
 
 # Maximum probability adjustment (±8pp).  The 42.6% upset rate implies
@@ -49,6 +50,13 @@ _AVG_DEFENSIVE_REB_RATE = 0.72
 _AVG_TEMPO = 68.0
 _AVG_THREE_PT_PCT = 0.34
 _AVG_OPP_EFG_PCT = 0.48
+
+# Clutch/blown-lead population averages (src/data/features/clutch_metrics.py).
+# Neutral defaults (0.5 / 0.0) so a team missing clutch data — the common
+# case until historical backfill runs — contributes zero asymmetry rather
+# than a spurious adjustment.
+_AVG_BLOWN_10PT_LEAD_RATE = 0.5
+_AVG_CLOSE_GAME_WIN_RATE = 0.5
 
 
 def _sigmoid(x: float, center: float = 0.0, scale: float = 1.0) -> float:
@@ -103,6 +111,7 @@ class E8MatchupInteractionScorer:
             "tempo_exploitation": self._tempo_exploitation(team_a, team_b),
             "three_point_interaction": self._three_point_interaction(team_a, team_b),
             "coach_e8_experience": self._coach_experience(team_a, team_b),
+            "clutch_composure_interaction": self._clutch_composure_interaction(team_a, team_b),
         }
 
         composite = sum(_SIGNAL_WEIGHTS[name] * value for name, value in signals.items())
@@ -194,6 +203,27 @@ class E8MatchupInteractionScorer:
         b_score = math.log1p(b_e8) + 0.5 * b_deep
 
         return _sigmoid(a_score - b_score, center=0.0, scale=1.0)
+
+    def _clutch_composure_interaction(self, a, b) -> float:
+        """Composure asymmetry: blown-lead tendency and close-game record.
+
+        Fields come from src/data/features/clutch_metrics.py's per-team
+        aggregation (blown_10pt_lead_rate, close_game_win_rate). Not a
+        pairwise interaction like the other signals (composure is a team
+        trait, not a matchup-dependent one) — scored as a direct asymmetry
+        so a team that reliably protects leads and wins close games gets an
+        edge over one that doesn't, independent of the opponent's profile.
+        """
+        a_blown = getattr(a, "blown_10pt_lead_rate", _AVG_BLOWN_10PT_LEAD_RATE)
+        b_blown = getattr(b, "blown_10pt_lead_rate", _AVG_BLOWN_10PT_LEAD_RATE)
+        a_close = getattr(a, "close_game_win_rate", _AVG_CLOSE_GAME_WIN_RATE)
+        b_close = getattr(b, "close_game_win_rate", _AVG_CLOSE_GAME_WIN_RATE)
+
+        # Lower blown-lead rate and higher close-game win rate = more composed.
+        a_composure = (1.0 - a_blown) + a_close
+        b_composure = (1.0 - b_blown) + b_close
+
+        return _sigmoid(a_composure - b_composure, center=0.0, scale=0.5)
 
 
 # ---------------------------------------------------------------------------
