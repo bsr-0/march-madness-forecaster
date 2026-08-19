@@ -364,6 +364,68 @@ class RosterPayloadSchema(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Play-by-play (cbbpy_pbp)
+# ---------------------------------------------------------------------------
+
+
+class PbpEventSchema(BaseModel):
+    """One normalized play-by-play event.
+
+    Schema confirmed live against ESPN's playbyplay HTML page (game
+    401714261, 2025-02-10) — see ``cbbpy_pbp.py`` module docstring. Fields
+    beyond game_id/period/seconds_remaining/home_score/away_score are
+    optional: they exist to support future box-score-from-PBP and
+    player-minutes-from-PBP aggregation (not built yet), not because
+    clutch_metrics.py needs them today. ``extra="allow"`` in case ESPN adds
+    fields this schema doesn't know about yet.
+    """
+
+    model_config = {"extra": "allow"}
+
+    game_id: str = Field(min_length=1)
+    period: int = Field(ge=1, le=10)
+    seconds_remaining: float = Field(ge=0.0)
+    home_score: int = Field(ge=0)
+    away_score: int = Field(ge=0)
+
+    home_away: Optional[str] = None
+    scoring_play: bool = False
+    shooting_play: bool = False
+    points_attempted: Optional[int] = Field(default=None, ge=1, le=3)
+    play_type: Optional[str] = None
+    play_type_category_id: Optional[str] = None
+    text: Optional[str] = None
+    athlete_id: Optional[str] = None
+    athlete_name: Optional[str] = None
+    athlete_team: Optional[str] = None
+    win_probability: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    favored_is_away: Optional[bool] = None
+    coordinate_x: Optional[float] = None
+    coordinate_y: Optional[float] = None
+
+
+class PbpGamePayloadSchema(BaseModel):
+    """Validated play-by-play for a single game."""
+
+    game_id: str = Field(min_length=1)
+    game_date: Optional[str] = None
+    home_team_raw: Optional[str] = None
+    away_team_raw: Optional[str] = None
+    plays: List[PbpEventSchema] = Field(default_factory=list)
+
+
+class PbpPayloadSchema(BaseModel):
+    """Validated full-season play-by-play payload from cbbpy_pbp scraper."""
+
+    season: int = Field(ge=2000, le=2100)
+    source: Optional[str] = None
+    cutoff_date: Optional[str] = None
+    games: List[PbpGamePayloadSchema] = Field(default_factory=list)
+    timestamp: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+# ---------------------------------------------------------------------------
 # Conference Seeds
 # ---------------------------------------------------------------------------
 
@@ -660,6 +722,59 @@ def validate_roster_payload(payload: dict) -> dict:
 
     result = {**payload, "teams": validated_teams}
     return result
+
+
+def validate_pbp_payload(payload: dict) -> dict:
+    """Validate a full-season play-by-play payload from cbbpy_pbp scraper.
+
+    Returns validated dict. Drops invalid games/plays with warnings, mirroring
+    ``validate_roster_payload``.
+    """
+    if not payload or not isinstance(payload, dict):
+        return payload
+
+    games = payload.get("games", [])
+    if not games:
+        return payload
+
+    validated_games = []
+    skipped_games = 0
+    skipped_plays = 0
+
+    for game_data in games:
+        try:
+            valid_plays = []
+            for play in game_data.get("plays", []):
+                try:
+                    valid_plays.append(PbpEventSchema(**play).model_dump())
+                except Exception as e:
+                    logger.warning(
+                        "Skipping invalid play in game %s: %s",
+                        game_data.get("game_id", "?"),
+                        e,
+                    )
+                    skipped_plays += 1
+
+            if valid_plays:
+                validated_games.append({**game_data, "plays": valid_plays})
+            else:
+                skipped_games += 1
+        except Exception as e:
+            logger.warning(
+                "Skipping invalid game %s: %s",
+                game_data.get("game_id", "?"),
+                e,
+            )
+            skipped_games += 1
+
+    if skipped_games or skipped_plays:
+        logger.warning(
+            "PBP validation: skipped %d games, %d plays",
+            skipped_games,
+            skipped_plays,
+        )
+
+    return {**payload, "games": validated_games}
 
 
 def validate_conference_seeds(seeds: dict) -> dict:

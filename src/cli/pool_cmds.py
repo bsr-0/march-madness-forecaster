@@ -1004,10 +1004,45 @@ def _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir):
     if not team_features:
         return round_probs
 
+    _merge_clutch_features(year, data_dir, team_features)
+
     e8_matchups = predict_e8_matchups(seeds)
     adjusted = apply_e8_adjustments(round_probs, e8_matchups, team_features)
     print(f"  Applied E8 matchup interaction adjustments ({len(e8_matchups)} matchups)")
     return adjusted
+
+
+def _merge_clutch_features(year, data_dir, team_features) -> None:
+    """Merge clutch_features_{year}.json onto the E8 team_features namespaces, in place.
+
+    Mirrors the torvik four-factors merge above: silently no-ops if the file
+    doesn't exist yet (clutch features require a play-by-play backfill —
+    src/data/scrapers/cbbpy_pbp.py + src/data/features/clutch_metrics.py —
+    that hasn't run for most years yet).
+    """
+    clutch_path = Path(data_dir) / f"clutch_features_{year}.json"
+    if not clutch_path.exists():
+        return
+    try:
+        with open(clutch_path) as f:
+            clutch = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    clutch_teams = {t["team_id"]: t for t in clutch.get("teams", []) if "team_id" in t}
+    for team_id, feat in team_features.items():
+        data = clutch_teams.get(team_id)
+        if not data:
+            continue
+        # Only set attributes with a real value — leaving them unset lets
+        # e8_matchup_scorer's getattr(..., default) fall back correctly for
+        # small-sample teams where aggregation returned None.
+        if data.get("blown_10pt_lead_rate") is not None:
+            feat.blown_10pt_lead_rate = data["blown_10pt_lead_rate"]
+        if data.get("close_game_win_rate") is not None:
+            feat.close_game_win_rate = data["close_game_win_rate"]
+
+    print(f"  Merged clutch features for {len(clutch_teams)} teams")
 
 
 def _find_and_read_seeds_file(year: int):
