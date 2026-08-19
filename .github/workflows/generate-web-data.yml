@@ -63,6 +63,16 @@ jobs:
           echo "=== Generating pairwise matchup table (docs/data/matchups_by_year.json) ==="
           python scripts/generate_matchup_table.py
 
+      # Powers the "Model Accuracy" tab. Reads the per-game LOYO prediction
+      # artifact, so it must run after pipeline artifacts are downloaded.
+      # Without this the tab would ship whatever ml_backtest.json happened to
+      # be committed and silently go stale.
+      - name: Generate ML backtest metrics
+        run: |
+          set -euo pipefail
+          echo "=== Generating ML backtest metrics (docs/data/ml_backtest.json) ==="
+          python scripts/generate_ml_backtest_data.py
+
       - name: Generate pool-aware, region, and exhaustive brackets
         run: |
           set -euo pipefail

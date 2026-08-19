@@ -145,8 +145,7 @@ let bracketData = { pool: null, exhaustive: null, stat: null };
 let loyoData          = null;   // per-year ESPN points, see docs/data/loyo_points.json
 let actualData         = null;  // real 2026 outcome, see docs/data/actual_2026.json — the
                                  // 2026 tournament already concluded, this is a replay
-let window3yrData      = null;  // 2024-2026 recency-fit backtest window, see docs/data/loyo_window_3yr_recency_fit.json
-let currentWindow      = '15yr';   // '15yr' | '3yr' — which backtest window's P(1st)/note to display
+let mlBacktestData   = null;    // LOYO prediction-accuracy metrics, see docs/data/ml_backtest.json
 let teamIndex        = {};      // team_id → { barthag, adj_oe, adj_de, champ_prob, elo_rating }
 let currentKey       = 'pool';
 let currentRound  = 'Round of 64';
@@ -207,12 +206,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     actual = null;
   }
-  let window3yr;
-  try {
-    window3yr = await fetch('data/loyo_window_3yr_recency_fit.json?v=2026-08-17a').then(r => r.json());
-  } catch (err) {
-    window3yr = null;
-  }
   let teamStats;
   try {
     teamStats = await fetch('data/team_stats_by_year.json?v=2026-08-17e').then(r => r.json());
@@ -225,12 +218,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     matchups = null;
   }
+  let mlBacktest;
+  try {
+    mlBacktest = await fetch('data/ml_backtest.json?v=2026-08-18a').then(r => r.json());
+  } catch (err) {
+    mlBacktest = null;
+  }
 
-  loyoData       = loyo;
-  actualData     = actual;
-  window3yrData  = window3yr;
-  teamStatsData  = teamStats;
-  matchupData    = matchups;
+  loyoData        = loyo;
+  actualData      = actual;
+  teamStatsData   = teamStats;
+  matchupData     = matchups;
+  mlBacktestData  = mlBacktest;
 
   // Build O(1) team lookup
   for (const t of profiles.teams) {
@@ -244,7 +243,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   renderStrategyStrip();
-  renderWindowToggle();
   activateStrategy('pool');
 
   if (teamStatsData && teamStatsData.years && teamStatsData.years.length) {
@@ -260,6 +258,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMatchupYearSelect();
     renderMatchupTable();
   }
+
+  renderMlBacktest();
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // visible, so switching tabs is instant with no re-fetch.
 // ──────────────────────────────────────────────────────────────────
 
-const PAGE_TABS = ['bracket', 'stats', 'matchups'];
+const PAGE_TABS = ['bracket', 'stats', 'matchups', 'backtest'];
 
 function setActiveTab(tab) {
   PAGE_TABS.forEach(name => {
@@ -532,59 +532,15 @@ function activateStrategy(key) {
   renderGames(rounds);
 }
 
-// ── Backtest window toggle ──
-//
-// STRATEGIES bakes in the 15-year (2011-2026) LOYO numbers as the default.
-// window3yrData (docs/data/loyo_window_3yr_recency_fit.json) holds a
-// second, much lower-power (n=3) cut over just 2024-2026. Unlike an earlier
-// version of this toggle, the '3yr' window is a genuine re-optimization,
-// not just a re-windowed display of the same 15-yr picks: the pool
-// strategy's blend_alpha hyperparameter is re-fit using only the most
-// recent 3 walk-forward years (src/optimization/recency_hparam_fitter.py),
-// scored via the same MC-pool-simulation P(1st) estimator production
-// selection uses. meta_region/meta_exhaustive never use the "blend"
-// probability base at all, so they're structurally unaffected and their
-// entries here are identical to what a 15-yr-style run over just these 3
-// years would show — only 'pool' actually differs.
-//
-// Diagnostic only either way — it does NOT change what bracket actually
-// gets submitted (scripts/generate_poolaware_bracket.py, the live 2026
-// production script, is untouched).
-const WINDOW_DEFS = {
-  '15yr': { label: '15-Year (2011–2026)', note: 'Full backtest, N=31 pool. Statistically validated.' },
-  '3yr':  { label: '2024–2026 (3-yr, refit)', note: 'Diagnostic only — pool strategy re-optimized on the 3-yr window itself, too few years for significance testing.' },
-};
-
-function setWindow(key) {
-  currentWindow = key;
-  renderWindowToggle();
-  renderStrategyStrip();
-  renderStrategyDetail();
-}
-
-function renderWindowToggle() {
-  const toggleEl = document.getElementById('window-toggle');
-  const noteEl   = document.getElementById('window-note');
-  if (!toggleEl) return;
-
-  toggleEl.innerHTML = Object.entries(WINDOW_DEFS).map(([key, def]) => `
-    <button class="window-toggle-btn${key === currentWindow ? ' active' : ''}"
-            onclick="setWindow('${key}')">${def.label}</button>
-  `).join('');
-
-  if (noteEl) noteEl.textContent = WINDOW_DEFS[currentWindow].note;
-}
-
-// Resolve the P(1st)/badge/note to display for a strategy under the
-// currently selected backtest window. Falls back to the strategy's baked-in
-// 15-yr numbers if a given window has no entry for it (e.g. Chalk, which
-// isn't backtested as a standalone strategy in any window).
+// Strategy stats always come from the full 15-year (2011-2026) LOYO
+// backtest baked into STRATEGIES. A 3-year (2024-2026) recency-refit window
+// toggle used to sit here as a diagnostic; it was removed because the refit
+// didn't improve the score and the n=3 window was too low-power to test for
+// significance. The fitter that produced it
+// (src/optimization/recency_hparam_fitter.py) is retained for offline
+// analysis — it never fed the submitted bracket either way.
 function effectiveStrategyStats(key) {
   const s = STRATEGIES.find(s => s.key === key);
-  if (currentWindow === '3yr' && window3yrData && window3yrData.strategies[key]) {
-    const w = window3yrData.strategies[key];
-    return { p_first: w.p_first, badge: `~${w.p_first}% P(1st)`, backtest_note: w.note };
-  }
   return { p_first: s.p_first, badge: s.badge, backtest_note: s.backtest_note };
 }
 
@@ -654,24 +610,7 @@ function renderStrategyDetail() {
 // have scored against that year's real outcome, not a simulated proxy).
 function loyoPointsHTML(key) {
   if (!loyoData || !loyoData.points_by_strategy[key]) return '';
-  const pts = { ...loyoData.points_by_strategy[key] };
-
-  // Under the 3-yr (recency-fit) window, swap in the counterfactual
-  // per-year scores the recency-fitted bracket actually would have scored
-  // against each year's real outcome — not just a re-windowed view of the
-  // same production picks. Only years where the fitter's chosen blend_alpha
-  // differs from the production default (0.5) can actually differ; where it
-  // doesn't, the override value is identical to the production one anyway.
-  const overrideYears = new Set();
-  if (currentWindow === '3yr' && window3yrData) {
-    const perYear = (window3yrData.strategies[key] || {}).per_year_score;
-    if (perYear) {
-      for (const [y, v] of Object.entries(perYear)) {
-        pts[y] = v;
-        overrideYears.add(y);
-      }
-    }
-  }
+  const pts = loyoData.points_by_strategy[key];
 
   const years = loyoData.years.filter(y => pts[y] != null);
   if (years.length === 0) return '';
@@ -683,12 +622,9 @@ function loyoPointsHTML(key) {
   const chips = years.map(y => {
     const v = pts[y];
     const heightPct = Math.max(8, Math.round((v / max) * 100));
-    const diagFlag = overrideYears.has(y) ? ' loyo-chip-diagnostic' : '';
-    const title = overrideYears.has(y)
-      ? `${y}: ${v.toFixed(0)} pts (3-yr recency-fit diagnostic)`
-      : `${y}: ${v.toFixed(0)} pts`;
+    const title = `${y}: ${v.toFixed(0)} pts`;
     return `
-      <div class="loyo-chip${diagFlag}" title="${title}">
+      <div class="loyo-chip" title="${title}">
         <div class="loyo-chip-bar-track">
           <div class="loyo-chip-bar" style="height:${heightPct}%"></div>
         </div>
@@ -1183,4 +1119,207 @@ function renderMatchupTable() {
     const display = v == null ? '—' : (col.fmt ? col.fmt(v) : v);
     return `<td class="${cls(col, i).trim()}">${display}</td>`;
   }).join('')}</tr>`).join('');
+}
+
+// ──────────────────────────────────────────────────────────────────
+// MODEL ACCURACY TAB
+//
+// Renders docs/data/ml_backtest.json — leave-one-year-out prediction
+// metrics. Everything displayed is precomputed by
+// scripts/generate_ml_backtest_data.py from the per-game prediction
+// artifact; this file only formats it. The framing is deliberately
+// unflattering where the data is unflattering (accuracy ties the seed
+// baseline, several model families score negative skill, the market edges
+// the model out) — see the caveats block in index.html.
+// ──────────────────────────────────────────────────────────────────
+
+// btPct tolerates null (unlike the bracket tab's pct(), which assumes a value).
+const btPct = (v, d = 1) => v == null ? '—' : `${(v * 100).toFixed(d)}%`;
+const num4  = (v) => v == null ? '—' : v.toFixed(4);
+
+function renderMlBacktest() {
+  const d = mlBacktestData;
+  if (!d) return;
+
+  const prod = d.models.find(m => m.key === d.production_key);
+  const base = d.models.find(m => m.key === d.baseline_key);
+  if (!prod || !base) return;
+
+  // ── Headline metric cards ──
+  const cards = [
+    {
+      label: 'Brier score',
+      value: num4(prod.brier),
+      sub: prod.brier_ci ? `95% CI ${num4(prod.brier_ci[0])}–${num4(prod.brier_ci[1])}` : '',
+      hint: 'lower is better',
+    },
+    {
+      label: 'Skill vs seed baseline (BSS)',
+      value: `${prod.bss >= 0 ? '+' : ''}${prod.bss.toFixed(3)}`,
+      sub: `baseline Brier ${num4(base.brier)}`,
+      hint: prod.bss > 0 ? 'modest positive skill' : 'no skill',
+      tone: prod.bss > 0 ? 'good' : 'bad',
+    },
+    {
+      label: 'Winner accuracy',
+      value: btPct(prod.accuracy),
+      sub: `seed baseline ${btPct(base.accuracy)}`,
+      hint: `${((prod.accuracy - base.accuracy) * 100).toFixed(1)}pp vs baseline`,
+      // A sub-1pp gap on 1,323 games is ~6 extra games called right — well
+      // inside noise, so this is flagged as flat rather than as a win.
+      tone: Math.abs(prod.accuracy - base.accuracy) < 0.01 ? 'flat' : 'good',
+    },
+    {
+      label: 'Games evaluated',
+      value: String(d.n_games),
+      sub: `${d.years.length} tournaments, ${d.years[0]}–${d.years[d.years.length - 1]}`,
+      hint: 'all out-of-sample',
+    },
+  ];
+
+  document.getElementById('bt-headline').innerHTML = cards.map(c => `
+    <div class="bt-card${c.tone ? ` bt-card-${c.tone}` : ''}">
+      <div class="bt-card-label">${c.label}</div>
+      <div class="bt-card-value">${c.value}</div>
+      <div class="bt-card-sub">${c.sub}</div>
+      <div class="bt-card-hint">${c.hint}</div>
+    </div>
+  `).join('');
+
+  // ── The honest headline: skill is real but small, and accuracy is flat ──
+  const accGapPP = (prod.accuracy - base.accuracy) * 100;
+  const extraGames = Math.round((prod.accuracy - base.accuracy) * d.n_games);
+  document.getElementById('bt-callout').innerHTML = `
+    <p><strong>The short version:</strong> the model beats the seed baseline on Brier score by
+    ${(prod.bss * 100).toFixed(1)}% (BSS ${prod.bss >= 0 ? '+' : ''}${prod.bss.toFixed(3)}) — a real but
+    modest edge that comes almost entirely from <em>better-calibrated confidence</em>, not from calling more
+    games correctly. It picks the winner in ${btPct(prod.accuracy)} of games against
+    ${btPct(base.accuracy)} for seeds alone: a gap of ${accGapPP.toFixed(1)} percentage points, or about
+    ${extraGames} extra games out of ${d.n_games} across ${d.years.length} tournaments — small enough that
+    it is indistinguishable from noise. If you want a model that tells you who wins substantially more often
+    than the bracket's own seeding does, this is not that model, and neither was any of the more complex
+    architectures tested.</p>
+  `;
+
+  const favEl = document.getElementById('bt-favrate');
+  if (favEl) favEl.textContent = btPct(d.favorite_win_rate);
+  const favEl2 = document.getElementById('bt-favrate-2');
+  if (favEl2) favEl2.textContent = btPct(d.favorite_win_rate);
+  const storedEl = document.getElementById('bt-stored-rate');
+  if (storedEl && d.source_orientation_note) {
+    storedEl.textContent = btPct(d.source_orientation_note.stored_outcome_1_rate);
+  }
+
+  // ── Model comparison table ──
+  const mCols = ['Model', 'Games', 'Brier', '95% CI', 'BSS vs seed', 'Accuracy', 'Log loss'];
+  document.getElementById('bt-models-head').innerHTML =
+    `<tr>${mCols.map((c, i) => `<th class="${i ? 'numeric' : ''}">${c}</th>`).join('')}</tr>`;
+  document.getElementById('bt-models-body').innerHTML = d.models.map(m => {
+    const isBase = m.key === d.baseline_key;
+    const isProd = m.key === d.production_key;
+    const bssCls = isBase ? '' : (m.bss > 0 ? 'bt-pos' : 'bt-neg');
+    const bssTxt = isBase ? '— (baseline)' : `${m.bss >= 0 ? '+' : ''}${m.bss.toFixed(4)}`;
+    return `<tr${isProd ? ' class="bt-row-prod"' : ''}>
+      <td>${m.label}${isProd ? ' <span class="bt-tag">production</span>' : ''}</td>
+      <td class="numeric">${m.n_games}</td>
+      <td class="numeric">${num4(m.brier)}</td>
+      <td class="numeric bt-dim">${m.brier_ci ? `${num4(m.brier_ci[0])}–${num4(m.brier_ci[1])}` : '—'}</td>
+      <td class="numeric ${bssCls}">${bssTxt}</td>
+      <td class="numeric">${btPct(m.accuracy)}</td>
+      <td class="numeric">${num4(m.log_loss)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Per-year skill chart (diverging bars around zero) ──
+  const maxAbs = Math.max(...d.per_year.map(y => Math.abs(y.bss)), 0.01);
+  document.getElementById('bt-year-chart').innerHTML = d.per_year.map(y => {
+    const h = Math.max(3, Math.round((Math.abs(y.bss) / maxAbs) * 46));
+    const pos = y.bss >= 0;
+    return `
+      <div class="bt-year" title="${y.year}: BSS ${y.bss >= 0 ? '+' : ''}${y.bss.toFixed(3)} — model Brier ${num4(y.brier_model)} vs seed ${num4(y.brier_seed)} (${y.n_games} games)">
+        <div class="bt-year-up">${pos ? `<div class="bt-year-bar bt-year-pos" style="height:${h}px"></div>` : ''}</div>
+        <div class="bt-year-axis"></div>
+        <div class="bt-year-dn">${pos ? '' : `<div class="bt-year-bar bt-year-neg" style="height:${h}px"></div>`}</div>
+        <div class="bt-year-label">'${String(y.year).slice(2)}</div>
+      </div>`;
+  }).join('');
+
+  const losses = d.per_year.filter(y => y.bss < 0);
+  document.getElementById('bt-year-note').textContent =
+    `The model lost to the seed baseline in ${losses.length} of ${d.per_year.length} tournaments` +
+    (losses.length ? ` (${losses.map(y => y.year).join(', ')}).` : '.') +
+    ' Single-year swings are dominated by a handful of games — 63 per tournament.';
+
+  // ── Per-round table ──
+  const rCols = ['Round', 'Games', 'Upset rate', 'Brier', 'Seed Brier', 'BSS', 'Accuracy', 'Seed accuracy'];
+  document.getElementById('bt-rounds-head').innerHTML =
+    `<tr>${rCols.map((c, i) => `<th class="${i ? 'numeric' : ''}">${c}</th>`).join('')}</tr>`;
+  document.getElementById('bt-rounds-body').innerHTML = d.per_round.map(r => {
+    const accWorse = r.accuracy_model < r.accuracy_seed - 1e-9;
+    return `<tr>
+      <td>${r.label}</td>
+      <td class="numeric">${r.n_games}</td>
+      <td class="numeric">${btPct(r.upset_rate)}</td>
+      <td class="numeric">${num4(r.brier_model)}</td>
+      <td class="numeric bt-dim">${num4(r.brier_seed)}</td>
+      <td class="numeric ${r.bss > 0 ? 'bt-pos' : 'bt-neg'}">${r.bss >= 0 ? '+' : ''}${r.bss.toFixed(4)}</td>
+      <td class="numeric ${accWorse ? 'bt-neg' : ''}">${btPct(r.accuracy_model)}</td>
+      <td class="numeric bt-dim">${btPct(r.accuracy_seed)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Market comparison ──
+  const mk = d.market_subset;
+  const mkSection = document.getElementById('bt-market-section');
+  if (!mk) {
+    mkSection.style.display = 'none';
+  } else {
+    const beatsMarket = mk.model.brier < mk.market.brier;
+    document.getElementById('bt-market-intro').innerHTML =
+      `Closing betting odds exist for ${mk.n_games} of ${d.n_games} games (${mk.years[0]}–${mk.years[mk.years.length - 1]}),
+       so this is scored on that subset only and is not comparable to the full-sample numbers above.
+       The market is the honest benchmark for a forecasting model — it aggregates every public signal plus money.
+       <strong>${beatsMarket
+         ? 'On this subset the model edges the closing line.'
+         : 'On this subset the closing line is still slightly sharper than the model.'}</strong>`;
+
+    const rows = [
+      { label: 'Torvik ratings (production)', s: mk.model },
+      { label: 'Closing betting market', s: mk.market },
+      { label: 'Seed baseline', s: mk.seed },
+    ];
+    document.getElementById('bt-market-head').innerHTML =
+      `<tr><th>Source</th><th class="numeric">Brier</th><th class="numeric">BSS vs seed</th><th class="numeric">Accuracy</th><th class="numeric">Log loss</th></tr>`;
+    document.getElementById('bt-market-body').innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.label}</td>
+        <td class="numeric">${num4(r.s.brier)}</td>
+        <td class="numeric">${r.s.bss == null ? '— (baseline)' : `${r.s.bss >= 0 ? '+' : ''}${r.s.bss.toFixed(4)}`}</td>
+        <td class="numeric">${btPct(r.s.accuracy)}</td>
+        <td class="numeric">${num4(r.s.log_loss)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Calibration ──
+  const bins = d.calibration.bins.filter(b => b.count > 0);
+  document.getElementById('bt-calib').innerHTML = bins.map(b => {
+    const predH = Math.round(b.mean_predicted * 80);
+    const actH  = Math.round(b.mean_actual * 80);
+    return `
+      <div class="bt-calib-bin" title="Predicted ${btPct(b.mean_predicted)} → actual ${btPct(b.mean_actual)} (${b.count} games)">
+        <div class="bt-calib-bars">
+          <div class="bt-calib-bar bt-calib-pred" style="height:${predH}px"></div>
+          <div class="bt-calib-bar bt-calib-act"  style="height:${actH}px"></div>
+        </div>
+        <div class="bt-calib-x">${Math.round(b.lower * 100)}–${Math.round(b.upper * 100)}</div>
+        <div class="bt-calib-n">n=${b.count}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('bt-calib-note').innerHTML =
+    `<span class="bt-swatch bt-calib-pred"></span> predicted &nbsp;
+     <span class="bt-swatch bt-calib-act"></span> actual &nbsp;·&nbsp;
+     Expected calibration error <strong>${num4(d.calibration.ece)}</strong> —
+     population-weighted mean gap between predicted and actual. Computed over ${d.n_games} games in
+     10 buckets, several of which are thin enough that their gap is mostly sampling noise.`;
 }

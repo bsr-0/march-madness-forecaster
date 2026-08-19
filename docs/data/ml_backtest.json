@@ -1,0 +1,488 @@
+{
+  "generated": "2026-08-19T04:55:01.175980+00:00",
+  "source_file": "artifacts/loyo_pergame_predictions.json",
+  "n_games": 1323,
+  "years": [
+    2005,
+    2006,
+    2007,
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "baseline_key": "seed",
+  "production_key": "torvik",
+  "favorite_win_rate": 0.72009,
+  "favorite_win_rate_n": 1304,
+  "source_orientation_note": {
+    "stored_outcome_1_rate": 0.71807,
+    "detail": "Source rows are stored winner-first \u2014 every 2005-2015 game has outcome=1. All metrics here are computed after re-orienting each game to better-seed-first, an outcome-independent convention."
+  },
+  "models": [
+    {
+      "key": "torvik",
+      "label": "Torvik ratings (production)",
+      "n_games": 1323,
+      "brier": 0.17929,
+      "accuracy": 0.7226,
+      "log_loss": 0.53094,
+      "bss": 0.03858,
+      "brier_ci": [
+        0.1689,
+        0.18993
+      ],
+      "accuracy_ci": [
+        0.69917,
+        0.74603
+      ]
+    },
+    {
+      "key": "seed",
+      "label": "Seed baseline",
+      "n_games": 1323,
+      "brier": 0.18648,
+      "accuracy": 0.71807,
+      "log_loss": 0.5505,
+      "bss": 0.0,
+      "brier_ci": [
+        0.17631,
+        0.19664
+      ],
+      "accuracy_ci": [
+        0.69463,
+        0.7415
+      ]
+    },
+    {
+      "key": "massey_avg",
+      "label": "Massey composite",
+      "n_games": 1323,
+      "brier": 0.1872,
+      "accuracy": 0.7226,
+      "log_loss": 0.56153,
+      "bss": -0.00383,
+      "brier_ci": [
+        0.17429,
+        0.20025
+      ],
+      "accuracy_ci": [
+        0.69917,
+        0.74603
+      ]
+    },
+    {
+      "key": "knn",
+      "label": "k-nearest neighbours",
+      "n_games": 1323,
+      "brier": 0.19803,
+      "accuracy": 0.68632,
+      "log_loss": 0.57913,
+      "bss": -0.06196,
+      "brier_ci": [
+        0.18785,
+        0.20785
+      ],
+      "accuracy_ci": [
+        0.66213,
+        0.71202
+      ]
+    },
+    {
+      "key": "elo",
+      "label": "Elo",
+      "n_games": 1323,
+      "brier": 0.214,
+      "accuracy": 0.64475,
+      "log_loss": 0.61617,
+      "bss": -0.14757,
+      "brier_ci": [
+        0.20776,
+        0.22043
+      ],
+      "accuracy_ci": [
+        0.61905,
+        0.67045
+      ]
+    }
+  ],
+  "per_year": [
+    {
+      "year": 2005,
+      "n_games": 63,
+      "brier_model": 0.19295,
+      "brier_seed": 0.18503,
+      "bss": -0.0428,
+      "accuracy_model": 0.68254,
+      "accuracy_seed": 0.68254
+    },
+    {
+      "year": 2006,
+      "n_games": 63,
+      "brier_model": 0.21912,
+      "brier_seed": 0.19997,
+      "bss": -0.09576,
+      "accuracy_model": 0.66667,
+      "accuracy_seed": 0.66667
+    },
+    {
+      "year": 2007,
+      "n_games": 63,
+      "brier_model": 0.12308,
+      "brier_seed": 0.14102,
+      "bss": 0.12725,
+      "accuracy_model": 0.80952,
+      "accuracy_seed": 0.80952
+    },
+    {
+      "year": 2008,
+      "n_games": 63,
+      "brier_model": 0.16011,
+      "brier_seed": 0.17255,
+      "bss": 0.07213,
+      "accuracy_model": 0.8254,
+      "accuracy_seed": 0.79365
+    },
+    {
+      "year": 2009,
+      "n_games": 63,
+      "brier_model": 0.17291,
+      "brier_seed": 0.15556,
+      "bss": -0.11149,
+      "accuracy_model": 0.73016,
+      "accuracy_seed": 0.7619
+    },
+    {
+      "year": 2010,
+      "n_games": 63,
+      "brier_model": 0.18927,
+      "brier_seed": 0.19941,
+      "bss": 0.05087,
+      "accuracy_model": 0.73016,
+      "accuracy_seed": 0.68254
+    },
+    {
+      "year": 2011,
+      "n_games": 63,
+      "brier_model": 0.22266,
+      "brier_seed": 0.20848,
+      "bss": -0.068,
+      "accuracy_model": 0.66667,
+      "accuracy_seed": 0.68254
+    },
+    {
+      "year": 2012,
+      "n_games": 63,
+      "brier_model": 0.17608,
+      "brier_seed": 0.19061,
+      "bss": 0.07621,
+      "accuracy_model": 0.77778,
+      "accuracy_seed": 0.73016
+    },
+    {
+      "year": 2013,
+      "n_games": 63,
+      "brier_model": 0.19929,
+      "brier_seed": 0.20673,
+      "bss": 0.03598,
+      "accuracy_model": 0.69841,
+      "accuracy_seed": 0.68254
+    },
+    {
+      "year": 2014,
+      "n_games": 63,
+      "brier_model": 0.19806,
+      "brier_seed": 0.21371,
+      "bss": 0.07323,
+      "accuracy_model": 0.63492,
+      "accuracy_seed": 0.65079
+    },
+    {
+      "year": 2015,
+      "n_games": 63,
+      "brier_model": 0.15207,
+      "brier_seed": 0.1732,
+      "bss": 0.12199,
+      "accuracy_model": 0.77778,
+      "accuracy_seed": 0.79365
+    },
+    {
+      "year": 2016,
+      "n_games": 63,
+      "brier_model": 0.17873,
+      "brier_seed": 0.19488,
+      "bss": 0.08283,
+      "accuracy_model": 0.73016,
+      "accuracy_seed": 0.66667
+    },
+    {
+      "year": 2017,
+      "n_games": 63,
+      "brier_model": 0.16792,
+      "brier_seed": 0.17435,
+      "bss": 0.03689,
+      "accuracy_model": 0.68254,
+      "accuracy_seed": 0.7619
+    },
+    {
+      "year": 2018,
+      "n_games": 63,
+      "brier_model": 0.19877,
+      "brier_seed": 0.21002,
+      "bss": 0.05357,
+      "accuracy_model": 0.65079,
+      "accuracy_seed": 0.66667
+    },
+    {
+      "year": 2019,
+      "n_games": 63,
+      "brier_model": 0.15536,
+      "brier_seed": 0.16429,
+      "bss": 0.05435,
+      "accuracy_model": 0.71429,
+      "accuracy_seed": 0.68254
+    },
+    {
+      "year": 2021,
+      "n_games": 63,
+      "brier_model": 0.20518,
+      "brier_seed": 0.22354,
+      "bss": 0.08214,
+      "accuracy_model": 0.65079,
+      "accuracy_seed": 0.71429
+    },
+    {
+      "year": 2022,
+      "n_games": 63,
+      "brier_model": 0.20708,
+      "brier_seed": 0.21556,
+      "bss": 0.03937,
+      "accuracy_model": 0.68254,
+      "accuracy_seed": 0.66667
+    },
+    {
+      "year": 2023,
+      "n_games": 63,
+      "brier_model": 0.20339,
+      "brier_seed": 0.20779,
+      "bss": 0.02118,
+      "accuracy_model": 0.69841,
+      "accuracy_seed": 0.71429
+    },
+    {
+      "year": 2024,
+      "n_games": 63,
+      "brier_model": 0.17158,
+      "brier_seed": 0.1783,
+      "bss": 0.03765,
+      "accuracy_model": 0.7619,
+      "accuracy_seed": 0.71429
+    },
+    {
+      "year": 2025,
+      "n_games": 63,
+      "brier_model": 0.12647,
+      "brier_seed": 0.13778,
+      "bss": 0.0821,
+      "accuracy_model": 0.85714,
+      "accuracy_seed": 0.8254
+    },
+    {
+      "year": 2026,
+      "n_games": 63,
+      "brier_model": 0.14495,
+      "brier_seed": 0.16331,
+      "bss": 0.11243,
+      "accuracy_model": 0.74603,
+      "accuracy_seed": 0.73016
+    }
+  ],
+  "per_round": [
+    {
+      "round": "R64",
+      "label": "Round of 64",
+      "n_games": 672,
+      "brier_model": 0.16167,
+      "brier_seed": 0.16764,
+      "bss": 0.03561,
+      "accuracy_model": 0.74256,
+      "accuracy_seed": 0.72917,
+      "upset_rate": 0.27083
+    },
+    {
+      "round": "R32",
+      "label": "Round of 32",
+      "n_games": 336,
+      "brier_model": 0.17671,
+      "brier_seed": 0.18669,
+      "bss": 0.05345,
+      "accuracy_model": 0.7619,
+      "accuracy_seed": 0.74702,
+      "upset_rate": 0.25298
+    },
+    {
+      "round": "S16",
+      "label": "Sweet 16",
+      "n_games": 168,
+      "brier_model": 0.21634,
+      "brier_seed": 0.21735,
+      "bss": 0.00462,
+      "accuracy_model": 0.64881,
+      "accuracy_seed": 0.67857,
+      "upset_rate": 0.32143
+    },
+    {
+      "round": "E8",
+      "label": "Elite 8",
+      "n_games": 84,
+      "brier_model": 0.25088,
+      "brier_seed": 0.2629,
+      "bss": 0.04571,
+      "accuracy_model": 0.57143,
+      "accuracy_seed": 0.55952,
+      "upset_rate": 0.44048
+    },
+    {
+      "round": "F4",
+      "label": "Final Four",
+      "n_games": 42,
+      "brier_model": 0.17691,
+      "brier_seed": 0.19938,
+      "bss": 0.1127,
+      "accuracy_model": 0.71429,
+      "accuracy_seed": 0.7381,
+      "upset_rate": 0.11905
+    },
+    {
+      "round": "NCG",
+      "label": "Championship",
+      "n_games": 21,
+      "brier_model": 0.20618,
+      "brier_seed": 0.20765,
+      "bss": 0.00704,
+      "accuracy_model": 0.66667,
+      "accuracy_seed": 0.80952,
+      "upset_rate": 0.09524
+    }
+  ],
+  "calibration": {
+    "bins": [
+      {
+        "lower": 0.0,
+        "upper": 0.1,
+        "count": 0,
+        "mean_predicted": null,
+        "mean_actual": null
+      },
+      {
+        "lower": 0.1,
+        "upper": 0.2,
+        "count": 0,
+        "mean_predicted": null,
+        "mean_actual": null
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.3,
+        "count": 6,
+        "mean_predicted": 0.26276,
+        "mean_actual": 0.16667
+      },
+      {
+        "lower": 0.3,
+        "upper": 0.4,
+        "count": 25,
+        "mean_predicted": 0.36322,
+        "mean_actual": 0.4
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "count": 111,
+        "mean_predicted": 0.46087,
+        "mean_actual": 0.51351
+      },
+      {
+        "lower": 0.5,
+        "upper": 0.6,
+        "count": 184,
+        "mean_predicted": 0.55264,
+        "mean_actual": 0.56522
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.7,
+        "count": 269,
+        "mean_predicted": 0.64998,
+        "mean_actual": 0.63941
+      },
+      {
+        "lower": 0.7,
+        "upper": 0.8,
+        "count": 269,
+        "mean_predicted": 0.74931,
+        "mean_actual": 0.72862
+      },
+      {
+        "lower": 0.8,
+        "upper": 0.9,
+        "count": 246,
+        "mean_predicted": 0.8494,
+        "mean_actual": 0.84959
+      },
+      {
+        "lower": 0.9,
+        "upper": 1.0,
+        "count": 213,
+        "mean_predicted": 0.94716,
+        "mean_actual": 0.94366
+      }
+    ],
+    "ece": 0.01425
+  },
+  "market_subset": {
+    "n_games": 364,
+    "years": [
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "model": {
+      "n_games": 364,
+      "brier": 0.17423,
+      "accuracy": 0.73626,
+      "log_loss": 0.52078,
+      "bss": 0.06568
+    },
+    "market": {
+      "n_games": 364,
+      "brier": 0.17563,
+      "accuracy": 0.73077,
+      "log_loss": 0.52405,
+      "bss": 0.05816
+    },
+    "seed": {
+      "n_games": 364,
+      "brier": 0.18648,
+      "accuracy": 0.72527,
+      "log_loss": 0.55723
+    }
+  }
+}
