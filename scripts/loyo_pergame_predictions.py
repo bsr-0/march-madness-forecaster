@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.eval_brier_postprocessing import seed_implied_prob
+from src.data.game_orientation import orient_result_games
 from src.prediction.torvik_kaggle import TarvikKagglePredictor
 
 logger = logging.getLogger(__name__)
@@ -167,11 +168,19 @@ def _load_all_barthag_sources(
 
 
 def load_tournament_games(year: int) -> list[dict]:
-    """Load tournament results, excluding First Four.
+    """Load tournament results, excluding First Four, oriented better-seed-first.
 
     Reads the consolidated `tournament_context_{year}.json` (key
     "results") when present, falling back to the old
-    `tournament_results_{year}.json`."""
+    `tournament_results_{year}.json`.
+
+    **Orientation is not cosmetic.** The stored files are largely
+    winner-first (100% of 2005-2015 games have ``team1_won``), so emitting
+    them as-is would make every downstream ``P(team1 wins)`` vs ``outcome``
+    comparison score against a ~90% base rate instead of ~72%, and would
+    teach any correction/calibration layer fit on these records a residual
+    bias of +0.238 that does not exist. See
+    ``src/data/game_orientation.py`` for the full write-up."""
     ctx_path = REPO_ROOT / f"data/raw/historical/tournament_context_{year}.json"
     data = None
     if ctx_path.exists():
@@ -185,7 +194,8 @@ def load_tournament_games(year: int) -> list[dict]:
         with open(path) as f:
             data = json.load(f)
     games = data.get("games", data) if isinstance(data, dict) else data
-    return [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
+    kept = [g for g in games if g.get("round_name", "") not in ("FF", "First Four")]
+    return orient_result_games(kept)
 
 
 def generate_year(
