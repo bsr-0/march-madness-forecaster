@@ -37,13 +37,14 @@ DATA_ROOT = Path("data")
 CACHE_DIR = DATA_ROOT / "raw" / "historical"
 
 # (name, builder, collection_key, min_expected) -- kept in sync with
-# scripts/backfill_pbp_history.py, including the escalation thresholds. See
+# scripts/backfill_pbp_history.py, including the escalation thresholds. These
+# builders emit one row per TOURNAMENT-FIELD team (68), not per D-I team. See
 # that module for why player_minutes carries a threshold of 0 (ESPN publishes
 # no substitution events before 2025-02-11, so this builder legitimately
 # yields nothing for earlier seasons -- use src/data/scrapers/espn_boxscore.py).
 BUILDERS = [
-    ("clutch_features", build_season_clutch_features, "teams", 300),
-    ("shooting_features", build_season_shooting_features, "teams", 300),
+    ("clutch_features", build_season_clutch_features, "teams", 60),
+    ("shooting_features", build_season_shooting_features, "teams", 60),
     ("player_minutes", build_season_minutes_features, "players", 0),
 ]
 
