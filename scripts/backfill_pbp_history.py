@@ -1,9 +1,26 @@
-"""Historical play-by-play backfill driver.
+"""Historical ESPN backfill driver (play-by-play + box scores).
 
-Fetches pbp_{year}.json for a range of seasons via CBBpyPbpScraper, then
-immediately builds clutch_features_{year}.json for each season as it
-finishes, so results become usable incrementally rather than only after
-every season completes.
+Two scrapes per season, run sequentially in one process:
+
+  1. play-by-play  -> pbp_{year}.json         -> clutch_features, shooting_features
+  2. box scores    -> boxscores_{year}.json   -> player_minutes
+
+Derived features are built as each season finishes, so results become usable
+incrementally rather than only after every season completes.
+
+**Why player_minutes comes from box scores, not play-by-play.** ESPN publishes
+no substitution events before 2025-02-11, and the PBP minutes reconstruction
+depends entirely on them: the 2026-08-19 run produced 9,581 players for 2026,
+4,386 for 2025 (only from 2025-02-12 on), *zero* for 2024 and 26 for 2023. The
+boxscore endpoint carries ESPN's own published per-player line, minutes first,
+starters labelled, and works back to at least 2009. See FINDINGS.md 6d and
+src/data/scrapers/espn_boxscore.py.
+
+**Why one process rather than two.** Both scrapes share a ~2.0s per-request
+politeness budget. Running them concurrently would halve the effective gap
+between requests from this IP; running them sequentially keeps the footprint
+identical to a single scrape and just takes longer. That matters because two
+other ESPN access paths are already behind bot management (see cbbpy_pbp.py).
 
 This is a long-running, deliberately slow job (see cbbpy_pbp.py's
 _DEFAULT_SCOREBOARD_DELAY / _DEFAULT_PBP_DELAY) -- tens of thousands of
@@ -29,8 +46,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.data.features.clutch_metrics import build_season_clutch_features  # noqa: E402
 from src.data.features.pbp_box_scores import build_season_shooting_features  # noqa: E402
-from src.data.features.pbp_player_minutes import build_season_minutes_features  # noqa: E402
+from src.data.features.boxscore_player_minutes import (  # noqa: E402
+    MinutesCoverageError,
+    build_season_minutes_features,
+)
 from src.data.scrapers.cbbpy_pbp import CBBpyPbpScraper  # noqa: E402
+from src.data.scrapers.espn_boxscore import EspnBoxscoreScraper  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,20 +72,25 @@ CACHE_DIR = DATA_ROOT / "raw" / "historical"
 # collection size that can plausibly come from a real season. Anything under it
 # is silent data loss, not a quiet year, and is escalated rather than warned.
 #
-# player_minutes is 0 here on purpose: ESPN publishes no substitution events
-# before 2025-02-11, so this builder legitimately yields nothing for every
-# earlier season and there is no threshold that separates "broken" from
-# "unsupported". Use the boxscore route instead --
-# src/data/scrapers/espn_boxscore.py. The run-end summary reports its coverage
-# either way so the gap stays visible.
+# player_minutes is deliberately absent: it now comes from the boxscore stage
+# below, which works for every season rather than only post-2025-02-11.
 BUILDERS = [
     ("clutch_features", build_season_clutch_features, "teams", 300),
     ("shooting_features", build_season_shooting_features, "teams", 300),
-    ("player_minutes", build_season_minutes_features, "players", 0),
 ]
 
+# A real season yields several thousand distinct players; anything far below
+# that is a parse failure rather than a quiet year.
+MIN_EXPECTED_PLAYERS = 500
 
-def run(start_year: int, end_year: int) -> None:
+
+def run(
+    start_year: int,
+    end_year: int,
+    *,
+    skip_pbp: bool = False,
+    skip_boxscore: bool = False,
+) -> None:
     scraper = CBBpyPbpScraper(cache_dir=str(CACHE_DIR))
 
     # Most recent seasons first -- most immediately useful for current
@@ -76,12 +102,19 @@ def run(start_year: int, end_year: int) -> None:
     coverage: dict = {}
 
     for year in years:
+        if skip_pbp:
+            if not skip_boxscore:
+                _run_boxscore_stage(year, coverage)
+            continue
+
         t0 = time.time()
         logger.info("=== Season %d: starting/resuming PBP fetch ===", year)
         try:
             pbp_payload = scraper.fetch_season_pbp(year)
         except Exception:
             logger.exception("Season %d: PBP fetch failed, moving on", year)
+            if not skip_boxscore:
+                _run_boxscore_stage(year, coverage)
             continue
 
         n_games = len(pbp_payload.get("games", []))
@@ -89,7 +122,9 @@ def run(start_year: int, end_year: int) -> None:
         logger.info("Season %d: %d games, %.0fs", year, n_games, elapsed)
 
         if n_games == 0:
-            logger.warning("Season %d: 0 games -- skipping derived feature builds", year)
+            logger.warning("Season %d: 0 PBP games -- skipping PBP-derived builds", year)
+            if not skip_boxscore:
+                _run_boxscore_stage(year, coverage)
             continue
 
         # All three derived feature sets come from the same payload. Failures
@@ -142,8 +177,61 @@ def run(start_year: int, end_year: int) -> None:
                 collection_key,
             )
 
+        # --- Box scores -> player_minutes ------------------------------
+        # Runs after the PBP pass for this season so the two scrapes never
+        # overlap; total wall time roughly doubles but the request rate seen
+        # by ESPN is unchanged.
+        if not skip_boxscore:
+            _run_boxscore_stage(year, coverage)
+
     _log_coverage_summary(coverage, start_year, end_year)
     logger.info("=== Backfill run finished (years %d-%d) ===", start_year, end_year)
+
+
+def _run_boxscore_stage(year: int, coverage: dict) -> None:
+    """Scrape one season of box scores and build player_minutes from them."""
+    t0 = time.time()
+    logger.info("=== Season %d: starting/resuming boxscore fetch ===", year)
+    scraper = EspnBoxscoreScraper(cache_dir=str(CACHE_DIR))
+    try:
+        payload = scraper.fetch_season(year)
+    except Exception:
+        logger.exception("Season %d: boxscore fetch failed, moving on", year)
+        coverage[("player_minutes", year)] = None
+        return
+
+    n_games = len(payload.get("games", []))
+    missing = payload.get("metadata", {}).get("games_missing_boxscore", 0)
+    logger.info(
+        "Season %d: %d boxscore games (%d pages had none), %.0fs",
+        year,
+        n_games,
+        missing,
+        time.time() - t0,
+    )
+    if n_games == 0:
+        logger.error("Season %d: 0 boxscore games -- skipping player_minutes", year)
+        coverage[("player_minutes", year)] = None
+        return
+
+    try:
+        result = build_season_minutes_features(year, DATA_ROOT, boxscore_payload=payload)
+    except MinutesCoverageError as exc:
+        # Raised rather than logged: a thin artifact looks like success on disk.
+        logger.error("Season %d: player_minutes rejected -- %s", year, exc)
+        coverage[("player_minutes", year)] = None
+        return
+    except Exception:
+        logger.exception("Season %d: player_minutes build failed", year)
+        coverage[("player_minutes", year)] = None
+        return
+
+    n_players = len(result.get("players", []))
+    coverage[("player_minutes", year)] = n_players
+    out_path = CACHE_DIR / f"player_minutes_{year}.json"
+    with open(out_path, "w") as f:
+        json.dump(result, f, indent=2)
+    logger.info("Season %d: wrote %s (%d players)", year, out_path.name, n_players)
 
 
 def _log_coverage_summary(coverage: dict, start_year: int, end_year: int) -> None:
@@ -157,7 +245,9 @@ def _log_coverage_summary(coverage: dict, start_year: int, end_year: int) -> Non
     if not coverage:
         return
     logger.info("=== Coverage summary (years %d-%d) ===", start_year, end_year)
-    for name, _builder, _collection_key, min_expected in BUILDERS:
+    tracked = [(name, min_expected) for name, _b, _k, min_expected in BUILDERS]
+    tracked.append(("player_minutes", MIN_EXPECTED_PLAYERS))
+    for name, min_expected in tracked:
         years = sorted((y for (n, y) in coverage if n == name), reverse=True)
         if not years:
             continue
@@ -188,5 +278,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start-year", type=int, default=2008)
     parser.add_argument("--end-year", type=int, default=2026)
+    parser.add_argument(
+        "--skip-pbp",
+        action="store_true",
+        help="Skip the play-by-play scrape; only fetch box scores / player_minutes.",
+    )
+    parser.add_argument(
+        "--skip-boxscore",
+        action="store_true",
+        help="Skip the boxscore scrape; only fetch play-by-play / clutch+shooting.",
+    )
     args = parser.parse_args()
-    run(args.start_year, args.end_year)
+    run(
+        args.start_year,
+        args.end_year,
+        skip_pbp=args.skip_pbp,
+        skip_boxscore=args.skip_boxscore,
+    )
