@@ -51,7 +51,13 @@ STRATEGY_CACHE_VERSION = 1
 # match round-trip. The probability cache lives one layer up; its
 # constants travel with it.
 BRACKET_DATA_VERSION = "torvik+seed=42"
-BRACKET_MODEL_VERSION = "torvik-barthag-v1"
+# v2 (2026-08-19): stochastic samplers now draw game winners from each base's
+# genuine pairwise head-to-head table instead of reconstructing one as
+# p1/(p1+p2) from two marginal advancement probabilities. That reconstruction
+# was invalid from R32 onward and biased toward the favorite by 7-14pp, so
+# every bracket cached under v1 was drawn from the wrong distribution. Bumping
+# invalidates those entries. See src/prediction/pairwise.py.
+BRACKET_MODEL_VERSION = "pairwise-h2h-v2"
 PROBABILITY_DATA_VERSION = "tournament_seeds+torvik_barthag"
 PROBABILITY_MODEL_VERSION = "torvik-barthag-v1"
 

@@ -72,7 +72,31 @@ def _pairwise_prob(
     round_name: str,
     round_probs: Dict[str, Dict[str, float]],
 ) -> float:
-    """Normalize marginal advancement probs to head-to-head P(team1 wins)."""
+    """Normalize marginal advancement probs to a head-to-head-like score.
+
+    KNOWN INVALID AS A PROBABILITY — DELIBERATELY UNCHANGED (2026-08-19).
+
+    This is the ``p1 / (p1 + p2)`` reconstruction documented in
+    ``src/prediction/pairwise.py``. It is exact only in R64; from R32 onward the
+    reach probabilities do not cancel and the result is biased toward the
+    favorite by roughly 7pp (R32) rising to 14pp (CHAMP). It is NOT
+    ``P(team1 beats team2)`` and must not be used as one.
+
+    It is retained here because this value is consumed as a **GBM feature**, not
+    as a probability: ``_game_features`` computes it identically across every
+    probability base and feeds the *disagreement between bases* to the model.
+    A consistent monotone transform of the underlying signal is a legitimate
+    feature even when it is not a calibrated probability, and the learner is
+    free to recalibrate it. Replacing it would change every meta_gbm* mode's
+    features and require retraining and re-backtesting the meta-selector, which
+    is model work rather than a probability-contract fix.
+
+    Worth revisiting: feeding genuine pairwise probabilities here would give the
+    model a better-conditioned feature, and the deeper rounds are exactly where
+    this transform is worst. Tracked in
+    ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md §2 (site 13).
+    Allowlisted in tests/test_pairwise_contract.py::_ALLOWLIST.
+    """
     p1 = round_probs.get(team1, {}).get(round_name, 0.0)
     p2 = round_probs.get(team2, {}).get(round_name, 0.0)
     total = p1 + p2

@@ -17,14 +17,21 @@ from scripts.mc_pool_backtest import (
 )
 
 _REGIONS = ("East", "West", "South", "Midwest")
+from src.prediction.pairwise import PairwiseProbabilities, ProbabilityBase
+
 _SEEDS = list(range(1, 17))
 _TOP_QUADRANT_SEEDS = {1, 16, 8, 9, 5, 12, 4, 13}
 
 
 def _synthetic_fixture():
-    """Build a 64-team fixture with monotonic-by-seed round_probs.
+    """Build a 64-team fixture with monotonic-by-seed probabilities.
 
-    Returns (first_round_matchups, round_probs, seeds, regions).
+    Returns ``(first_round_matchups, base, seeds, regions)`` where ``base`` is a
+    :class:`ProbabilityBase` — a Mapping over the marginal round_probs (so
+    ``base[tid]["CHAMP"]`` still works) that also carries the pairwise
+    head-to-head table the samplers draw game winners from. The pairwise side
+    is log5 over the project's standard seed->barthag ladder, which keeps the
+    fixture chalk-dominant.
     """
     seeds = {}
     regions = {}
@@ -55,7 +62,11 @@ def _synthetic_fixture():
             first_round.append(f"{region.lower()}_{s1}")
             first_round.append(f"{region.lower()}_{s2}")
 
-    return tuple(first_round), round_probs, seeds, regions
+    pw = PairwiseProbabilities.from_ratings(
+        {tid: max(0.10, 1.0 - seed * 0.04) for tid, seed in seeds.items()},
+        "log5(seed_ladder)",
+    )
+    return tuple(first_round), ProbabilityBase("synthetic", round_probs, pw), seeds, regions
 
 
 def test_backward_registered_in_construction_modes():
@@ -206,12 +217,29 @@ def test_backward_e8_opponent_from_opposite_quadrant():
 def test_backward_differs_from_champ_first():
     """Backward should produce statistically different brackets than champ_first.
 
-    Both lock the champion, but backward ALSO locks F4 and E8 teams
-    (conditioned on the champion). This should produce higher lock counts
-    and different early-round patterns.
+    Both lock the champion, but backward ALSO locks 3 more F4 teams and 4 E8
+    opponents (conditioned on the champion), so 8 R64 games are decided by an
+    anchor draw rather than by sampling the matchup.
+
+    The observable consequence is MORE R64 upsets, not fewer. Anchors are drawn
+    categorically from the marginal F4/S16 distributions, so a 10-seed can be
+    drawn as an anchor and is then forced to win its R64 game — overriding a
+    matchup the sampler would otherwise have given to the favorite ~98% of the
+    time. Locking anchors drawn from a broad distribution *injects* variance
+    into early rounds.
+
+    REWRITTEN 2026-08-19. This test previously asserted backward had LOWER R64
+    variance than champ_first, on the reasoning "more locked games means more
+    determinism". That proxy was measuring the sampler's chalk bias, not the
+    lock count: under the old ``p1/(p1+p2)`` reconstruction a 1v16 R64 game came
+    out at ~0.91 instead of its true ~0.98, so unlocked games carried enough
+    residual variance to dominate the comparison. With genuine pairwise
+    probabilities the chalk games are properly near-deterministic and the
+    ordering inverts. The lock-count claim was always true; the variance proxy
+    was never a valid way to measure it.
     """
     fr, rp, seeds, regions = _synthetic_fixture()
-    n = 1000
+    n = 4000
 
     rng1 = np.random.default_rng(42)
     backward = sample_backward_brackets(fr, rp, n, rng1, seeds, regions)
@@ -219,16 +247,29 @@ def test_backward_differs_from_champ_first():
     rng2 = np.random.default_rng(42)
     champ = sample_champ_first_brackets(fr, rp, n, rng2)
 
-    # The R64 pick distributions should differ — backward locks more teams,
-    # so more R64 games are deterministic per bracket.
-    bwd_r64_variance = backward[:, :32].astype(float).var(axis=0).mean()
-    champ_r64_variance = champ[:, :32].astype(float).var(axis=0).mean()
+    # Measure the mechanism directly: mean R64 upsets per bracket.
+    def _mean_r64_upsets(brackets):
+        total = 0.0
+        for g in range(32):
+            t1, t2 = fr[2 * g], fr[2 * g + 1]
+            favorite_is_t1 = seeds[t1] < seeds[t2]
+            total += float((brackets[:, g] != favorite_is_t1).mean())
+        return total
 
-    # Backward locks 8 teams through various levels; champ_first locks 1.
-    # So backward should have LOWER R64 variance (more games are locked).
-    assert bwd_r64_variance < champ_r64_variance, (
-        f"Backward should lock more R64 games than champ_first "
-        f"(backward var={bwd_r64_variance:.4f}, champ var={champ_r64_variance:.4f})"
+    bwd_upsets = _mean_r64_upsets(backward)
+    champ_upsets = _mean_r64_upsets(champ)
+
+    assert bwd_upsets > champ_upsets + 0.25, (
+        f"Backward locks 8 anchors drawn from the marginal distributions, so it "
+        f"should force more R64 upsets than champ_first's single lock "
+        f"(backward={bwd_upsets:.2f}, champ_first={champ_upsets:.2f})"
+    )
+
+    # And the R64 pick distributions should be measurably different.
+    pick_rate_delta = float(np.abs(backward[:, :32].mean(axis=0) - champ[:, :32].mean(axis=0)).mean())
+    assert pick_rate_delta > 0.005, (
+        f"Backward and champ_first should produce different R64 pick distributions "
+        f"(mean |delta| = {pick_rate_delta:.4f})"
     )
 
 
