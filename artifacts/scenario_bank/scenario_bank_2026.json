@@ -1,0 +1,180 @@
+{
+  "year": 2026,
+  "n_sims": 120000,
+  "eval_slice": 1500,
+  "candidate_pool": 118500,
+  "source": "log5(torvik_2026)",
+  "named_team": "michigan",
+  "baseline_expected_score": 723.1,
+  "generated_at": "2026-08-20T17:41:06.062612+00:00",
+  "conditions": [
+    {
+      "condition": "null (unconditional control)",
+      "p_condition": 1.0,
+      "n_surviving": 118500,
+      "n_unique": 118500,
+      "hamming": {
+        "mean": 21.61355,
+        "p05": 16.0,
+        "p50": 22.0,
+        "p95": 28.0
+      },
+      "expected_score": 724.8,
+      "ev_retention": 1.0024,
+      "champion_entropy_bits": 3.67,
+      "distinct_champions": 47,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.196,
+      "mean_seed_by_round": {
+        "S16": 3.83,
+        "E8": 3.04,
+        "F4": 2.49,
+        "CHAMP": 1.81
+      }
+    },
+    {
+      "condition": ">=1 2/3-seed in Final Four",
+      "p_condition": 0.84515,
+      "n_surviving": 100150,
+      "n_unique": 100150,
+      "hamming": {
+        "mean": 21.68405,
+        "p05": 16.0,
+        "p50": 22.0,
+        "p95": 28.0
+      },
+      "expected_score": 716.2,
+      "ev_retention": 0.9905,
+      "champion_entropy_bits": 3.71,
+      "distinct_champions": 46,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.183,
+      "mean_seed_by_round": {
+        "S16": 3.81,
+        "E8": 3.02,
+        "F4": 2.47,
+        "CHAMP": 1.85
+      }
+    },
+    {
+      "condition": ">=2 2/3-seeds in Final Four",
+      "p_condition": 0.46947,
+      "n_surviving": 55632,
+      "n_unique": 55632,
+      "hamming": {
+        "mean": 21.4894,
+        "p05": 16.0,
+        "p50": 21.0,
+        "p95": 28.0
+      },
+      "expected_score": 704.0,
+      "ev_retention": 0.9737,
+      "champion_entropy_bits": 3.76,
+      "distinct_champions": 45,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.144,
+      "mean_seed_by_round": {
+        "S16": 3.79,
+        "E8": 2.97,
+        "F4": 2.44,
+        "CHAMP": 1.95
+      }
+    },
+    {
+      "condition": ">=1 double-digit seed in S16",
+      "p_condition": 0.60572,
+      "n_surviving": 71778,
+      "n_unique": 71778,
+      "hamming": {
+        "mean": 22.39105,
+        "p05": 16.0,
+        "p50": 22.0,
+        "p95": 29.0
+      },
+      "expected_score": 720.4,
+      "ev_retention": 0.9964,
+      "champion_entropy_bits": 3.65,
+      "distinct_champions": 47,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.201,
+      "mean_seed_by_round": {
+        "S16": 4.1,
+        "E8": 3.15,
+        "F4": 2.53,
+        "CHAMP": 1.8
+      }
+    },
+    {
+      "condition": ">=2 double-digit seeds in S16",
+      "p_condition": 0.2237,
+      "n_surviving": 26508,
+      "n_unique": 26508,
+      "hamming": {
+        "mean": 23.1596,
+        "p05": 17.0,
+        "p50": 23.0,
+        "p95": 29.0
+      },
+      "expected_score": 700.4,
+      "ev_retention": 0.9687,
+      "champion_entropy_bits": 3.63,
+      "distinct_champions": 46,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.205,
+      "mean_seed_by_round": {
+        "S16": 4.48,
+        "E8": 3.33,
+        "F4": 2.59,
+        "CHAMP": 1.79
+      }
+    },
+    {
+      "condition": "exactly two 1-seeds in Final Four",
+      "p_condition": 0.35874,
+      "n_surviving": 42511,
+      "n_unique": 42511,
+      "hamming": {
+        "mean": 21.274213710685533,
+        "p05": 15.0,
+        "p50": 21.0,
+        "p95": 27.0
+      },
+      "expected_score": 750.5,
+      "ev_retention": 1.038,
+      "champion_entropy_bits": 3.27,
+      "distinct_champions": 44,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.24,
+      "mean_seed_by_round": {
+        "S16": 3.8,
+        "E8": 2.94,
+        "F4": 2.27,
+        "CHAMP": 1.53
+      }
+    },
+    {
+      "condition": "michigan reaches Final Four",
+      "p_condition": 0.4848,
+      "n_surviving": 57449,
+      "n_unique": 57449,
+      "hamming": {
+        "mean": 20.572307230723073,
+        "p05": 15.0,
+        "p50": 21.0,
+        "p95": 27.0
+      },
+      "expected_score": 772.5,
+      "ev_retention": 1.0684,
+      "champion_entropy_bits": 2.92,
+      "distinct_champions": 34,
+      "modal_champion": "michigan",
+      "modal_champion_share": 0.405,
+      "mean_seed_by_round": {
+        "S16": 3.79,
+        "E8": 2.89,
+        "F4": 2.14,
+        "CHAMP": 1.48
+      }
+    }
+  ]
+}
