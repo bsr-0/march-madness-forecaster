@@ -1167,13 +1167,20 @@ def load_team_stat_sources(
                 "adj_tempo": data.get("adj_tempo", 68.0),
                 "barthag": data.get("barthag", 0.5),
                 "t_rank": data.get("t_rank", 999),
-                "two_pt_pct": data.get("two_pt_pct") or 0.48,
-                "three_pt_pct": data.get("three_pt_pct") or 0.34,
-                "three_pt_rate": data.get("three_pt_rate") or 0.35,
-                "ft_pct": data.get("ft_pct") or 0.72,
-                "opp_two_pt_pct": data.get("opp_two_pt_pct") or 0.48,
-                "opp_three_pt_pct": data.get("opp_three_pt_pct") or 0.34,
-                "opp_three_pt_rate": data.get("opp_three_pt_rate") or 0.35,
+                # These seven use `.get(key, default)` like their neighbours, not
+                # `.get(key) or default`. The `or` form also swallows a legitimate
+                # 0.0, which is the same falsy-coalescing defect found in
+                # noseed_model._get_stat (FINDINGS.md 6c). A season-aggregate
+                # shooting percentage is never exactly zero, so this changes no
+                # current value -- it removes the trap, and the inconsistency with
+                # the surrounding lines that made it easy to miss.
+                "two_pt_pct": data.get("two_pt_pct", 0.48),
+                "three_pt_pct": data.get("three_pt_pct", 0.34),
+                "three_pt_rate": data.get("three_pt_rate", 0.35),
+                "ft_pct": data.get("ft_pct", 0.72),
+                "opp_two_pt_pct": data.get("opp_two_pt_pct", 0.48),
+                "opp_three_pt_pct": data.get("opp_three_pt_pct", 0.34),
+                "opp_three_pt_rate": data.get("opp_three_pt_rate", 0.35),
                 "wab": data.get("wab", 0.0),
                 "wins": data.get("wins", 0),
                 "losses": data.get("losses", 0),

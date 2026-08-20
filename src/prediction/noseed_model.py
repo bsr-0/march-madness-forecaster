@@ -79,8 +79,106 @@ def _sf(val, default):
 
 
 def _get_stat(stats, key, default):
-    enriched = stats.get("enriched_stats", {})
-    return _sf(stats.get(key) or enriched.get(key), default)
+    """Read one stat, falling back to ``enriched_stats`` then to ``default``.
+
+    The ``is None`` checks are deliberate. This used to read
+    ``stats.get(key) or enriched.get(key)``, which treats a legitimate ``0.0``
+    as missing and silently substitutes the default — the classic falsy-value
+    coalescing bug. Four-factor rates are never exactly zero in practice so it
+    changed nothing measurable here, but it is wrong and would bite any future
+    feature that can legitimately be zero.
+
+    Note the per-key default is a *tolerance for one team missing one stat*, not
+    a licence to run without a feature at all. When a key is absent for the
+    whole payload, every team gets the same default, every differential is
+    exactly 0.0 — a perfectly plausible feature value — and the model degrades
+    to a coin flip with nothing in the output to indicate it. That is what
+    :func:`validate_stats_payload` exists to catch.
+    """
+    val = stats.get(key)
+    if val is None:
+        val = (stats.get("enriched_stats") or {}).get(key)
+    return _sf(val, default)
+
+
+# Every key _build_feature_vector reads, paired with the dimension it feeds.
+# Kept adjacent to that function so the two cannot drift apart.
+REQUIRED_FEATURE_KEYS: Tuple[str, ...] = (
+    "adj_offensive_efficiency",
+    "adj_defensive_efficiency",
+    "adj_tempo",
+    "effective_fg_pct",
+    "turnover_rate",
+    "offensive_reb_rate",
+    "free_throw_rate",
+    "opp_effective_fg_pct",
+    "opp_turnover_rate",
+    "defensive_reb_rate",
+    "opp_free_throw_rate",
+    "barthag",
+)
+
+
+class FeatureSkewError(RuntimeError):
+    """Raised when a stats payload cannot populate the model's feature vector.
+
+    This is the train/serve skew guard. Its absence cost the project a
+    measurable amount: ``mc_pool_backtest`` passed a four-factors-only dict to a
+    model trained on 12 features, so ``adj_offensive_efficiency``,
+    ``adj_defensive_efficiency``, ``adj_tempo`` and ``barthag`` were identically
+    zero for every matchup. The model returned ~0.5 on everything — 17/32
+    agreement with the seed favourite, i.e. chance, and 1-seeds over 16-seeds at
+    0.474-0.540 — and nothing in the pipeline said so. See FINDINGS.md 6c.
+    """
+
+
+def validate_stats_payload(
+    stats: Dict[str, dict],
+    *,
+    min_coverage: float = 0.5,
+    context: str = "",
+) -> None:
+    """Assert a stats payload can actually populate the feature vector.
+
+    Checks *coverage per feature key* across the payload rather than presence
+    for a single team, because that is the shape of the failure worth catching:
+    one team missing one stat is normal and the per-key default handles it,
+    while a key missing for everyone is train/serve skew.
+
+    Args:
+        min_coverage: minimum fraction of teams that must carry each key.
+        context: free-text label for the error message (e.g. "inference").
+
+    Raises:
+        FeatureSkewError: listing every under-covered key and its coverage.
+    """
+    if not stats:
+        raise FeatureSkewError(f"empty stats payload{f' ({context})' if context else ''}")
+
+    teams = [t for t in stats.values() if isinstance(t, dict)]
+    if not teams:
+        raise FeatureSkewError(f"stats payload has no team dicts{f' ({context})' if context else ''}")
+
+    n = len(teams)
+    bad = []
+    for key in REQUIRED_FEATURE_KEYS:
+        present = sum(
+            1 for t in teams if t.get(key) is not None or (t.get("enriched_stats") or {}).get(key) is not None
+        )
+        coverage = present / n
+        if coverage < min_coverage:
+            bad.append((key, coverage))
+
+    if bad:
+        detail = ", ".join(f"{k} ({c:.0%})" for k, c in bad)
+        raise FeatureSkewError(
+            f"stats payload{f' ({context})' if context else ''} is missing required "
+            f"feature keys across {n} teams: {detail}. Every team would fall back to "
+            f"the same default, making those feature differentials identically zero "
+            f"and the model's output uninformative. This is train/serve skew — supply "
+            f"the full team-stats payload (noseed_model._load_team_stats), not a "
+            f"four-factors-only dict."
+        )
 
 
 def _build_feature_vector(t1_stats: dict, t2_stats: dict) -> np.ndarray:
@@ -217,6 +315,7 @@ def train_noseed_model(max_year: Optional[int] = None) -> NoseedModel:
     for year in train_years:
         games = _load_tournament_results(year)
         stats = _load_team_stats(year)
+        validate_stats_payload(stats, context=f"training year {year}")
         for g in games:
             if g.get("round_name") == "FF":
                 continue
@@ -265,6 +364,7 @@ def build_noseed_probabilities(
     stats: Dict[str, dict],
 ) -> Dict[Tuple[str, str], float]:
     """Build pairwise win probabilities using the no-seed model."""
+    validate_stats_payload(stats, context="build_noseed_probabilities")
     probs: Dict[Tuple[str, str], float] = {}
     team_ids = list(seeds.keys())
     for t1, t2 in combinations(team_ids, 2):
@@ -285,6 +385,7 @@ def build_noseed_round_probabilities(
     each team's mean advantage/disadvantage vs the field according
     to the no-seed model.
     """
+    validate_stats_payload(stats, context="build_noseed_round_probabilities")
     seed_rates = _compute_advancement_rates()
     round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
     result = {}
