@@ -1,0 +1,180 @@
+{
+  "year": 2023,
+  "n_sims": 120000,
+  "eval_slice": 1500,
+  "candidate_pool": 118500,
+  "source": "log5(torvik_2023)",
+  "named_team": "houston",
+  "baseline_expected_score": 589.0,
+  "generated_at": "2026-08-20T17:40:51.605793+00:00",
+  "conditions": [
+    {
+      "condition": "null (unconditional control)",
+      "p_condition": 1.0,
+      "n_surviving": 118500,
+      "n_unique": 118500,
+      "hamming": {
+        "mean": 25.22225,
+        "p05": 19.0,
+        "p50": 25.0,
+        "p95": 32.0
+      },
+      "expected_score": 589.8,
+      "ev_retention": 1.0013,
+      "champion_entropy_bits": 4.08,
+      "distinct_champions": 57,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.206,
+      "mean_seed_by_round": {
+        "S16": 4.81,
+        "E8": 4.02,
+        "F4": 3.4,
+        "CHAMP": 2.59
+      }
+    },
+    {
+      "condition": ">=1 2/3-seed in Final Four",
+      "p_condition": 0.77014,
+      "n_surviving": 91262,
+      "n_unique": 91262,
+      "hamming": {
+        "mean": 25.13555,
+        "p05": 19.0,
+        "p50": 25.0,
+        "p95": 32.0
+      },
+      "expected_score": 591.2,
+      "ev_retention": 1.0037,
+      "champion_entropy_bits": 4.08,
+      "distinct_champions": 57,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.185,
+      "mean_seed_by_round": {
+        "S16": 4.77,
+        "E8": 3.93,
+        "F4": 3.25,
+        "CHAMP": 2.52
+      }
+    },
+    {
+      "condition": ">=2 2/3-seeds in Final Four",
+      "p_condition": 0.35062,
+      "n_surviving": 41549,
+      "n_unique": 41549,
+      "hamming": {
+        "mean": 24.7742,
+        "p05": 18.0,
+        "p50": 25.0,
+        "p95": 31.0
+      },
+      "expected_score": 586.0,
+      "ev_retention": 0.9948,
+      "champion_entropy_bits": 4.01,
+      "distinct_champions": 55,
+      "modal_champion": "ucla",
+      "modal_champion_share": 0.175,
+      "mean_seed_by_round": {
+        "S16": 4.68,
+        "E8": 3.76,
+        "F4": 2.98,
+        "CHAMP": 2.45
+      }
+    },
+    {
+      "condition": ">=1 double-digit seed in S16",
+      "p_condition": 0.91197,
+      "n_surviving": 108069,
+      "n_unique": 108069,
+      "hamming": {
+        "mean": 25.4085,
+        "p05": 19.0,
+        "p50": 25.0,
+        "p95": 32.0
+      },
+      "expected_score": 581.1,
+      "ev_retention": 0.9865,
+      "champion_entropy_bits": 4.08,
+      "distinct_champions": 57,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.207,
+      "mean_seed_by_round": {
+        "S16": 4.91,
+        "E8": 4.08,
+        "F4": 3.43,
+        "CHAMP": 2.6
+      }
+    },
+    {
+      "condition": ">=2 double-digit seeds in S16",
+      "p_condition": 0.6682,
+      "n_surviving": 79182,
+      "n_unique": 79182,
+      "hamming": {
+        "mean": 25.80745,
+        "p05": 19.0,
+        "p50": 26.0,
+        "p95": 32.0
+      },
+      "expected_score": 580.3,
+      "ev_retention": 0.9852,
+      "champion_entropy_bits": 4.09,
+      "distinct_champions": 57,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.208,
+      "mean_seed_by_round": {
+        "S16": 5.15,
+        "E8": 4.23,
+        "F4": 3.52,
+        "CHAMP": 2.61
+      }
+    },
+    {
+      "condition": "exactly two 1-seeds in Final Four",
+      "p_condition": 0.27884,
+      "n_surviving": 33043,
+      "n_unique": 33043,
+      "hamming": {
+        "mean": 24.24871243562178,
+        "p05": 18.0,
+        "p50": 24.0,
+        "p95": 31.0
+      },
+      "expected_score": 642.0,
+      "ev_retention": 1.0899,
+      "champion_entropy_bits": 3.38,
+      "distinct_champions": 51,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.309,
+      "mean_seed_by_round": {
+        "S16": 4.68,
+        "E8": 3.68,
+        "F4": 2.68,
+        "CHAMP": 1.91
+      }
+    },
+    {
+      "condition": "houston reaches Final Four",
+      "p_condition": 0.48066,
+      "n_surviving": 56958,
+      "n_unique": 56958,
+      "hamming": {
+        "mean": 23.98764876487649,
+        "p05": 18.0,
+        "p50": 24.0,
+        "p95": 30.0
+      },
+      "expected_score": 643.8,
+      "ev_retention": 1.093,
+      "champion_entropy_bits": 3.17,
+      "distinct_champions": 43,
+      "modal_champion": "houston",
+      "modal_champion_share": 0.428,
+      "mean_seed_by_round": {
+        "S16": 4.72,
+        "E8": 3.77,
+        "F4": 2.92,
+        "CHAMP": 2.06
+      }
+    }
+  ]
+}
