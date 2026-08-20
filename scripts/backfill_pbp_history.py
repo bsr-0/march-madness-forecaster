@@ -72,11 +72,18 @@ CACHE_DIR = DATA_ROOT / "raw" / "historical"
 # collection size that can plausibly come from a real season. Anything under it
 # is silent data loss, not a quiet year, and is escalated rather than warned.
 #
+# These two builders emit one row per TOURNAMENT-FIELD team (68), not per D-I
+# team (~360). An earlier threshold of 300 was set from the wrong denominator
+# and fired on every healthy season -- a guard that cries wolf every run is
+# worse than no guard, because it trains you to skim past it. 60 leaves room
+# for a field with an unresolved First Four slot without tolerating a real
+# collapse.
+#
 # player_minutes is deliberately absent: it now comes from the boxscore stage
 # below, which works for every season rather than only post-2025-02-11.
 BUILDERS = [
-    ("clutch_features", build_season_clutch_features, "teams", 300),
-    ("shooting_features", build_season_shooting_features, "teams", 300),
+    ("clutch_features", build_season_clutch_features, "teams", 60),
+    ("shooting_features", build_season_shooting_features, "teams", 60),
 ]
 
 # A real season yields several thousand distinct players; anything far below
