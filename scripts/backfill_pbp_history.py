@@ -47,10 +47,20 @@ CACHE_DIR = DATA_ROOT / "raw" / "historical"
 
 # Kept in sync with scripts/build_pbp_derived_features.py, which rebuilds
 # these from already-fetched PBP without re-scraping.
+# (name, builder, collection_key, min_expected) -- min_expected is the smallest
+# collection size that can plausibly come from a real season. Anything under it
+# is silent data loss, not a quiet year, and is escalated rather than warned.
+#
+# player_minutes is 0 here on purpose: ESPN publishes no substitution events
+# before 2025-02-11, so this builder legitimately yields nothing for every
+# earlier season and there is no threshold that separates "broken" from
+# "unsupported". Use the boxscore route instead --
+# src/data/scrapers/espn_boxscore.py. The run-end summary reports its coverage
+# either way so the gap stays visible.
 BUILDERS = [
-    ("clutch_features", build_season_clutch_features, "teams"),
-    ("shooting_features", build_season_shooting_features, "teams"),
-    ("player_minutes", build_season_minutes_features, "players"),
+    ("clutch_features", build_season_clutch_features, "teams", 300),
+    ("shooting_features", build_season_shooting_features, "teams", 300),
+    ("player_minutes", build_season_minutes_features, "players", 0),
 ]
 
 
@@ -61,6 +71,9 @@ def run(start_year: int, end_year: int) -> None:
     # bracket-pool construction, and confirms the pipeline stays healthy
     # before sinking days into the oldest, least certain years.
     years = sorted(range(start_year, end_year + 1), reverse=True)
+
+    # (name, year) -> collection size, or None when the build produced nothing.
+    coverage: dict = {}
 
     for year in years:
         t0 = time.time()
@@ -82,16 +95,41 @@ def run(start_year: int, end_year: int) -> None:
         # All three derived feature sets come from the same payload. Failures
         # are per-builder so one bad derivation doesn't cost the others (and
         # never costs the fetched PBP, which is the expensive part).
-        for name, builder, collection_key in BUILDERS:
+        for name, builder, collection_key, min_expected in BUILDERS:
             try:
                 result = builder(year, DATA_ROOT, pbp_payload=pbp_payload)
             except Exception:
                 logger.exception("Season %d: %s build failed", year, name)
+                coverage[(name, year)] = None
                 continue
 
             if not result:
-                logger.warning("Season %d: %s produced nothing", year, name)
+                coverage[(name, year)] = None
+                log = logger.error if min_expected else logger.warning
+                log(
+                    "Season %d: %s produced NOTHING from %d games -- no file written",
+                    year,
+                    name,
+                    n_games,
+                )
                 continue
+
+            n_items = len(result.get(collection_key, []))
+            coverage[(name, year)] = n_items
+            if min_expected and n_items < min_expected:
+                # Loud on purpose: a thin-but-nonempty result still writes a
+                # file, so without this it looks like a successful season.
+                logger.error(
+                    "Season %d: %s produced only %d %s from %d games (expected >= %d). "
+                    "This is the signature of a parse failure or an upstream schema "
+                    "change, not a real season.",
+                    year,
+                    name,
+                    n_items,
+                    collection_key,
+                    n_games,
+                    min_expected,
+                )
 
             out_path = CACHE_DIR / f"{name}_{year}.json"
             with open(out_path, "w") as f:
@@ -100,11 +138,50 @@ def run(start_year: int, end_year: int) -> None:
                 "Season %d: wrote %s (%d %s)",
                 year,
                 out_path.name,
-                len(result.get(collection_key, [])),
+                n_items,
                 collection_key,
             )
 
+    _log_coverage_summary(coverage, start_year, end_year)
     logger.info("=== Backfill run finished (years %d-%d) ===", start_year, end_year)
+
+
+def _log_coverage_summary(coverage: dict, start_year: int, end_year: int) -> None:
+    """Report per-builder coverage so gaps cannot hide in hours of scroll.
+
+    The 2026-08-19 run silently produced zero player_minutes for 2024 and 26
+    for 2023 while logging a steady stream of successful clutch/shooting
+    writes. Anyone reading the tail of that log would reasonably conclude the
+    backfill was healthy.
+    """
+    if not coverage:
+        return
+    logger.info("=== Coverage summary (years %d-%d) ===", start_year, end_year)
+    for name, _builder, _collection_key, min_expected in BUILDERS:
+        years = sorted((y for (n, y) in coverage if n == name), reverse=True)
+        if not years:
+            continue
+        empty = [y for y in years if not coverage[(name, y)]]
+        # A thin season still writes a file, so it looks like a success in the
+        # log stream. Surface it here or it hides among the healthy seasons.
+        thin = [
+            y
+            for y in years
+            if coverage[(name, y)] and min_expected and coverage[(name, y)] < min_expected
+        ]
+        healthy = [y for y in years if y not in empty and y not in thin]
+        notes = []
+        if empty:
+            notes.append(f"empty: {empty}")
+        if thin:
+            notes.append(f"THIN: {[(y, coverage[(name, y)]) for y in thin]}")
+        logger.info(
+            "  %-18s %2d/%2d seasons healthy (%s)",
+            name,
+            len(healthy),
+            len(years),
+            "; ".join(notes) if notes else "no gaps",
+        )
 
 
 if __name__ == "__main__":

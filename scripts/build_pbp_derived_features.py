@@ -36,10 +36,15 @@ logger = logging.getLogger("pbp_derive")
 DATA_ROOT = Path("data")
 CACHE_DIR = DATA_ROOT / "raw" / "historical"
 
+# (name, builder, collection_key, min_expected) -- kept in sync with
+# scripts/backfill_pbp_history.py, including the escalation thresholds. See
+# that module for why player_minutes carries a threshold of 0 (ESPN publishes
+# no substitution events before 2025-02-11, so this builder legitimately
+# yields nothing for earlier seasons -- use src/data/scrapers/espn_boxscore.py).
 BUILDERS = [
-    ("clutch_features", build_season_clutch_features, "teams"),
-    ("shooting_features", build_season_shooting_features, "teams"),
-    ("player_minutes", build_season_minutes_features, "players"),
+    ("clutch_features", build_season_clutch_features, "teams", 300),
+    ("shooting_features", build_season_shooting_features, "teams", 300),
+    ("player_minutes", build_season_minutes_features, "players", 0),
 ]
 
 
@@ -63,7 +68,7 @@ def build_year(year: int, include_incomplete: bool) -> None:
     n_games = len(payload.get("games", []))
     logger.info("Season %d: building derived features from %d games", year, n_games)
 
-    for name, builder, collection_key in BUILDERS:
+    for name, builder, collection_key, min_expected in BUILDERS:
         try:
             result = builder(year, DATA_ROOT, pbp_payload=payload)
         except Exception:
@@ -71,8 +76,22 @@ def build_year(year: int, include_incomplete: bool) -> None:
             continue
 
         if not result:
-            logger.warning("Season %d: %s produced nothing", year, name)
+            log = logger.error if min_expected else logger.warning
+            log("Season %d: %s produced NOTHING from %d games -- no file written", year, name, n_games)
             continue
+
+        n_items = len(result.get(collection_key, []))
+        if min_expected and n_items < min_expected:
+            logger.error(
+                "Season %d: %s produced only %d %s from %d games (expected >= %d). "
+                "This is the signature of a parse failure or an upstream schema change.",
+                year,
+                name,
+                n_items,
+                collection_key,
+                n_games,
+                min_expected,
+            )
 
         out_path = CACHE_DIR / f"{name}_{year}.json"
         with open(out_path, "w") as f:
@@ -81,7 +100,7 @@ def build_year(year: int, include_incomplete: bool) -> None:
             "Season %d: wrote %s (%d %s)",
             year,
             out_path.name,
-            len(result.get(collection_key, [])),
+            n_items,
             collection_key,
         )
 
