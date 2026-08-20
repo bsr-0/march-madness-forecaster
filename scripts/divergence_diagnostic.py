@@ -32,7 +32,18 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 
 
 def _load_team_stats(year):
-    return _load_torvik_ff(year) or {}
+    """Full Torvik team stats for the noseed model.
+
+    FIXED 2026-08-20. This was a third, independent copy of the train/serve
+    skew: it returned ``_load_torvik_ff(year)``, the four-factors sub-dict
+    alone, to a model whose feature vector needs 12 keys. Every divergence
+    figure this script produced before today was computed against a noseed
+    model running on four zeroed dimensions -- i.e. a coin flip. See
+    FINDINGS.md 6c.
+    """
+    from src.prediction.noseed_model import _load_team_stats as _load_full
+
+    return _load_full(year)
 
 
 def build_first_round_matchups(seeds, regions):

@@ -460,14 +460,68 @@ Correcting the pairwise contract simply routed sampling to the real model for th
 time and exposed that the model was being fed a crippled vector.
 
 **Implications for the historical record:** any past conclusion of the form "the no-seed
-model doesn't beat seed" is unsupported — the B1 base has never been evaluated on its own
+model doesn't beat seed" is unsupported — the B1 base had never been evaluated on its own
 matchup probabilities. `blend` (α·seed + (1−α)·noseed) is contaminated by the same bug.
 
-**Proposed fix (NOT applied — changes baselines, needs a re-run):** have the backtest pass
-the full stats payload, i.e. use `noseed_model._load_team_stats(year)` for the dict handed
-to `build_noseed_probabilities` / `build_noseed_round_probabilities`, and add a guard that
-raises when a feature vector's `barthag`/`adj_*` dimensions are all exactly zero, so
-train/serve skew fails loudly instead of silently degrading to a coin flip.
+**Scan for the same defect elsewhere (2026-08-20).** The bug had three sites, not one:
+
+| site | status |
+|---|---|
+| `scripts/mc_pool_backtest.py::_load_team_stats` | **was broken** — fixed |
+| `src/optimization/recency_hparam_fitter.py` | **was broken** — imports the loader above, so it was fitting `blend_alpha` walk-forward against a coin-flip model. Fixed transitively. |
+| `scripts/divergence_diagnostic.py::_load_team_stats` | **was broken** — an independent copy returning `_load_torvik_ff`. Every divergence figure it produced before today is unreliable. Fixed. |
+| `src/cli/pool_cmds.py`, `scripts/unified_mode_evaluation.py`, `scripts/backtest_ev_vs_kaggle.py` | always correct — they imported `noseed_model._load_team_stats` |
+
+Verified empirically rather than by reading: every loader that feeds noseed now returns
+362 teams with all 12 required keys present.
+
+Two adjacent findings from the same scan:
+
+- **`torvik_correction` (the production Kaggle model) is structurally immune.** Its
+  `_feature_vector` takes explicit positional arguments, so omitting one raises `TypeError`
+  rather than silently defaulting, and its optional market/elo sources fall back
+  identically in `fit` and `predict` — consistent degradation, not skew. Worth copying as
+  a pattern.
+- **Seven falsy-`or` defaults** in `src/pipeline/stages/data_loader.py` (`two_pt_pct`,
+  `three_pt_pct`, `three_pt_rate`, `ft_pct`, and the `opp_` variants) sat inconsistently
+  among neighbours using the correct `.get(key, default)` form. No current value changes —
+  a season-aggregate shooting percentage is never exactly zero — but they were the same
+  trap, and are now consistent.
+
+**Residual risk not closed:** `feature_engineering.extract_team_features` reads 64 keys and
+its call site passes `torvik_map.get(team_id, {})` / `proprietary_map.get(team_id, {})`,
+i.e. the same silent-default shape. It sits on the tournament-pipeline path, which does run
+`_strict_torvik` validation, so it was not verified broken — but it has no per-key coverage
+check equivalent to `validate_stats_payload`, and would fail the same way if a source
+went missing.
+
+**FIXED 2026-08-20.** Three changes:
+
+1. `mc_pool_backtest._load_team_stats` now delegates to `noseed_model._load_team_stats`,
+   supplying all 12 features instead of the four-factors sub-dict.
+2. `noseed_model.validate_stats_payload` + `FeatureSkewError` — checks *per-key coverage
+   across the payload*, so one team missing one stat still passes (that is what the
+   per-key default is for) while a key missing for everyone raises. Wired into
+   `train_noseed_model`, `build_noseed_probabilities` and
+   `build_noseed_round_probabilities`, so training and both serving paths are guarded.
+3. `_get_stat` no longer uses `stats.get(k) or enriched.get(k)` — the falsy-coalescing form
+   treats a legitimate `0.0` as missing. Four-factor rates are never exactly zero so no
+   current value changes, but the trap is gone.
+
+Measured effect on the model's own output (2024 R64, versus the recorded pre-fix figures):
+
+| | before | after | torvik reference |
+|---|---:|---:|---:|
+| mean \|p-0.5\| | 0.041 | **0.241** | 0.270 |
+| games in [0.4, 0.6] | 93.8% | **25.0%** | 28.1% |
+| agrees with seed favourite | 17/32 (chance) | **27/32** | 28/32 |
+| 1-seed over 16-seed | 0.474-0.540 | **0.919-0.941** | ~0.980 |
+
+The model now discriminates about as sharply as torvik. Regression tests in
+`tests/test_noseed_feature_skew.py` pin both the defect signature and the guard.
+
+**The `noseed` and `blend` rows in 6b are now stale** — they measured a coin flip. Both
+need a fresh backtest before anything is concluded about the no-seed model.
 
 ## 6d. ESPN publishes no substitution events before 2025-02-11 (2026-08-19)
 
@@ -534,15 +588,18 @@ misleadingly small artifact.
 
 ## 8. Known open technical debt (not yet fixed, roughly prioritized)
 
-- **`noseed` train/serve feature skew — root-caused, fix not yet applied** (P0, opened
-  2026-08-19): the backtest serves `_build_feature_vector` a four-factors-only stats dict,
-  so `adj_offensive_efficiency`, `adj_defensive_efficiency`, `adj_tempo` and `barthag` are
-  identically 0.0 for every matchup. The model predicts ~0.5 on everything (17/32 R64
-  favorite agreement — chance; 1-seeds over 16-seeds at 0.474-0.540). **The B1 no-seed base
-  has never actually been evaluated on its own matchup probabilities**, and `blend` is
-  contaminated too. Full diagnosis and proposed fix in §6c. Applying the fix changes the
-  noseed/blend baselines in §6b and needs a fresh backtest run. Do not draw
-  preference/scenario-bank conclusions involving these bases until it is resolved.
+- **`noseed`/`blend` baselines need re-running after the train/serve skew fix** (P0,
+  opened 2026-08-19, code fixed 2026-08-20): the skew is fixed and guarded (§6c), and the
+  model now discriminates as sharply as torvik (27/32 R64 favourite agreement, up from
+  17/32). But the `noseed` and `blend` rows in §6b measured the coin-flip version and are
+  stale. `recency_hparam_fitter` was also affected, so the walk-forward `blend_alpha` it
+  fits was tuned against that coin flip and should be refitted. Nothing should be
+  concluded about the no-seed model — in either direction — until a fresh backtest runs.
+- **`extract_team_features` has no per-key coverage check** (P2, opened 2026-08-20): reads
+  64 keys, and its call site passes `torvik_map.get(team_id, {})`, the same silent-default
+  shape that hid the noseed skew for months. Not verified broken — it sits behind
+  `_strict_torvik` validation on the pipeline path — but it has no equivalent of
+  `validate_stats_payload`. See §6c.
 - **Temperature `tau` on the pairwise logit is untested** (opened 2026-08-19): whether
   controlled sharpening (`p' = sigmoid(logit(p)/tau)`) improves winner-take-all
   performance without wrecking calibration. Must be fit walk-forward against P(1st) /

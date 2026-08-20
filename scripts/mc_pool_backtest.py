@@ -455,15 +455,33 @@ def _validate_pretournament(data, filepath):
 
 
 def _load_team_stats(year):
-    """Load Torvik four-factors for noseed model (pre-tournament only).
+    """Load the FULL Torvik team-stats payload for the noseed model.
 
-    Reads the merged `torvik_{year}.json` (key "four_factors") when
-    present, falling back to the standalone `torvik_four_factors_{year}.json`."""
-    data = _load_torvik_ff(year)
-    if data is None:
-        return {}
-    _validate_pretournament(data, HIST_DIR / f"torvik_{year}.json")
-    return data
+    Delegates to ``noseed_model._load_team_stats``, which reads
+    ``torvik_{year}.json``'s ``teams`` array (adj_offensive_efficiency,
+    adj_defensive_efficiency, adj_tempo, barthag) *merged with* the
+    ``four_factors`` sub-dict.
+
+    FIXED 2026-08-20 — train/serve skew. This used to return
+    ``_load_torvik_ff(year)``, i.e. the four-factors sub-dict alone: 8 keys fed
+    to a model whose feature vector needs 12. The other four
+    (adj_offensive_efficiency, adj_defensive_efficiency, adj_tempo, barthag)
+    fell through to their per-key defaults on *both* sides of every
+    differential, so those dimensions were identically 0.0 for every matchup —
+    including barthag, the most predictive feature in the set.
+
+    The effect was total and silent: the model returned ~0.5 on everything,
+    agreed with the seed favourite in 17 of 32 R64 games (chance), and rated
+    1-seeds over 16-seeds at 0.474-0.540. Nothing in the pipeline surfaced it,
+    because a zero differential is a perfectly plausible feature value.
+
+    The two functions shared a name and differed only in payload, which is how
+    this survived. ``validate_stats_payload`` now fails loudly on any repeat.
+    See FINDINGS.md 6c.
+    """
+    from src.prediction.noseed_model import _load_team_stats as _load_full_team_stats
+
+    return _load_full_team_stats(year)
 
 
 def _load_torvik_barthag(year, seeds):
