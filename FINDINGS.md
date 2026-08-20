@@ -611,7 +611,56 @@ and print an end-of-run coverage summary flagging both empty and THIN seasons.
 `boxscore_player_minutes` raises `MinutesCoverageError` rather than writing a
 misleadingly small artifact.
 
-## 7. Load-bearing code that looks dead but isn't — do not delete
+## 6e. Common random numbers in candidate selection (2026-08-20)
+
+Three selection loops drew a fresh opponent field and a fresh tournament *inside*
+the per-candidate loop, giving every candidate independent noise that `argmax`
+could not distinguish from signal. Fixed by hoisting the draws into
+`draw_selection_trials()` and scoring via `score_candidate_p1()`. Scoring logic
+is byte-identical; only the provenance of the trials changed.
+
+Acceptance results (2024 fixture, production candidate recipe, 500 trials, 5 seeds):
+
+| criterion | result |
+|---|---|
+| per-candidate estimates stay consistent | **PASS** — max abs mean diff 0.0044, min p=0.42 |
+| candidate-difference SE >= 2x better | **FAIL** — 0.0102 -> 0.0088 = **1.16x** |
+| selection stability improves | **PASS** — modal winner 2/5 -> 3/5, distinct winners 3 -> 2 |
+| controls reproduce / production unchanged | **PARTIAL** — see below |
+
+Also 3.3x faster: fields and tournaments were being regenerated once per
+*candidate-trial* rather than once per *trial*.
+
+**The >=2x prediction was wrong, and the error is instructive.** It came from a
+single candidate pair rather than an average over all pairs. CRN cancels only
+*shared* noise, so the benefit scales with candidate correlation: similar pairs
+(Hamming <= median) improved 1.85x, distant pairs 0.94x — none at all. A diverse
+candidate set gains less than a similar one, which is the opposite of the
+intuition that variance reduction helps most when choices are hard.
+
+**The measurement's real value was a different finding.** Production generates a
+mean of 25.5 candidates per year, but on the torvik base alone the recipe dedups
+to 5 distinct brackets with a mean pairwise Hamming distance of **6 games out of
+63**. The selector is choosing among near-identical brackets, so the true P(1st)
+differences between them are tiny and no amount of variance reduction makes that
+choice reliable. **Candidate diversity, not selection precision, is the binding
+constraint** — directly relevant to the scenario-bank design, whose candidates
+come from simulated tournaments and are diverse by construction.
+
+**Full backtest (canonical contract, n=15).** Controls reproduced exactly — seed
+4.05%/612 and torvik 3.40%/662, to the digit. `meta_region_poolaware` came in at
+**10.47%** against the documented 11.2%.
+
+That difference is **-0.73pp = -0.92 SE** (SE ≈ 0.79pp at this rate over 1500
+year-repeats), i.e. statistically indistinguishable from unchanged — but it
+cannot be claimed as a clean pass either, and the comparison is confounded: the
+11.2% reference predates *both* the CRN change and the noseed train/serve fix,
+and poolaware's candidate sweep includes a `blend` base that the noseed fix
+altered. Isolating CRN's own contribution needs a run at the preceding commit
+(~3h), not yet done. The 2026-08-18 reference log is no longer on disk (removed
+in the doc-consolidation commit), so no paired per-year comparison is possible.
+
+
 
 - `src/ml/gnn/schedule_graph.py` — powers live SOS features despite
   `enable_gnn=false`.
