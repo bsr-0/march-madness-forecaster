@@ -469,6 +469,58 @@ to `build_noseed_probabilities` / `build_noseed_round_probabilities`, and add a 
 raises when a feature vector's `barthag`/`adj_*` dimensions are all exactly zero, so
 train/serve skew fails loudly instead of silently degrading to a coin flip.
 
+## 6d. ESPN publishes no substitution events before 2025-02-11 (2026-08-19)
+
+**Hard external boundary. Expensive to rediscover — measured, not inferred.**
+
+`pbp_player_minutes.py` reconstructs on-court intervals from play-by-play
+substitution events. Those events do not exist in ESPN's feed before **2025-02-11**:
+
+| season | opening-day games with subs | March games with subs |
+|--------|---------------------------:|----------------------:|
+| 2026 | 60/60 | 80/80 |
+| 2025 | 0/60 | 80/80 (cutover mid-season) |
+| 2024 | 0/60 | 0/80 |
+| 2023 | 0/60 | 0/80 |
+
+Narrowing the 2025 file to the day: `2025-02-08` → 0/12, `2025-02-10` → 0/12,
+`2025-02-11` → **1/12**, `2025-02-12` → 12/12.
+
+Play *text* was also searched for sub-like wording (`subbing`, `substitut`,
+`enters the game`) under any `play_type`: zero matches pre-cutover. **The data is
+absent, not relabelled** — no parser change can recover it. Play schemas are
+otherwise identical across eras (same 19 keys, `athlete_id`/`name`/`team` all
+populated), so this is not a scraping or parsing defect.
+
+Consequences: `player_minutes_2026` = 9,581 players; `player_minutes_2025` = 4,386
+(only 2025-02-12 → 2025-03-17, ~26% of that season, so a biased basis for
+season-long minutes shares); 2024 = zero, file never written; 2023 = 26 players
+(noise). Every season older than 2025 will produce nothing. `clutch_features` and
+`shooting_features` derive from score/clock and are unaffected — they are the
+remaining justification for the PBP backfill.
+
+**Use the boxscore route instead** — `src/data/scrapers/espn_boxscore.py`. ESPN's
+published per-player stat line, minutes first, players grouped `starters`/`bench`.
+Probed live: 2022, 2015 and 2009 games all return complete data whose per-team
+minutes sum to exactly 200 (5 x 40 regulation). It is better than the PBP route on
+every axis — full historical coverage, published rather than reconstructed,
+starters labelled rather than inferred — and supersedes it even for 2025-2026.
+`build_season_minutes_features` in `src/data/features/boxscore_player_minutes.py`
+emits the identical schema, so `player_minutes_{year}.json` consumers need no change.
+
+The boxscore page is a *separate endpoint*: the playbyplay page carries only the
+boxscore tab's column config plus a nav link, so extending the PBP scraper cannot
+pick this up.
+
+**Silent-failure guard added.** The 2026-08-19 backfill logged
+`player_minutes produced nothing` for 2024 and wrote a 26-player file for 2023, and
+the run continued past both — anyone reading the log tail would have concluded it
+was healthy. `backfill_pbp_history.py` and `build_pbp_derived_features.py` now carry
+per-builder `min_expected` thresholds, escalate empty/thin results to `logger.error`,
+and print an end-of-run coverage summary flagging both empty and THIN seasons.
+`boxscore_player_minutes` raises `MinutesCoverageError` rather than writing a
+misleadingly small artifact.
+
 ## 7. Load-bearing code that looks dead but isn't — do not delete
 
 - `src/ml/gnn/schedule_graph.py` — powers live SOS features despite
