@@ -1,0 +1,959 @@
+{
+  "year": 2024,
+  "n_sims": 60000,
+  "pool_size": 1200,
+  "trials": 3000,
+  "k": 5,
+  "p1_se_estimate": 0.00336,
+  "generated_at": "2026-08-20T19:47:55.854137+00:00",
+  "results": [
+    {
+      "constraint": "null (unconditional)",
+      "n_surviving": 60000,
+      "pool_size": 1200,
+      "unconstrained_best_ev": 930.1,
+      "unconstrained_best_p1": 0.0783,
+      "ev_p1_spearman": 0.073,
+      "cells": {
+        "ev/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 551.0,
+          "ev_retention": 0.5924,
+          "mean_p_first": 0.02,
+          "p1_retention": 0.2553,
+          "distinct_champions": 4,
+          "champions": [
+            "houston(1)",
+            "florida(7)",
+            "baylor(3)",
+            "saint_mary_s__ca(5)",
+            "saint_mary_s__ca(5)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              4,
+              6,
+              7,
+              11
+            ],
+            [
+              2,
+              3,
+              4,
+              6
+            ],
+            [
+              4,
+              5,
+              5,
+              6
+            ],
+            [
+              1,
+              1,
+              4,
+              5
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1012.0,
+          "hamming_mean": 30.6
+        },
+        "ev/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 681.8,
+          "ev_retention": 0.7331,
+          "mean_p_first": 0.0279,
+          "p1_retention": 0.3557,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "alabama(4)",
+            "connecticut(1)",
+            "purdue(1)",
+            "north_carolina(1)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              3,
+              3,
+              3,
+              4
+            ],
+            [
+              1,
+              2,
+              2,
+              10
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              4,
+              5
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1014.0,
+          "hamming_mean": 26.8
+        },
+        "ev/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 847.9,
+          "ev_retention": 0.9117,
+          "mean_p_first": 0.0343,
+          "p1_retention": 0.4374,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "connecticut(1)",
+            "purdue(1)",
+            "arizona(2)",
+            "auburn(4)"
+          ],
+          "distinct_final_fours": 3,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              4
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 592.0,
+          "hamming_mean": 14.8
+        },
+        "p1/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 576.5,
+          "ev_retention": 0.6199,
+          "mean_p_first": 0.0365,
+          "p1_retention": 0.4655,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "illinois(3)",
+            "purdue(1)",
+            "creighton(3)",
+            "tennessee(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              1,
+              1,
+              4,
+              4
+            ],
+            [
+              3,
+              3,
+              4,
+              5
+            ],
+            [
+              1,
+              2,
+              3,
+              11
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 956.0,
+          "hamming_mean": 30.0
+        },
+        "p1/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 645.4,
+          "ev_retention": 0.6939,
+          "mean_p_first": 0.0391,
+          "p1_retention": 0.4996,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "illinois(3)",
+            "baylor(3)",
+            "purdue(1)",
+            "houston(1)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              1,
+              1,
+              3,
+              3
+            ],
+            [
+              1,
+              3,
+              4,
+              4
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1002.0,
+          "hamming_mean": 27.2
+        },
+        "p1/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 694.8,
+          "ev_retention": 0.7471,
+          "mean_p_first": 0.0661,
+          "p1_retention": 0.8443,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "arizona(2)",
+            "iowa_state(2)",
+            "connecticut(1)",
+            "tennessee(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              2,
+              2,
+              2
+            ],
+            [
+              2,
+              2,
+              2,
+              3
+            ],
+            [
+              1,
+              2,
+              3,
+              3
+            ],
+            [
+              1,
+              2,
+              2,
+              3
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 748.0,
+          "hamming_mean": 17.0
+        }
+      }
+    },
+    {
+      "constraint": ">=2 2/3-seed in F4",
+      "n_surviving": 22908,
+      "pool_size": 1200,
+      "unconstrained_best_ev": 904.9,
+      "unconstrained_best_p1": 0.0753,
+      "ev_p1_spearman": -0.027,
+      "cells": {
+        "ev/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 589.0,
+          "ev_retention": 0.6508,
+          "mean_p_first": 0.0255,
+          "p1_retention": 0.3389,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "saint_mary_s__ca(5)",
+            "tcu(9)",
+            "arizona(2)",
+            "illinois(3)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              2,
+              5,
+              8
+            ],
+            [
+              2,
+              3,
+              6,
+              9
+            ],
+            [
+              1,
+              2,
+              2,
+              5
+            ],
+            [
+              1,
+              2,
+              3,
+              11
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1030.0,
+          "hamming_mean": 29.4
+        },
+        "ev/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 664.5,
+          "ev_retention": 0.7343,
+          "mean_p_first": 0.0255,
+          "p1_retention": 0.3381,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "arizona(2)",
+            "gonzaga(5)",
+            "michigan_state(9)",
+            "connecticut(1)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              2,
+              5,
+              6
+            ],
+            [
+              1,
+              2,
+              3,
+              5
+            ],
+            [
+              1,
+              2,
+              3,
+              9
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 996.0,
+          "hamming_mean": 25.8
+        },
+        "ev/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 837.7,
+          "ev_retention": 0.9257,
+          "mean_p_first": 0.0409,
+          "p1_retention": 0.5434,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "connecticut(1)",
+            "arizona(2)",
+            "iowa_state(2)",
+            "purdue(1)"
+          ],
+          "distinct_final_fours": 3,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              1,
+              1,
+              2,
+              3
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 644.0,
+          "hamming_mean": 16.0
+        },
+        "p1/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 585.0,
+          "ev_retention": 0.6464,
+          "mean_p_first": 0.0433,
+          "p1_retention": 0.5752,
+          "distinct_champions": 3,
+          "champions": [
+            "marquette(2)",
+            "iowa_state(2)",
+            "purdue(1)",
+            "iowa_state(2)",
+            "marquette(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              2,
+              3
+            ],
+            [
+              2,
+              3,
+              4,
+              11
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              2,
+              2,
+              5
+            ],
+            [
+              1,
+              2,
+              2,
+              4
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 970.0,
+          "hamming_mean": 29.4
+        },
+        "p1/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 614.9,
+          "ev_retention": 0.6795,
+          "mean_p_first": 0.0405,
+          "p1_retention": 0.5381,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "illinois(3)",
+            "auburn(4)",
+            "creighton(3)",
+            "arizona(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              2,
+              3
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              2,
+              3,
+              4,
+              8
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1022.0,
+          "hamming_mean": 28.2
+        },
+        "p1/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 680.2,
+          "ev_retention": 0.7516,
+          "mean_p_first": 0.0665,
+          "p1_retention": 0.8832,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "arizona(2)",
+            "north_carolina(1)",
+            "iowa_state(2)",
+            "tennessee(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              2,
+              2,
+              3
+            ],
+            [
+              1,
+              2,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ],
+            [
+              1,
+              2,
+              2,
+              2
+            ],
+            [
+              1,
+              2,
+              3,
+              3
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 792.0,
+          "hamming_mean": 20.0
+        }
+      }
+    },
+    {
+      "constraint": ">=2 double-digit seed in S16",
+      "n_surviving": 30587,
+      "pool_size": 1200,
+      "unconstrained_best_ev": 907.7,
+      "unconstrained_best_p1": 0.0667,
+      "ev_p1_spearman": 0.074,
+      "cells": {
+        "ev/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 615.8,
+          "ev_retention": 0.6784,
+          "mean_p_first": 0.028,
+          "p1_retention": 0.42,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "brigham_young(6)",
+            "marquette(2)",
+            "arizona(2)",
+            "creighton(3)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              4,
+              6,
+              9,
+              11
+            ],
+            [
+              2,
+              2,
+              2,
+              9
+            ],
+            [
+              1,
+              2,
+              2,
+              10
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1010.0,
+          "hamming_mean": 30.4
+        },
+        "ev/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 593.1,
+          "ev_retention": 0.6534,
+          "mean_p_first": 0.0191,
+          "p1_retention": 0.287,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "alabama(4)",
+            "connecticut(1)",
+            "gonzaga(5)",
+            "auburn(4)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              2,
+              4,
+              6,
+              7
+            ],
+            [
+              1,
+              2,
+              5,
+              8
+            ],
+            [
+              1,
+              2,
+              5,
+              5
+            ],
+            [
+              3,
+              4,
+              7,
+              10
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1030.0,
+          "hamming_mean": 29.0
+        },
+        "ev/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 832.6,
+          "ev_retention": 0.9172,
+          "mean_p_first": 0.0332,
+          "p1_retention": 0.498,
+          "distinct_champions": 5,
+          "champions": [
+            "houston(1)",
+            "connecticut(1)",
+            "purdue(1)",
+            "iowa_state(2)",
+            "arizona(2)"
+          ],
+          "distinct_final_fours": 2,
+          "final_four_seeds": [
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              1,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              2
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 612.0,
+          "hamming_mean": 18.0
+        },
+        "p1/hamming": {
+          "n_returned": 5,
+          "mean_expected_score": 611.5,
+          "ev_retention": 0.6737,
+          "mean_p_first": 0.0252,
+          "p1_retention": 0.378,
+          "distinct_champions": 4,
+          "champions": [
+            "marquette(2)",
+            "connecticut(1)",
+            "connecticut(1)",
+            "arizona(2)",
+            "florida(7)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              2,
+              2,
+              2,
+              6
+            ],
+            [
+              1,
+              1,
+              1,
+              4
+            ],
+            [
+              1,
+              1,
+              1,
+              10
+            ],
+            [
+              1,
+              1,
+              2,
+              7
+            ],
+            [
+              4,
+              6,
+              7,
+              11
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1040.0,
+          "hamming_mean": 30.8
+        },
+        "p1/weighted": {
+          "n_returned": 5,
+          "mean_expected_score": 600.4,
+          "ev_retention": 0.6615,
+          "mean_p_first": 0.0358,
+          "p1_retention": 0.537,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "auburn(4)",
+            "creighton(3)",
+            "arizona(2)",
+            "connecticut(1)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              2,
+              2,
+              2,
+              6
+            ],
+            [
+              1,
+              4,
+              4,
+              9
+            ],
+            [
+              1,
+              1,
+              3,
+              4
+            ],
+            [
+              2,
+              3,
+              4,
+              6
+            ],
+            [
+              1,
+              2,
+              2,
+              2
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 1026.0,
+          "hamming_mean": 27.2
+        },
+        "p1/hierarchical": {
+          "n_returned": 5,
+          "mean_expected_score": 653.1,
+          "ev_retention": 0.7195,
+          "mean_p_first": 0.0595,
+          "p1_retention": 0.892,
+          "distinct_champions": 5,
+          "champions": [
+            "marquette(2)",
+            "arizona(2)",
+            "north_carolina(1)",
+            "tennessee(2)",
+            "iowa_state(2)"
+          ],
+          "distinct_final_fours": 5,
+          "final_four_seeds": [
+            [
+              2,
+              2,
+              2,
+              6
+            ],
+            [
+              2,
+              2,
+              2,
+              2
+            ],
+            [
+              1,
+              1,
+              2,
+              6
+            ],
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            [
+              1,
+              2,
+              2,
+              4
+            ]
+          ],
+          "materially_distinct": 5,
+          "weighted_distance_mean": 788.0,
+          "hamming_mean": 20.8
+        }
+      }
+    }
+  ]
+}
