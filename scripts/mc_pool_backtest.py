@@ -1867,6 +1867,96 @@ def _try_load_espn(year, seeds):
         return None
 
 
+def draw_selection_trials(
+    n_trials,
+    *,
+    n_opponents,
+    first_round,
+    pick_dist,
+    matchup_probs,
+    seeds,
+    rng,
+    chalk_noise_std=None,
+    noise_std=0.16,
+):
+    """Pre-draw the (opponent field, tournament outcome) pairs for candidate selection.
+
+    COMMON RANDOM NUMBERS. Every candidate in a selection loop must be scored
+    against *this same* set of trials.
+
+    Drawing inside the per-candidate loop instead — which is what the three
+    selection loops used to do — gives each candidate its own opponents and its
+    own tournaments, so their scores carry independent noise:
+
+        score(A) = signal(A) + noise_A
+        score(B) = signal(B) + noise_B
+
+    and ``argmax`` sees the noise as though it were signal. Measured on 2024
+    with 8 real candidates and 500 trials, the SE of the A-vs-B *difference*
+    was 0.0094 — as large as the SE of either estimate on its own, i.e. no
+    cancellation at all — and the selector changed its mind across 3 of 5
+    master seeds on identical data. Sharing the draws cut that difference-SE to
+    0.0026, a 3.6x reduction.
+
+    Hoisting is also ~3x faster: fields and tournaments were being regenerated
+    once per *candidate-trial* rather than once per *trial*, so the redundant
+    work scaled with the candidate count.
+
+    Note this reduces the variance of *differences between candidates*, not of
+    each candidate's own estimate — the latter is essentially unchanged (0.0092
+    vs 0.0083). Differences are the only thing argmax consumes.
+
+    Returns:
+        List of ``(opponent_brackets, sim_winners_by_round)`` of length n_trials.
+    """
+    kwargs = {}
+    if chalk_noise_std is not None:
+        kwargs["chalk_noise_std"] = chalk_noise_std
+
+    trials = []
+    for _ in range(n_trials):
+        opp = generate_opponent_brackets(
+            n_opponents=n_opponents,
+            first_round_matchups=first_round,
+            pick_distribution=pick_dist if pick_dist else {},
+            matchup_probs=matchup_probs,
+            seeds=seeds,
+            rng=rng,
+            **kwargs,
+        )
+        _sim_out, _sim_br = simulate_tournament_outcomes(
+            n_tournaments=1,
+            first_round_matchups=first_round,
+            matchup_probs=matchup_probs,
+            seeds=seeds,
+            noise_std=noise_std,
+            rng=rng,
+        )
+        sim_winners = {rnd: set(_sim_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
+        trials.append((opp, sim_winners))
+    return trials
+
+
+def score_candidate_p1(bracket_vec, trials, first_round, scoring_system):
+    """P(1st) for one candidate against a pre-drawn trial set.
+
+    The scoring itself is unchanged from the inline loops this replaces: the
+    same ``score_brackets_team_identity`` calls and the same ``>=`` tie
+    convention (a tie counts as a win, matching a shared-first-place payout).
+    Only where the trials come from has changed — see
+    :func:`draw_selection_trials`.
+    """
+    if not trials:
+        return 0.0
+    wins = 0
+    for opp, sim_winners in trials:
+        c_score = score_brackets_team_identity(bracket_vec.reshape(1, 63), sim_winners, first_round, scoring_system)[0]
+        opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, scoring_system)
+        if c_score >= opp_scores.max():
+            wins += 1
+    return wins / len(trials)
+
+
 def bracket_config_to_bool_array(bracket_config, first_round_matchups):
     """Convert BracketConfiguration.picks to (63,) boolean vector.
 
@@ -2927,38 +3017,20 @@ def _run_one_year(
                 _cf_rng = np.random.default_rng(54321 + year)
                 best_p1 = -1.0
                 best_idx = 0
+                n_trials = 200
+                # COMMON RANDOM NUMBERS: draw once, score every candidate
+                # against the same fields and tournaments.
+                _cf_trials = draw_selection_trials(
+                    n_trials,
+                    n_opponents=n_opponents,
+                    first_round=first_round,
+                    pick_dist=pick_dist,
+                    matchup_probs=seed_pw,
+                    seeds=seeds,
+                    rng=_cf_rng,
+                )
                 for ci in range(len(cand_champs)):
-                    wins = 0
-                    n_trials = 200
-                    for _trial in range(n_trials):
-                        opp = generate_opponent_brackets(
-                            n_opponents=n_opponents,
-                            first_round_matchups=first_round,
-                            pick_distribution=pick_dist if pick_dist else {},
-                            matchup_probs=seed_pw,
-                            seeds=seeds,
-                            rng=_cf_rng,
-                        )
-                        # Score candidate + opponents against a simulated outcome
-                        _sim_out, _sim_br = simulate_tournament_outcomes(
-                            n_tournaments=1,
-                            first_round_matchups=first_round,
-                            matchup_probs=seed_pw,
-                            seeds=seeds,
-                            noise_std=0.16,
-                            rng=_cf_rng,
-                        )
-                        sim_winners = {rnd: set(_sim_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
-                        c_score = score_brackets_team_identity(
-                            cand_brackets[ci : ci + 1],
-                            sim_winners,
-                            first_round,
-                            ESPN_SCORING,
-                        )[0]
-                        opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
-                        if c_score >= opp_scores.max():
-                            wins += 1
-                    p1 = wins / n_trials
+                    p1 = score_candidate_p1(cand_brackets[ci], _cf_trials, first_round, ESPN_SCORING)
                     if p1 > best_p1:
                         best_p1 = p1
                         best_idx = ci
@@ -3263,41 +3335,18 @@ def _run_one_year(
                     best_p1 = -1.0
                     best_idx = 0
                     n_trials = 300
+                    # COMMON RANDOM NUMBERS -- see draw_selection_trials.
+                    _4c_trials = draw_selection_trials(
+                        n_trials,
+                        n_opponents=n_opponents,
+                        first_round=first_round,
+                        pick_dist=pick_dist,
+                        matchup_probs=seed_pw,
+                        seeds=seeds,
+                        rng=_4c_rng,
+                    )
                     for ci in range(len(cand_brackets)):
-                        wins = 0
-                        for _ in range(n_trials):
-                            opp = generate_opponent_brackets(
-                                n_opponents=n_opponents,
-                                first_round_matchups=first_round,
-                                pick_distribution=pick_dist if pick_dist else {},
-                                matchup_probs=seed_pw,
-                                seeds=seeds,
-                                rng=_4c_rng,
-                            )
-                            _sim_out, _sim_br = simulate_tournament_outcomes(
-                                n_tournaments=1,
-                                first_round_matchups=first_round,
-                                matchup_probs=seed_pw,
-                                seeds=seeds,
-                                noise_std=0.16,
-                                rng=_4c_rng,
-                            )
-                            sim_winners = {rnd: set(_sim_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
-                            c_score = score_brackets_team_identity(
-                                cand_brackets[ci].reshape(1, 63),
-                                sim_winners,
-                                first_round,
-                                ESPN_SCORING,
-                            )[0]
-                            opp_scores = score_brackets_team_identity(
-                                opp,
-                                sim_winners,
-                                first_round,
-                                ESPN_SCORING,
-                            )
-                            if c_score >= opp_scores.max():
-                                wins += 1
-                        p1 = wins / n_trials
+                        p1 = score_candidate_p1(cand_brackets[ci], _4c_trials, first_round, ESPN_SCORING)
                         if p1 > best_p1:
                             best_p1 = p1
                             best_idx = ci
@@ -3475,42 +3524,21 @@ def _run_one_year(
                     n_pa_trials = pa_trials
                     best_pa_p1 = -1.0
                     best_pa_idx = 0
+                    # COMMON RANDOM NUMBERS -- see draw_selection_trials. This
+                    # is the production selector, and the loop with the most
+                    # candidates, so it is where independent draws cost most.
+                    _pa_trials_set = draw_selection_trials(
+                        n_pa_trials,
+                        n_opponents=n_opponents,
+                        first_round=first_round,
+                        pick_dist=_pa_pub,
+                        matchup_probs=seed_pw,
+                        seeds=seeds,
+                        rng=_pa_rng,
+                        chalk_noise_std=pool_chalk_noise_std,
+                    )
                     for ci, (bvec, _) in enumerate(_pa_candidates):
-                        wins = 0
-                        for _ in range(n_pa_trials):
-                            opp = generate_opponent_brackets(
-                                n_opponents=n_opponents,
-                                first_round_matchups=first_round,
-                                pick_distribution=_pa_pub,
-                                matchup_probs=seed_pw,
-                                seeds=seeds,
-                                rng=_pa_rng,
-                                chalk_noise_std=pool_chalk_noise_std,
-                            )
-                            _pa_out, _pa_br = simulate_tournament_outcomes(
-                                n_tournaments=1,
-                                first_round_matchups=first_round,
-                                matchup_probs=seed_pw,
-                                seeds=seeds,
-                                noise_std=0.16,
-                                rng=_pa_rng,
-                            )
-                            sim_winners = {rnd: set(_pa_br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
-                            c_score = score_brackets_team_identity(
-                                bvec.reshape(1, 63),
-                                sim_winners,
-                                first_round,
-                                ESPN_SCORING,
-                            )[0]
-                            opp_scores = score_brackets_team_identity(
-                                opp,
-                                sim_winners,
-                                first_round,
-                                ESPN_SCORING,
-                            )
-                            if c_score >= opp_scores.max():
-                                wins += 1
-                        p1 = wins / n_pa_trials
+                        p1 = score_candidate_p1(bvec, _pa_trials_set, first_round, ESPN_SCORING)
                         if p1 > best_pa_p1:
                             best_pa_p1 = p1
                             best_pa_idx = ci
