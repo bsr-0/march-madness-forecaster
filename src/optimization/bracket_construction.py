@@ -845,25 +845,38 @@ def _run_simulated_annealing(
 ) -> Tuple[Dict[str, str], str, List[str]]:
     """Run SA optimization from a chalk seed bracket.
 
+    Requires ``round_probs`` to be a
+    :class:`~src.prediction.pairwise.ProbabilityBase` — SA needs genuine
+    head-to-head probabilities and will not accept a bare marginal mapping.
+
     Returns (picks, champion, final_four) in the standard format.
     """
+    from ..prediction.pairwise import MissingPairwiseSource, ProbabilityBase
     from .bracket_search import SAConfig, SimulatedAnnealingOptimizer
 
     # Build chalk starting bracket
     chalk = _build_chalk_search_bracket(by_region, round_probs, seeds)
 
-    # Build pairwise predict_fn from round_probs
+    # Pairwise probabilities for SA's swap evaluation.
+    #
+    # This used to be reconstructed from the marginals as
+    # ``max(probs_t1.values()) / (max(probs_t1.values()) + max(probs_t2.values()))``.
+    # Marginal advancement probabilities decrease monotonically with round, so
+    # ``max(...)`` was always the R64 value — SA scored Final Four and
+    # championship games using first-round win rates, with no round dependence
+    # at all. Any historical conclusion about SA's effectiveness that predates
+    # this fix was measured against that degenerate signal.
+    if not isinstance(round_probs, ProbabilityBase):
+        raise MissingPairwiseSource(
+            "simulated_annealing requires a ProbabilityBase carrying a pairwise "
+            "source; marginal round probabilities cannot be converted into "
+            "head-to-head probabilities. See src/prediction/pairwise.py."
+        )
+    _pw = round_probs.pairwise
+
     def predict_fn(t1: str, t2: str) -> float:
-        """P(t1 beats t2) — average across available rounds."""
-        probs_t1 = round_probs.get(t1, {})
-        probs_t2 = round_probs.get(t2, {})
-        # Use the maximum round probability as a proxy for head-to-head
-        p1 = max(probs_t1.values()) if probs_t1 else 0.5
-        p2 = max(probs_t2.values()) if probs_t2 else 0.5
-        total = p1 + p2
-        if total > 0:
-            return p1 / total
-        return 0.5
+        """P(t1 beats t2) from the base's head-to-head table."""
+        return _pw.p(t1, t2)
 
     # Scale SA temperature with risk_level: higher risk = hotter start = more exploration
     initial_temp = 0.5 + risk_level * 1.5  # range [0.5, 2.0]
@@ -908,15 +921,22 @@ def _enumerate_region_outcomes(
     round_probs: Dict[str, Dict[str, float]],
     scorer: Callable[[str, str], float],
     max_outcomes: int = 100,
-) -> List[Tuple[Dict[str, str], str, float, float]]:
+) -> List[Tuple[Dict[str, str], str, float]]:
     """Enumerate top region outcomes by EV, returning the best N.
 
     Uses iterative beam search: at each round, keep the top max_outcomes*5
     partial brackets by EV. This avoids exponential blowup while exploring
     enough diversity to find high-EV outcomes.
 
-    Returns list of (picks_dict, regional_champion, log_prob, total_ev)
-    sorted by total_ev descending.
+    Returns list of (picks_dict, regional_champion, total_ev) sorted by
+    total_ev descending.
+
+    Note this function used to also accumulate a path ``log_prob`` from
+    ``p1 / (p1 + p2)`` over the marginals. That reconstruction is not a
+    head-to-head probability (see src/prediction/pairwise.py) and no caller
+    ever read the value — ranking is by ``total_ev`` at every stage. It has
+    been removed rather than repaired: reintroducing a path probability here
+    should start from a genuine pairwise source.
     """
     # Build initial team pairs from seed matchup order
     initial_teams = []
@@ -926,26 +946,22 @@ def _enumerate_region_outcomes(
         seed_for_team[region_seeds[high]] = high
         seed_for_team[region_seeds[low]] = low
 
-    # State: (teams_advancing, picks_dict, log_prob, total_ev)
-    beam: List[Tuple[List[str], Dict[str, str], float, float]] = [(initial_teams, {}, 0.0, 0.0)]
+    # State: (teams_advancing, picks_dict, total_ev)
+    beam: List[Tuple[List[str], Dict[str, str], float]] = [(initial_teams, {}, 0.0)]
     beam_limit = max_outcomes * 5
 
     for round_idx in range(4):  # R64, R32, S16, E8
         round_name = _ROUND_NAMES[round_idx]
-        next_beam: List[Tuple[List[str], Dict[str, str], float, float]] = []
+        next_beam: List[Tuple[List[str], Dict[str, str], float]] = []
 
-        for teams, picks, log_prob, ev in beam:
+        for teams, picks, ev in beam:
             # For this round, enumerate all 2^(n_games) outcomes
             n_games = len(teams) // 2
             # Iteratively expand game-by-game to keep it manageable
-            combos = [([], dict(picks), log_prob, ev)]
+            combos = [([], dict(picks), ev)]
 
             for g in range(n_games):
                 t1, t2 = teams[g * 2], teams[g * 2 + 1]
-                p1 = round_probs.get(t1, {}).get(round_name, 0.5)
-                p2 = round_probs.get(t2, {}).get(round_name, 0.5)
-                total = p1 + p2
-                p1_win = p1 / total if total > 1e-8 else 0.5
 
                 ev1 = scorer(t1, round_name)
                 ev2 = scorer(t2, round_name)
@@ -961,37 +977,35 @@ def _enumerate_region_outcomes(
                     game_key = f"{round_name}_{region}_{g + 1}"
 
                 new_combos = []
-                for adv, p, lp, e in combos:
+                for adv, p, e in combos:
                     # t1 wins
-                    lp1 = lp + math.log(max(p1_win, 1e-10))
                     p1c = dict(p)
                     p1c[game_key] = t1
-                    new_combos.append((adv + [t1], p1c, lp1, e + ev1))
+                    new_combos.append((adv + [t1], p1c, e + ev1))
                     # t2 wins
-                    lp2 = lp + math.log(max(1.0 - p1_win, 1e-10))
                     p2c = dict(p)
                     p2c[game_key] = t2
-                    new_combos.append((adv + [t2], p2c, lp2, e + ev2))
+                    new_combos.append((adv + [t2], p2c, e + ev2))
 
                 combos = new_combos
                 # Prune within the round to prevent exponential blowup
                 if len(combos) > beam_limit:
-                    combos.sort(key=lambda x: x[3], reverse=True)
+                    combos.sort(key=lambda x: x[2], reverse=True)
                     combos = combos[:beam_limit]
 
             next_beam.extend(combos)
 
         # Keep top outcomes across all parent beams
-        next_beam.sort(key=lambda x: x[3], reverse=True)
+        next_beam.sort(key=lambda x: x[2], reverse=True)
         beam = next_beam[:beam_limit]
 
     # Beam now contains complete region outcomes (1 team each)
     results = []
-    for teams, picks, log_prob, ev in beam:
+    for teams, picks, ev in beam:
         if teams:
-            results.append((picks, teams[0], log_prob, ev))
+            results.append((picks, teams[0], ev))
 
-    results.sort(key=lambda x: x[3], reverse=True)
+    results.sort(key=lambda x: x[2], reverse=True)
     return results[:max_outcomes]
 
 
@@ -1020,7 +1034,7 @@ def _region_top_n_construction(
         outcomes = _enumerate_region_outcomes(region, by_region[region], round_probs, scorer, max_outcomes)
         if not outcomes:
             continue
-        best_picks, best_champ, _, _ = outcomes[0]
+        best_picks, best_champ, _ = outcomes[0]
         all_picks.update(best_picks)
         e8_winners[region] = best_champ
 

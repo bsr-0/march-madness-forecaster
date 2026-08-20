@@ -18,9 +18,10 @@ import numpy as np
 from src.data.seed_pick_model import SEED_PICK_RATES
 from src.prediction.noseed_model import (
     train_noseed_model,
-    build_noseed_round_probabilities,
+    build_noseed_probabilities,
 )
-from src.prediction.seed_probabilities import build_seed_round_probabilities
+from src.prediction.pairwise import PairwiseProbabilities
+from src.prediction.seed_probabilities import build_seed_probabilities
 from src.simulation.pool_competition import ROUND_NAMES
 
 HIST_DIR = Path("data/raw/historical")
@@ -46,19 +47,44 @@ def build_first_round_matchups(seeds, regions):
     return matchups
 
 
-def compute_divergence(first_round, seed_rp, noseed_rp, seeds):
+def field_pick_share(s1, s2, round_name):
+    """Share of brackets picking seed *s1* over seed *s2* at *round_name*.
+
+    This normalizes two OWNERSHIP percentages, not two model probabilities.
+    SEED_PICK_RATES[seed][round] is the fraction of public brackets advancing
+    that seed, so the ratio answers "of brackets that advance one of these two,
+    what share take s1" — a genuine ratio of two shares of the same population.
+
+    Contrast with model advancement probabilities, where the same arithmetic is
+    invalid (see src/prediction/pairwise.py). Kept in its own function so the
+    contract scanner can allowlist this and only this.
+    """
+    p1 = SEED_PICK_RATES.get(s1, {}).get(round_name, 0.0)
+    p2 = SEED_PICK_RATES.get(s2, {}).get(round_name, 0.0)
+    return p1 / (p1 + p2) if (p1 + p2) > 1e-8 else 0.5
+
+
+def compute_divergence(first_round, seed_pw, noseed_pw, seeds):
     """Compute per-game probability divergence between noseed and seed/field.
 
-    For each game, computes the head-to-head pick probability under both
-    noseed and seed models, and under the SEED_PICK_RATES field model.
+    For each game, computes the head-to-head win probability under both the
+    noseed and seed models, and the field's pick share under SEED_PICK_RATES.
+
+    CORRECTED 2026-08-19: this used to derive the model head-to-head numbers by
+    normalizing two marginal round-advancement probabilities
+    (``p1 / (p1 + p2)``), which is invalid from R32 onward and biased toward the
+    favorite by 7-14pp. Since the divergence being measured here is *between*
+    two such numbers, the bias partly cancelled — but not exactly, because seed
+    and noseed have different marginal profiles. Any divergence figure produced
+    by this script before that date should be treated as unreliable.
+
+    Args:
+        seed_pw / noseed_pw: :class:`PairwiseProbabilities` for each model.
     """
     results = []
-    current_teams_seed = list(first_round)
-    current_teams_noseed = list(first_round)
-    current_teams_field = list(first_round)
 
-    # For simplicity, walk with seed model to determine matchups
-    # (all models see the same first-round matchups; later rounds depend on path)
+    # All models see the same first-round matchups; later rounds depend on the
+    # path, so walk with the seed model for consistent matchup tracking.
     current_teams = list(first_round)
 
     for round_idx in range(6):
@@ -74,20 +100,9 @@ def compute_divergence(first_round, seed_rp, noseed_rp, seeds):
             s1 = seeds.get(t1, 8)
             s2 = seeds.get(t2, 8)
 
-            # Noseed head-to-head probability
-            p1_ns = noseed_rp.get(t1, {}).get(round_name, 0.0)
-            p2_ns = noseed_rp.get(t2, {}).get(round_name, 0.0)
-            p_ns = p1_ns / (p1_ns + p2_ns) if (p1_ns + p2_ns) > 1e-8 else 0.5
-
-            # Seed head-to-head probability
-            p1_sd = seed_rp.get(t1, {}).get(round_name, 0.0)
-            p2_sd = seed_rp.get(t2, {}).get(round_name, 0.0)
-            p_sd = p1_sd / (p1_sd + p2_sd) if (p1_sd + p2_sd) > 1e-8 else 0.5
-
-            # Field (SEED_PICK_RATES) head-to-head probability
-            p1_f = SEED_PICK_RATES.get(s1, {}).get(round_name, 0.0)
-            p2_f = SEED_PICK_RATES.get(s2, {}).get(round_name, 0.0)
-            p_f = p1_f / (p1_f + p2_f) if (p1_f + p2_f) > 1e-8 else 0.5
+            p_ns = noseed_pw.p(t1, t2)
+            p_sd = seed_pw.p(t1, t2)
+            p_f = field_pick_share(s1, s2, round_name)
 
             results.append(
                 {
@@ -133,10 +148,14 @@ def main():
             continue
 
         model = train_noseed_model(max_year=year)
-        seed_rp = build_seed_round_probabilities(seeds)
-        noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+        seed_pw = PairwiseProbabilities.from_dict(
+            build_seed_probabilities(seeds), "historical_seed_h2h"
+        )
+        noseed_pw = PairwiseProbabilities.from_dict(
+            build_noseed_probabilities(model, seeds, stats), "noseed_model"
+        )
 
-        games = compute_divergence(first_round, seed_rp, noseed_rp, seeds)
+        games = compute_divergence(first_round, seed_pw, noseed_pw, seeds)
         for g in games:
             g["year"] = year
         all_games.extend(games)

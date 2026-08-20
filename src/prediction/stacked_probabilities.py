@@ -371,10 +371,13 @@ def build_stacked_round_probabilities(
     min_prior_years: int = _DEFAULT_MIN_PRIOR_YEARS,
     ridge_alpha: float = _DEFAULT_RIDGE_ALPHA,
 ) -> Optional[Dict[str, Dict[str, float]]]:
-    """End-to-end: fit Ridge weights → blend barthag → MC round_probs.
+    """End-to-end: fit Ridge weights → blend barthag → ProbabilityBase.
 
-    Uses the same MC construction as torvik (``build_torvik_round_probabilities``).
-    Returns None if insufficient training data or source unavailability.
+    Uses the same MC construction as torvik (``build_base_from_ratings``),
+    which keeps the pairwise table attached to the marginals it generated.
+    The result is a Mapping over the marginals, so legacy round_probs reads
+    still work. Returns None if insufficient training data or source
+    unavailability.
     """
     barthag = load_stacked_barthag(
         test_year,
@@ -386,6 +389,6 @@ def build_stacked_round_probabilities(
     if barthag is None:
         return None
 
-    from scripts.mc_pool_backtest import build_torvik_round_probabilities
+    from scripts.mc_pool_backtest import build_base_from_ratings
 
-    return build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
+    return build_base_from_ratings("stacked", seeds, regions, barthag, n_sims=n_sims)

@@ -70,6 +70,12 @@ from src.prediction.seed_probabilities import (
     build_seed_probabilities,
     build_seed_round_probabilities,
 )
+from src.prediction.pairwise import (
+    MissingPairwiseSource,
+    PairwiseProbabilities,
+    ProbabilityBase,
+)
+from src.prediction.pairwise import log5 as _canonical_log5
 from src.simulation.pool_competition import (
     generate_opponent_brackets,
     score_brackets_against_outcome,
@@ -493,13 +499,51 @@ def _load_torvik_barthag(year, seeds):
 
 
 def _log5(barthag_a, barthag_b):
-    """Log5 formula: P(A beats B) from their win rates vs average."""
-    pa, pb = barthag_a, barthag_b
-    num = pa * (1 - pb)
-    denom = pa * (1 - pb) + pb * (1 - pa)
-    if denom < 1e-12:
-        return 0.5
-    return num / denom
+    """Log5 formula: P(A beats B) from their win rates vs average.
+
+    Thin alias for the canonical definition in ``src.prediction.pairwise`` so
+    there is exactly one implementation in the project.
+    """
+    return _canonical_log5(barthag_a, barthag_b)
+
+
+def build_bracket_order(seeds, regions):
+    """Return the 64 team_ids in bracket order (game g is [2g], [2g+1]).
+
+    Extracted from ``build_torvik_round_probabilities`` so the pairwise
+    builders and the marginalizer provably walk the same bracket.
+    """
+    region_teams = {r: {} for r in REGION_ORDER}
+    for tid, seed in seeds.items():
+        r = regions.get(tid, "")
+        if r in region_teams:
+            region_teams[r][seed] = tid
+
+    bracket_order = []
+    for region in REGION_ORDER:
+        rt = region_teams[region]
+        for high, low in SEED_MATCHUP_ORDER:
+            t1 = rt.get(high, f"unknown_{region}_{high}")
+            t2 = rt.get(low, f"unknown_{region}_{low}")
+            bracket_order.extend([t1, t2])
+    return bracket_order
+
+
+def build_base_from_ratings(name, seeds, regions, barthag, n_sims=10000):
+    """Build a :class:`ProbabilityBase` from barthag-equivalent ratings.
+
+    The pairwise table is primary (log5 over the ratings); the marginals are
+    derived from it by simulation. This is the sanctioned direction of flow —
+    see ``src/prediction/pairwise.py``.
+
+    Returns ``None`` when ``barthag`` is None, so callers can keep their
+    existing "source unavailable this year" branches.
+    """
+    if barthag is None:
+        return None
+    pw = PairwiseProbabilities.from_ratings(barthag, source=f"log5({name}_barthag)")
+    rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
+    return ProbabilityBase(name, rp, pw)
 
 
 def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
@@ -509,26 +553,18 @@ def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
     probabilities derived from barthag values. Counts how often each
     team advances to each round.
 
+    This is a marginalizer: pairwise -> simulator -> marginals. It is the only
+    sanctioned way to produce ``round_probs``. Prefer
+    :func:`build_base_from_ratings`, which keeps the pairwise source attached
+    to the marginals it generated.
+
     Returns: Dict[team_id, Dict[round_name, probability]]
     """
     rng = np.random.default_rng(42)
     round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 
     # Build the bracket structure (same ordering as the backtest)
-    region_teams = {r: {} for r in REGION_ORDER}
-    for tid, seed in seeds.items():
-        r = regions.get(tid, "")
-        if r in region_teams:
-            region_teams[r][seed] = tid
-
-    # Build ordered matchups per region
-    bracket_order = []  # List of 64 team_ids in bracket order
-    for region in REGION_ORDER:
-        rt = region_teams[region]
-        for high, low in SEED_MATCHUP_ORDER:
-            t1 = rt.get(high, f"unknown_{region}_{high}")
-            t2 = rt.get(low, f"unknown_{region}_{low}")
-            bracket_order.extend([t1, t2])
+    bracket_order = build_bracket_order(seeds, regions)
 
     # Count round advances
     advance_counts = {tid: {rnd: 0 for rnd in round_names} for tid in seeds}
@@ -717,21 +753,94 @@ def build_model_bracket_argmax(first_round_matchups, round_probs):
     return winners
 
 
+def _wrap_pipeline_base(mode_name, sources, adjustments, pipeline_rp, base_round_probs):
+    """Wrap a resolved pipeline's round_probs in a ProbabilityBase.
+
+    A pipeline is ``w1*srcA + w2*srcB + ... [+ adjustments]``. The two halves
+    behave differently under the pairwise contract:
+
+    * **Source blending** has a valid pairwise counterpart — a convex
+      combination of head-to-head probabilities is itself a head-to-head
+      probability. This mirrors ``build_blend_probabilities``, which already
+      blends seed and noseed pairwise tables the same way. So a pure blend
+      keeps a real pairwise source.
+
+    * **Adjustments** (upset_tuned, volatile, coach_adj, momentum,
+      roster_adj, contrarian) are multiplicative tweaks defined only in
+      marginal space. There is no principled head-to-head counterpart —
+      mapping them into pairwise space would mean inventing model semantics.
+      So an adjusted pipeline gets ``pairwise=None`` and will raise
+      :class:`MissingPairwiseSource` if a stochastic sampler asks for one,
+      rather than silently reconstructing a fake table from the marginals.
+
+    Applying the adjustments to the underlying *ratings* instead of to the
+    marginals would give them a pairwise counterpart, but that changes the
+    adjustments' numerics and is a modelling decision, not a contract fix.
+    """
+    if adjustments:
+        return ProbabilityBase(mode_name, pipeline_rp, None)
+
+    blended: Dict[Tuple[str, str], float] = {}
+    labels = []
+    for weight, src_name in sources:
+        src = base_round_probs.get(src_name)
+        if not isinstance(src, ProbabilityBase) or not src.has_pairwise:
+            return ProbabilityBase(mode_name, pipeline_rp, None)
+        labels.append(f"{weight}*{src_name}")
+        for key, p in src.pairwise.probs.items():
+            blended[key] = blended.get(key, 0.0) + weight * p
+
+    if not blended:
+        return ProbabilityBase(mode_name, pipeline_rp, None)
+
+    total_weight = sum(w for w, _ in sources)
+    if abs(total_weight - 1.0) > 1e-9 and total_weight > 0:
+        blended = {k: v / total_weight for k, v in blended.items()}
+
+    return ProbabilityBase(
+        mode_name,
+        pipeline_rp,
+        PairwiseProbabilities.from_dict(blended, "blend(" + "+".join(labels) + ")"),
+    )
+
+
+def _require_pairwise(base, caller):
+    """Return the pairwise table for *base*, or fail with a pointed message.
+
+    Guards every stochastic game-sampling path. Before the pairwise contract
+    existed these call sites silently rebuilt a head-to-head probability as
+    ``p1 / (p1 + p2)`` from two marginals, which is invalid from R32 onward and
+    biased toward the favorite by 7-14pp (see src/prediction/pairwise.py).
+    """
+    if not isinstance(base, ProbabilityBase):
+        raise MissingPairwiseSource(
+            f"{caller} received a bare round_probs mapping ({type(base).__name__}). "
+            "Stochastic samplers need a ProbabilityBase carrying a pairwise source; "
+            "marginals must not be converted into head-to-head probabilities."
+        )
+    return base.pairwise
+
+
 def sample_model_brackets(first_round_matchups, round_probs, n_brackets, rng):
     """Sample N stochastic brackets from model round probabilities.
 
     Uses the same path-consistent walk as the opponent bracket sampler:
-    at each game, the winner is drawn probabilistically from the model's
-    head-to-head probability (derived from marginal round advancement rates).
-    Path consistency is enforced — a team can only appear in round R+1 if
-    it won in round R within this bracket.
+    at each game, the winner is drawn from the base's **pairwise** head-to-head
+    probability. Path consistency is enforced — a team can only appear in
+    round R+1 if it won in round R within this bracket.
 
     This preserves the model's calibrated probability signal instead of
     collapsing it to a single argmax bracket.
 
+    Args:
+        round_probs: a :class:`ProbabilityBase`. It still behaves as the
+            legacy ``{team: {round: p}}`` mapping for marginal reads, but it
+            additionally carries the pairwise source used here.
+
     Returns:
         Boolean array of shape (n_brackets, 63).
     """
+    pw = _require_pairwise(round_probs, "sample_model_brackets")
     all_brackets = np.zeros((n_brackets, 63), dtype=bool)
 
     for b in range(n_brackets):
@@ -739,7 +848,6 @@ def sample_model_brackets(first_round_matchups, round_probs, n_brackets, rng):
         game_idx = 0
 
         for round_idx in range(6):
-            round_name = ROUND_NAMES[round_idx]
             next_round = []
 
             for g in range(0, len(current_teams), 2):
@@ -748,15 +856,7 @@ def sample_model_brackets(first_round_matchups, round_probs, n_brackets, rng):
                     continue
 
                 t1, t2 = current_teams[g], current_teams[g + 1]
-
-                # Get marginal advancement probabilities and normalize
-                p1 = round_probs.get(t1, {}).get(round_name, 0.0)
-                p2 = round_probs.get(t2, {}).get(round_name, 0.0)
-
-                if p1 + p2 > 1e-8:
-                    p_t1 = p1 / (p1 + p2)
-                else:
-                    p_t1 = 0.5
+                p_t1 = pw.p(t1, t2)
 
                 if rng.random() < p_t1:
                     winner = t1
@@ -805,12 +905,14 @@ def _sample_with_locks(
 
     At each game: if one of the two teams is in the sample's locked set
     AND the current round is at or before lock_through_round, that team
-    wins. Otherwise the winner is drawn stochastically from the normalized
-    head-to-head probability (same formula as sample_model_brackets).
+    wins. Otherwise the winner is drawn stochastically from the base's
+    pairwise head-to-head probability (same as sample_model_brackets).
 
     Args:
         first_round_matchups: flat list of 64 team_ids in bracket order
-        round_probs: {team_id: {round_name: P(team wins round)}}
+        round_probs: a :class:`ProbabilityBase`; anchors are chosen by the
+            caller from its marginals, game winners are drawn from its
+            pairwise table
         n_brackets: number of samples to draw
         rng: np.random.Generator
         locked_teams_per_sample: list of length n_brackets; each element is a
@@ -823,6 +925,7 @@ def _sample_with_locks(
     Returns:
         Boolean array of shape (n_brackets, 63).
     """
+    pw = _require_pairwise(round_probs, "_sample_with_locks")
     all_brackets = np.zeros((n_brackets, 63), dtype=bool)
     lock_round_idx = _LOCK_ROUND_INDEX.get(lock_through_round, -1) if lock_through_round else -1
 
@@ -832,7 +935,6 @@ def _sample_with_locks(
         game_idx = 0
 
         for round_idx in range(6):
-            round_name = ROUND_NAMES[round_idx]
             next_round = []
             within_lock_range = lock_round_idx >= 0 and round_idx <= lock_round_idx
 
@@ -853,13 +955,7 @@ def _sample_with_locks(
                     winner = locked_winner
                     all_brackets[b, game_idx] = winner == t1
                 else:
-                    p1 = round_probs.get(t1, {}).get(round_name, 0.0)
-                    p2 = round_probs.get(t2, {}).get(round_name, 0.0)
-                    if p1 + p2 > 1e-8:
-                        p_t1 = p1 / (p1 + p2)
-                    else:
-                        p_t1 = 0.5
-                    if rng.random() < p_t1:
+                    if rng.random() < pw.p(t1, t2):
                         winner = t1
                         all_brackets[b, game_idx] = True
                     else:
@@ -1319,6 +1415,7 @@ def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rn
     low_conf_threshold = 0.60
     low_conf_upset_boost = 1.5
 
+    pw = _require_pairwise(round_probs, "sample_confidence_brackets")
     all_brackets = np.zeros((n_brackets, 63), dtype=bool)
 
     for b in range(n_brackets):
@@ -1326,7 +1423,6 @@ def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rn
         game_idx = 0
 
         for round_idx in range(6):
-            round_name = ROUND_NAMES[round_idx]
             next_round = []
 
             for g in range(0, len(current_teams), 2):
@@ -1335,13 +1431,7 @@ def sample_confidence_brackets(first_round_matchups, round_probs, n_brackets, rn
                     continue
 
                 t1, t2 = current_teams[g], current_teams[g + 1]
-                p1 = round_probs.get(t1, {}).get(round_name, 0.0)
-                p2 = round_probs.get(t2, {}).get(round_name, 0.0)
-
-                if p1 + p2 > 1e-8:
-                    p_t1 = p1 / (p1 + p2)
-                else:
-                    p_t1 = 0.5
+                p_t1 = pw.p(t1, t2)
 
                 # Route by confidence on the favorite.
                 fav_prob = max(p_t1, 1.0 - p_t1)
@@ -1404,6 +1494,7 @@ def sample_backward_brackets(
     composition, F4 determines E8 composition. A 7-seed champion's
     region reflects that the 7-seed is strong enough to win it all.
     """
+    pw = _require_pairwise(round_probs, "sample_backward_brackets")
     _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
 
     # Pre-compute team groupings by region and quadrant.
@@ -1520,13 +1611,7 @@ def sample_backward_brackets(
                     winner = locked_winner
                     all_brackets[b, game_idx] = winner == t1
                 else:
-                    p1 = round_probs.get(t1, {}).get(round_name, 0.0)
-                    p2 = round_probs.get(t2, {}).get(round_name, 0.0)
-                    if p1 + p2 > 1e-8:
-                        p_t1 = p1 / (p1 + p2)
-                    else:
-                        p_t1 = 0.5
-                    if rng.random() < p_t1:
+                    if rng.random() < pw.p(t1, t2):
                         winner = t1
                         all_brackets[b, game_idx] = True
                     else:
@@ -2152,9 +2237,32 @@ def _run_one_year(
     noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
     blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=hparams.blend_alpha)
 
+    # Pairwise counterparts. Each base's head-to-head table comes from that
+    # base's own model — never reconstructed from its marginals. For seed /
+    # noseed / blend the marginals and the pairwise table are independently
+    # sourced (empirical seed advancement rates vs empirical head-to-head
+    # rates); they are both legitimate empirical quantities but are not
+    # guaranteed mutually consistent. Left as-is deliberately: deriving
+    # seed_rp from seed_pw by simulation would move the documented seed
+    # baseline and confound this correction.
+    noseed_pw = build_noseed_probabilities(model, seeds, stats)
+    blend_pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=hparams.blend_alpha)
+
+    seed_base = ProbabilityBase("seed", seed_rp, PairwiseProbabilities.from_dict(seed_pw, "historical_seed_h2h"))
+    noseed_base = ProbabilityBase("noseed", noseed_rp, PairwiseProbabilities.from_dict(noseed_pw, "noseed_model"))
+    blend_base = ProbabilityBase(
+        "blend",
+        blend_rp,
+        PairwiseProbabilities.from_dict(blend_pw, f"blend(seed,noseed,alpha={hparams.blend_alpha})"),
+    )
+
     # Torvik barthag-based round probabilities (Log5 + MC simulation)
     barthag = _load_torvik_barthag(year, seeds)
-    torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+    torvik_base = build_base_from_ratings("torvik", seeds, regions, barthag)
+    # Alias, not a copy: ProbabilityBase is a Mapping over the marginals, so
+    # every `torvik_rp[tid][rnd]` read below is unchanged, while modes that need
+    # head-to-head probabilities (simulated_annealing) can reach .pairwise.
+    torvik_rp = torvik_base
 
     # Build opponent distribution (needed before leveraged mode).
     try:
@@ -2186,16 +2294,10 @@ def _run_one_year(
     )
 
     market_barthag = load_market_ratings(year, seeds)
-    if market_barthag is not None:
-        odds_rp = build_torvik_round_probabilities(seeds, regions, market_barthag)
-    else:
-        odds_rp = None
+    odds_base = build_base_from_ratings("odds", seeds, regions, market_barthag)
 
     spread_barthag = load_spread_power_ratings(year, seeds)
-    if spread_barthag is not None:
-        spread_rp = build_torvik_round_probabilities(seeds, regions, spread_barthag)
-    else:
-        spread_rp = None
+    spread_base = build_base_from_ratings("spread_power", seeds, regions, spread_barthag)
 
     # --- Elo base (A4) ---
     # Self-contained K=38 Elo from historical_games, bridged via the
@@ -2204,10 +2306,7 @@ def _run_one_year(
     from src.prediction.elo_probabilities import load_elo_barthag
 
     elo_barthag = load_elo_barthag(year, seeds, Path("data"))
-    if elo_barthag is not None:
-        elo_rp = build_torvik_round_probabilities(seeds, regions, elo_barthag)
-    else:
-        elo_rp = None
+    elo_base = build_base_from_ratings("elo", seeds, regions, elo_barthag)
 
     # --- Massey composite base (A5) ---
     # Aggregated rating across ~150 ranking systems, bridged to canonical
@@ -2216,10 +2315,7 @@ def _run_one_year(
     from src.prediction.massey_probabilities import load_massey_avg_barthag
 
     massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
-    if massey_barthag is not None:
-        massey_avg_rp = build_torvik_round_probabilities(seeds, regions, massey_barthag)
-    else:
-        massey_avg_rp = None
+    massey_avg_base = build_base_from_ratings("massey_avg", seeds, regions, massey_barthag)
 
     # Massey-best (A6): walk-forward Brier selection over 56+ per-system
     # rankers (POM, SAG, MOR, BAR, etc.), picking the system with lowest
@@ -2230,7 +2326,7 @@ def _run_one_year(
         build_massey_best_round_probabilities,
     )
 
-    massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+    massey_best_base = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
 
     # AP-strength (A8): final-pre-tournament AP poll → barthag, MC via the
     # shared torvik round-probs builder. Falls back to None if the year is
@@ -2238,10 +2334,7 @@ def _run_one_year(
     from src.prediction.ap_probabilities import load_ap_strength_barthag
 
     ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), Path("data"))
-    if ap_barthag is not None:
-        ap_strength_rp = build_torvik_round_probabilities(seeds, regions, ap_barthag)
-    else:
-        ap_strength_rp = None
+    ap_strength_base = build_base_from_ratings("ap_strength", seeds, regions, ap_barthag)
 
     # Stacked meta-learner (B5): Ridge regression over all Category-A
     # bases. Walk-forward: fits on game-level barthag diffs from years
@@ -2250,41 +2343,41 @@ def _run_one_year(
     # or if any Category-A source is missing for the test year.
     from src.prediction.stacked_probabilities import build_stacked_round_probabilities
 
-    stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+    stacked_base = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
 
     # --- KNN matchup similarity base (B8) ---
     from src.prediction.knn_probabilities import load_knn_barthag
 
     knn_barthag = load_knn_barthag(year, seeds, Path("data"))
-    if knn_barthag is not None:
-        knn_rp = build_torvik_round_probabilities(seeds, regions, knn_barthag)
-    else:
-        knn_rp = None
+    knn_base = build_base_from_ratings("knn", seeds, regions, knn_barthag)
 
-    # Probability base registry: base_name → round_probs
+    # Probability base registry: base_name → ProbabilityBase.
+    #
+    # Values are ProbabilityBase objects, which are Mappings over the marginal
+    # round probabilities (so every legacy `rp[team][round]` read still works)
+    # that additionally carry the pairwise table those marginals came from.
+    # Stochastic samplers draw game winners from the pairwise side; EV scorers
+    # read the marginal side. Bases with no head-to-head model carry
+    # pairwise=None and fail loudly if a sampler asks for one.
     base_round_probs = {
-        "seed": seed_rp,
-        "noseed": noseed_rp,
-        "blend": blend_rp,
-        "torvik": torvik_rp,
+        "seed": seed_base,
+        "noseed": noseed_base,
+        "blend": blend_base,
+        "torvik": torvik_base,
     }
     # Only register data-dependent bases if data is available for this year
-    if odds_rp is not None:
-        base_round_probs["odds"] = odds_rp
-    if elo_rp is not None:
-        base_round_probs["elo"] = elo_rp
-    if massey_avg_rp is not None:
-        base_round_probs["massey_avg"] = massey_avg_rp
-    if massey_best_rp is not None:
-        base_round_probs["massey_best"] = massey_best_rp
-    if spread_rp is not None:
-        base_round_probs["spread_power"] = spread_rp
-    if ap_strength_rp is not None:
-        base_round_probs["ap_strength"] = ap_strength_rp
-    if stacked_rp is not None:
-        base_round_probs["stacked"] = stacked_rp
-    if knn_rp is not None:
-        base_round_probs["knn"] = knn_rp
+    for _bname, _bobj in (
+        ("odds", odds_base),
+        ("elo", elo_base),
+        ("massey_avg", massey_avg_base),
+        ("massey_best", massey_best_base),
+        ("spread_power", spread_base),
+        ("ap_strength", ap_strength_base),
+        ("stacked", stacked_base),
+        ("knn", knn_base),
+    ):
+        if _bobj is not None:
+            base_round_probs[_bname] = _bobj
 
     # --- Contrarian and pool-wisdom bases (B6, B7) ---
     from src.prediction.contrarian_probabilities import (
@@ -2292,14 +2385,19 @@ def _run_one_year(
         load_pool_wisdom_ratings,
     )
 
-    # Contrarian: adjust torvik by ownership gap against public picks
+    # Contrarian: adjust torvik by ownership gap against public picks.
+    # This is a marginal-space adjustment (round_probs in, round_probs out)
+    # with no corresponding head-to-head model, so it has no pairwise source.
+    # It remains usable by EV-scored construction modes; stochastic samplers
+    # will raise MissingPairwiseSource rather than fabricate one.
     contrarian_rp = build_contrarian_round_probs(torvik_rp, pick_dist)
-    base_round_probs["contrarian"] = contrarian_rp
+    base_round_probs["contrarian"] = ProbabilityBase("contrarian", contrarian_rp, None)
 
-    # Pool wisdom: actual pool picks or extrapolated from bias signature
+    # Pool wisdom: actual pool picks or extrapolated from bias signature.
+    # Empirical ownership marginals; likewise no head-to-head model.
     pool_rp = load_pool_wisdom_ratings(year, seeds)
     if pool_rp is not None:
-        base_round_probs["pool_wisdom"] = pool_rp
+        base_round_probs["pool_wisdom"] = ProbabilityBase("pool_wisdom", pool_rp, None)
 
     # Upset-tuned context: walk-forward seed-by-round historical reach rates.
     # Computed once per test year; consumed by the upset_tuned adjustment
@@ -2379,35 +2477,35 @@ def _run_one_year(
 
     # Legacy modes: hardcoded specs for backward compatibility
     legacy_specs = {
-        "seed": ("seed", seed_rp, sample_model_brackets),
-        "noseed": ("noseed", noseed_rp, sample_model_brackets),
-        "blend": ("blend", blend_rp, sample_model_brackets),
-        "torvik": ("torvik", torvik_rp, sample_model_brackets),
+        "seed": ("seed", seed_base, sample_model_brackets),
+        "noseed": ("noseed", noseed_base, sample_model_brackets),
+        "blend": ("blend", blend_base, sample_model_brackets),
+        "torvik": ("torvik", torvik_base, sample_model_brackets),
         "champ_first_tv": (
             "champ_first_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
         ),
         "champ_first_chalkfade_tv": (
             "champ_first_chalkfade_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r, _cbt=chalk_bias_table: sample_champ_first_chalkfade_brackets(
                 fr, rp, n, r, seeds, _cbt
             ),
         ),
         "f4_first_tv": (
             "f4_first_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
         ),
         "e8_first_tv": (
             "e8_first_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
         ),
         "det_champ_tv": (
             "det_champ_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: _deterministic_bracket_sampler(
                 fr,
                 rp,
@@ -2421,7 +2519,7 @@ def _run_one_year(
         ),
         "det_f4_tv": (
             "det_f4_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: _deterministic_bracket_sampler(
                 fr,
                 rp,
@@ -2435,7 +2533,7 @@ def _run_one_year(
         ),
         "det_e8_tv": (
             "det_e8_tv",
-            torvik_rp,
+            torvik_base,
             lambda fr, rp, n, r: _deterministic_bracket_sampler(
                 fr,
                 rp,
@@ -2498,7 +2596,13 @@ def _run_one_year(
             )
             if pipeline_rp is not None:
                 sampler = _make_sampler(construction)
-                mode_sampler_specs.append((mode_name, pipeline_rp, sampler))
+                mode_sampler_specs.append(
+                    (
+                        mode_name,
+                        _wrap_pipeline_base(mode_name, sources, adjustments, pipeline_rp, base_round_probs),
+                        sampler,
+                    )
+                )
             else:
                 print(f"  WARNING: pipeline '{mode_name}' sources not available for year {year}, skipping")
         except (ValueError, KeyError) as exc:
@@ -3312,6 +3416,37 @@ def _run_one_year(
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
                     print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
                 else:
+                    # GENERATOR / EVALUATOR PROBABILITY MISMATCH (documented 2026-08-19).
+                    #
+                    # Candidates above are generated from torvik / massey / blend
+                    # round_probs. They are scored below against tournaments and
+                    # opponent fields simulated from `seed_pw` — historical
+                    # seed-based head-to-head probabilities. Generator and
+                    # evaluator therefore live in different probability universes.
+                    #
+                    # This is DELIBERATE, not an oversight. Scoring candidates
+                    # under the same model that generated them makes the selector
+                    # self-confirming: it would reward whichever candidate best
+                    # matches the generating model's own biases, and P(1st) would
+                    # measure agreement-with-self rather than expected pool
+                    # performance. The seed model is the one probability source in
+                    # this project that is (a) purely empirical, (b) independent of
+                    # every ratings base being compared, and (c) stable across
+                    # years, which makes it a neutral referee.
+                    #
+                    # The cost is real and should be stated: any edge a ratings
+                    # base has *over* seed is invisible to selection. A candidate
+                    # that correctly identifies an upset the seed model considers
+                    # unlikely is scored as if that upset were unlikely. So this
+                    # selector is conservative by construction — it can only pick
+                    # among candidates, never reward them for being right in ways
+                    # seed cannot see.
+                    #
+                    # If this is ever changed, change it deliberately and re-run
+                    # the full backtest: swapping in the generating model's own
+                    # pairwise probabilities would likely inflate P(1st) without
+                    # any real improvement.
+                    #
                     # Score each candidate via pool simulation (binary P(1st) estimator).
                     # Rank-based estimator (fraction-beaten) was tested 2026-05-16
                     # and caused a severe regression: 7.1% vs 11.9% baseline.

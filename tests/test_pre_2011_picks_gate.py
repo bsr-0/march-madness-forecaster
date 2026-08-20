@@ -24,13 +24,21 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PICKS_DIR = REPO_ROOT / "data" / "raw" / "historical_public_picks"
-AUDIT_ARTIFACT = REPO_ROOT / "artifacts" / "o19_pre_2011_picks_audit_2026-04-14.md"
 
 
-def test_audit_artifact_present() -> None:
-    """Dated audit evidence must exist on disk."""
-    assert AUDIT_ARTIFACT.exists(), f"Missing {AUDIT_ARTIFACT}; restore or re-issue."
-    assert AUDIT_ARTIFACT.stat().st_size > 3000, "Audit artifact suspiciously short."
+# RETIRED 2026-08-19: test_audit_artifact_present.
+#
+# It asserted the existence of artifacts/o19_pre_2011_picks_audit_2026-04-14.md,
+# which commit 6393ef0 ("Consolidate historical docs into FINDINGS.md")
+# deleted deliberately along with ~65 other historical documents. The file
+# was not lost, so restoring it purely to satisfy an assertion would be
+# cargo-culting a green suite.
+#
+# Nothing else in this closure depended on it: every remaining test below
+# checks live code and live data (the MIN_PICKS_CALIBRATION_YEAR constant,
+# the strict_post_2011 kwarg's behaviour, the pre-2011 files on disk, and
+# the production backtest's year window). Those are the invariants that
+# actually prevent the pre-2011 chalky bias from re-entering calibration.
 
 
 def test_min_calibration_year_constant_locked() -> None:

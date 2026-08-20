@@ -330,6 +330,145 @@ methodology notes matter):
   status is unclear from the reviewed docs — worth re-verifying if precision
   matters).
 
+## 6b. The pairwise probability contract, and the corrected stochastic baseline (2026-08-19)
+
+Full detail in `ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md`. The short version:
+
+**The bug.** `round_probs[team][R]` is the *marginal* P(team wins its round-R game). Seven
+call sites reconstructed a head-to-head probability from two marginals as `p1 / (p1 + p2)`.
+Decomposing `p_i = r_i * w_i` (reach × win), the reach terms never cancel, so the expression
+is not `P(t1 beats t2)`. It is exact in R64 only (both teams reach with certainty, so
+`p1 + p2 = 1`) and degrades from R32 onward, one-directionally toward the favorite:
+
+| round | R64 | R32 | S16 | E8 | F4 | CHAMP |
+|-------|----:|----:|----:|---:|---:|------:|
+| mean abs error | 0.0008 | 0.0708 | 0.1118 | 0.1169 | 0.1283 | 0.1358 |
+
+**The contract.** `src/prediction/pairwise.py`. Legal direction is
+`pairwise -> simulator -> outcomes -> marginals`, never the reverse. A probability base is
+now a `ProbabilityBase` — a Mapping over its marginals that also carries the pairwise table
+they were derived from. Bases with no head-to-head model (`contrarian`, `pool_wisdom`,
+adjusted pipelines) carry `pairwise=None` and raise `MissingPairwiseSource` rather than
+fabricate one. Enforced by `tests/test_pairwise_contract.py`, including a static AST scan
+of `src/` and `scripts/`.
+
+**Marginals are NOT wrong for expected score.** `_make_ev_scorer` and
+`_compute_expected_points` are correct as written and were deliberately left alone:
+`E[points] = sum_R pts_R * sum_{t in picked_R} marginal[t][R]` exactly, by linearity of
+expectation. The contract governs one thing only — never manufacture a *pairwise*
+probability out of *marginals*.
+
+**Production was unaffected.** `torvik` round_probs and the brackets from `region_top_n`,
+`exhaustive_champion`, `champ_first`, `f4_first`, `e8_first` and `forward_greedy` are
+bit-identical before and after (verified 2023-2026 by hashing picks/champion/F4/EV against a
+clean HEAD worktree). **`meta_region_poolaware` and the 11.2% P(1st) figure are unchanged
+and required no re-validation.**
+
+**The corrected stochastic baseline.** Canonical contract
+(`--team-identity --opponent pool --n-opponents 30 --n-repeats 100`, 2011-2026 excl. 2020,
+n=15). These are the numbers to trust going forward; the "before" column is retained only so
+nobody re-derives it and thinks the suite regressed.
+
+| Mode | P(1st) pre-fix (invalid) | **P(1st) corrected** | MeanScore pre-fix | **corrected** |
+|------|------------------------:|---------------------:|------------------:|--------------:|
+| seed | 4.92% | **4.05%** | 695 | **612** |
+| noseed | 3.93% | **0.58%** | 637 | **338** |
+| blend | 4.78% | **1.95%** | 661 | **464** |
+| torvik | 4.23% | **3.40%** | 728 | **662** |
+| meta_sa | 1.33% | **0.73%** | 199 | **215** |
+| meta_sa_chalk | 1.00% | **1.67%** | 195 | **316** |
+| meta_sa_vol | 1.00% | **0.93%** | 253 | **281** |
+
+The pre-fix run reproduced the then-documented baselines exactly (seed 4.9%, SA 1-2%), which
+validates the harness. SE is ~0.3-0.5pp: noseed/blend are ~6-7 SE and unambiguous; the
+meta_sa_chalk gain is ~2.5 SE across correlated years and is not a real improvement.
+
+**The invalid transform was load-bearing — do not let that tempt a revert.** It sharpened
+later rounds toward favorites, favorites usually win, and P(1st) in a 31-entry
+winner-take-all pool tracks expected score. The historical figures for these modes were
+flattered by a defect; the corrected figures are the honest ones. Do not quote the torvik
+delta as "the price of upset variation" — the correction moved several things at once and
+does not isolate that axis.
+
+**Two open items this exposed** (see §8):
+1. `noseed`'s collapse turned out to be a **train/serve feature skew bug**, diagnosed
+   2026-08-19 — see §6c. The noseed model is not weak; it is being served a feature vector
+   whose four most predictive dimensions are identically zero.
+2. A temperature `tau` on the pairwise logit is worth testing as an independent modelling
+   experiment — but `tau` must NOT be fit to reproduce the pre-fix numbers, which would be
+   reverse-engineering a bug. The question is whether controlled sharpening helps
+   winner-take-all performance without destroying calibration; `tau = 1` winning is a fine
+   answer.
+
+**Simulated annealing: re-validated, conclusion unchanged.** SA's `predict_fn` was
+round-agnostic (`max(probs.values())` is always the R64 value, so F4 games were scored with
+first-round win rates), which produced pathological brackets — the 2025 Final Four contained
+a 16-seed. With a correct pairwise `predict_fn` the pathologies vanish and MeanScore improves,
+but P(1st) is 0.73-1.67% against a 4.05% seed baseline. **SA is ineffective on the merits,
+not because of the broken predict_fn. Consider this closed.**
+
+**Known remaining conversions, deliberately unfixed** (both documented in-place and
+allowlisted in the contract test): `scripts/_bracket_export_common.py` (feeds the web UI's
+displayed `win_prob`; fixing it moves user-visible numbers) and
+`src/prediction/meta_selector.py::_pairwise_prob` (consumed as a GBM *feature* computed
+identically across bases; changing it requires retraining every `meta_gbm*` mode).
+
+## 6c. `noseed` train/serve feature skew — the B1 base has never actually been tested (2026-08-19)
+
+Diagnosed while investigating why `noseed` fell to 0.58% P(1st) / MeanScore 338 under the
+corrected sampler (§6b). **It is not a calibration weakness. It is a bug, and it means the
+no-seed model's own matchup predictions have never contributed to any backtest result.**
+
+**Root cause: two different functions named `_load_team_stats`.**
+
+| | reads | returns |
+|---|---|---|
+| `src/prediction/noseed_model.py::_load_team_stats` (used by **training**) | `torvik_{year}.json` → `data["teams"]`, merged with `four_factors` | full stats: `adj_offensive_efficiency`, `adj_defensive_efficiency`, `adj_tempo`, `barthag`, + 8 four-factors |
+| `scripts/mc_pool_backtest.py::_load_team_stats` (used by **inference**, line ~2197) | `_load_torvik_ff(year)` | the `four_factors` sub-dict **only** — 8 keys |
+
+`_build_feature_vector` needs 12 dimensions. Served the four-factors-only dict, four of them
+fall through to their hardcoded defaults on *both* sides of the differential, so they are
+identically `0.0` for every matchup — including the single most predictive feature,
+`barthag`.
+
+UConn (1) vs Stetson (16), 2024:
+
+```
+TRAINED features: [ 18.37, -20.02, -2.10, 0.037, -0.009, 0.090, 0.016, -0.069, 0.027, 0.044, 0.066, 0.612 ]
+SERVED  features: [  0.00,   0.00,  0.00, 0.037, -0.009, 0.090, 0.016, -0.069, 0.027, 0.044, 0.066, 0.000 ]
+                    ^adjO   ^adjD  ^tempo                                                        ^barthag
+```
+
+The consequences are exactly what you would predict from that vector:
+
+| source | mean \|p-0.5\| | frac in [0.4,0.6] | agrees with seed favorite (R64) | 1-vs-16 games |
+|---|---:|---:|---:|---|
+| noseed pairwise (served) | 0.041 | 93.8% | **17/32 — chance** | 0.474 – 0.540 |
+| noseed marginal ratio (old path) | 0.211 | 50.0% | 30/32 | ~0.983 |
+| torvik log5 (reference) | 0.270 | 28.1% | 28/32 | ~0.980 |
+
+It ranks a 16-seed over North Carolina (0.474). Its R64 favorite agreement is 17/32, which
+is a coin flip.
+
+**Why this stayed hidden for so long.** The old sampler never called
+`build_noseed_probabilities`. It used `build_noseed_round_probabilities`, which starts from
+*seed-based* historical advancement rates and applies a no-seed adjustment — and that
+adjustment is computed from the same zeroed features, so it is ~0. The `noseed` base was
+therefore **the seed base with a near-null adjustment**, which is why its pre-fix P(1st)
+(3.93%) sat just under seed's (4.92%) and why it agreed with the seed favorite 30/32.
+Correcting the pairwise contract simply routed sampling to the real model for the first
+time and exposed that the model was being fed a crippled vector.
+
+**Implications for the historical record:** any past conclusion of the form "the no-seed
+model doesn't beat seed" is unsupported — the B1 base has never been evaluated on its own
+matchup probabilities. `blend` (α·seed + (1−α)·noseed) is contaminated by the same bug.
+
+**Proposed fix (NOT applied — changes baselines, needs a re-run):** have the backtest pass
+the full stats payload, i.e. use `noseed_model._load_team_stats(year)` for the dict handed
+to `build_noseed_probabilities` / `build_noseed_round_probabilities`, and add a guard that
+raises when a feature vector's `barthag`/`adj_*` dimensions are all exactly zero, so
+train/serve skew fails loudly instead of silently degrading to a coin flip.
+
 ## 7. Load-bearing code that looks dead but isn't — do not delete
 
 - `src/ml/gnn/schedule_graph.py` — powers live SOS features despite
@@ -343,6 +482,24 @@ methodology notes matter):
 
 ## 8. Known open technical debt (not yet fixed, roughly prioritized)
 
+- **`noseed` train/serve feature skew — root-caused, fix not yet applied** (P0, opened
+  2026-08-19): the backtest serves `_build_feature_vector` a four-factors-only stats dict,
+  so `adj_offensive_efficiency`, `adj_defensive_efficiency`, `adj_tempo` and `barthag` are
+  identically 0.0 for every matchup. The model predicts ~0.5 on everything (17/32 R64
+  favorite agreement — chance; 1-seeds over 16-seeds at 0.474-0.540). **The B1 no-seed base
+  has never actually been evaluated on its own matchup probabilities**, and `blend` is
+  contaminated too. Full diagnosis and proposed fix in §6c. Applying the fix changes the
+  noseed/blend baselines in §6b and needs a fresh backtest run. Do not draw
+  preference/scenario-bank conclusions involving these bases until it is resolved.
+- **Temperature `tau` on the pairwise logit is untested** (opened 2026-08-19): whether
+  controlled sharpening (`p' = sigmoid(logit(p)/tau)`) improves winner-take-all
+  performance without wrecking calibration. Must be fit walk-forward against P(1st) /
+  MeanScore — explicitly NOT tuned to reproduce the pre-correction numbers. See §6b.
+- **Two marginal→pairwise conversions remain by choice** (opened 2026-08-19):
+  `scripts/_bracket_export_common.py` (UI-visible `win_prob`) and
+  `src/prediction/meta_selector.py::_pairwise_prob` (GBM feature). Both are documented
+  in-place and allowlisted in `tests/test_pairwise_contract.py`. Fixing either has
+  downstream cost — moved user-facing numbers, or a full meta-selector retrain. See §6b.
 - **Scraper security** (P0): API keys passed in query params instead of
   `Authorization: Bearer` headers (`torvik.py`); API key cached via
   `os.environ`, visible via `ps aux`/crash logs.

@@ -138,6 +138,27 @@ def build_bracket_json(seeds, regions, barthag, round_probs, picks, team_names, 
             # gap that round_probs reflects. Falls back to scalar Log5 only
             # if round_probs has no usable data for either team (e.g. a
             # base with missing round_probs coverage).
+            # KNOWN DEFECT — DELIBERATELY NOT FIXED HERE (2026-08-19).
+            #
+            # This normalizes two MARGINAL advancement probabilities into
+            # something displayed to users as a head-to-head win probability.
+            # That conversion is only valid in R64, where both teams reach the
+            # game with certainty and p1 + p2 == 1. From R32 onward four or
+            # more teams contest the slot, the reach probabilities do not
+            # cancel, and the result is biased toward the favorite by roughly
+            # 7pp (R32) rising to 14pp (CHAMP). The comment above argues the
+            # ratio captures "path strength" — it does, but path strength is
+            # not what a matchup win probability means, and it is not what the
+            # UI label claims.
+            #
+            # Left unchanged because this is the export that feeds the web UI's
+            # displayed win_prob, and the pairwise-contract work is explicitly
+            # scoped to leave user-visible numbers alone. Fixing it means
+            # threading a ProbabilityBase through the export and accepting that
+            # every displayed later-round probability moves.
+            #
+            # Tracked in ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md §3.
+            # Allowlisted in tests/test_pairwise_contract.py::_ALLOWLIST.
             rp1 = round_probs.get(t1, {}).get(rkey, 0.0)
             rp2 = round_probs.get(t2, {}).get(rkey, 0.0)
             if rp1 + rp2 > 1e-9:

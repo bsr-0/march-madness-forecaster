@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.prediction.pairwise import PairwiseProbabilities, ProbabilityBase
 from src.optimization.bracket_construction import (
     CONSTRUCTION_MODES,
     construct_bracket,
@@ -63,7 +64,16 @@ def _synthetic_fixture():
             }
 
     public_picks = {tid: dict(rp) for tid, rp in round_probs.items()}
-    return seeds, regions, round_probs, public_picks
+
+    # Pairwise head-to-head table. Modes that sample or search over matchups
+    # (simulated_annealing) require this; EV-scored modes only read the
+    # marginals, which ProbabilityBase exposes as a plain Mapping.
+    pw = PairwiseProbabilities.from_ratings(
+        {tid: max(0.10, 1.0 - seed * 0.04) for tid, seed in seeds.items()},
+        "log5(seed_ladder)",
+    )
+    base = ProbabilityBase("synthetic", round_probs, pw)
+    return seeds, regions, base, public_picks
 
 
 def _assert_complete_bracket(picks, final_four, champion):
@@ -223,12 +233,13 @@ def test_forward_greedy_with_forced_champion_falls_back():
 
 def test_missing_region_seed_raises():
     """If the seed map is incomplete after normalization, construction must fail loudly."""
-    seeds, regions, round_probs, public_picks = _synthetic_fixture()
-    # Drop the east_16 team from seeds so East is missing seed 16
+    seeds, regions, base, public_picks = _synthetic_fixture()
+    # Drop the east_16 team from seeds so East is missing seed 16.
+    # ProbabilityBase is an immutable Mapping view, so rebuild it without the team.
     del seeds["east_16"]
     del regions["east_16"]
-    del round_probs["east_16"]
     del public_picks["east_16"]
+    round_probs = {t: r for t, r in base.round_probs.items() if t != "east_16"}
     with pytest.raises(ValueError, match="missing seed"):
         construct_bracket(
             mode="champ_first",

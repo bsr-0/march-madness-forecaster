@@ -300,15 +300,17 @@ def build_massey_best_round_probabilities(
     n_sims: int = 10000,
     min_games: int = _DEFAULT_MIN_GAMES,
 ) -> Optional[Dict[str, Dict[str, float]]]:
-    """End-to-end: select best system → load its ratings → MC round_probs.
+    """End-to-end: select best system → load its ratings → ProbabilityBase.
 
-    Uses the same MC construction as torvik (``build_torvik_round_probabilities``).
+    Uses the same MC construction as torvik (``build_base_from_ratings``).
     Teams not in the selected system's ratings get the seed-based fallback
     ``max(0.10, 1.0 - seed * 0.04)``.
 
-    Returns None if no system qualifies for selection — the caller should
-    treat that as "massey_best source unavailable this year" (same pattern
-    as missing torvik data).
+    Returns a :class:`~src.prediction.pairwise.ProbabilityBase` (which is a
+    Mapping over the marginals, so legacy round_probs reads still work) or
+    None if no system qualifies for selection — the caller should treat that
+    as "massey_best source unavailable this year" (same pattern as missing
+    torvik data).
     """
     barthag_from_system = load_massey_best_barthag(test_year, data_root, min_games=min_games)
     if barthag_from_system is None:
@@ -323,7 +325,8 @@ def build_massey_best_round_probabilities(
             s = seeds[tid]
             barthag[tid] = max(0.10, 1.0 - float(s) * 0.04)
 
-    # Delegate to the torvik round-probs MC (same Log5-with-barthag mechanism).
-    from scripts.mc_pool_backtest import build_torvik_round_probabilities
+    # Delegate to the shared base builder (same Log5-with-barthag mechanism),
+    # which keeps the pairwise table attached to the marginals it generated.
+    from scripts.mc_pool_backtest import build_base_from_ratings
 
-    return build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
+    return build_base_from_ratings("massey_best", seeds, regions, barthag, n_sims=n_sims)

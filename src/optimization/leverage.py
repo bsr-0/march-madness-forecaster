@@ -889,14 +889,25 @@ def _filter_brackets_by_path_protection(
 ) -> List["BracketConfiguration"]:
     """Return only brackets whose path protection score meets the threshold.
 
-    Builds an approximate pairwise predict_fn from per-round model_probs,
-    converts each BracketConfiguration into a list of BracketPick objects,
+    Converts each BracketConfiguration into a list of BracketPick objects,
     then scores via PathProtectionScorer.  Brackets scoring >= min_score
     are kept; the rest are discarded.
 
+    Path protection is a *pairwise* question — it asks how likely the teams on
+    a bracket's critical paths are to survive their actual matchups — so it
+    requires a genuine head-to-head source. This function previously built one
+    by averaging each team's marginals across all rounds into a scalar
+    "strength" and normalizing (``s1 / (s1 + s2)``), which collapsed the round
+    dimension entirely and is not a matchup probability. When no pairwise
+    source is available the filter is now skipped (all brackets returned
+    unfiltered) rather than run on fabricated numbers — a no-op is honest,
+    a wrong filter silently discards good brackets.
+
     Args:
         brackets: Candidate BracketConfiguration objects.
-        model_probs: team_id -> {round_name: probability}.
+        model_probs: team_id -> {round_name: probability}. When this is a
+            :class:`~src.prediction.pairwise.ProbabilityBase`, its pairwise
+            table is used and filtering runs; otherwise filtering is skipped.
         scoring_system: Round -> points mapping.
         min_score: Minimum acceptable path protection score (default 0.85).
 
@@ -904,22 +915,19 @@ def _filter_brackets_by_path_protection(
         Filtered list; may be empty if all brackets fail.
     """
     try:
+        from ..prediction.pairwise import ProbabilityBase
         from .path_protection import PathProtectionScorer
         from .bracket_search import BracketPick
     except Exception:
         return brackets  # graceful fallback if imports unavailable
 
-    # Build an approximate predict_fn from aggregate model strength.
-    # For each team we use the mean across all rounds as a proxy for strength.
-    team_strength: Dict[str, float] = {}
-    for tid, probs in model_probs.items():
-        vals = [v for v in probs.values() if isinstance(v, (int, float))]
-        team_strength[tid] = sum(vals) / len(vals) if vals else 0.01
+    if not isinstance(model_probs, ProbabilityBase) or not model_probs.has_pairwise:
+        return brackets
+
+    _pw = model_probs.pairwise
 
     def _approx_predict_fn(t1: str, t2: str) -> float:
-        s1 = team_strength.get(t1, 0.01)
-        s2 = team_strength.get(t2, 0.01)
-        return s1 / max(s1 + s2, 1e-10)
+        return _pw.p(t1, t2)
 
     # Build seed→team_id lookup per region from model_probs + team_metadata.
     # We rely on metadata being embedded in model_probs keys only if the
