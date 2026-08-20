@@ -372,9 +372,15 @@ nobody re-derives it and thinks the suite regressed.
 | Mode | P(1st) pre-fix (invalid) | **P(1st) corrected** | MeanScore pre-fix | **corrected** |
 |------|------------------------:|---------------------:|------------------:|--------------:|
 | seed | 4.92% | **4.05%** | 695 | **612** |
-| noseed | 3.93% | **0.58%** | 637 | **338** |
-| blend | 4.78% | **1.95%** | 661 | **464** |
+| noseed | 3.93% | **2.79%** | 637 | **602** |
+| blend | 4.78% | **3.43%** | 661 | **610** |
 | torvik | 4.23% | **3.40%** | 728 | **662** |
+
+The `noseed` and `blend` figures above are the **2026-08-20 re-run**, after the
+train/serve skew fix (§6c). The intermediate values measured on 2026-08-19
+(noseed 0.58% / MeanScore 338, blend 1.95% / 464) measured a coin-flip model and
+should not be cited. `seed` and `torvik` reproduced to the digit across both runs,
+which is what validates the comparison.
 | meta_sa | 1.33% | **0.73%** | 199 | **215** |
 | meta_sa_chalk | 1.00% | **1.67%** | 195 | **316** |
 | meta_sa_vol | 1.00% | **0.93%** | 253 | **281** |
@@ -520,8 +526,38 @@ Measured effect on the model's own output (2024 R64, versus the recorded pre-fix
 The model now discriminates about as sharply as torvik. Regression tests in
 `tests/test_noseed_feature_skew.py` pin both the defect signature and the guard.
 
-**The `noseed` and `blend` rows in 6b are now stale** — they measured a coin flip. Both
-need a fresh backtest before anything is concluded about the no-seed model.
+**Re-baselined 2026-08-20** (canonical contract, `seed`/`torvik` held as controls and
+reproduced exactly, which validates the run):
+
+| mode | P(1st) skewed | fixed | MeanScore skewed | fixed |
+|------|-------------:|------:|-----------------:|------:|
+| noseed | 0.58% | **2.79%** | 338 | **602** |
+| blend | 1.95% | **3.43%** | 464 | **610** |
+
+The fix restored the model's scoring power almost entirely: MeanScore 338 -> 602,
+against seed's 612. It is no longer producing near-random brackets.
+
+**But it still loses to seed, and now that is a real result rather than an artifact.**
+noseed 2.79% vs seed 4.05% (MeanRank t=-5.71, p_adj=0.0002; BestRank p_adj=0.0130).
+blend 3.43% vs seed 4.05% (MeanRank p_adj=0.0003, though BestRank p_adj=0.9484 — not
+separable on that view).
+
+So the question the bug had left open is now answered: the B1 no-seed base *has* been
+evaluated on its own matchup probabilities, and it does not beat seed for P(1st). Note
+the pre-contract figure of 3.93% was the seed model wearing a noseed label — the real
+model scores 2.79%, i.e. worse than the thing it was accidentally imitating.
+
+**One observation worth chasing.** MeanScore is now nearly identical to seed (602 vs
+612) while P(1st) is materially lower (2.79% vs 4.05%). Similar expected points, worse
+win rate, means the gap is structural rather than a matter of raw strength — the
+brackets are positioned differently against the field, not simply weaker. That is
+consistent with this project's core finding that construction and selection dominate
+prediction accuracy, and it is the kind of gap a preference/portfolio layer could
+plausibly close. Not investigated.
+
+**Caveat:** this run used the fixed `blend_alpha=0.5`, not a refitted value. Now that
+noseed is a real model the optimal alpha may differ, so `blend` in particular deserves a
+refit before its 3.43% is treated as final.
 
 ## 6d. ESPN publishes no substitution events before 2025-02-11 (2026-08-19)
 
@@ -588,13 +624,15 @@ misleadingly small artifact.
 
 ## 8. Known open technical debt (not yet fixed, roughly prioritized)
 
-- **`noseed`/`blend` baselines need re-running after the train/serve skew fix** (P0,
-  opened 2026-08-19, code fixed 2026-08-20): the skew is fixed and guarded (§6c), and the
-  model now discriminates as sharply as torvik (27/32 R64 favourite agreement, up from
-  17/32). But the `noseed` and `blend` rows in §6b measured the coin-flip version and are
-  stale. `recency_hparam_fitter` was also affected, so the walk-forward `blend_alpha` it
-  fits was tuned against that coin flip and should be refitted. Nothing should be
-  concluded about the no-seed model — in either direction — until a fresh backtest runs.
+- **`blend_alpha` should be refitted** (P2, opened 2026-08-20): `recency_hparam_fitter`
+  was fitting walk-forward alpha against the coin-flip noseed model. The canonical
+  backtest uses a fixed `blend_alpha=0.5` so its numbers are unaffected, but any
+  `--hparam-fitter` run before 2026-08-20 is void, and `blend`'s re-baselined 3.43%
+  (§6c) may move once alpha is refitted against the working model.
+- **Why does noseed match seed on MeanScore but not P(1st)?** (P2, opened 2026-08-20):
+  602 vs 612 expected points, but 2.79% vs 4.05% win rate. Similar scoring power, worse
+  pool position — a structural difference rather than a strength one. Possibly reachable
+  by a construction/portfolio layer. See §6c.
 - **`extract_team_features` has no per-key coverage check** (P2, opened 2026-08-20): reads
   64 keys, and its call site passes `torvik_map.get(team_id, {})`, the same silent-default
   shape that hid the noseed skew for months. Not verified broken — it sits behind
