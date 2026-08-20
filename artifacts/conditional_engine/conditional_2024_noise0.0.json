@@ -1,0 +1,667 @@
+{
+  "year": 2024,
+  "n_sims": 100000,
+  "noise_std": 0.0,
+  "k_returned": 5,
+  "source": "log5(torvik_2024)",
+  "unconditional_mean_expected_score": 880.7,
+  "generated_at": "2026-08-20T19:35:23.229817+00:00",
+  "results": [
+    {
+      "constraint": "null (unconditional)",
+      "p_constraint": 1.0,
+      "n_surviving": 100000,
+      "best_ev_in_pool": 930.0,
+      "returned": [
+        {
+          "expected_score": 930.0,
+          "p_first": 0.042,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 864.7,
+          "p_first": 0.032,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 867.6,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            4
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 875.7,
+          "p_first": 0.031,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 865.4,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 2
+        }
+      ],
+      "returned_hamming": {
+        "mean": 19.4,
+        "min": 18,
+        "max": 22
+      },
+      "mean_expected_score": 880.7,
+      "mean_p_first": 0.0362,
+      "distinct_champions_returned": 1,
+      "ev_retention": 1.0
+    },
+    {
+      "constraint": ">=1 2/3-seed in F4",
+      "p_constraint": 0.78938,
+      "n_surviving": 78938,
+      "best_ev_in_pool": 930.0,
+      "returned": [
+        {
+          "expected_score": 930.0,
+          "p_first": 0.042,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 854.3,
+          "p_first": 0.032,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 3
+        },
+        {
+          "expected_score": 870.5,
+          "p_first": 0.034,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 868.8,
+          "p_first": 0.026,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 864.7,
+          "p_first": 0.022,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        }
+      ],
+      "returned_hamming": {
+        "mean": 20.2,
+        "min": 19,
+        "max": 24
+      },
+      "mean_expected_score": 877.7,
+      "mean_p_first": 0.0312,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.9966
+    },
+    {
+      "constraint": ">=2 2/3-seed in F4",
+      "p_constraint": 0.38018,
+      "n_surviving": 38018,
+      "best_ev_in_pool": 904.6,
+      "returned": [
+        {
+          "expected_score": 904.6,
+          "p_first": 0.044,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            3
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 836.7,
+          "p_first": 0.028,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            3
+          ],
+          "dd_seeds_in_s16": 2
+        },
+        {
+          "expected_score": 838.4,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 843.9,
+          "p_first": 0.026,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 829.7,
+          "p_first": 0.031,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        }
+      ],
+      "returned_hamming": {
+        "mean": 22.0,
+        "min": 20,
+        "max": 25
+      },
+      "mean_expected_score": 850.7,
+      "mean_p_first": 0.0334,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.9659
+    },
+    {
+      "constraint": ">=1 double-digit seed in S16",
+      "p_constraint": 0.83443,
+      "n_surviving": 83443,
+      "best_ev_in_pool": 926.2,
+      "returned": [
+        {
+          "expected_score": 926.2,
+          "p_first": 0.041,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 853.9,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 851.8,
+          "p_first": 0.022,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 854.2,
+          "p_first": 0.028,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 863.5,
+          "p_first": 0.023,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        }
+      ],
+      "returned_hamming": {
+        "mean": 21.4,
+        "min": 19,
+        "max": 25
+      },
+      "mean_expected_score": 869.9,
+      "mean_p_first": 0.0304,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.9877
+    },
+    {
+      "constraint": ">=2 double-digit seed in S16",
+      "p_constraint": 0.50802,
+      "n_surviving": 50802,
+      "best_ev_in_pool": 918.7,
+      "returned": [
+        {
+          "expected_score": 918.7,
+          "p_first": 0.035,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 2
+        },
+        {
+          "expected_score": 853.2,
+          "p_first": 0.027,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 3
+        },
+        {
+          "expected_score": 834.6,
+          "p_first": 0.028,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            4
+          ],
+          "dd_seeds_in_s16": 3
+        },
+        {
+          "expected_score": 843.8,
+          "p_first": 0.037,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 2
+        },
+        {
+          "expected_score": 847.8,
+          "p_first": 0.03,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 2
+        }
+      ],
+      "returned_hamming": {
+        "mean": 22.4,
+        "min": 20,
+        "max": 24
+      },
+      "mean_expected_score": 859.6,
+      "mean_p_first": 0.0314,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.976
+    },
+    {
+      "constraint": "exactly 2 1-seeds in F4",
+      "p_constraint": 0.35923,
+      "n_surviving": 35923,
+      "best_ev_in_pool": 906.3,
+      "returned": [
+        {
+          "expected_score": 906.3,
+          "p_first": 0.047,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            4
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 844.8,
+          "p_first": 0.025,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            3
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 836.8,
+          "p_first": 0.028,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            4
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 835.2,
+          "p_first": 0.034,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            5
+          ],
+          "dd_seeds_in_s16": 2
+        },
+        {
+          "expected_score": 854.2,
+          "p_first": 0.022,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        }
+      ],
+      "returned_hamming": {
+        "mean": 21.4,
+        "min": 19,
+        "max": 24
+      },
+      "mean_expected_score": 855.4,
+      "mean_p_first": 0.0312,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.9713
+    },
+    {
+      "constraint": "houston reaches F4",
+      "p_constraint": 0.56442,
+      "n_surviving": 56442,
+      "best_ev_in_pool": 930.0,
+      "returned": [
+        {
+          "expected_score": 930.0,
+          "p_first": 0.042,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 864.7,
+          "p_first": 0.032,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 867.6,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            4
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 875.7,
+          "p_first": 0.031,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 865.4,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 2
+        }
+      ],
+      "returned_hamming": {
+        "mean": 19.4,
+        "min": 18,
+        "max": 22
+      },
+      "mean_expected_score": 880.7,
+      "mean_p_first": 0.0362,
+      "distinct_champions_returned": 1,
+      "ev_retention": 1.0
+    },
+    {
+      "constraint": "champion = houston",
+      "p_constraint": 0.27752,
+      "n_surviving": 27752,
+      "best_ev_in_pool": 930.0,
+      "returned": [
+        {
+          "expected_score": 930.0,
+          "p_first": 0.042,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 864.7,
+          "p_first": 0.032,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 1
+        },
+        {
+          "expected_score": 867.6,
+          "p_first": 0.038,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            2,
+            4
+          ],
+          "dd_seeds_in_s16": 0
+        },
+        {
+          "expected_score": 857.4,
+          "p_first": 0.026,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "dd_seeds_in_s16": 2
+        },
+        {
+          "expected_score": 882.8,
+          "p_first": 0.029,
+          "champion": "houston",
+          "champion_seed": 1,
+          "final_four_seeds": [
+            1,
+            1,
+            1,
+            2
+          ],
+          "dd_seeds_in_s16": 1
+        }
+      ],
+      "returned_hamming": {
+        "mean": 20.0,
+        "min": 18,
+        "max": 24
+      },
+      "mean_expected_score": 880.5,
+      "mean_p_first": 0.0334,
+      "distinct_champions_returned": 1,
+      "ev_retention": 0.9998
+    }
+  ]
+}
