@@ -24,37 +24,26 @@ const BUILD_STRATEGIES = [
     detail: 'Takes positions designed to beat a field of other brackets, not to maximise points.' },
 ];
 
-const PREF_GROUPS = [
-  { title: 'Final Four', key: 'f4', options: [
-      { id: 'none', label: 'No preference' },
-      { id: 'f4_mostly_favorites', label: 'Mostly favorites' },
-      { id: 'f4_at_least_1_two_three', label: 'At least one 2 or 3 seed' },
-      { id: 'f4_at_least_2_two_three', label: 'At least two 2 or 3 seeds' },
-  ]},
-  { title: 'Cinderellas', key: 's16', options: [
-      { id: 'none', label: 'No preference' },
-      { id: 's16_no_double_digit', label: 'Chalk — favorites advance' },
-      { id: 's16_at_least_1_double_digit', label: 'One double-digit seed in the Sweet 16' },
-      { id: 's16_at_least_2_double_digit', label: 'Two or more' },
-  ]},
-];
-
 async function initBuild() {
   try {
-    const res = await fetch('data/candidates_2026.json?v=1');
+    // Cache-buster tracks the schema, so a contract bump can never be served
+    // a stale artifact from cache.
+    const res = await fetch(`data/candidates_2026.json?v=${EXPECTED_ARTIFACT_SCHEMA}`);
     if (!res.ok) throw new Error(res.status);
-    ARTIFACT = await res.json();
+    const loaded = await res.json();
+    // Refuse an artifact this code does not understand rather than rendering
+    // something plausible from it. The contract is owned by
+    // src/product/artifact_contract.py and mirrored in selection.js.
+    validateArtifact(loaded);
+    ARTIFACT = loaded;
   } catch (e) {
     document.getElementById('build-context').textContent =
       'Bracket data is unavailable right now.';
+    console.error('artifact rejected:', e.message);
     return;
   }
-  const m = ARTIFACT.meta || {};
-  document.getElementById('build-context').textContent =
-    `${ARTIFACT.year} replay · ${ARTIFACT.candidates.length.toLocaleString()} candidate brackets ` +
-    `from ${(m.n_sims || 0).toLocaleString()} simulated tournaments.`;
   renderStrategyCards();
-  renderPrefGrid();
+  generateBrackets();
 }
 
 function renderStrategyCards() {
@@ -71,49 +60,30 @@ function renderStrategyCards() {
 function setObjective(key) {
   buildState.objective = key;
   renderStrategyCards();
-  if (buildState.selected.length) generateBrackets();
+  generateBrackets();
 }
 
-/* Feasibility text comes from the artifact's full-bank frequencies, never from
- * counting candidates — the candidate list deliberately over-samples unlikely
- * champions and is not a probability sample. */
-function freqLabel(prefId) {
-  if (prefId === 'none') return '';
-  const f = constraintFrequency(ARTIFACT, prefId);
-  if (f == null) return '';
-  return `happens in about ${Math.round(f * 10)} of 10 simulated tournaments`;
-}
-
-function renderPrefGrid() {
-  document.getElementById('pref-grid').innerHTML = PREF_GROUPS.map(g => `
-    <div class="pref-group">
-      <p class="pref-title">${g.title}</p>
-      ${g.options.map(o => {
-        const active = buildState.preference === o.id ||
-          (o.id === 'none' && !g.options.some(x => x.id !== 'none' && x.id === buildState.preference));
-        const isOn = buildState.preference === o.id;
-        return `<label class="pref-opt${isOn ? ' on' : ''}">
-          <input type="radio" name="pref-${g.key}" ${isOn ? 'checked' : ''}
-                 onchange="setPreference('${o.id}','${g.key}')">
-          <span class="pref-label">${o.label}</span>
-          <span class="pref-freq">${freqLabel(o.id)}</span>
-        </label>`;
-      }).join('')}
-    </div>`).join('');
-}
-
-/* One preference at a time in v1. Combining predicates is supported by the
- * engine but multiplies the rare-combination cases, and the feasibility warning
- * story is not designed yet. */
-function setPreference(id, group) {
-  buildState.preference = id;
-  renderPrefGrid();
-  if (buildState.selected.length) generateBrackets();
-}
+/* PREFERENCE CONTROLS ARE DELIBERATELY ABSENT FROM V1.
+ *
+ * The engine supports the frozen preference predicates and they remain
+ * canonical and parity-tested in selection.js / src/product/selection.py. They
+ * are not exposed here because seed-shaped controls ("at least two 2/3 seeds in
+ * the Final Four") are implementation vocabulary: they read as configuring an
+ * optimizer rather than choosing how to play.
+ *
+ * The intended surface is an "angle" -- a basketball philosophy such as
+ * rebounding or three-point shooting -- and no angle may ship until research
+ * establishes that it produces materially different brackets, retains
+ * acceptable expected score, is stable across seasons, is computable from
+ * pre-tournament information, and can be frozen and versioned.
+ *
+ * Until then the product offers two objectives and returns two brackets rather
+ * than manufacturing a third.
+ */
 
 function generateBrackets() {
   if (!ARTIFACT) return;
-  const sel = selectBrackets(ARTIFACT, buildState.objective, buildState.preference, null, 3);
+  const sel = selectWithAlternative(ARTIFACT, buildState.objective);
   buildState.selected = sel;
 
   const results = document.getElementById('build-results');
@@ -125,7 +95,20 @@ function generateBrackets() {
     return;
   }
 
-  const ROLE = ['Model Favorite', 'Alternative', 'Third Option'];
+  /* Names state why each bracket exists. Never 'Bracket 1 / 2 / 3'.
+   *
+   * The second slot is filled only when selectWithAlternative found a materially
+   * different bracket that keeps most of the objective's value. When it did not,
+   * one bracket is shown -- the product does not invent a second strategy to
+   * fill a slot. */
+  const ROLE = buildState.objective === 'ev'
+    ? ['Model Favorite', 'Alternative']
+    : ['Pool Upside', 'Alternative'];
+  const ROLE_NOTE = buildState.objective === 'ev'
+    ? ['The highest expected-score bracket.',
+       'A different bracket that keeps most of the expected value.']
+    : ['The bracket with the best chance of finishing first.',
+       'A different route to the same goal.'];
   const summaries = sel.map(i => candidateSummary(ARTIFACT, i));
   const evs = ARTIFACT.candidates.map(c => c.ev);
   const p1s = ARTIFACT.candidates.map(c => c.p1);
@@ -138,6 +121,7 @@ function generateBrackets() {
   document.getElementById('result-cards').innerHTML = summaries.map((s, n) => `
     <div class="result-card">
       <p class="rc-role">${ROLE[n]}</p>
+      <p class="rc-role-note">${ROLE_NOTE[n]}</p>
       <p class="rc-champ">${prettyName(s.champion_id)} <span class="rc-seed">(${s.champion_seed})</span></p>
       <p class="rc-f4">Final Four: ${s.final_four.map(t => `${prettyName(t.id)} (${t.seed})`).join(' · ')}</p>
       <p class="rc-meter"><span>Expected points</span><span class="rc-dots">${dots(s.ev, evs)}</span></p>
@@ -148,16 +132,30 @@ function generateBrackets() {
     </div>`).join('');
 
   const m = ARTIFACT.meta || {};
+  /* The replay disclosure is not optional copy. The ${m.year} tournament has
+   * already been played, and these brackets are a replay against it — never a
+   * live forecast and never evidence of predictive accuracy. */
   document.getElementById('compare-wrap').innerHTML = `
     <p class="compare-note">
       Pool upside assumes a ${m.p1_pool_size || 30}-opponent pool with typical public picks.
       It is not a universal probability of winning any pool.
+    </p>
+    <p class="compare-note">
+      This is a replay of the ${m.year || 2026} field, shown so you can see how the
+      builder behaves on a real bracket. It is not a live forecast.
     </p>`;
   results.style.display = '';
 }
 
+/* Canonical display name for a team id.
+ *
+ * Reads the artifact's `teams[].name` rather than transforming the slug. Slugs
+ * do not round-trip -- `texas_a_m` is "Texas A&M", not "Texas A M" -- so any
+ * client-side derivation is wrong for a predictable set of schools.
+ */
 function prettyName(id) {
-  return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const t = ARTIFACT && ARTIFACT.teams.find(x => x.id === id);
+  return t ? t.name : id;
 }
 
 /* Prettify team ids inside explanation strings.
@@ -178,12 +176,18 @@ function prettifyReasons(reasons) {
  * bracket representation. */
 function viewGeneratedBracket(n) {
   const idx = buildState.selected[n];
-  const rounds = candidateToRounds(ARTIFACT, idx, mkTeam, log5);
-  window.GENERATED_ROUNDS = rounds;
-  delete roundsCache['generated'];
+  const s = candidateSummary(ARTIFACT, idx);
+  window.GENERATED_ROUNDS = candidateToRounds(ARTIFACT, idx, mkTeam);
+
+  const role = (buildState.objective === 'ev'
+    ? ['Model Favorite', 'Alternative']
+    : ['Pool Upside', 'Alternative'])[n];
+  document.getElementById('detail-title').textContent =
+    `${role} · ${prettyName(s.champion_id)} to win it`;
+
   setActiveTab('bracket');
-  activateStrategy('generated');
-  document.getElementById('tab-bracket').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showGeneratedBracket();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 if (document.readyState === 'loading') {

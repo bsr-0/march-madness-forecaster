@@ -3,91 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2026 Bracket Picker (Replay) — March Madness Forecaster</title>
+  <title>Bracket Builder — March Madness Forecaster</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2026-08-18a">
+  <link rel="stylesheet" href="style.css?v=2026-08-21c">
 </head>
 <body>
   <div class="site-backdrop" aria-hidden="true"></div>
 
   <header class="page-header">
     <div class="page-header-inner">
-      <p class="eyebrow">2026 Tournament · Completed</p>
-      <h1>Bracket Picker</h1>
-      <p class="page-tagline">A replay of the 2026 tournament — pick a strategy to see what it would have called.</p>
+      <h1>Build a bracket you actually want to submit</h1>
+      <p class="page-tagline">
+        The model has already played out thousands of plausible tournaments.
+        You choose how you want to play.
+      </p>
     </div>
   </header>
 
   <main class="page-main">
 
     <nav class="page-tabs" id="page-tabs">
-      <button class="page-tab-btn active" data-tab="build" onclick="setActiveTab('build')">Build My Bracket</button>
-      <button class="page-tab-btn" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
-      <button class="page-tab-btn" data-tab="stats" onclick="setActiveTab('stats')">Team Stats</button>
-      <button class="page-tab-btn" data-tab="matchups" onclick="setActiveTab('matchups')">Matchups</button>
-      <button class="page-tab-btn" data-tab="backtest" onclick="setActiveTab('backtest')">Model Accuracy</button>
+      <button class="page-tab-btn active" data-tab="build" onclick="setActiveTab('build')">Build</button>
+      <button class="page-tab-btn" data-tab="explore" onclick="setActiveTab('explore')">Explore</button>
+      <button class="page-tab-btn" data-tab="record" onclick="setActiveTab('record')">Track Record</button>
     </nav>
 
     <div class="tab-panel" id="tab-build">
 
-      <section class="build-intro">
-        <p class="build-lede">
-          We simulate the tournament 150,000 times, then build different brackets
-          depending on what you are optimising for.
-        </p>
+      <section class="build-hero">
+        <p class="build-lede">How do you want to play?</p>
+        <div class="strategy-cards" id="strategy-cards"></div>
+        <button class="generate-btn" id="generate-btn" onclick="generateBrackets()">Build my brackets</button>
         <p class="build-sub" id="build-context"></p>
       </section>
 
-      <section class="build-step">
-        <p class="section-label">1 &middot; What are you optimising for?</p>
-        <div class="strategy-cards" id="strategy-cards"></div>
-      </section>
-
-      <section class="build-step">
-        <p class="section-label">2 &middot; Any preferences? <span class="optional">optional</span></p>
-        <div class="pref-grid" id="pref-grid"></div>
-      </section>
-
-      <section class="build-step">
-        <button class="generate-btn" id="generate-btn" onclick="generateBrackets()">Build my brackets</button>
-      </section>
-
       <section class="build-results" id="build-results" style="display:none">
-        <p class="section-label">Your three options</p>
+        <p class="section-label">Your brackets</p>
         <div class="result-cards" id="result-cards"></div>
         <div class="compare-wrap" id="compare-wrap"></div>
       </section>
 
     </div>
 
-    <div class="tab-panel" id="tab-bracket">
+    <!-- Detail view, reached from Build via "View bracket". Hidden on load so it
+         does not render underneath the default destination. -->
+    <!-- Bracket detail, reached from Build via "View bracket". Hidden on load
+         so it does not render underneath the default destination.
 
-      <!-- Strategy selector -->
-      <section class="strategy-section">
-        <p class="section-label">Pick your approach</p>
-        <div class="strategy-strip" id="strategy-strip"></div>
-        <div class="strategy-detail" id="strategy-detail"></div>
+         The legacy strategy selector and the performance note that lived here
+         are gone: they named construction algorithms ("Pool Optimizer", "Region
+         Beam Search") and quoted P(1st) figures from a window that included the
+         replay year. -->
+    <div class="tab-panel" id="tab-bracket" data-detail-view="1" style="display:none">
 
-        <p class="window-note">Full 15-year backtest (2011–2026), N=31 pool. Statistically validated.</p>
+      <section class="detail-head">
+        <button class="detail-back" onclick="setActiveTab('build')">&larr; Back to my brackets</button>
+        <p class="detail-title" id="detail-title"></p>
       </section>
 
-      <!-- Champion path -->
       <section class="path-section">
-        <p class="section-label">Modeled path to the title</p>
+        <p class="section-label">Path to the title</p>
         <div class="path-scroll">
           <div class="path-flow" id="path-flow"></div>
         </div>
       </section>
 
-      <!-- Actual outcome retrospective -->
       <section class="actual-section" id="actual-section" style="display:none">
         <p class="section-label">How it actually went</p>
         <div class="actual-panel" id="actual-panel"></div>
       </section>
 
-      <!-- Bracket board -->
       <section class="bracket-section">
         <div class="bracket-header">
           <p class="section-label">Bracket board</p>
@@ -96,218 +83,71 @@
         <div class="bracket-body" id="bracket-body"></div>
       </section>
 
-      <!-- Performance note -->
-      <section class="perf-section">
-        <p class="perf-note">
-          <strong>Pool Optimizer</strong> is validated via 15-year leave-one-year-out backtest (2011–2026, excl. 2020;
-          includes 2026 now that it has concluded). Against a real N=31 pool it achieves
-          <strong>11.2% P(1st)</strong> vs a 4.9% seed baseline, winning all 15/15 years (MeanRank p&thinsp;&lt;&thinsp;0.0001).
-          <strong>Exhaustive Search</strong> tests all 64 possible champions (~6.2% P(1st), beating seed on MeanRank
-          in 14/15 years). <strong>Region Beam Search</strong> builds each region independently via beam
-          search (~6.3% P(1st), 14/15 years). <strong>Chalk</strong> (always the favorite) is a
-          preference filter with no pool-backtest guarantee.
+    </div>
+
+    <!-- EXPLORE — what the model thinks is likely. Read-only: no bracket
+         controls, because building is Build's job. -->
+    <div class="tab-panel" id="tab-explore" style="display:none">
+
+      <section class="xp-section">
+        <p class="xp-lede">What the model expects</p>
+        <p class="xp-sub">
+          Based on playing the tournament out many thousands of times from each team's
+          pre-tournament strength.
         </p>
+        <div class="xp-headline" id="explore-headline"></div>
+      </section>
+
+      <section class="xp-section">
+        <p class="xp-lede">Closest opening games</p>
+        <p class="xp-sub">The first-round matchups the model considers most nearly even.</p>
+        <div class="xp-matchups" id="explore-matchups"></div>
+      </section>
+
+      <section class="xp-section">
+        <p class="xp-lede">Every team, round by round</p>
+        <p class="xp-sub">How far each team is expected to get. Click a round to sort by it.</p>
+        <label class="xp-search">
+          <span>Search</span>
+          <input type="text" id="explore-search" placeholder="Team…" oninput="setExploreSearch(this.value)">
+        </label>
+        <div class="xp-table-scroll" id="explore-table"></div>
       </section>
 
     </div>
 
-    <div class="tab-panel" id="tab-stats" style="display:none">
+    <!-- TRACK RECORD — how the model has actually done. The replay year is
+         rendered apart and is excluded from every headline by the generator. -->
+    <div class="tab-panel" id="tab-record" style="display:none">
 
-      <!-- Team stats table -->
-      <section class="stats-table-section" id="stats-table-section" style="display:none">
-        <p class="section-label">Pre-tournament team stats</p>
-        <p class="stats-table-intro">
-          Every tournament-qualified team, as it stood right before that year's tournament started — Torvik
-          ratings and four factors; regular-season volatility (scoring margin and its spread, close-game
-          rate and record, rate of losses to lower-ranked teams); shooting and defensive-pressure splits from
-          the Kaggle box score (3-point rate/percentage, opponent 3P defense, assist-to-turnover ratio, steals
-          + blocks per game, true road/neutral win rate); roster continuity; and each team's head coach with
-          that coach's tournament record <em>before</em> this season. Click a column to sort. The
-          <strong class="stats-outcome-key">gold columns on the right</strong> are how the team actually
-          finished — a result, not a pre-tournament stat.
+      <section class="tr-section">
+        <p class="xp-lede">How the model has done</p>
+        <p class="xp-sub">
+          Every tournament is predicted by a model built without that season, so these
+          are results on seasons the model had not seen.
         </p>
-        <div class="stats-controls">
-          <label class="stats-control">
-            <span>Year</span>
-            <select id="stats-year-select" onchange="setStatsYear(this.value)"></select>
-          </label>
-          <label class="stats-control stats-control-search">
-            <span>Search</span>
-            <input type="text" id="stats-search" placeholder="Team or conference…" oninput="setStatsSearch(this.value)">
-          </label>
-        </div>
-        <div class="stats-table-scroll">
-          <table class="stats-table" id="stats-table">
-            <thead id="stats-table-head"></thead>
-            <tbody id="stats-table-body"></tbody>
-          </table>
-        </div>
+        <div id="record-headline"></div>
       </section>
 
-    </div>
+      <section class="tr-section" id="record-per-year"></section>
 
-    <div class="tab-panel" id="tab-matchups" style="display:none">
+      <section class="tr-section" id="record-method"></section>
 
-      <!-- Pairwise tournament matchup table -->
-      <section class="stats-table-section" id="matchup-table-section" style="display:none">
-        <p class="section-label">Tournament matchups</p>
-        <p class="stats-table-intro">
-          Every tournament game, with the pre-tournament stat crossings that actually decide them — my offense
-          against your defense, my ball security against your pressure, my offensive glass against your
-          defensive glass. These are properties of a <em>pair</em> of teams, so they can't live in the per-team
-          table. Differences are favourite-minus-underdog, so positive always favours the higher seed. Click a
-          column to sort; the <strong class="stats-outcome-key">gold columns</strong> are the result.
-        </p>
-        <div class="stats-controls">
-          <label class="stats-control">
-            <span>Year</span>
-            <select id="matchup-year-select" onchange="setMatchupYear(this.value)"></select>
-          </label>
-          <label class="stats-control stats-control-search">
-            <span>Search</span>
-            <input type="text" id="matchup-search" placeholder="Team, round or region…" oninput="setMatchupSearch(this.value)">
-          </label>
-        </div>
-        <div class="stats-table-scroll">
-          <table class="stats-table" id="matchup-table">
-            <thead id="matchup-table-head"></thead>
-            <tbody id="matchup-table-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-    </div>
-
-    <div class="tab-panel" id="tab-backtest" style="display:none">
-
-      <section class="bt-section">
-        <p class="section-label">How accurate is the model, really?</p>
-        <p class="stats-table-intro">
-          Out-of-sample results from leave-one-year-out backtesting: for every tournament, the model is
-          trained without that year and then asked to predict it cold. Every number below is computed from
-          <code>artifacts/loyo_pergame_predictions.json</code> by
-          <code>scripts/generate_ml_backtest_data.py</code> — model and baseline are scored on the
-          <em>same games</em>, so the comparison is like-for-like. Nothing on this page is hand-entered.
-        </p>
-
-        <div class="bt-headline" id="bt-headline"></div>
-        <div class="bt-callout" id="bt-callout"></div>
-      </section>
-
-      <section class="bt-section">
-        <p class="section-label">Every model tested, against the seed baseline</p>
-        <p class="stats-table-intro">
-          Brier score is the headline metric (lower is better — it rewards being confident
-          <em>and</em> right). <strong>BSS</strong> is skill relative to the seed baseline: positive means
-          better than simply trusting seeds, 0 means no better, negative means worse. The baseline is a
-          genuinely strong opponent — higher seeds win about
-          <strong id="bt-favrate"></strong> of tournament games.
-        </p>
-        <div class="stats-table-scroll">
-          <table class="stats-table" id="bt-models-table">
-            <thead id="bt-models-head"></thead>
-            <tbody id="bt-models-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="bt-section">
-        <p class="section-label">Year by year</p>
-        <p class="stats-table-intro">
-          Skill is not consistent across years. Bars above the line are years the model beat the seed
-          baseline; bars below are years it lost to it.
-        </p>
-        <div class="bt-year-chart" id="bt-year-chart"></div>
-        <p class="bt-note" id="bt-year-note"></p>
-      </section>
-
-      <section class="bt-section">
-        <p class="section-label">By round</p>
-        <p class="stats-table-intro">
-          Where the edge actually comes from — and where it disappears. Note the accuracy columns in the
-          late rounds.
-        </p>
-        <div class="stats-table-scroll">
-          <table class="stats-table" id="bt-rounds-table">
-            <thead id="bt-rounds-head"></thead>
-            <tbody id="bt-rounds-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="bt-section" id="bt-market-section">
-        <p class="section-label">Versus the betting market</p>
-        <p class="stats-table-intro" id="bt-market-intro"></p>
-        <div class="stats-table-scroll">
-          <table class="stats-table" id="bt-market-table">
-            <thead id="bt-market-head"></thead>
-            <tbody id="bt-market-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="bt-section">
-        <p class="section-label">Calibration</p>
-        <p class="stats-table-intro">
-          When the model says 70%, does it happen 70% of the time? Each bar compares predicted probability
-          against what actually occurred in that bucket. Sparse buckets are noisy — the game counts matter
-          as much as the bars.
-        </p>
-        <div class="bt-calib" id="bt-calib"></div>
-        <p class="bt-note" id="bt-calib-note"></p>
-      </section>
-
-      <section class="bt-section">
-        <p class="section-label">Caveats — read before trusting any of the above</p>
-        <ul class="bt-caveats">
-          <li>
-            <strong>These numbers depend on a bug fix, and older figures elsewhere may not include it.</strong>
-            Tournament results were stored <em>winner-first</em> — every 2005–2015 game listed the winning
-            team first, and 90.2% of all games did. Scored in that order a model is graded against a ~90%
-            base rate instead of the real
-            <strong id="bt-favrate-2"></strong>, which silently ruins accuracy and calibration figures and
-            teaches any correction layer a bias that does not exist. Games are now re-oriented to an
-            outcome-independent convention (better seed first) at the data-loading boundary. Brier, log
-            loss and BSS are mathematically unaffected by that flip, so older Brier figures remain valid —
-            but any previously published accuracy, calibration or correction-layer result predating the fix
-            should be treated as suspect.
-          </li>
-          <li>
-            <strong>Researcher degrees of freedom are not fully audited.</strong> Hyperparameters were tuned
-            while observing backtest results on these same years, and no multiple-testing correction is
-            applied across the ~150 Brier evaluations per fit. Genuine out-of-sample performance is
-            therefore likely <em>somewhat worse</em> than shown.
-          </li>
-          <li>
-            <strong>Sample sizes are small where it matters most.</strong> 63 games per tournament, and the
-            late rounds are tiny — a single Final Four is 2 games. Round-level and year-level numbers should
-            be read as indicative, not decisive.
-          </li>
-          <li>
-            <strong>The optimization target was held-out Brier, not BSS.</strong> The model was selected to
-            minimize Brier; its skill-over-baseline was measured afterward, not optimized for.
-          </li>
-          <li>
-            <strong>This is prediction accuracy, not pool performance.</strong> This project's actual edge is
-            bracket construction and selection, not forecasting games — every model family tested converges
-            to roughly zero skill over the seed baseline, which is why production runs a 7-feature logistic
-            regression rather than anything more elaborate. The Bracket Picker tab's P(1st) numbers come from
-            a separate pool-simulation backtest and are not comparable to the metrics here.
-          </li>
-        </ul>
-      </section>
+      <section class="tr-section" id="record-replay"></section>
 
     </div>
 
   </main>
 
   <footer class="site-footer">
-    <span>March Madness Forecaster · 2026 replay</span>
-    <span>Backtested bracket models for pool competition</span>
+    <span>March Madness Forecaster</span>
+    <span>Built on a method fixed in advance and recorded.</span>
   </footer>
 
-  <script src="selection.js"></script>
-  <script src="build.js"></script>
-  <script src="app.js?v=2026-08-18a"></script>
+  <script src="app.js?v=2026-08-21c"></script>
+  <script src="selection.js?v=2026-08-21c"></script>
+  <script src="build.js?v=2026-08-21c"></script>
+  <script src="explore.js?v=2026-08-21c"></script>
+  <script src="record.js?v=2026-08-21c"></script>
 </body>
 </html>

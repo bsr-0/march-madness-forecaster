@@ -45,6 +45,10 @@ from src.data.game_orientation import (  # noqa: E402
 SRC = REPO / "artifacts" / "loyo_pergame_predictions.json"
 OUT = REPO / "docs" / "data" / "ml_backtest.json"
 
+# The season used as an in-sample integration fixture. Spec 2027.v2 trains
+# through it, so it may never appear in a headline accuracy figure.
+REPLAY_YEAR = 2026
+
 # Model key -> display label. "seed" is the baseline everything is scored
 # against; "torvik" is the production probability source the bracket UI uses.
 MODELS = [
@@ -171,12 +175,26 @@ def main():
             rows.append(r)
 
     years = sorted({g["year"] for g in rows})
-    seed_brier_all = brier(pairs_for(rows, "seed"))
 
-    # ── Headline + model table ───────────────────────────────────────
+    # ── The replay year is excluded from every headline figure ───────
+    #
+    # 2026 is an in-sample integration fixture, not a prospective evaluation
+    # season: spec 2027.v2 trains through it. Leaving it in the headline would
+    # make a performance claim out of a season the model has already seen -- and
+    # a flattering one, because 2026 happens to be the model's best year
+    # (accuracy .746 vs .721 across the honest window; Brier .145 vs .181).
+    #
+    # It is still reported, separately and labelled, in `replay_year`. The
+    # separation is computed HERE rather than in the browser so the site cannot
+    # reconstruct a contaminated headline by re-aggregating per-year rows.
+    scored_rows = [g for g in rows if g["year"] != REPLAY_YEAR]
+    scored_years = sorted({g["year"] for g in scored_rows})
+    seed_brier_all = brier(pairs_for(scored_rows, "seed"))
+
+    # ── Headline + model table (excluding the replay year) ───────────
     models = []
     for key, label in MODELS:
-        s = summarize(rows, key, baseline_brier=seed_brier_all, with_ci=True)
+        s = summarize(scored_rows, key, baseline_brier=seed_brier_all, with_ci=True)
         if s:
             models.append({"key": key, "label": label, **s})
 
@@ -199,10 +217,33 @@ def main():
             }
         )
 
+    # ── The replay year, reported apart from the headline ────────────
+    replay_rows = [g for g in rows if g["year"] == REPLAY_YEAR]
+    replay_year = None
+    if replay_rows:
+        rb = brier(pairs_for(replay_rows, "seed"))
+        rm = summarize(replay_rows, "torvik", baseline_brier=rb)
+        rs = summarize(replay_rows, "seed")
+        replay_year = {
+            "year": REPLAY_YEAR,
+            "n_games": rm["n_games"],
+            "brier_model": rm["brier"],
+            "brier_seed": rs["brier"],
+            "accuracy_model": rm["accuracy"],
+            "accuracy_seed": rs["accuracy"],
+            "is_out_of_sample": False,
+            "label": f"{REPLAY_YEAR} replay (in-sample)",
+            "disclaimer": (
+                f"{REPLAY_YEAR} is an integration fixture. The model was trained on it, "
+                "so these numbers are not evidence of predictive accuracy and are "
+                "excluded from every headline figure on this page."
+            ),
+        }
+
     # ── Per-round ────────────────────────────────────────────────────
     per_round = []
     for rnd in ROUND_ORDER:
-        rr = [g for g in rows if g["round"] == rnd]
+        rr = [g for g in scored_rows if g["round"] == rnd]
         if not rr:
             continue
         sb = brier(pairs_for(rr, "seed"))
@@ -228,12 +269,12 @@ def main():
         )
 
     # ── Calibration ──────────────────────────────────────────────────
-    cal_bins, ece = calibration_bins(rows, "torvik")
+    cal_bins, ece = calibration_bins(scored_rows, "torvik")
 
     # ── Closing-market subset ────────────────────────────────────────
     # Only ~1/4 of games have odds, so this is scored on its own subset
     # rather than compared against the full-sample numbers above.
-    mkt_rows = [g for g in rows if g.get("closing_market") is not None]
+    mkt_rows = [g for g in scored_rows if g.get("closing_market") is not None]
     market = None
     if mkt_rows:
         msb = brier(pairs_for(mkt_rows, "seed"))
@@ -245,13 +286,19 @@ def main():
             "seed": summarize(mkt_rows, "seed"),
         }
 
-    seeded = [g for g in rows if g["favorite_won"] is not None]
+    seeded = [g for g in scored_rows if g["favorite_won"] is not None]
 
     payload = {
         "generated": datetime.now(timezone.utc).isoformat(),
         "source_file": "artifacts/loyo_pergame_predictions.json",
-        "n_games": len(rows),
-        "years": years,
+        "n_games": len(scored_rows),
+        "years": scored_years,
+        "all_years_including_replay": years,
+        "replay_year": replay_year,
+        "scoring_window_note": (
+            f"Every headline figure excludes {REPLAY_YEAR}, which is an in-sample "
+            "integration fixture rather than a prospective evaluation season."
+        ),
         "baseline_key": "seed",
         "production_key": "torvik",
         # Excludes same-seed matchups (1-vs-1 Final Fours etc.), where there
@@ -278,7 +325,8 @@ def main():
         json.dump(payload, f, indent=2)
 
     print(f"Wrote {OUT}")
-    print(f"  {len(rows)} games, {len(years)} years ({years[0]}-{years[-1]})")
+    print(f"  {len(scored_rows)} scored games, {len(scored_years)} years "
+          f"({scored_years[0]}-{scored_years[-1]}); {REPLAY_YEAR} held out of headline")
     for m in models:
         print(f"  {m['label']:32} Brier {m['brier']:.4f}  acc {m['accuracy']:.4f}  BSS {m.get('bss', 0):+.4f}")
     print(f"  ECE (production): {ece}")
