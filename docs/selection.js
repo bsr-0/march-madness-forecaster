@@ -86,6 +86,86 @@ function selectBrackets(artifact, objective = 'ev', preference = 'none', teamInd
   return chosen;
 }
 
+/* Diverse selection (product.v2) — mirror of src/product/selection.py.
+ *
+ * Versioned separately from the frozen 2027.v2 methodology: this changes only
+ * WHICH already-scored candidates are shown, never how they were scored.
+ *
+ * v3 pins v2's semantics in configs/frozen/product_v3.json; the behaviour below
+ * is unchanged from v2.
+ *
+ * v1 put "distinct champion" first, which on the 2026 field returned an
+ * alternative retaining 0.973 EV with a Final Four identical to the baseline's,
+ * while a 0.995 bracket with a changed Final Four went unshown. Champion
+ * diversity is a signal, not a requirement.
+ *
+ * Not a distance metric. Hamming weights all 63 games equally, so R64 is 50.8%
+ * of Hamming but 16.7% of the points — the wrong objective, as established.
+ */
+const SELECTION_VERSION = 'product.v3';
+const MIN_F4_CHANGES = 1, MIN_S16_CHANGES = 2, DEFAULT_MIN_RETENTION = 0.97;
+const DIVERSITY_TIERS = ['final_four', 'sweet_16', 'champion'];
+
+function differenceProfile(artifact, index, baselineIndex) {
+  const a = artifact.candidates[index].w, b = artifact.candidates[baselineIndex].w;
+  const notIn = (xs, ys) => { const s = new Set(ys); return xs.filter(x => !s.has(x)).length; };
+  return {
+    champion: a[CHAMP][0] !== b[CHAMP][0] ? 1 : 0,
+    final_four: notIn(a[F4], b[F4]),
+    sweet_16: notIn(a[S16], b[S16]),
+  };
+}
+
+function differsAtTier(artifact, index, otherIndex, tier) {
+  const d = differenceProfile(artifact, index, otherIndex);
+  if (tier === 'final_four') return d.final_four >= MIN_F4_CHANGES;
+  if (tier === 'sweet_16')   return d.sweet_16 >= MIN_S16_CHANGES;
+  if (tier === 'champion')   return d.champion >= 1;
+  throw new Error(`unknown diversity tier ${tier}`);
+}
+
+/* A different champion is NOT sufficient on its own — that is the degenerate
+ * case this exists to catch. */
+function isMateriallyDifferent(artifact, index, baselineIndex) {
+  return differsAtTier(artifact, index, baselineIndex, 'final_four') ||
+         differsAtTier(artifact, index, baselineIndex, 'sweet_16');
+}
+
+/* Up to k brackets: quality first, subject to visible structural diversity.
+ * Returns FEWER than k when the field has no distinguishable bracket left —
+ * one honest bracket beats a manufactured second. */
+function selectDiverse(artifact, objective = 'ev', k = 2, minRetention = DEFAULT_MIN_RETENTION) {
+  if (!OBJECTIVES.includes(objective)) throw new Error(`unknown objective ${objective}`);
+  if (k < 1) throw new Error('k must be at least 1');
+  const C = artifact.candidates;
+  if (!C.length) return [];
+
+  const order = C.map((_, i) => i).sort((a, b) => (C[b][objective] - C[a][objective]) || (a - b));
+  const chosen = [order[0]];
+  const floor = C[order[0]][objective] * minRetention;
+
+  while (chosen.length < k) {
+    let pick = null;
+    for (const tier of DIVERSITY_TIERS) {
+      for (let n = 1; n < order.length; n++) {
+        const i = order[n];
+        if (C[i][objective] < floor) break;   // descending: nothing further qualifies
+        if (chosen.includes(i)) continue;
+        if (chosen.every(c => differsAtTier(artifact, i, c, tier))) { pick = i; break; }
+      }
+      if (pick !== null) break;
+    }
+    if (pick === null) break;
+    chosen.push(pick);
+  }
+  return chosen;
+}
+
+/* The Build flow's selector: one bracket, plus an alternative if one exists. */
+function selectWithAlternative(artifact, objective = 'ev', minRetention = DEFAULT_MIN_RETENTION) {
+  return selectDiverse(artifact, objective, 2, minRetention);
+}
+
 /* User-facing "happens in X of 10 tournaments".
  *
  * Read from the artifact's full-bank fields, NEVER by counting candidates. The
@@ -147,14 +227,74 @@ function whyThisDiffers(artifact, index, baselineIndex) {
   return out;
 }
 
+/* ARTIFACT CONTRACT — mirror of src/product/artifact_contract.py.
+ *
+ * Ownership: the artifact contract owns the schema version, NOT the methodology
+ * spec and NOT this selection code. Schema changes must be visible here rather
+ * than discovered as a rendering bug.
+ *
+ * Strict in both directions. Refusing an older artifact is obvious; refusing a
+ * NEWER one matters just as much, because it may carry fields this code does not
+ * understand or may have redefined one it thinks it does. Rendering it anyway
+ * would be a correctness failure that looks like a success.
+ */
+const EXPECTED_ARTIFACT_SCHEMA = 5;
+
+const REQUIRED_ARTIFACT_FIELDS = [
+  'schema', 'year', 'teams', 'first_round', 'pairwise',
+  'candidates', 'team_round_probabilities', 'constraint_probabilities', 'meta',
+];
+
+function validateArtifact(artifact) {
+  const declared = artifact ? artifact.schema : undefined;
+  if (declared === undefined || declared === null) {
+    throw new Error('artifact declares no schema; it predates the contract');
+  }
+  if (declared !== EXPECTED_ARTIFACT_SCHEMA) {
+    throw new Error(
+      `artifact is schema ${declared}, expected ${EXPECTED_ARTIFACT_SCHEMA}. ` +
+      'Refusing rather than guessing.');
+  }
+  const missing = REQUIRED_ARTIFACT_FIELDS.filter(f => !(f in artifact) || !artifact[f]);
+  if (missing.length) {
+    throw new Error(`artifact is missing required field(s): ${missing.join(', ')}`);
+  }
+  const n = artifact.teams.length;
+  if (artifact.pairwise.length !== n * n) {
+    throw new Error(`pairwise has ${artifact.pairwise.length} entries, expected ${n * n}`);
+  }
+  if (artifact.team_round_probabilities.length !== n) {
+    throw new Error('team_round_probabilities does not match the team table');
+  }
+  // Schema 5: canonical names are required. Rendering a slug is a product
+  // defect, so it fails the contract rather than reaching a user.
+  const nameless = artifact.teams.filter(t => !t.name);
+  if (nameless.length) {
+    throw new Error(`${nameless.length} team(s) have no canonical name`);
+  }
+  return true;
+}
+
+/* Read the canonical P(row beats col) out of the artifact's pairwise table.
+ *
+ * The browser does NOT compute this. Deriving it from ratings would make the
+ * client a second, unversioned implementation of tournament math, and the board
+ * could then disagree with the simulations that produced the bracket. The
+ * artifact is the contract; if a number is needed for rendering, it ships.
+ */
+function pairwiseProb(artifact, i, j) {
+  const n = artifact.teams.length;
+  const p = artifact.pairwise;
+  if (!p) throw new Error('artifact is missing the pairwise table (schema < 3)');
+  return p[i * n + j];
+}
+
 /* Expand a candidate into the shape the existing bracket renderer expects.
  *
  * Reuses the renderer's contract rather than introducing a second bracket
- * representation. Display win_prob is computed browser-side from team ratings,
- * exactly as the existing chalk path does — that is presentation, which the
- * browser owns.
+ * representation.
  */
-function candidateToRounds(artifact, index, mkTeamFn, log5Fn) {
+function candidateToRounds(artifact, index, mkTeamFn) {
   const ROUND_NAMES = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
   const teams = artifact.teams;
   const c = artifact.candidates[index];
@@ -167,10 +307,11 @@ function candidateToRounds(artifact, index, mkTeamFn, log5Fn) {
     const next = [];
     for (let g = 0; g < current.length; g += 2) {
       const i1 = current[g], i2 = current[g + 1];
-      const t1 = mkTeamFn(teams[i1].id, teams[i1].id, teams[i1].seed, 0.5);
-      const t2 = mkTeamFn(teams[i2].id, teams[i2].id, teams[i2].seed, 0.5);
+      // Canonical names come from the artifact (schema 5); never derived here.
+      const t1 = mkTeamFn(teams[i1].id, teams[i1].name, teams[i1].seed);
+      const t2 = mkTeamFn(teams[i2].id, teams[i2].name, teams[i2].seed);
       const winnerIdx = winners.has(i1) ? i1 : i2;
-      const wp = log5Fn(t1.barthag, t2.barthag);
+      const wp = pairwiseProb(artifact, i1, i2);
       games.push({
         round: ROUND_NAMES[r],
         region: teams[i1].region === teams[i2].region ? teams[i1].region : '',
@@ -192,6 +333,9 @@ function candidateToRounds(artifact, index, mkTeamFn, log5Fn) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     selectBrackets, constraintFrequency, candidateSummary, whyThisDiffers,
-    candidateToRounds, preferencePredicates, OBJECTIVES,
+    candidateToRounds, preferencePredicates, pairwiseProb, OBJECTIVES,
+    validateArtifact, EXPECTED_ARTIFACT_SCHEMA,
+    selectWithAlternative, selectDiverse, isMateriallyDifferent,
+    differenceProfile, differsAtTier, SELECTION_VERSION,
   };
 }

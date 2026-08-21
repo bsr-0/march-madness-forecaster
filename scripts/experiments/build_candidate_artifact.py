@@ -216,6 +216,57 @@ def true_team_f4_probabilities(rounds: List, seeds: Dict[str, int]) -> Dict[str,
     return {t: round(v / n, 5) for t, v in sorted(c.items(), key=lambda kv: -kv[1])}
 
 
+def load_team_names(year: int) -> Dict[str, str]:
+    """Canonical display names, straight from the upstream tournament context.
+
+    The artifact previously carried only ids, so the browser reconstructed names
+    by title-casing the slug. That cannot round-trip: `saint_mary_s__ca` became
+    "Saint Mary S Ca", `texas_a_m` became "Texas A M", and `tcu` became "Tcu".
+
+    `team_name` is the authoritative value and is taken verbatim. No alias table
+    and no frontend-side transformation: if the browser needs a value to render
+    correctly, that value belongs in the artifact.
+    """
+    for prefix in (Path("data/raw/historical"), Path("data/raw")):
+        path = prefix / f"tournament_context_{year}.json"
+        if not path.exists():
+            continue
+        with open(path) as f:
+            ctx = json.load(f)
+        entries = (ctx.get("seeds") or {}).get("teams") or ctx.get("teams") or []
+        names = {
+            t["team_id"]: t["team_name"]
+            for t in entries
+            if t.get("team_id") and t.get("team_name")
+        }
+        if names:
+            return names
+    raise RuntimeError(
+        f"no canonical team names found for {year}; the artifact must not ship "
+        "ids for the browser to guess at"
+    )
+
+
+def true_team_round_probabilities(rounds: List, team_ids: List[str]) -> List[List[float]]:
+    """P(team reaches each stage), over the FULL bank. Powers the Explore tab.
+
+    Row per team (aligned to ``teams``), six columns: reaches R32, S16, E8,
+    Final Four, Final, champion. Column 3 is the Final Four probability and
+    column 5 is the title probability.
+
+    Counted over every simulated tournament, NEVER over ``candidates``. The
+    sampler deliberately over-samples unlikely champions to protect diversity, so
+    counting candidate rows would overstate exactly the long shots a user is most
+    likely to misread.
+    """
+    counters = [Counter() for _ in range(6)]
+    for r in rounds:
+        for stage in range(6):
+            counters[stage].update(r[stage])
+    n = len(rounds)
+    return [[round(counters[stage][t] / n, 5) for stage in range(6)] for t in team_ids]
+
+
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
@@ -336,12 +387,8 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     # The artifact is deliberately not a probability sample -- verify the
     # difference is real so the warning below is not decorative.
     preds = _constraint_predicates(seeds)
-    artifact_probs = {
-        k: round(sum(1 for i in sel if f(rounds[i])) / len(sel), 5) for k, f in preds.items()
-    }
-    checks["constraint_prob_bias"] = {
-        k: round(artifact_probs[k] - true_probs[k], 4) for k in true_probs
-    }
+    artifact_probs = {k: round(sum(1 for i in sel if f(rounds[i])) / len(sel), 5) for k, f in preds.items()}
+    checks["constraint_prob_bias"] = {k: round(artifact_probs[k] - true_probs[k], 4) for k in true_probs}
 
     # Compact encoding: team table + per-round winner indices.
     team_ids = sorted(seeds)
@@ -358,16 +405,56 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
             }
         )
 
+    # Canonical per-matchup win probabilities, shipped so the browser never
+    # reconstructs model math from ratings.
+    #
+    # These are the SAME PairwiseProbabilities that drove the simulation, not a
+    # display-only recomputation, so the board cannot disagree with the bank it
+    # came from. Stored as a flat row-major n*n table of P(row beats col) rather
+    # than only the 63 games of each candidate: candidates disagree about who
+    # meets whom, and a per-candidate encoding would be both larger and
+    # redundant. Rounding to 4dp is a rendering tolerance, asserted in
+    # tests/test_artifact_pairwise_contract.py.
+    team_names = load_team_names(year)
+    missing_names = [t for t in team_ids if t not in team_names]
+    if missing_names:
+        raise RuntimeError(
+            f"no canonical name for {missing_names}; refusing to ship an artifact "
+            "the browser would have to guess names from"
+        )
+
+    team_round_probs = true_team_round_probabilities(rounds, team_ids)
+
+    n = len(team_ids)
+    pairwise_flat = [
+        round(float(pw.p(team_ids[i], team_ids[j])), 4) if i != j else 0.5 for i in range(n) for j in range(n)
+    ]
+
     return {
-        "schema": 2,
+        # Schema 3 adds `pairwise`. This is an implementation-contract change --
+        # moving an already-computed value from the browser into the artifact --
+        # and NOT a methodology change: the numbers are identical to what the
+        # frozen 2027.v2 pipeline already produced.
+        # Schema 4 adds `team_round_probabilities` (Explore). Like `pairwise`,
+        # this is an implementation-contract addition: the numbers were already
+        # computed by the frozen pipeline and are merely transported.
+        # Schema 5 adds the canonical `name` on each team. Additive, and an
+        # artifact/UI contract change only: no model, simulation, objective,
+        # preference or selection behaviour moves, and 2027.v2 is untouched.
+        "schema": 5,
         "year": year,
-        "teams": [{"id": t, "seed": seeds[t], "region": regions.get(t, "")} for t in team_ids],
+        "teams": [
+            {"id": t, "name": team_names[t], "seed": seeds[t], "region": regions.get(t, "")}
+            for t in team_ids
+        ],
         # The 64 team indices in bracket order (game g is [2g], [2g+1]). Carried
         # in the artifact so the browser can reconstruct game pairings without
         # reimplementing build_bracket_order -- the artifact is a contract, and
         # anything the client needs to render belongs inside it rather than in a
         # duplicated JS constant that can drift.
         "first_round": [tidx[t] for t in first_round],
+        "pairwise": pairwise_flat,
+        "team_round_probabilities": team_round_probs,
         "candidates": candidates,
         "meta": {
             "n_sims": n_sims,
@@ -426,9 +513,11 @@ def main() -> None:
     print(f"  low-EV/high-P1 kept   {v['low_ev_high_p1_count']}")
     print(f"  EV-vs-P1 rank corr    {v['ev_p1_rank_corr']}")
     bias = v["constraint_prob_bias"]
-    print(f"  artifact-vs-true P(constraint) bias: "
-          f"min {min(bias.values()):+.3f}  max {max(bias.values()):+.3f}  "
-          f"(why frequencies ship separately)")
+    print(
+        f"  artifact-vs-true P(constraint) bias: "
+        f"min {min(bias.values()):+.3f}  max {max(bias.values()):+.3f}  "
+        f"(why frequencies ship separately)"
+    )
     print("  constraint coverage:")
     for k, n in v["constraint_coverage"].items():
         print(f"     {k:22} {n:6,}")
