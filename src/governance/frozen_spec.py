@@ -41,9 +41,27 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-SPEC_VERSION = "2027.v1"
+SPEC_VERSION = "2027.v2"
 FREEZE_DATE = "2026-08-20"
-FROZEN_SPEC_PATH = Path("configs/frozen/prospective_2027.json")
+FROZEN_SPEC_PATH = Path("configs/frozen/prospective_2027_v2.json")
+PROSPECTIVE_DOC = Path("PROSPECTIVE_2027_v2.md")
+
+# v1 is retained verbatim as the original prospective specification. Its file and
+# document are immutable; `test_v1_specification_is_immutable` pins the hash.
+SUPERSEDED = {
+    "version": "2027.v1",
+    "spec_path": "configs/frozen/prospective_2027.json",
+    "doc": "PROSPECTIVE_2027.md",
+    "spec_hash": "557d5fd54a198933b0bf3e5466c9cc874956b07087b650a8822ea6d0fab1dcf6",
+    "commit": "10c8a66223c9b77a22e92aa8ec059379cb20812c",
+    "reason_superseded": (
+        "TRAIN_YEARS extended through 2026. The 2026 season concluded in April 2026, "
+        "so it is ordinary historical data for a 2027 prediction. Decided ex ante on "
+        "2026-08-20, before any 2027 information existed, and NOT on the basis of any "
+        "2026 performance comparison. 2026 remains permanently barred as an evaluation "
+        "season; this concerns training data only."
+    ),
+}
 
 
 def capture_live_spec() -> Dict[str, Any]:
@@ -72,6 +90,7 @@ def capture_live_spec() -> Dict[str, Any]:
     return {
         "spec_version": SPEC_VERSION,
         "freeze_date": FREEZE_DATE,
+        "supersedes": SUPERSEDED,
         "model": {
             "training_cutoff_season": max(TRAIN_YEARS),
             "train_years": sorted(TRAIN_YEARS),
@@ -131,6 +150,7 @@ def capture_live_spec() -> Dict[str, Any]:
         },
         "holdout": {
             "contaminated_seasons": [2026],
+            "contaminated_for_evaluation_only": True,
             "contamination_reason": (
                 "2026 is inside BACKTEST_YEARS, the production strategy was selected on a "
                 "window containing it, and a documented modelling conclusion was drawn from "

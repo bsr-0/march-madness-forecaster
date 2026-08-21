@@ -67,6 +67,13 @@ TRAIN_YEARS = [
     2023,
     2024,
     2025,
+    # 2026 added for prospective spec 2027.v2 (2026-08-20). The 2026 season
+    # concluded in April 2026, so it is ordinary historical data for any 2027
+    # prediction. The walk-forward filter in train_noseed_model
+    # (`y < max_year`) means this changes nothing for any test year <= 2026 --
+    # only the 2027 prediction path sees it. 2026 remains permanently barred as
+    # an EVALUATION season (PROSPECTIVE_2027.md); this concerns training only.
+    2026,
 ]
 
 
