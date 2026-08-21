@@ -3,7 +3,8 @@
     Freeze date:         2026-08-20
     Spec version:        2027.v1
     Configuration hash:  557d5fd54a198933b0bf3e5466c9cc874956b07087b650a8822ea6d0fab1dcf6
-    Freeze commit:       see git tag `holdout-2027-frozen`
+    Freeze commit:       10c8a66223c9b77a22e92aa8ec059379cb20812c
+    Git tag:             holdout-2027-frozen
     Status:              FROZEN
 
 2027 is the first uncontaminated prospective evaluation of the complete
