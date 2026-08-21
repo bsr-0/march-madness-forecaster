@@ -1,0 +1,184 @@
+{
+  "generated_from": "src/product/selection.py (canonical)",
+  "artifact": "docs/data/candidates_2026.json",
+  "artifact_schema": 2,
+  "k": 3,
+  "cases": [
+    {
+      "objective": "ev",
+      "preference": "none",
+      "team_id": null,
+      "expected_indices": [
+        2814,
+        527,
+        323
+      ],
+      "frequency": 1.0
+    },
+    {
+      "objective": "ev",
+      "preference": "f4_at_least_1_two_three",
+      "team_id": null,
+      "expected_indices": [
+        914,
+        839,
+        323
+      ],
+      "frequency": 0.84523
+    },
+    {
+      "objective": "ev",
+      "preference": "f4_at_least_2_two_three",
+      "team_id": null,
+      "expected_indices": [
+        1626,
+        2349,
+        1993
+      ],
+      "frequency": 0.46911
+    },
+    {
+      "objective": "ev",
+      "preference": "f4_mostly_favorites",
+      "team_id": null,
+      "expected_indices": [
+        2814,
+        527,
+        323
+      ],
+      "frequency": 0.19697
+    },
+    {
+      "objective": "ev",
+      "preference": "s16_at_least_1_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        1166,
+        754,
+        841
+      ],
+      "frequency": 0.60475
+    },
+    {
+      "objective": "ev",
+      "preference": "s16_at_least_2_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        2301,
+        787,
+        346
+      ],
+      "frequency": 0.22294
+    },
+    {
+      "objective": "ev",
+      "preference": "s16_no_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        2814,
+        527,
+        323
+      ],
+      "frequency": 0.39525
+    },
+    {
+      "objective": "ev",
+      "preference": "team_reaches_final_four",
+      "team_id": "michigan",
+      "expected_indices": [
+        2814,
+        527,
+        323
+      ],
+      "frequency": 0.48493
+    },
+    {
+      "objective": "p1",
+      "preference": "none",
+      "team_id": null,
+      "expected_indices": [
+        1216,
+        1540,
+        340
+      ],
+      "frequency": 1.0
+    },
+    {
+      "objective": "p1",
+      "preference": "f4_at_least_1_two_three",
+      "team_id": null,
+      "expected_indices": [
+        1216,
+        1540,
+        340
+      ],
+      "frequency": 0.84523
+    },
+    {
+      "objective": "p1",
+      "preference": "f4_at_least_2_two_three",
+      "team_id": null,
+      "expected_indices": [
+        1216,
+        340,
+        292
+      ],
+      "frequency": 0.46911
+    },
+    {
+      "objective": "p1",
+      "preference": "f4_mostly_favorites",
+      "team_id": null,
+      "expected_indices": [
+        1540,
+        1776,
+        2532
+      ],
+      "frequency": 0.19697
+    },
+    {
+      "objective": "p1",
+      "preference": "s16_at_least_1_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        912,
+        2634,
+        134
+      ],
+      "frequency": 0.60475
+    },
+    {
+      "objective": "p1",
+      "preference": "s16_at_least_2_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        1994,
+        696,
+        2046
+      ],
+      "frequency": 0.22294
+    },
+    {
+      "objective": "p1",
+      "preference": "s16_no_double_digit",
+      "team_id": null,
+      "expected_indices": [
+        1216,
+        1540,
+        340
+      ],
+      "frequency": 0.39525
+    },
+    {
+      "objective": "p1",
+      "preference": "team_reaches_final_four",
+      "team_id": "michigan",
+      "expected_indices": [
+        1540,
+        817,
+        2754
+      ],
+      "frequency": 0.48493
+    }
+  ]
+}

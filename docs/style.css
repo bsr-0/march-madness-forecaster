@@ -1429,3 +1429,67 @@ body {
   .bt-section { padding: 20px 16px; }
   .bt-card-value { font-size: 1.5rem; }
 }
+
+/* ── Build My Bracket ─────────────────────────────────────────────────── */
+
+.build-intro { margin: 0 0 1.75rem; }
+.build-lede { font-size: 1.05rem; line-height: 1.55; margin: 0 0 .4rem; }
+.build-sub { font-size: .85rem; opacity: .7; margin: 0; }
+.build-step { margin: 0 0 1.75rem; }
+.optional { font-weight: 400; opacity: .55; text-transform: none; letter-spacing: 0; }
+
+.strategy-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; }
+.strategy-card {
+  display: flex; flex-direction: column; gap: .3rem; text-align: left;
+  padding: 1rem; border-radius: 10px; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03);
+  color: inherit; font: inherit; transition: border-color .15s, background .15s;
+}
+.strategy-card:hover { border-color: rgba(255,255,255,.25); }
+.strategy-card.selected { border-color: #d4a72c; background: rgba(212,167,44,.10); }
+.sc-icon { font-size: 1.4rem; }
+.sc-label { font-weight: 700; font-size: 1rem; }
+.sc-blurb { font-size: .88rem; opacity: .85; }
+.sc-detail { font-size: .78rem; opacity: .6; line-height: 1.4; }
+
+.pref-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+.pref-title { font-weight: 600; font-size: .9rem; margin: 0 0 .5rem; opacity: .9; }
+.pref-opt {
+  display: grid; grid-template-columns: auto 1fr; gap: .5rem .6rem; align-items: baseline;
+  padding: .45rem .6rem; border-radius: 7px; cursor: pointer; margin-bottom: .25rem;
+}
+.pref-opt:hover { background: rgba(255,255,255,.04); }
+.pref-opt.on { background: rgba(212,167,44,.10); }
+.pref-label { font-size: .9rem; }
+.pref-freq { grid-column: 2; font-size: .74rem; opacity: .55; }
+
+.generate-btn {
+  padding: .8rem 1.6rem; border-radius: 8px; border: none; cursor: pointer;
+  background: #d4a72c; color: #1a1a1a; font-weight: 700; font-size: .95rem;
+}
+.generate-btn:hover { filter: brightness(1.08); }
+
+.result-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .9rem; }
+.result-card {
+  padding: 1rem; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03);
+}
+.rc-role { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin: 0 0 .4rem; }
+.rc-champ { font-size: 1.15rem; font-weight: 700; margin: 0 0 .2rem; }
+.rc-seed { opacity: .6; font-weight: 400; font-size: .9rem; }
+.rc-f4 { font-size: .8rem; opacity: .75; margin: 0 0 .7rem; line-height: 1.45; }
+.rc-meter { display: flex; justify-content: space-between; font-size: .8rem; margin: .2rem 0; }
+.rc-dots { letter-spacing: .12em; color: #d4a72c; }
+.rc-dd { font-size: .76rem; opacity: .6; margin: .6rem 0 0; }
+.rc-why { margin: .6rem 0 0; padding-left: 1.1rem; font-size: .78rem; opacity: .8; line-height: 1.5; }
+.rc-view {
+  margin-top: .85rem; width: 100%; padding: .5rem; border-radius: 6px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.20); background: transparent; color: inherit; font: inherit;
+}
+.rc-view:hover { background: rgba(255,255,255,.06); }
+.compare-note { font-size: .76rem; opacity: .55; margin: 1rem 0 0; line-height: 1.5; }
+.empty-note { font-size: .9rem; opacity: .7; }
+
+@media (max-width: 640px) {
+  .strategy-cards, .result-cards, .pref-grid { grid-template-columns: 1fr; }
+}

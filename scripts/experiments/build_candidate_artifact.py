@@ -359,9 +359,15 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         )
 
     return {
-        "schema": 1,
+        "schema": 2,
         "year": year,
         "teams": [{"id": t, "seed": seeds[t], "region": regions.get(t, "")} for t in team_ids],
+        # The 64 team indices in bracket order (game g is [2g], [2g+1]). Carried
+        # in the artifact so the browser can reconstruct game pairings without
+        # reimplementing build_bracket_order -- the artifact is a contract, and
+        # anything the client needs to render belongs inside it rather than in a
+        # duplicated JS constant that can drift.
+        "first_round": [tidx[t] for t in first_round],
         "candidates": candidates,
         "meta": {
             "n_sims": n_sims,
