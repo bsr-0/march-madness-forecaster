@@ -69,5 +69,13 @@ data/kaggle/MMasseyOrdinals.csv
 # (clutch_features_*, shooting_features_*, player_minutes_*) are committed
 # instead, since those are what the pipeline actually consumes.
 data/raw/historical/pbp_*.json
+# Raw boxscore scrape output, same category as pbp_*.json above: 78-101 MB per
+# season, two already exceed GitHub's 100 MB per-file limit, and they are
+# regenerable from scripts/backfill_pbp_history.py. The small derived feature
+# files (player_minutes_*, clutch_features_*, shooting_features_*) ARE tracked.
+data/raw/historical/boxscores_*.json
 data/raw/historical/_narrow_schema_backup/
 data/raw/historical/_pbp_backfill*.log
+
+# Playwright MCP snapshot/console artifacts from local UI testing
+.playwright-mcp/
