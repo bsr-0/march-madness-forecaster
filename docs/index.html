@@ -23,11 +23,44 @@
   <main class="page-main">
 
     <nav class="page-tabs" id="page-tabs">
-      <button class="page-tab-btn active" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
+      <button class="page-tab-btn active" data-tab="build" onclick="setActiveTab('build')">Build My Bracket</button>
+      <button class="page-tab-btn" data-tab="bracket" onclick="setActiveTab('bracket')">Bracket Picker</button>
       <button class="page-tab-btn" data-tab="stats" onclick="setActiveTab('stats')">Team Stats</button>
       <button class="page-tab-btn" data-tab="matchups" onclick="setActiveTab('matchups')">Matchups</button>
       <button class="page-tab-btn" data-tab="backtest" onclick="setActiveTab('backtest')">Model Accuracy</button>
     </nav>
+
+    <div class="tab-panel" id="tab-build">
+
+      <section class="build-intro">
+        <p class="build-lede">
+          We simulate the tournament 150,000 times, then build different brackets
+          depending on what you are optimising for.
+        </p>
+        <p class="build-sub" id="build-context"></p>
+      </section>
+
+      <section class="build-step">
+        <p class="section-label">1 &middot; What are you optimising for?</p>
+        <div class="strategy-cards" id="strategy-cards"></div>
+      </section>
+
+      <section class="build-step">
+        <p class="section-label">2 &middot; Any preferences? <span class="optional">optional</span></p>
+        <div class="pref-grid" id="pref-grid"></div>
+      </section>
+
+      <section class="build-step">
+        <button class="generate-btn" id="generate-btn" onclick="generateBrackets()">Build my brackets</button>
+      </section>
+
+      <section class="build-results" id="build-results" style="display:none">
+        <p class="section-label">Your three options</p>
+        <div class="result-cards" id="result-cards"></div>
+        <div class="compare-wrap" id="compare-wrap"></div>
+      </section>
+
+    </div>
 
     <div class="tab-panel" id="tab-bracket">
 
@@ -273,6 +306,8 @@
     <span>Backtested bracket models for pool competition</span>
   </footer>
 
+  <script src="selection.js"></script>
+  <script src="build.js"></script>
   <script src="app.js?v=2026-08-18a"></script>
 </body>
 </html>

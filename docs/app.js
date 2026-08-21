@@ -49,6 +49,23 @@
 
 const STRATEGIES = [
   {
+    // Synthetic entry so the existing bracket renderer can display a bracket
+    // produced by the Build tab. It has no backtest identity of its own -- the
+    // bracket comes from the frozen candidate artifact, and pick === null means
+    // the renderer reads precomputed_winner_id from each game.
+    key: 'generated',
+    label: 'Your bracket',
+    subtitle: 'Built from your strategy and preferences',
+    description: 'Selected from the candidate artifact for the objective and preferences you chose.',
+    p_first: null,
+    badge: 'Your pick',
+    badge_tone: 'gold',
+    is_top: false,
+    is_model: true,
+    backtest_note: '',
+    pick: null,
+  },
+  {
     key: 'pool',
     label: 'Pool Optimizer',
     subtitle: 'Best backtested model',
@@ -343,6 +360,7 @@ function regionRounds()     { return precomputedRounds(bracketData.stat); }
 // Precomputed strategies read their bracket straight from a JSON file
 // instead of simulating client-side (see STRATEGIES pick === null).
 const PRECOMPUTED_ROUNDS = {
+  generated: () => window.GENERATED_ROUNDS || [],
   pool: poolRounds,
   exhaustive: exhaustiveRounds,
   stat: regionRounds,
@@ -547,8 +565,9 @@ function effectiveStrategyStats(key) {
 // ── Strategy strip ──
 
 function renderStrategyStrip() {
+  // 'generated' is rendered via the Build tab, not the legacy strategy strip.
   const el = document.getElementById('strategy-strip');
-  el.innerHTML = STRATEGIES.map(s => {
+  el.innerHTML = STRATEGIES.filter(s => s.key !== 'generated').map(s => {
     const bc = BADGE_COLORS[s.badge_tone] || BADGE_COLORS.neutral;
     const stats = effectiveStrategyStats(s.key);
     const badgeHTML = stats.badge
