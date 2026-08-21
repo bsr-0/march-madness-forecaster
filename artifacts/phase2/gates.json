@@ -1,0 +1,106 @@
+{
+  "passed": 20,
+  "total": 20,
+  "gates": [
+    {
+      "gate": "live code matches the frozen spec exactly",
+      "pass": true,
+      "detail": "2027.v2"
+    },
+    {
+      "gate": "identical seeds produce a byte-identical payload",
+      "pass": true,
+      "detail": "1aa4fc3ae542f053\u2026"
+    },
+    {
+      "gate": "every candidate is a feasible bracket",
+      "pass": true,
+      "detail": "500 checked"
+    },
+    {
+      "gate": "EV independently recomputes",
+      "pass": true,
+      "detail": "max err 0.00e+00"
+    },
+    {
+      "gate": "P(1st) values are valid probabilities",
+      "pass": true,
+      "detail": "n=2,974"
+    },
+    {
+      "gate": "P(1st) standard error recorded",
+      "pass": true,
+      "detail": "SE ~0.49pp \u2014 differences below this are not rankable"
+    },
+    {
+      "gate": "champion coverage preserved by the sampler",
+      "pass": true,
+      "detail": "47 -> 47"
+    },
+    {
+      "gate": "EV/P(1st) disagreement region survives sampling",
+      "pass": true,
+      "detail": "522 low-EV/high-P(1st) candidates"
+    },
+    {
+      "gate": "bracket diversity preserved",
+      "pass": true,
+      "detail": "Hamming 21.68 -> 21.79"
+    },
+    {
+      "gate": "every preference predicate has coverage",
+      "pass": true,
+      "detail": "min 572"
+    },
+    {
+      "gate": "user-facing frequencies come from the full bank",
+      "pass": true,
+      "detail": "sampling bias -0.009..+0.006"
+    },
+    {
+      "gate": "preference predicates reproduce on the decoded artifact",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "gate": "Python/browser agree on 'ev'",
+      "pass": true,
+      "detail": "[2814, 527, 323]"
+    },
+    {
+      "gate": "Python/browser agree on 'p1'",
+      "pass": true,
+      "detail": "[1216, 1540, 340]"
+    },
+    {
+      "gate": "'ev' returns 3 distinct-champion brackets",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "gate": "'p1' returns 3 distinct-champion brackets",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "gate": "artifact schema complete",
+      "pass": true,
+      "detail": "2,974 candidates"
+    },
+    {
+      "gate": "pool-size assumption disclosed",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "gate": "objectives limited to the two measured",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "gate": "artifact size acceptable for the browser",
+      "pass": true,
+      "detail": "0.64 MB"
+    }
+  ]
+}
