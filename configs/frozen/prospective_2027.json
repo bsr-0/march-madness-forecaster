@@ -1,0 +1,124 @@
+{
+  "candidate_selection": {
+    "common_random_numbers": true,
+    "diversity_algorithm": "hierarchical: distinct champion -> distinct Final Four -> points-weighted distance",
+    "ev_definition": "sum_R pts_R * sum_{t in picked_R} P(t wins R), marginals from the unconditional bank",
+    "ev_strata": 10,
+    "k_returned": 3,
+    "min_per_champion": 8,
+    "objectives": [
+      "ev",
+      "p1"
+    ],
+    "p1_definition": "P(bracket score >= max opponent score) over shared trials",
+    "p1_opponent_model": "ESPN public pick distribution + seed pairwise referee",
+    "p1_pool_size": 30,
+    "p1_trials": 2000,
+    "sampler": "champion quotas (proportional with floor) then EV strata within champion",
+    "scoring_mode": "team_identity (never shape-encoded)",
+    "scoring_system": {
+      "CHAMP": 320,
+      "E8": 80,
+      "F4": 160,
+      "R32": 20,
+      "R64": 10,
+      "S16": 40
+    },
+    "target_candidates": 3000
+  },
+  "freeze_date": "2026-08-20",
+  "holdout": {
+    "contaminated_seasons": [
+      2026
+    ],
+    "contamination_reason": "2026 is inside BACKTEST_YEARS, the production strategy was selected on a window containing it, and a documented modelling conclusion was drawn from its outcome. It is an integration/regression season, not a benchmark.",
+    "outcomes_available_at_freeze": false,
+    "prospective_season": 2027
+  },
+  "model": {
+    "blend_alpha_default": 0.5,
+    "feature_count": 12,
+    "feature_keys": [
+      "adj_defensive_efficiency",
+      "adj_offensive_efficiency",
+      "adj_tempo",
+      "barthag",
+      "defensive_reb_rate",
+      "effective_fg_pct",
+      "free_throw_rate",
+      "offensive_reb_rate",
+      "opp_effective_fg_pct",
+      "opp_free_throw_rate",
+      "opp_turnover_rate",
+      "turnover_rate"
+    ],
+    "noseed_architecture": "logistic + GBM ensemble, 50/50, symmetric augmentation",
+    "train_years": [
+      2008,
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "training_cutoff_season": 2025
+  },
+  "preferences": {
+    "frequencies_source": "full scenario bank, never the candidate artifact",
+    "predicates": [
+      "f4_at_least_1_two_three",
+      "f4_at_least_2_two_three",
+      "f4_mostly_favorites",
+      "s16_at_least_1_double_digit",
+      "s16_at_least_2_double_digit",
+      "s16_no_double_digit",
+      "team_reaches_final_four"
+    ]
+  },
+  "product": {
+    "excluded_from_v1": [
+      "balanced blend",
+      "contrarian ownership penalty",
+      "configurable pool size"
+    ],
+    "p1_disclosure_required": "P(1st) assumes a 30-opponent pool with ESPN public pick behaviour. It is not a universal probability of winning any pool.",
+    "strategies": [
+      {
+        "constraint": null,
+        "name": "Trust the Model",
+        "objective": "ev"
+      },
+      {
+        "constraint": null,
+        "name": "Win My Pool",
+        "objective": "p1"
+      },
+      {
+        "constraint": "user-selected",
+        "name": "Your Preference",
+        "objective": "user-selected"
+      }
+    ]
+  },
+  "spec_hash": "557d5fd54a198933b0bf3e5466c9cc874956b07087b650a8822ea6d0fab1dcf6",
+  "spec_version": "2027.v1",
+  "tournament_engine": {
+    "log5_probe_0.9_vs_0.5": 0.9,
+    "marginals_direction": "pairwise -> simulator -> marginals (never reversed)",
+    "pairwise_construction": "log5 over barthag-equivalent ratings",
+    "propagation": "src.prediction.pairwise.simulate_bracket_outcomes",
+    "scenario_bank_noise_std": 0.0,
+    "scenario_bank_size": 150000
+  }
+}
