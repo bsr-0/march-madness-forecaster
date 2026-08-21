@@ -1493,3 +1493,129 @@ body {
 @media (max-width: 640px) {
   .strategy-cards, .result-cards, .pref-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   EXPLORE  (.xp-*)  and  TRACK RECORD  (.tr-*)
+   Mobile-first: single column by default, widening at 700px.
+   ══════════════════════════════════════════════════════════════════ */
+
+.xp-section, .tr-section { margin: 0 0 2.25rem; }
+.xp-lede { font-size: 1.05rem; font-weight: 700; margin: 0 0 .3rem; }
+.xp-sub  { font-size: .85rem; color: var(--ink-soft); margin: 0 0 1rem; line-height: 1.5; }
+
+/* Headline probability columns */
+.xp-headline { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 700px) { .xp-headline { grid-template-columns: 1fr 1fr; } }
+.xp-col {
+  padding: 1.1rem; border-radius: var(--radius-md);
+  background: var(--panel); border: 1px solid var(--panel-border);
+}
+.xp-col-title {
+  margin: 0 0 .75rem; font-size: .72rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);
+}
+.xp-row {
+  display: grid; grid-template-columns: minmax(7rem, 1fr) 3.5rem 2.6rem;
+  align-items: center; gap: .5rem; padding: .28rem 0; font-size: .88rem;
+}
+.xp-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-seed { color: var(--ink-faint); font-size: .8em; }
+.xp-track { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.xp-bar   { display: block; height: 100%; border-radius: 3px; background: var(--accent-gold); }
+.xp-val   { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.xp-note  { margin: .8rem 0 0; font-size: .78rem; line-height: 1.5; color: var(--ink-soft); }
+
+/* Closest opening games */
+.xp-matchups { display: grid; grid-template-columns: 1fr; gap: .4rem; }
+@media (min-width: 700px) { .xp-matchups { grid-template-columns: 1fr 1fr; } }
+.xp-match {
+  display: flex; justify-content: space-between; align-items: center; gap: .6rem;
+  padding: .6rem .8rem; border-radius: var(--radius-md);
+  background: var(--panel); border: 1px solid var(--panel-border); font-size: .85rem;
+}
+.xp-vs { color: var(--ink-faint); padding: 0 .25rem; }
+.xp-match-p { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Advancement table */
+.xp-search { display: flex; flex-direction: column; gap: .3rem; margin: 0 0 .75rem; max-width: 18rem; }
+.xp-search span { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint); }
+.xp-search input {
+  padding: .5rem .7rem; border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border); background: var(--panel-strong);
+  color: var(--ink); font: inherit; font-size: .9rem;
+}
+.xp-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.xp-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.xp-table th, .xp-table td { padding: .45rem .55rem; text-align: right; white-space: nowrap; }
+.xp-table th {
+  position: sticky; top: 0; background: var(--panel-strong);
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-faint); border-bottom: 1px solid var(--panel-border);
+}
+.xp-th-team, .xp-td-team { text-align: left; }
+/* The team column stays put while the round columns scroll. */
+.xp-th-team, .xp-td-team {
+  position: sticky; left: 0; background: var(--panel-strong);
+}
+.xp-th-sortable { cursor: pointer; }
+.xp-th-sortable.sorted { color: var(--accent); }
+.xp-table tbody tr:nth-child(even) { background: rgba(92, 64, 41, 0.04); }
+.xp-td-p { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.xp-td-p.strong { color: var(--ink); font-weight: 600; }
+
+/* ── Track Record ── */
+.tr-window { margin: 0 0 .9rem; font-size: .8rem; color: var(--ink-faint); }
+.tr-stats { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+@media (min-width: 700px) { .tr-stats { grid-template-columns: 1fr 1fr; } }
+.tr-stat {
+  display: flex; flex-direction: column; gap: .2rem; padding: 1.1rem;
+  border-radius: var(--radius-md); background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+.tr-stat-val { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+.tr-stat-lbl { font-size: .85rem; color: var(--ink-soft); }
+.tr-stat-cmp { font-size: .78rem; color: var(--ink-faint); }
+.tr-plain { font-size: .88rem; line-height: 1.6; color: var(--ink-soft); margin: 1rem 0 0; }
+.tr-section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 .3rem; }
+.tr-sub { font-size: .85rem; color: var(--ink-soft); margin: 0 0 .9rem; }
+.tr-note { font-size: .76rem; color: var(--ink-faint); margin: .7rem 0 0; }
+
+.tr-years { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.2rem, 1fr)); gap: .4rem; }
+.tr-year {
+  display: flex; flex-direction: column; align-items: center; gap: .15rem;
+  padding: .5rem .3rem; border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border); background: var(--panel);
+}
+.tr-year.win  { border-color: rgba(47, 122, 99, 0.45); }
+.tr-year.loss { border-color: var(--panel-border); }
+.tr-year-y { font-size: .72rem; color: var(--ink-faint); }
+.tr-year-a { font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tr-year.win .tr-year-a { color: var(--accent-green); }
+
+.tr-method { margin: 0; padding-left: 1.1rem; }
+.tr-method li { font-size: .88rem; line-height: 1.65; color: var(--ink-soft); margin: 0 0 .3rem; }
+
+/* The replay block is visually set apart on purpose: it must never read as
+   part of the record above it. */
+.tr-replay {
+  padding: 1.2rem; border-radius: var(--radius-md);
+  background: rgba(200, 145, 37, 0.08);
+  border: 1px dashed rgba(200, 145, 37, 0.55);
+}
+.tr-replay-tag {
+  margin: 0 0 .5rem; font-size: .68rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--accent-deep);
+}
+.tr-replay-fig { font-size: .85rem; line-height: 1.6; color: var(--ink-soft); margin: .9rem 0 0; }
+.tr-replay-warn { display: block; margin-top: .3rem; font-weight: 600; color: var(--accent-deep); }
+
+/* Bracket detail header */
+.detail-head { display: flex; flex-direction: column; gap: .5rem; margin: 0 0 1.5rem; }
+.detail-back {
+  align-self: flex-start; padding: .45rem .8rem; border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border); background: var(--panel);
+  color: var(--ink); font: inherit; font-size: .82rem; cursor: pointer;
+}
+.detail-back:hover { border-color: var(--accent); color: var(--accent); }
+.detail-title { margin: 0; font-size: 1.15rem; font-weight: 700; }
