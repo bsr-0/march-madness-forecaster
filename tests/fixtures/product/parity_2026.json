@@ -1,8 +1,9 @@
 {
   "generated_from": "src/product/selection.py (canonical)",
   "artifact": "docs/data/candidates_2026.json",
-  "artifact_schema": 2,
+  "artifact_schema": 5,
   "k": 3,
+  "selection_version": "product.v3",
   "cases": [
     {
       "objective": "ev",
@@ -179,6 +180,55 @@
         2754
       ],
       "frequency": 0.48493
+    }
+  ],
+  "diverse_cases": [
+    {
+      "objective": "ev",
+      "k": 1,
+      "expected_indices": [
+        2814
+      ]
+    },
+    {
+      "objective": "ev",
+      "k": 2,
+      "expected_indices": [
+        2814,
+        914
+      ]
+    },
+    {
+      "objective": "ev",
+      "k": 3,
+      "expected_indices": [
+        2814,
+        914,
+        2785
+      ]
+    },
+    {
+      "objective": "p1",
+      "k": 1,
+      "expected_indices": [
+        1216
+      ]
+    },
+    {
+      "objective": "p1",
+      "k": 2,
+      "expected_indices": [
+        1216,
+        1540
+      ]
+    },
+    {
+      "objective": "p1",
+      "k": 3,
+      "expected_indices": [
+        1216,
+        1540
+      ]
     }
   ]
 }

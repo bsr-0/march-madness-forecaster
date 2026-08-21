@@ -27,6 +27,8 @@ from src.product.selection import (
     candidate_summary,
     constraint_frequency,
     select,
+    select_diverse,
+    select_with_alternative,
     why_this_differs,
 )
 
@@ -136,6 +138,56 @@ def test_javascript_mirror_matches_python(artifact, fixture):
     assert not mismatches, (
         "docs/selection.js has diverged from src/product/selection.py. Python is "
         "canonical — fix the mirror, do not regenerate the fixture to match JS.\n" + "\n".join(mismatches)
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_javascript_mirrors_select_diverse(artifact, fixture):
+    """The Build flow's actual selector must agree across both implementations.
+
+    ``select`` is exercised above via the fixture; this covers the material-
+    difference gate, which is what the product calls and which decides whether
+    the user sees one bracket or two.
+    """
+    runner = """
+    const sel = require(process.argv[2]);
+    const art = JSON.parse(require('fs').readFileSync(process.argv[3], 'utf8'));
+    const fix = JSON.parse(require('fs').readFileSync(process.argv[4], 'utf8'));
+    console.log(JSON.stringify(fix.diverse_cases.map(
+      c => sel.selectDiverse(art, c.objective, c.k))));
+    """
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
+        f.write(runner)
+        script = f.name
+
+    proc = subprocess.run(
+        ["node", script, str(JS), str(ARTIFACT), str(FIXTURE)],
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert proc.returncode == 0, f"node failed: {proc.stderr[:400]}"
+    js_out = json.loads(proc.stdout)
+
+    cases = fixture["diverse_cases"]
+    assert len(js_out) == len(cases)
+    for js, case in zip(js_out, cases):
+        py = select_diverse(artifact, case["objective"], k=case["k"])
+        assert py == case["expected_indices"], (
+            f"canonical Python no longer reproduces the fixture for "
+            f"{case['objective']} k={case['k']}; regenerate the fixture deliberately."
+        )
+        assert js == py, (
+            f"selectDiverse diverges for {case['objective']} k={case['k']}: "
+            f"python={py} js={js}. Python is canonical — fix the mirror."
+        )
+
+    # p1 k=3 returns two brackets on this artifact. If the mirror ever pads a
+    # short result to k, this is what catches it.
+    short = [c for c in cases if len(c["expected_indices"]) < c["k"]]
+    assert short, (
+        "no fixture case returns fewer than k; the mirror's short-result "
+        "behaviour is no longer covered"
     )
 
 
