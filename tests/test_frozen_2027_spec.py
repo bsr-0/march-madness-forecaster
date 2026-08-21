@@ -22,7 +22,9 @@ import pytest
 from src.governance.frozen_spec import (
     FREEZE_DATE,
     FROZEN_SPEC_PATH,
+    PROSPECTIVE_DOC,
     SPEC_VERSION,
+    SUPERSEDED,
     canonical_hash,
     capture_live_spec,
     diff_against_frozen,
@@ -66,8 +68,8 @@ def test_live_system_has_not_drifted_from_the_freeze():
 
 
 def test_prospective_document_records_the_freeze():
-    """PROSPECTIVE_2027.md must carry the same version, date and hash."""
-    doc = (REPO / "PROSPECTIVE_2027.md").read_text()
+    """The operative prospective doc must carry this version, date and hash."""
+    doc = (REPO / PROSPECTIVE_DOC).read_text()
     frozen = load_frozen_spec(REPO / FROZEN_SPEC_PATH)
     for token in (SPEC_VERSION, FREEZE_DATE, frozen["spec_hash"]):
         assert token in doc, f"PROSPECTIVE_2027.md does not record {token!r}"
@@ -119,3 +121,62 @@ def test_spec_is_valid_json_and_sorted():
     assert raw == json.dumps(parsed, indent=2, sort_keys=True) + "\n" or raw == json.dumps(
         parsed, indent=2, sort_keys=True
     )
+
+
+def test_v1_specification_is_immutable():
+    """The superseded v1 record must never change.
+
+    v1 is the original prospective specification. Its value is entirely in being
+    an untouched record of what was frozen on 2026-08-20 before 2027 existed; a
+    v1 that can be edited afterwards is worth nothing. Both the spec file and its
+    document are pinned here.
+    """
+    v1_path = REPO / SUPERSEDED["spec_path"]
+    assert v1_path.exists(), "the v1 specification file has been deleted"
+    v1 = json.loads(v1_path.read_text())
+    body = {k: v for k, v in v1.items() if k != "spec_hash"}
+    assert canonical_hash(body) == SUPERSEDED["spec_hash"], (
+        "configs/frozen/prospective_2027.json has been modified. v1 is an immutable "
+        "historical record -- create a new version instead of editing it."
+    )
+    assert v1["spec_version"] == SUPERSEDED["version"]
+    assert (REPO / SUPERSEDED["doc"]).exists(), "PROSPECTIVE_2027.md has been deleted"
+
+
+def test_v2_records_why_it_supersedes_v1():
+    """A version bump must carry its justification, not just a new number."""
+    spec = capture_live_spec()
+    sup = spec["supersedes"]
+    assert sup["version"] == "2027.v1"
+    reason = sup["reason_superseded"].lower()
+    assert "train_years" in reason and "2026" in reason
+    assert "ex ante" in reason, "the ex-ante ordering must be recorded"
+    assert "not on the basis of any 2026 performance" in reason.replace("  ", " ")
+
+
+def test_training_extension_does_not_touch_historical_walk_forward():
+    """Adding 2026 must alter ONLY prediction years after 2026.
+
+    train_noseed_model filters with `y < max_year`, so every test year at or
+    before 2026 trains on an identical set. This is what makes the v2 change
+    surgical rather than a re-baselining of the whole project.
+    """
+    from src.prediction.noseed_model import TRAIN_YEARS
+
+    v2 = list(TRAIN_YEARS)
+    v1 = [y for y in v2 if y != 2026]
+    assert 2026 in v2, "v2 must include 2026 in training"
+    for test_year in range(2011, 2027):
+        assert [y for y in v1 if y < test_year] == [y for y in v2 if y < test_year], (
+            f"training set for test year {test_year} changed; the extension is not surgical"
+        )
+    gained = set(y for y in v2 if y < 2027) - set(y for y in v1 if y < 2027)
+    assert gained == {2026}
+
+
+def test_2026_still_barred_as_an_evaluation_season():
+    """Training on 2026 must not quietly reclassify it as evaluable."""
+    spec = capture_live_spec()
+    assert 2026 in spec["holdout"]["contaminated_seasons"]
+    assert spec["holdout"]["contaminated_for_evaluation_only"] is True
+    assert spec["model"]["training_cutoff_season"] == 2026
