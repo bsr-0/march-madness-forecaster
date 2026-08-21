@@ -1,0 +1,26 @@
+{
+  "artifact_file_sha256": "725cd68ead5d27f7a091324a34d35e27462d4c9aa49e9dbf8976cdf42608b391",
+  "artifact_payload_sha256": "1aa4fc3ae542f05388902c93dd3b0d60df1c77b2b0127b4a89b3ea186cc814f8",
+  "artifact_size_bytes": 671288,
+  "evaluation_note": "No 2026 outcome metric was computed. 2026 is an integration fixture; its predictive performance must not be used as evidence of out-of-sample skill.",
+  "evaluation_performed": false,
+  "fixture_season": 2026,
+  "generated_at": "2026-08-21T03:49:50.092753+00:00",
+  "generation_parameters": {
+    "bank_sims": 150000,
+    "candidates_actual": 2974,
+    "candidates_target": 3000,
+    "p1_pool_size": 30,
+    "p1_trials": 2000
+  },
+  "input_hashes": {
+    "espn_picks": "380f68dc4486167387f9b13e4e3037f513212f2fee13ffd3a3c246f144827385",
+    "torvik": "ee923cb238faf94452ba094c6f68ab19cd3d0cfc9a03df50ac33abf41373180e",
+    "tournament_context": "f318eb63a500edff1bd71da200415200b89a52367f57c0f841b79d7d3852efd1"
+  },
+  "purpose": "Phase 2 production-scale validation. Integration fixture, NOT a 2027 artifact.",
+  "random_seed": 20260820,
+  "source_commit": "66b809322525fe3edfe5f3f4e8d2bb7cbc922d82",
+  "spec_hash": "8ef6c966bb0070fdecca70938b67d445f1bf5ae3625b5edce697e2808e6adea6",
+  "spec_version": "2027.v2"
+}
