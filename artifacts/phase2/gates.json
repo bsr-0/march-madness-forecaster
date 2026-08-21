@@ -10,7 +10,7 @@
     {
       "gate": "identical seeds produce a byte-identical payload",
       "pass": true,
-      "detail": "1aa4fc3ae542f053\u2026"
+      "detail": "258a70f747947549\u2026"
     },
     {
       "gate": "every candidate is a feasible bracket",
@@ -100,7 +100,7 @@
     {
       "gate": "artifact size acceptable for the browser",
       "pass": true,
-      "detail": "0.64 MB"
+      "detail": "0.67 MB"
     }
   ]
 }
