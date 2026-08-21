@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from src.product.selection import select, constraint_frequency
+from src.product.selection import select, select_diverse, constraint_frequency, SELECTION_VERSION
 
 ART = Path("docs/data/candidates_2026.json")
 OUT = Path("tests/fixtures/product/parity_2026.json")
@@ -42,17 +42,32 @@ def main() -> None:
             "frequency": constraint_frequency(art, "team_reaches_final_four", top_team),
         })
 
+    # product.v2 selector cases. This is what the Build flow actually calls, so
+    # it needs the same drift protection as the frozen preference predicates.
+    # k=3 is included because p1 legitimately returns fewer than k on this
+    # artifact -- the mirror must reproduce the short result, not pad it.
+    diverse = [
+        {"objective": obj, "k": k, "expected_indices": select_diverse(art, obj, k=k)}
+        for obj in ("ev", "p1")
+        for k in (1, 2, 3)
+    ]
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({
         "generated_from": "src/product/selection.py (canonical)",
         "artifact": str(ART),
         "artifact_schema": art["schema"],
         "k": 3,
+        "selection_version": SELECTION_VERSION,
         "cases": cases,
+        "diverse_cases": diverse,
     }, indent=2) + "\n")
     print(f"wrote {OUT} — {len(cases)} cases")
     for c in cases[:4]:
         print(f"  {c['objective']:3} {c['preference']:28} -> {c['expected_indices']}")
+    print(f"selection {SELECTION_VERSION} — {len(diverse)} diverse cases")
+    for c in diverse:
+        print(f"  {c['objective']:3} k={c['k']} -> {c['expected_indices']}")
 
 
 if __name__ == "__main__":

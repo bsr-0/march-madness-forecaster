@@ -43,8 +43,46 @@ from typing import Any, Dict
 
 SPEC_VERSION = "2027.v2"
 FREEZE_DATE = "2026-08-20"
-FROZEN_SPEC_PATH = Path("configs/frozen/prospective_2027_v2.json")
 PROSPECTIVE_DOC = Path("PROSPECTIVE_2027_v2.md")
+
+# The methodology spec the drift gate checks.
+#
+# SCOPE CORRECTION, 2026-08-21. The original file below carried three
+# selection-owned fields -- candidate_selection.diversity_algorithm,
+# candidate_selection.k_returned and product.strategies -- as hardcoded literals.
+# capture_live_spec() transcribed the same literals, so the gate compared a
+# constant to itself and reported "no drift" while all three had stopped
+# describing the product. A gate that cannot fail is not a gate.
+#
+# Those fields moved to src/governance/product_spec.py (product.v3), where they
+# are derived from the live implementation. THE METHODOLOGY DID NOT CHANGE: no
+# model, simulation, objective, scoring rule or P(1st) definition moved. The hash
+# differs only because the specification boundary was corrected, and
+# test_methodology_values_are_unchanged_by_the_boundary_correction proves that
+# field-by-field against the original.
+FROZEN_SPEC_PATH = Path("configs/frozen/prospective_2027_v2_scoped.json")
+
+# Kept byte-identical as the original prospective record. Never rewritten.
+ORIGINAL_V2_SPEC_PATH = Path("configs/frozen/prospective_2027_v2.json")
+
+SCOPE_CORRECTION = {
+    "date": "2026-08-21",
+    "supersedes_scope_of": str(ORIGINAL_V2_SPEC_PATH),
+    "moved_to": "configs/frozen/product_v3.json",
+    "fields_moved": [
+        "candidate_selection.diversity_algorithm",
+        "candidate_selection.k_returned",
+        "product.strategies",
+    ],
+    "methodology_unchanged": True,
+    "reason": (
+        "The moved fields describe how candidates become the displayed brackets, not "
+        "how candidates were produced. They were hardcoded literals on both sides of "
+        "the comparison, so the drift gate could not detect a change in them. The "
+        "2027.v2 methodology itself is untouched; the hash changed only because the "
+        "specification boundary was corrected."
+    ),
+}
 
 # v1 is retained verbatim as the original prospective specification. Its file and
 # document are immutable; `test_v1_specification_is_immutable` pins the hash.
@@ -91,6 +129,7 @@ def capture_live_spec() -> Dict[str, Any]:
         "spec_version": SPEC_VERSION,
         "freeze_date": FREEZE_DATE,
         "supersedes": SUPERSEDED,
+        "scope_correction": SCOPE_CORRECTION,
         "model": {
             "training_cutoff_season": max(TRAIN_YEARS),
             "train_years": sorted(TRAIN_YEARS),
@@ -119,8 +158,6 @@ def capture_live_spec() -> Dict[str, Any]:
             "objectives": ["ev", "p1"],
             "ev_definition": "sum_R pts_R * sum_{t in picked_R} P(t wins R), marginals from the unconditional bank",
             "p1_definition": "P(bracket score >= max opponent score) over shared trials",
-            "diversity_algorithm": "hierarchical: distinct champion -> distinct Final Four -> points-weighted distance",
-            "k_returned": 3,
             "scoring_system": dict(ESPN_SCORING),
             "scoring_mode": "team_identity (never shape-encoded)",
         },
@@ -136,12 +173,10 @@ def capture_live_spec() -> Dict[str, Any]:
             ],
             "frequencies_source": "full scenario bank, never the candidate artifact",
         },
+        # Selection-owned fields (diversity_algorithm, k_returned, strategies)
+        # are NOT here; see src/governance/product_spec.py. What remains are
+        # constraints the methodology genuinely owns.
         "product": {
-            "strategies": [
-                {"name": "Trust the Model", "objective": "ev", "constraint": None},
-                {"name": "Win My Pool", "objective": "p1", "constraint": None},
-                {"name": "Your Preference", "objective": "user-selected", "constraint": "user-selected"},
-            ],
             "excluded_from_v1": ["balanced blend", "contrarian ownership penalty", "configurable pool size"],
             "p1_disclosure_required": (
                 "P(1st) assumes a 30-opponent pool with ESPN public pick behaviour. "

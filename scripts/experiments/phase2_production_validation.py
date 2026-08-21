@@ -51,6 +51,7 @@ from scripts.experiments.build_candidate_artifact import (  # noqa: E402
 )
 from scripts.experiments.conditional_bracket_engine import _REACHES  # noqa: E402
 from scripts.experiments.integration_test_2026 import _select_node, _select_python  # noqa: E402
+from src.product.artifact_contract import contract_record, validate_artifact
 from src.governance.frozen_spec import (  # noqa: E402
     FROZEN_SPEC_PATH,
     SPEC_VERSION,
@@ -86,23 +87,15 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def deterministic_payload(art: Dict[str, Any]) -> Dict[str, Any]:
-    """The reproducible content, with non-deterministic fields removed.
-
-    ``generated_at`` and the validation block's sampled diagnostics are excluded:
-    hashing a timestamp would make every build unique and prove nothing about
-    reproducibility.
-    """
-    payload = {k: v for k, v in art.items() if k != "validation"}
-    meta = dict(payload.get("meta", {}))
-    meta.pop("generated_at", None)
-    payload["meta"] = meta
-    return payload
-
-
-def payload_hash(art: Dict[str, Any]) -> str:
-    blob = json.dumps(deterministic_payload(art), sort_keys=True, separators=(",", ":")).encode()
-    return hashlib.sha256(blob).hexdigest()
+# Determinism is defined ONCE, in the artifact contract. This module used to
+# carry its own slightly different copy (it kept `provenance`, which records
+# file paths and cutoff dates), so a manifest hash and a contract hash could
+# disagree about whether two builds were identical. Two definitions of "the same
+# artifact" is the same defect pattern as two definitions of a spec field.
+from src.product.artifact_contract import (  # noqa: E402
+    deterministic_payload,  # noqa: F401  (re-exported for callers)
+    payload_hash,
+)
 
 
 def input_hashes(year: int) -> Dict[str, str]:
@@ -241,7 +234,11 @@ def main() -> int:
 
     gate("artifact size acceptable for the browser", size < 3_000_000, f"{size / 2**20:.2f} MB")
 
+    # The schema is part of the record, not an implicit assumption.
+    validate_artifact(art, context="phase2 production artifact")
+
     manifest = {
+        "artifact_contract": contract_record(art),
         "purpose": "Phase 2 production-scale validation. Integration fixture, NOT a 2027 artifact.",
         "spec_version": SPEC_VERSION,
         "spec_hash": _spec["spec_hash"],

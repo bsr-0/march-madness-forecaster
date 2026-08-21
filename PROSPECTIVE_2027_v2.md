@@ -2,9 +2,10 @@
 
     Freeze date:         2026-08-20
     Spec version:        2027.v2
-    Configuration hash:  8ef6c966bb0070fdecca70938b67d445f1bf5ae3625b5edce697e2808e6adea6
+    Configuration hash:  c7d1c67663601bd4b28758ca368d3de70a18daaa15d60d18b74fa500d3109018
     Supersedes:          2027.v1 (hash 557d5fd5…, commit 10c8a662)
     Status:              FROZEN
+    Scope corrected:     2026-08-21 (methodology unchanged — see below)
 
 This is the operative prospective specification for the 2027 evaluation.
 `PROSPECTIVE_2027.md` and `configs/frozen/prospective_2027.json` are retained
@@ -12,6 +13,50 @@ This is the operative prospective specification for the 2027 evaluation.
 
 As with v1, this document is contractual. Do not edit its substance after the
 freeze. If the system changes again, create v3 and record that v2 is superseded.
+
+---
+
+## Scope correction, 2026-08-21 — the methodology did NOT change
+
+**The 2027.v2 methodology is unchanged.** No model, simulation, objective,
+scoring rule or P(1st) definition moved. Three fields that were never
+methodology were removed from this specification and reclassified under
+`product.v3`:
+
+    candidate_selection.diversity_algorithm
+    candidate_selection.k_returned
+    product.strategies
+
+They describe how the already-produced candidate set is turned into the brackets
+on screen — not how the candidates were produced. Changing them cannot move a
+single probability, expected score or P(1st).
+
+**Why the correction was necessary.** All three were hardcoded literals in
+`capture_live_spec()`, identical to the literals in the frozen file. The drift
+gate therefore compared a constant to itself and could never fail on them. It
+reported "no drift" while all three had stopped describing the product: selection
+had moved to tiered diversity, the Build flow returned k=2, and "Your Preference"
+was no longer exposed. An integrity control that cannot fail is worse than none.
+
+**Why the hash changed.** Only because those three fields left the specification
+body. `tests/test_spec_boundary.py::test_methodology_values_are_unchanged_by_the_boundary_correction`
+proves field-by-field that every surviving methodology value is identical to the
+original file's. The prospective claim for 2027.v2 is therefore intact and the
+version is deliberately NOT bumped.
+
+**Where each record now lives.**
+
+    configs/frozen/prospective_2027_v2.json         original, byte-identical, never rewritten
+                                                    (sha256 9143f9ee…, pinned by test)
+    configs/frozen/prospective_2027_v2_scoped.json  methodology-only; what the drift gate checks
+                                                    (hash c7d1c67663601bd4…)
+    configs/frozen/product_v3.json                  selection-owned fields, derived from live code
+                                                    (hash d7b3537a15231c2b…)
+
+The product spec is introspected rather than transcribed — including reading the
+shipped `docs/build.js` for k and the strategy list — and
+`tests/test_spec_boundary.py` mutation-tests every field to prove the hash
+actually moves when the implementation does.
 
 ---
 
