@@ -1,0 +1,167 @@
+{
+  "year": 2026,
+  "passed": 32,
+  "total": 32,
+  "checks": [
+    {
+      "check": "system matches the 2027.v1 freeze",
+      "pass": true,
+      "detail": "2027.v1"
+    },
+    {
+      "check": "pre-tournament gate accepts 2026 inputs",
+      "pass": true,
+      "detail": "cutoff 2026-03-16 < tip 2026-03-17"
+    },
+    {
+      "check": "serving payload carries all 12 features",
+      "pass": true,
+      "detail": "worst coverage 100%"
+    },
+    {
+      "check": "validate_stats_payload accepts the serving payload",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "artifact produced candidates",
+      "pass": true,
+      "detail": "1,479"
+    },
+    {
+      "check": "every candidate path-consistent",
+      "pass": true,
+      "detail": "500 checked"
+    },
+    {
+      "check": "EV recomputes exactly",
+      "pass": true,
+      "detail": "max err 0.00e+00"
+    },
+    {
+      "check": "champion diversity preserved",
+      "pass": true,
+      "detail": "45 -> 45"
+    },
+    {
+      "check": "bracket diversity preserved",
+      "pass": true,
+      "detail": "Hamming 21.7 -> 21.93"
+    },
+    {
+      "check": "objective-disagreement region retained",
+      "pass": true,
+      "detail": "210 low-EV/high-P1 candidates"
+    },
+    {
+      "check": "P(1st) computed for every candidate",
+      "pass": true,
+      "detail": "all in [0,1]"
+    },
+    {
+      "check": "preference coverage non-thin",
+      "pass": true,
+      "detail": "min 259"
+    },
+    {
+      "check": "predicates reproduce on the decoded artifact",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "frequencies sourced from full bank, not artifact",
+      "pass": true,
+      "detail": "bias recorded: -0.023..+0.023"
+    },
+    {
+      "check": "top-level key 'schema'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'year'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'teams'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'candidates'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'meta'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'provenance'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "top-level key 'validation'",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "teams carry id/seed/region",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "candidates carry w/ev/p1/dd16",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "pool-size assumption disclosed",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "objectives limited to the two measured",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "'ev' returns 3 brackets",
+      "pass": true,
+      "detail": "champions 3"
+    },
+    {
+      "check": "'ev' champions are distinct",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "'p1' returns 3 brackets",
+      "pass": true,
+      "detail": "champions 3"
+    },
+    {
+      "check": "'p1' champions are distinct",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Python/browser agree on 'ev' selection",
+      "pass": true,
+      "detail": "py=[165, 954, 24] js=[165, 954, 24]"
+    },
+    {
+      "check": "Python/browser agree on 'p1' selection",
+      "pass": true,
+      "detail": "py=[1251, 1068, 1106] js=[1251, 1068, 1106]"
+    },
+    {
+      "check": "artifact size acceptable for the browser",
+      "pass": true,
+      "detail": "0.32 MB"
+    }
+  ]
+}
