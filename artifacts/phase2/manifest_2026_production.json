@@ -1,11 +1,39 @@
 {
-  "artifact_file_sha256": "725cd68ead5d27f7a091324a34d35e27462d4c9aa49e9dbf8976cdf42608b391",
-  "artifact_payload_sha256": "1aa4fc3ae542f05388902c93dd3b0d60df1c77b2b0127b4a89b3ea186cc814f8",
-  "artifact_size_bytes": 671288,
+  "artifact_contract": {
+    "artifact_schema": 5,
+    "compatibility": "exact match only; older and newer are both refused",
+    "expected_artifact_schema": 5,
+    "payload_excludes": [
+      "validation",
+      "provenance",
+      "meta.generated_at"
+    ],
+    "payload_sha256": "258a70f7479475490c645f84f9a4f3b6dd8c8e59ade18bb3b749dc996956e202",
+    "required_fields": [
+      "candidates",
+      "constraint_probabilities",
+      "first_round",
+      "meta",
+      "pairwise",
+      "schema",
+      "team_round_probabilities",
+      "teams",
+      "year"
+    ],
+    "schema_history": {
+      "2": "candidates + teams + first_round",
+      "3": "added `pairwise`; browser-side log5 removed",
+      "4": "added `team_round_probabilities`; powers Explore",
+      "5": "added canonical `name` on each team; the browser stopped guessing names from slugs"
+    }
+  },
+  "artifact_file_sha256": "012308380e5a5208a4584d3fefd438ab21f27a8a8b54ef8e9fc8049eb03fdc73",
+  "artifact_payload_sha256": "258a70f7479475490c645f84f9a4f3b6dd8c8e59ade18bb3b749dc996956e202",
+  "artifact_size_bytes": 707567,
   "evaluation_note": "No 2026 outcome metric was computed. 2026 is an integration fixture; its predictive performance must not be used as evidence of out-of-sample skill.",
   "evaluation_performed": false,
   "fixture_season": 2026,
-  "generated_at": "2026-08-21T03:49:50.092753+00:00",
+  "generated_at": "2026-08-21T14:59:22.861430+00:00",
   "generation_parameters": {
     "bank_sims": 150000,
     "candidates_actual": 2974,
@@ -20,7 +48,7 @@
   },
   "purpose": "Phase 2 production-scale validation. Integration fixture, NOT a 2027 artifact.",
   "random_seed": 20260820,
-  "source_commit": "66b809322525fe3edfe5f3f4e8d2bb7cbc922d82",
-  "spec_hash": "8ef6c966bb0070fdecca70938b67d445f1bf5ae3625b5edce697e2808e6adea6",
+  "source_commit": "3486b295c241cfbf6bf1fb9dbf57cdd78fca3720",
+  "spec_hash": "c7d1c67663601bd4b28758ca368d3de70a18daaa15d60d18b74fa500d3109018",
   "spec_version": "2027.v2"
 }
