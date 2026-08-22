@@ -1,16 +1,20 @@
-/* Bracket Lab — minimal, near-monochrome. One accent, used sparingly, so the
-   only strong colour on the page marks the picked team. */
+/* Bracket Lab — dark, minimal, near-monochrome. Colour is rationed: the only
+   saturated things on the page are a picked team, an upset, and a negative
+   coefficient. Everything else is greyscale so those three read instantly. */
 
 :root {
-  --bg:      #fbfbfa;
-  --panel:   #ffffff;
-  --ink:     #16181d;
-  --ink-2:   #5b6270;
-  --ink-3:   #9aa1ad;
-  --line:    #e6e7ea;
-  --line-2:  #d3d6dc;
-  --accent:  #1c1f26;
-  --up:      #b4531f;
+  color-scheme: dark;
+  --bg:      #0e1013;
+  --panel:   #16191e;
+  --panel-2: #1c2027;
+  --ink:     #e8eaed;
+  --ink-2:   #9ba3ae;
+  --ink-3:   #667080;
+  --line:    #24282f;
+  --line-2:  #333944;
+  --accent:  #6ea8fe;   /* picked team, positive coefficient */
+  --up:      #e0894a;   /* upset, negative coefficient */
+  --good:    #5fb98a;
   --r:       8px;
 }
 
@@ -32,7 +36,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; padding: 14px 24px;
-  background: rgba(251, 251, 250, 0.86);
+  background: rgba(14, 16, 19, 0.82);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--line);
 }
@@ -45,14 +49,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   color: var(--ink-3); transition: color .12s, background .12s;
 }
 .yr:hover { color: var(--ink); }
-.yr.on { color: var(--ink); background: #eceef1; }
+.yr.on { color: var(--ink); background: var(--panel-2); }
 
-.modes { display: flex; padding: 3px; gap: 2px; background: #eceef1; border-radius: 8px; }
+.modes { display: flex; padding: 3px; gap: 2px; background: var(--panel-2); border-radius: 8px; }
 .mode {
   padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
   color: var(--ink-2); white-space: nowrap;
 }
-.mode.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.mode.on { background: var(--line-2); color: var(--ink); }
 
 /* ---------- layout ---------- */
 
@@ -66,9 +70,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .tag {
   padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600;
   letter-spacing: .04em; text-transform: uppercase;
-  background: #e8ece8; color: #2f5d3f; white-space: nowrap;
+  background: rgba(95, 185, 138, .14); color: var(--good); white-space: nowrap;
 }
-.tag.alt { background: #eceef1; color: var(--ink-2); }
+.tag.alt { background: var(--panel-2); color: var(--ink-2); }
 
 /* ---------- weights ---------- */
 
@@ -86,7 +90,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .ghost {
   font-size: 12px; color: var(--ink-3); padding: 3px 8px; border-radius: 5px;
 }
-.ghost:hover { color: var(--ink); background: #f1f2f4; }
+.ghost:hover { color: var(--ink); background: var(--panel-2); }
 
 .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px 26px; }
 .g-name {
@@ -139,8 +143,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: 7px 9px; background: var(--panel); text-align: left;
   font-size: 13px; color: var(--ink-3); transition: background .1s, color .1s;
 }
-.side:hover { background: #f5f6f7; }
-.side.win { color: var(--ink); font-weight: 600; }
+.side:hover { background: var(--panel-2); }
+.side.win { color: var(--accent); font-weight: 600; }
 .side.win.upset { color: var(--up); }
 .seed { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .side.win .seed { color: inherit; }
@@ -162,7 +166,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 40;
   width: min(420px, 100%); overflow-y: auto;
   background: var(--panel); border-left: 1px solid var(--line);
-  box-shadow: -8px 0 32px rgba(0,0,0,.06);
+  box-shadow: -8px 0 32px rgba(0,0,0,.4);
 }
 .drawer-head {
   position: sticky; top: 0; display: flex; align-items: flex-start;
@@ -187,16 +191,17 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%;
   background: var(--ink-3); transform: translate(-50%, -50%);
 }
+.side.win .sc { color: var(--accent); }
 .d-row.lit .d-track i { background: var(--accent); }
 .d-val { text-align: right; font-variant-numeric: tabular-nums; }
 .d-w {
   width: 22px; height: 22px; border-radius: 5px; font-size: 11px;
-  color: var(--ink-3); background: #f1f2f4; font-variant-numeric: tabular-nums;
+  color: var(--ink-3); background: var(--panel-2); font-variant-numeric: tabular-nums;
 }
-.d-w:hover { color: var(--ink); background: #e6e8eb; }
-.d-row.lit .d-w { background: var(--accent); color: #fff; }
+.d-w:hover { color: var(--ink); background: var(--line-2); }
+.d-row.lit .d-w { background: var(--accent); color: #0e1013; }
 
-.scrim { position: fixed; inset: 0; z-index: 30; background: rgba(20,22,26,.12); }
+.scrim { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.5); }
 
 /* ---------- small screens ---------- */
 

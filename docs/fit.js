@@ -70,11 +70,19 @@ function solve(A, b) {
  *
  * rows  : [{x: number[], w: 0|1}]  full-width differentials
  * cols  : indices into x of the enabled variables
- * skipY : season to exclude -- leave-one-year-out. Passing null fits on
- *         everything, which is only correct when no season is being predicted.
+ * asOf  : the season being predicted. Training uses STRICTLY EARLIER seasons.
+ *
+ * WALK-FORWARD, NOT PLAIN LEAVE-ONE-YEAR-OUT.
+ * Excluding only the target season would still train 2024 on 2025 and 2026 --
+ * using future tournaments to predict a past one. That is not a thing anyone
+ * could have done at the time, and it flatters early seasons. Restricting to
+ * prior years is what someone standing on that Selection Sunday actually had.
+ *
+ * Pass null to fit on everything, which is only correct when no season is being
+ * predicted.
  */
-function fitLogistic(rows, cols, skipYear) {
-  const used = rows.filter(r => r.y !== skipYear);
+function fitLogistic(rows, cols, asOf) {
+  const used = asOf === null || asOf === undefined ? rows : rows.filter(r => r.y < asOf);
   const k = cols.length;
   if (!k || used.length < k * 5) {
     return { beta: cols.map(() => 0), n: used.length, converged: false, reason: 'not enough data' };
@@ -130,10 +138,11 @@ function fitLogistic(rows, cols, skipYear) {
  *
  * Reported so the user can see that enabling more variables does not
  * automatically mean a better model. It is IN-SAMPLE on the training seasons --
- * honest as a fit diagnostic, not a claim about future accuracy.
+ * a fit diagnostic, not a claim about future accuracy. The out-of-sample number
+ * is computed separately and shipped alongside.
  */
-function fitQuality(rows, cols, skipYear, beta) {
-  const used = rows.filter(r => r.y !== skipYear);
+function fitQuality(rows, cols, asOf, beta) {
+  const used = asOf === null || asOf === undefined ? rows : rows.filter(r => r.y < asOf);
   if (!used.length || !cols.length) return null;
   let correct = 0, ll = 0;
   for (const r of used) {
@@ -146,6 +155,48 @@ function fitQuality(rows, cols, skipYear, beta) {
   return { accuracy: correct / used.length, logLoss: -ll / used.length, n: used.length };
 }
 
+
+/* Walk-forward out-of-sample evaluation.
+ *
+ * For each test season: fit on strictly earlier seasons, then score the games of
+ * that season, which the fit has never seen. This is the only number here that
+ * says anything about how the chosen variables would do on a tournament that has
+ * not happened.
+ *
+ * It is recomputed live because it depends on which variables are enabled, and
+ * there are 2^26 possible selections. Cost is one fit per test season; with all
+ * 26 variables that is ~12 fits and well under a second.
+ *
+ * Seasons before `minYear` are not tested: with only a season or two of history
+ * the fit is too thin to be a fair test of anything.
+ */
+function crossValidate(rows, cols, years, minYear) {
+  if (!cols.length) return null;
+  const testYears = years.filter(y => y >= (minYear || 2014));
+  let correct = 0, n = 0, ll = 0;
+  const perYear = {};
+
+  for (const y of testYears) {
+    const test = rows.filter(r => r.y === y);
+    if (!test.length) continue;
+    const f = fitLogistic(rows, cols, y);
+    if (!f.n || f.n < cols.length * 5) continue;   // too little history to judge
+
+    let c = 0;
+    for (const r of test) {
+      let t = 0;
+      for (let j = 0; j < cols.length; j++) t += f.beta[j] * r.x[cols[j]];
+      const p = sigmoid(t);
+      if ((p >= 0.5 ? 1 : 0) === r.w) { c++; correct++; }
+      ll += r.w ? Math.log(Math.max(p, 1e-12)) : Math.log(Math.max(1 - p, 1e-12));
+      n++;
+    }
+    perYear[y] = { n: test.length, accuracy: c / test.length };
+  }
+  if (!n) return null;
+  return { accuracy: correct / n, logLoss: -ll / n, n, perYear, seasons: Object.keys(perYear).length };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { fitLogistic, fitQuality, sigmoid, solve, FIT };
+  module.exports = { fitLogistic, fitQuality, crossValidate, sigmoid, solve, FIT };
 }

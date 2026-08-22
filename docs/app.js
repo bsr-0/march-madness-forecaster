@@ -57,6 +57,8 @@ function refit() {
   const f = fitLogistic(state.training.games, cols, state.year);
   f.keys = keys;
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
+  // The honest number: fit on prior seasons, scored on seasons never seen.
+  f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
   state.fit = f;
 }
 
@@ -149,10 +151,14 @@ function render() {
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Pick variables</span><span>Switch on any variables above. A model is fitted to real tournament games and its coefficients decide every matchup.</span>`;
   } else {
-    const f = state.fit, q = f.quality;
+    const f = state.fit, o = f.oos;
+    // Lead with out-of-sample. In-sample is shown second and labelled, because
+    // it always looks better and always will.
     note.innerHTML = `<span class="tag alt">Fitted</span><span>` +
-      `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} tournament games ` +
-      `excluding ${state.year}. Calls ${(q.accuracy * 100).toFixed(1)}% of those games correctly.` +
+      `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} games from seasons before ${state.year}. ` +
+      (o ? `<strong>${(o.accuracy * 100).toFixed(1)}% out-of-sample</strong> across ${o.seasons} held-out seasons ` +
+           `(${(f.quality.accuracy * 100).toFixed(1)}% in-sample).`
+         : `Not enough history to test out-of-sample.`) +
       `</span>`;
   }
 
@@ -251,8 +257,8 @@ function updateHint() {
   const el = document.getElementById('w-hint');
   if (!n) { el.textContent = ''; return; }
   const f = state.fit;
-  el.textContent = f && f.quality
-    ? `${n} on · ${(f.quality.accuracy * 100).toFixed(1)}% on ${f.n.toLocaleString()} games`
+  el.textContent = f && f.oos
+    ? `${n} on · ${(f.oos.accuracy * 100).toFixed(1)}% out-of-sample`
     : `${n} on`;
 }
 
