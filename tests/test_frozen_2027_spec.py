@@ -91,28 +91,15 @@ def test_2026_is_recorded_as_contaminated():
 def test_v1_excludes_the_unvalidated_strategies():
     """Balanced and Contrarian were never measured; they must not ship.
 
-    The strategy list itself now lives in the product spec (product.v3): it
-    describes what the UI offers, not how the model works. It used to sit here as
-    a hardcoded literal asserting three strategies including "Your Preference" --
-    which the product had already stopped exposing, and which this comparison
-    could not detect because both sides were the same constant.
-
-    What stays methodology-owned is the exclusion: the objectives are ev and p1,
-    and no unmeasured blend may be added.
+    The strategy list itself is no longer asserted here. It described what the UI
+    offered and was captured from the shipped frontend, which has been removed
+    for a rebuild. What stays methodology-owned is the exclusion: the objectives
+    are ev and p1, and no unmeasured blend may be added.
     """
-    from src.governance.product_spec import capture_live_product_spec
-
     spec = capture_live_spec()
     assert spec["candidate_selection"]["objectives"] == ["ev", "p1"]
     excluded = " ".join(spec["product"]["excluded_from_v1"]).lower()
     assert "balanced" in excluded and "contrarian" in excluded
-
-    names = {s["name"] for s in capture_live_product_spec()["strategies"]}
-    assert names == {"Trust the Model", "Win My Pool"}, (
-        f"the shipped strategy set is {names}; v1 offers exactly the two measured "
-        "objectives, and any addition needs research before a label"
-    )
-    assert not {"Balanced", "Contrarian"} & names
 
 
 def test_pool_size_assumption_is_disclosed():
