@@ -139,15 +139,37 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
 }
 .side {
-  display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 7px;
+  display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: 6px;
   padding: 7px 9px; background: var(--panel); text-align: left;
   font-size: 13px; color: var(--ink-3); transition: background .1s, color .1s;
 }
 .side:hover { background: var(--panel-2); }
-.side.win { color: var(--accent); font-weight: 600; }
-.side.win.upset { color: var(--up); }
+/* PICKED is the primary state: this bracket advanced the team. */
+.side.picked { color: var(--accent); font-weight: 600; }
+.side.picked .seed { color: inherit; }
+
+/* WRONG: picked, but the team did not actually win. Struck through, muted --
+   the pick is still visible as a pick, just clearly not what happened. */
+.side.picked.wrong { color: var(--ink-3); font-weight: 500; }
+.side.picked.wrong .tname { text-decoration: line-through; text-decoration-thickness: 1px; }
+.side.picked.wrong .sc { color: var(--ink-3); }
+
+/* MISSED: not picked, but actually won. The answer the bracket did not give. */
+.side.missed { color: var(--good); }
+.side.missed .tname { font-weight: 600; }
+
+/* UPSET is a property of the PICK, never of correctness. Amber previously did
+   double duty here and read as "wrong"; it is now a small explicit badge. */
+.side.upset .tname { color: var(--up); }
+
+.badge {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
+  padding: 1.5px 4px; border-radius: 3px; white-space: nowrap;
+}
+.badge.up  { background: rgba(224, 137, 74, .16); color: var(--up); }
+.badge.won { background: rgba(95, 185, 138, .16); color: var(--good); }
 .seed { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.side.win .seed { color: inherit; }
+
 .tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--ink-3); }
 
@@ -191,7 +213,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%;
   background: var(--ink-3); transform: translate(-50%, -50%);
 }
-.side.win .sc { color: var(--accent); }
+.side.picked .sc { color: var(--accent); }
 .d-row.lit .d-track i { background: var(--accent); }
 .d-val { text-align: right; font-variant-numeric: tabular-nums; }
 .d-w {

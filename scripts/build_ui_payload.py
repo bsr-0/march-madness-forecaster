@@ -120,6 +120,41 @@ def zscores(values: List[float], higher_better: bool) -> List[float]:
     return [0.0 if v is None else round(sign * (v - mean) / sd, 4) for v in values]
 
 
+# Bracket rounds in order, as the results file names them. "FF" is the First
+# Four play-in, which is not one of the 63 bracket games.
+RESULT_ROUNDS = ["R64", "R32", "S16", "E8", "F4", "NCG"]
+
+
+def actual_winners(year: int, team_ids: List[str]) -> Any:
+    """Who actually won, per round, as indices into the team table.
+
+    Returned so the board can show what happened next to what was picked. This
+    is a factual record of the tournament, not a score: no total is derived from
+    it anywhere, because for 2026 the model was trained on that season and a
+    tally would read as performance.
+    """
+    for prefix in (Path("data/raw/historical"), Path("data/raw")):
+        path = prefix / f"tournament_context_{year}.json"
+        if not path.exists():
+            continue
+        games = (json.loads(path.read_text()).get("results") or {}).get("games") or []
+        if not games:
+            return None
+        idx = {t: i for i, t in enumerate(team_ids)}
+        by_round: Dict[str, List[int]] = {r: [] for r in RESULT_ROUNDS}
+        for g in games:
+            rnd = g.get("round_name")
+            if rnd not in by_round:
+                continue
+            win = g["team1_id"] if g.get("team1_won") else g["team2_id"]
+            if win in idx:
+                by_round[rnd].append(idx[win])
+        if not any(by_round.values()):
+            return None
+        return [sorted(by_round[r]) for r in RESULT_ROUNDS]
+    return None
+
+
 def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     art_path = CANDIDATES_DIR / f"candidates_{year}.json"
     rows = stats_by_year.get(str(year))
@@ -153,9 +188,13 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # The LOYO-validated bracket, from the canonical selector.
     picks = [list(r) for r in art["candidates"][select_diverse(art, "p1", k=1)[0]]["w"]]
 
+    actual = actual_winners(year, [t["id"] for t in teams])
+
     return {
         "year": year,
         "status": "ready",
+        # Per-round actual winners, or null for a season not yet played.
+        "actual": actual,
         "teams": [
             {
                 "id": t["id"],
@@ -174,7 +213,10 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         ),
         "z": z,
         "raw": raw,
-        "variables": [{"key": k, "label": lb, "group": g, "higher_better": hb} for k, lb, g, hb in VARIABLES],
+        "variables": [
+            {"key": k, "label": lb, "group": g, "higher_better": hb, "descriptive": desc}
+            for k, lb, g, hb, desc in VARIABLES
+        ],
     }
 
 

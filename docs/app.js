@@ -169,7 +169,7 @@ function render() {
   board.innerHTML = rounds.map((games, r) => `
     <div class="round" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
-      ${games.map(g => gameHTML(g)).join('')}
+      ${games.map(g => gameHTML(g, r)).join('')}
     </div>`).join('');
 }
 
@@ -211,22 +211,42 @@ function equationHTML() {
     </div>`;
 }
 
-function gameHTML(g) {
+/* Three separate signals, deliberately not conflated:
+ *
+ *   PICKED   this bracket advanced the team. The primary state.
+ *   UPSET    the pick is the lower-seeded team. A property of the pick.
+ *   WRONG    the team did not actually win. A property of reality.
+ *
+ * They were previously collapsed: upsets were amber, which read as "wrong" even
+ * though the board showed no real outcomes at all. Now a pick that lost is
+ * struck through and the team that actually won is marked, so "bold choice" and
+ * "missed" can never be mistaken for each other.
+ */
+function gameHTML(g, round) {
   const pa = g.p === undefined ? null : g.p;
+  const truth = state.season.actual ? new Set(state.season.actual[round]) : null;
+  // A game is only gradeable if reality reached it: both teams must be ones the
+  // real tournament actually put in this game.
+  const gradeable = truth && (truth.has(g.a) || truth.has(g.b));
   return `
     <div class="game">
-      ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b)}
-      ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a)}
+      ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b, gradeable ? truth.has(g.a) : null)}
+      ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a, gradeable ? truth.has(g.b) : null)}
     </div>`;
 }
 
-function sideHTML(i, won, p, oppI) {
+function sideHTML(i, picked, p, oppI, actuallyWon) {
   const t = state.season.teams[i];
-  const upset = won && state.season.teams[oppI].seed < t.seed;
+  const upset = picked && state.season.teams[oppI].seed < t.seed;
+  const wrong = picked && actuallyWon === false;
+  const missed = !picked && actuallyWon === true;   // the team that really won
   return `
-    <button class="side${won ? ' win' : ''}${upset ? ' upset' : ''}" onclick="openTeam(${i})">
+    <button class="side${picked ? ' picked' : ''}${upset ? ' upset' : ''}` +
+    `${wrong ? ' wrong' : ''}${missed ? ' missed' : ''}" onclick="openTeam(${i})">
       <span class="seed">${t.seed}</span>
       <span class="tname">${t.name}</span>
+      ${upset ? '<span class="badge up" title="Lower seed picked">UPSET</span>' : ''}
+      ${missed ? '<span class="badge won" title="This team actually won">WON</span>' : ''}
       ${p === null ? '' : `<span class="sc">${Math.round(p * 100)}%</span>`}
     </button>`;
 }
