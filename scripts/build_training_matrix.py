@@ -91,16 +91,7 @@ def main() -> int:
             x = [round(z[a][k] - z[b][k], 4) for k in keys]
             if not any(x):
                 continue
-            games.append({
-                "y": year,
-                "x": x,
-                # Seeds travel with the row so the UI can derive seed-matchup
-                # base rates per walk-forward fold. They are not a stat column:
-                # a base rate is a property of the PAIRING, not of either team,
-                # so it cannot be expressed as a team differential.
-                "s": [g.get("team1_seed"), g.get("team2_seed")],
-                "w": 1 if g.get("team1_won") else 0,
-            })
+            games.append({"y": year, "x": x, "w": 1 if g.get("team1_won") else 0})
             per_year[year] = per_year.get(year, 0) + 1
 
     payload = {

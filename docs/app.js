@@ -16,9 +16,6 @@
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
 
 const OPTIMIZED = '__optimized__';
-// The seed prior is not a team stat, so it is not in the season payload's
-// variable list. It is a property of the matchup and gets its own key.
-const SEED_PRIOR_KEY = 'seed_history';
 
 const state = {
   year: 2026,
@@ -58,29 +55,14 @@ function refit() {
   const keys = [...state.enabled].filter(k => k !== OPTIMIZED);
   if (!state.training || !keys.length) { state.fit = null; return; }
 
-  const wantsPrior = keys.includes(SEED_PRIOR_KEY);
-  const statKeys = keys.filter(k => k !== SEED_PRIOR_KEY);
-  const cols = statKeys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
+  const cols = keys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
+  if (!cols.length) { state.fit = null; return; }
 
-  // The prior is derived from seasons before the displayed one, so it is
-  // appended per fold rather than shipped as a fixed column.
-  const priorIdx = state.training.keys.length;
-  const rows = wantsPrior ? withSeedPrior(state.training.games, state.year) : state.training.games;
-  const allCols = wantsPrior ? [...cols, priorIdx] : cols;
-  const ordered = wantsPrior ? [...statKeys, SEED_PRIOR_KEY] : statKeys;
-  if (!allCols.length) { state.fit = null; return; }
-
-  const f = fitLogistic(rows, allCols, state.year);
-  f.keys = ordered;
-  f.usesPrior = wantsPrior;
-  f.priorModel = wantsPrior ? seedPriorModel(state.training.games, state.year) : null;
-  f.quality = fitQuality(rows, allCols, state.year, f.beta);
-
-  // Cross-validation must rebuild the prior inside each fold, or the prior
-  // would carry the test season's own upsets.
-  f.oos = wantsPrior
-    ? crossValidatePrior(state.training.games, cols, priorIdx, state.training.years, 2014)
-    : crossValidate(state.training.games, cols, state.training.years, 2014);
+  const f = fitLogistic(state.training.games, cols, state.year);
+  f.keys = keys;
+  f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
+  // The honest number: fit on prior seasons, scored on seasons never seen.
+  f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
   state.fit = f;
 }
 
@@ -89,15 +71,10 @@ function refit() {
  * Antisymmetric by construction: swapping a and b negates the differential and
  * so flips the probability exactly. */
 function winProb(a, b) {
-  const z = state.season.z, f = state.fit, teams = state.season.teams;
+  const z = state.season.z, f = state.fit;
   let t = 0;
   for (let j = 0; j < f.keys.length; j++) {
-    const key = f.keys[j];
-    if (key === SEED_PRIOR_KEY) {
-      t += f.beta[j] * seedPriorLogit(f.priorModel, teams[a].seed, teams[b].seed);
-      continue;
-    }
-    const col = z[key];
+    const col = z[f.keys[j]];
     if (col) t += f.beta[j] * ((col[a] || 0) - (col[b] || 0));
   }
   return sigmoid(t);
@@ -244,7 +221,6 @@ function render() {
 function equationHTML() {
   const f = state.fit;
   const label = Object.fromEntries(state.season.variables.map(v => [v.key, v.label]));
-  label[SEED_PRIOR_KEY] = 'Seed history';
 
   const terms = f.keys
     .map((k, i) => ({ k, b: f.beta[i], label: label[k] || k }))
@@ -254,12 +230,9 @@ function equationHTML() {
     const sign = t.b < 0 ? '\u2212' : '+';
     const mag = Math.abs(t.b).toFixed(2);
     const weak = Math.abs(t.b) < 0.05;
-    // The prior is already a log-odds, not a standardised difference, so it is
-    // not written with a delta.
-    const isPrior = t.k === SEED_PRIOR_KEY;
     return `<span class="term${weak ? ' weak' : ''}" title="${weak ? 'Essentially no contribution' : ''}">` +
            `${i === 0 && t.b >= 0 ? '' : `<i class="op">${sign}</i>`}` +
-           `<b>${mag}</b><span class="dv">${isPrior ? '' : '\u0394'}${t.label}</span></span>`;
+           `<b>${mag}</b><span class="dv">\u0394${t.label}</span></span>`;
   }).join('');
 
   return `
