@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bracket Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=4">
+</head>
+<body>
+
+<!-- One page. Controls at the top drive one bracket below them; there are no
+     tabs and no second destination. -->
+<header class="bar">
+  <div class="bar-l">
+    <span class="mark">Bracket Lab</span>
+    <nav class="years" id="years" aria-label="Season"></nav>
+  </div>
+  <div class="bar-r">
+    <div class="modes" id="modes" role="tablist" aria-label="Method">
+      <button class="mode on" data-mode="pool" role="tab" aria-selected="true">Optimized</button>
+      <button class="mode"    data-mode="vars" role="tab" aria-selected="false">My weights</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- Weight controls. Present only in "My weights"; a single variable is just
+       one weight at full and the rest at zero. -->
+  <section class="panel" id="weights" hidden>
+    <div class="panel-head">
+      <p class="panel-title">What decides each game</p>
+      <div class="panel-actions">
+        <button class="ghost" id="clear-w">Clear</button>
+        <span class="hint" id="w-hint"></span>
+      </div>
+    </div>
+    <div class="groups" id="groups"></div>
+  </section>
+
+  <section class="note" id="mode-note"></section>
+
+  <section class="board" id="board"></section>
+
+  <section class="empty" id="empty" hidden></section>
+
+</main>
+
+<!-- Team inspector. Opens from any team on the board. -->
+<aside class="drawer" id="drawer" hidden aria-label="Team detail">
+  <div class="drawer-head">
+    <div>
+      <p class="d-name" id="d-name"></p>
+      <p class="d-sub" id="d-sub"></p>
+    </div>
+    <button class="x" id="d-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="d-body" id="d-body"></div>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<script src="app.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "seasons": [
+    {
+      "year": 2024,
+      "status": "ready"
+    },
+    {
+      "year": 2025,
+      "status": "ready"
+    },
+    {
+      "year": 2026,
+      "status": "ready"
+    },
+    {
+      "year": 2027,
+      "status": "not_started"
+    }
+  ],
+  "variables_excluded_as_leakage": [
+    "outcome_rounds_won",
+    "outcome_vs_seed_delta",
+    "hist_residual",
+    "hist_appearances"
+  ]
+}
