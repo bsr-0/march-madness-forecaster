@@ -95,23 +95,25 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 
 .v {
-  display: grid; grid-template-columns: 1fr 72px 26px; align-items: center;
-  gap: 8px; padding: 2px 0; font-size: 13px; color: var(--ink-2);
+  display: grid; grid-template-columns: 14px 1fr 86px; align-items: center;
+  gap: 8px; padding: 3px 0; font-size: 13px; color: var(--ink-2); cursor: pointer;
 }
+.v:hover { color: var(--ink); }
+.v input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; margin: 0; cursor: pointer; }
 .v.active { color: var(--ink); font-weight: 500; }
 .v-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.v-w { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-3); }
-.v.active .v-w { color: var(--ink); }
-
-input[type=range] {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: 3px; border-radius: 2px; background: var(--line-2); cursor: pointer;
+/* Coefficient readout: bar for magnitude, number for the value. Sign is shown
+   because a negative coefficient is a real finding, not an error. */
+.coef { display: grid; grid-template-columns: 1fr 38px; align-items: center; gap: 6px; }
+.coef.off { display: block; text-align: right; font-size: 11.5px; color: var(--line-2); }
+.coef-bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.coef-bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.coef.neg .coef-bar i { background: var(--up); }
+.coef.weak .coef-bar i { background: var(--line-2); }
+.coef-n {
+  text-align: right; font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--ink);
 }
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
-  background: var(--panel); border: 1.5px solid var(--ink-3);
-}
-.v.active input[type=range]::-webkit-slider-thumb { background: var(--accent); border-color: var(--accent); }
+.coef.weak .coef-n { color: var(--ink-3); }
 
 /* ---------- board ---------- */
 

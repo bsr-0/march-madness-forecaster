@@ -46,34 +46,51 @@ SEASONS = [2024, 2025, 2026, 2027]
 # `higher_better=False` means the raw stat is inverted when standardised, so a
 # positive weight always means "I want more of this". Without that, weighting
 # defensive efficiency would silently favour the worst defences.
+# A fourth flag marks DESCRIPTIVE variables: ones where "more" is a team
+# property a user might want, not a property that wins games. Roster composition
+# is the clear case. Measured across 1,079-1,085 team-seasons:
+#
+#   freshman minutes  vs performance-vs-seed   r = +0.020
+#   returning minutes vs performance-vs-seed   r = -0.028
+#   freshman minutes  vs rounds won            r = +0.052
+#   returning minutes vs rounds won            r = -0.002
+#
+# Standard error at that n is ~0.030, so all four are indistinguishable from
+# zero: neither youth nor experience predicts tournament performance here. They
+# also correlate with each other at r = -0.533, so treating both as "higher is
+# better" was incoherent as well as unsupported.
+#
+# They stay selectable -- "show me a bracket that favours veteran teams" is a
+# legitimate thing to ask -- but the UI labels them as preferences rather than
+# edges, so a weight is not mistaken for a claim.
 VARIABLES: List[Dict[str, Any]] = [
-    # key, label, group, higher_better
-    ("barthag", "Overall rating", "Overall", True),
-    ("t_rank", "National rank", "Overall", False),
-    ("adj_offensive_efficiency", "Offense", "Overall", True),
-    ("adj_defensive_efficiency", "Defense", "Overall", False),
-    ("adj_tempo", "Tempo", "Overall", True),
-    ("effective_fg_pct", "Shooting (eFG%)", "Offense", True),
-    ("three_pt_pct", "3PT accuracy", "Offense", True),
-    ("three_pt_rate", "3PT volume", "Offense", True),
-    ("offensive_reb_rate", "Offensive rebounding", "Offense", True),
-    ("turnover_rate", "Ball security", "Offense", False),
-    ("free_throw_rate", "Free throw rate", "Offense", True),
-    ("ast_to_ratio", "Assist-to-turnover", "Offense", True),
-    ("opp_effective_fg_pct", "Shot defense", "Defense", False),
-    ("opp_three_pt_pct", "3PT defense", "Defense", False),
-    ("defensive_reb_rate", "Defensive rebounding", "Defense", True),
-    ("opp_turnover_rate", "Forcing turnovers", "Defense", True),
-    ("havoc_rate", "Havoc (steals + blocks)", "Defense", True),
-    ("opp_free_throw_rate", "Fouling", "Defense", False),
-    ("reg_season_margin_avg", "Average margin", "Form", True),
-    ("reg_season_margin_std", "Consistency", "Form", False),
-    ("close_game_win_rate", "Close-game record", "Form", True),
-    ("true_road_win_pct", "Road wins", "Form", True),
-    ("losses_to_weaker_rate", "Bad losses", "Form", False),
-    ("returning_minutes_pct", "Experience returning", "Roster", True),
-    ("freshman_minutes_pct", "Freshman minutes", "Roster", True),
-    ("coach_prior_tourney_wins", "Coach tournament wins", "Roster", True),
+    # key, label, group, higher_better, descriptive
+    ("barthag", "Overall rating", "Overall", True, False),
+    ("t_rank", "National rank", "Overall", False, False),
+    ("adj_offensive_efficiency", "Offense", "Overall", True, False),
+    ("adj_defensive_efficiency", "Defense", "Overall", False, False),
+    ("adj_tempo", "Tempo", "Overall", True, False),
+    ("effective_fg_pct", "Shooting (eFG%)", "Offense", True, False),
+    ("three_pt_pct", "3PT accuracy", "Offense", True, False),
+    ("three_pt_rate", "3PT volume", "Offense", True, False),
+    ("offensive_reb_rate", "Offensive rebounding", "Offense", True, False),
+    ("turnover_rate", "Ball security", "Offense", False, False),
+    ("free_throw_rate", "Free throw rate", "Offense", True, False),
+    ("ast_to_ratio", "Assist-to-turnover", "Offense", True, False),
+    ("opp_effective_fg_pct", "Shot defense", "Defense", False, False),
+    ("opp_three_pt_pct", "3PT defense", "Defense", False, False),
+    ("defensive_reb_rate", "Defensive rebounding", "Defense", True, False),
+    ("opp_turnover_rate", "Forcing turnovers", "Defense", True, False),
+    ("havoc_rate", "Havoc (steals + blocks)", "Defense", True, False),
+    ("opp_free_throw_rate", "Fouling", "Defense", False, False),
+    ("reg_season_margin_avg", "Average margin", "Form", True, False),
+    ("reg_season_margin_std", "Consistency", "Form", False, False),
+    ("close_game_win_rate", "Close-game record", "Form", True, False),
+    ("true_road_win_pct", "Road wins", "Form", True, False),
+    ("losses_to_weaker_rate", "Bad losses", "Form", False, False),
+    ("returning_minutes_pct", "More returning minutes", "Roster", True, True),
+    ("freshman_minutes_pct", "More freshman minutes", "Roster", True, True),
+    ("coach_prior_tourney_wins", "Coach tournament wins", "Roster", True, False),
 ]
 
 # Never selectable: these are results, not pre-tournament properties.
@@ -127,7 +144,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # Stat values aligned to the artifact's team order, then standardised.
     z: Dict[str, List[float]] = {}
     raw: Dict[str, List[Any]] = {}
-    for key, _label, _group, higher_better in VARIABLES:
+    for key, _label, _group, higher_better, _descriptive in VARIABLES:
         vals = [by_id.get(t["id"], {}).get(key) for t in teams]
         vals = [v if isinstance(v, (int, float)) else None for v in vals]
         raw[key] = [None if v is None else round(float(v), 4) for v in vals]

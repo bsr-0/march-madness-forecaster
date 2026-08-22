@@ -4,22 +4,13 @@
  *               Shipped precomputed in the season payload; the browser renders
  *               it and does not re-derive it.
  *
- *   My weights  the user weights pre-tournament stats and every game is decided
- *               by the weighted sum. This IS computed in the browser, and that
- *               is deliberate: it is arithmetic over standardised values that
- *               already shipped, not a model. Nothing here estimates a
- *               probability or reimplements the tournament engine.
+ *   Fit         the user switches variables on and off; a logistic regression
+ *               is fitted live on real tournament games and its coefficients
+ *               decide every matchup. Nobody has to guess a weight or a sign --
+ *               the data supplies both, and they are shown.
  *
- * Z-scores arrive sign-corrected from Python, so "more of this is better" is
- * already baked into the data. Weights are therefore 0..5 and never negative:
- * asking a user to decide the sign of a coefficient would be asking them to
- * re-derive something the payload already knows, and getting it wrong would
- * silently favour (say) the worst defences.
- *
- * One consequence worth knowing: with a SINGLE variable the magnitude does not
- * matter. Scaling one column by a positive constant cannot reorder it, so
- * weight 1 and weight 5 give the same bracket. Magnitude only starts to matter
- * once two or more variables are competing.
+ * The fit excludes the displayed season (leave-one-year-out), so the
+ * coefficients were never derived from the games being predicted.
  */
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
@@ -27,12 +18,21 @@ const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four
 const state = {
   year: 2026,
   mode: 'pool',
-  weights: {},      // key -> 0..5 (never negative; see note below)
+  enabled: new Set(),   // variable keys switched on
+  fit: null,            // {beta, n, converged}
+  training: null,
   season: null,
   cache: {},
 };
 
 /* ---------- data ---------- */
+
+async function loadTraining() {
+  if (state.training) return state.training;
+  const res = await fetch('data/training.json?v=1');
+  state.training = await res.json();
+  return state.training;
+}
 
 async function loadSeason(year) {
   if (state.cache[year]) return state.cache[year];
@@ -45,25 +45,38 @@ async function loadSeason(year) {
 
 /* ---------- bracket solving ---------- */
 
-/* Score a team under the current weights. Absent weights mean zero, so an
- * untouched control contributes nothing rather than a hidden default. */
-function score(idx) {
-  const z = state.season.z;
-  let total = 0;
-  for (const key in state.weights) {
-    const w = state.weights[key];
-    if (!w) continue;
-    const col = z[key];
-    if (col) total += w * (col[idx] || 0);
-  }
-  return total;
+/* Refit whenever the enabled set or the season changes.
+ *
+ * The displayed season is excluded from the fit. Without that the coefficients
+ * would be derived from the very games being predicted, and the bracket would
+ * look far better than the method deserves. */
+function refit() {
+  const keys = [...state.enabled];
+  if (!state.training || !keys.length) { state.fit = null; return; }
+  const cols = keys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
+  const f = fitLogistic(state.training.games, cols, state.year);
+  f.keys = keys;
+  f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
+  state.fit = f;
 }
 
-/* Play the bracket out under the weights.
+/* P(team a beats team b) under the fitted coefficients.
  *
- * Ties break toward the better seed, then by index, so the board is stable and
- * a user changing one weight does not see unrelated games flip. */
-function solveByWeights() {
+ * Antisymmetric by construction: swapping a and b negates the differential and
+ * so flips the probability exactly. */
+function winProb(a, b) {
+  const z = state.season.z, f = state.fit;
+  let t = 0;
+  for (let j = 0; j < f.keys.length; j++) {
+    const col = z[f.keys[j]];
+    if (col) t += f.beta[j] * ((col[a] || 0) - (col[b] || 0));
+  }
+  return sigmoid(t);
+}
+
+/* Play the bracket out under the fit. Exact ties go to the better seed, then
+ * lower index, so the board never jitters on a coin-flip game. */
+function solveByFit() {
   const teams = state.season.teams;
   let current = state.season.first_round.slice();
   const rounds = [];
@@ -71,12 +84,12 @@ function solveByWeights() {
     const games = [], next = [];
     for (let g = 0; g < current.length; g += 2) {
       const a = current[g], b = current[g + 1];
-      const sa = score(a), sb = score(b);
+      const p = winProb(a, b);
       let win;
-      if (sa !== sb) win = sa > sb ? a : b;
+      if (p !== 0.5) win = p > 0.5 ? a : b;
       else if (teams[a].seed !== teams[b].seed) win = teams[a].seed < teams[b].seed ? a : b;
       else win = Math.min(a, b);
-      games.push({ a, b, win, sa, sb });
+      games.push({ a, b, win, p });
       next.push(win);
     }
     rounds.push(games);
@@ -104,8 +117,8 @@ function solveFromPicks() {
   return rounds;
 }
 
-function anyWeight() {
-  return Object.values(state.weights).some(v => v);
+function anyEnabled() {
+  return state.enabled.size > 0 && state.fit && state.fit.keys.length > 0;
 }
 
 /* ---------- render ---------- */
@@ -133,13 +146,17 @@ function render() {
 
   if (state.mode === 'pool') {
     note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
-  } else if (!anyWeight()) {
-    note.innerHTML = `<span class="tag alt">Pick a variable</span><span>Choose one above and it alone decides every game. Add more to blend them.</span>`;
+  } else if (!anyEnabled()) {
+    note.innerHTML = `<span class="tag alt">Pick variables</span><span>Switch on any variables above. A model is fitted to real tournament games and its coefficients decide every matchup.</span>`;
   } else {
-    note.innerHTML = `<span class="tag alt">Your weights</span><span>${describeWeights()}</span>`;
+    const f = state.fit, q = f.quality;
+    note.innerHTML = `<span class="tag alt">Fitted</span><span>` +
+      `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} tournament games ` +
+      `excluding ${state.year}. Calls ${(q.accuracy * 100).toFixed(1)}% of those games correctly.` +
+      `</span>`;
   }
 
-  const rounds = state.mode === 'pool' || !anyWeight() ? solveFromPicks() : solveByWeights();
+  const rounds = state.mode === 'pool' || !anyEnabled() ? solveFromPicks() : solveByFit();
   board.innerHTML = rounds.map((games, r) => `
     <div class="round" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
@@ -147,35 +164,23 @@ function render() {
     </div>`).join('');
 }
 
-function describeWeights() {
-  const on = Object.entries(state.weights).filter(([, v]) => v);
-  const byKey = Object.fromEntries(state.season.variables.map(v => [v.key, v.label]));
-  if (on.length === 1) {
-    // Magnitude is inert for a single variable, so the copy does not mention it.
-    return `Every game goes to the team with better <strong>${byKey[on[0][0]]}</strong>.`;
-  }
-  const parts = on.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => byKey[k]);
-  return `Blending <strong>${parts.join('</strong>, <strong>')}</strong>` +
-         `${on.length > 3 ? ` and ${on.length - 3} more` : ''}, weighted.`;
-}
-
 function gameHTML(g) {
-  const t = state.season.teams;
+  const pa = g.p === undefined ? null : g.p;
   return `
     <div class="game">
-      ${sideHTML(g.a, g.win === g.a, g.sa, g.b)}
-      ${sideHTML(g.b, g.win === g.b, g.sb, g.a)}
+      ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b)}
+      ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a)}
     </div>`;
 }
 
-function sideHTML(i, won, sc, oppI) {
+function sideHTML(i, won, p, oppI) {
   const t = state.season.teams[i];
   const upset = won && state.season.teams[oppI].seed < t.seed;
   return `
     <button class="side${won ? ' win' : ''}${upset ? ' upset' : ''}" onclick="openTeam(${i})">
       <span class="seed">${t.seed}</span>
       <span class="tname">${t.name}</span>
-      ${sc === null ? '' : `<span class="sc">${sc > 0 ? '+' : ''}${sc.toFixed(2)}</span>`}
+      ${p === null ? '' : `<span class="sc">${Math.round(p * 100)}%</span>`}
     </button>`;
 }
 
@@ -187,42 +192,68 @@ function renderGroups() {
   const groups = {};
   for (const v of s.variables) (groups[v.group] ||= []).push(v);
 
+  // Coefficients, keyed for lookup. Shown live so the effect of enabling a
+  // variable is visible immediately -- including when it turns out to be ~0.
+  const beta = {};
+  if (state.fit) state.fit.keys.forEach((k, n) => { beta[k] = state.fit.beta[n]; });
+  const maxAbs = Math.max(0.001, ...Object.values(beta).map(Math.abs));
+
   document.getElementById('groups').innerHTML = Object.entries(groups).map(([g, vars]) => `
     <div class="group">
       <p class="g-name">${g}</p>
       ${vars.map(v => {
-        const w = state.weights[v.key] || 0;
+        const on = state.enabled.has(v.key);
+        const b = beta[v.key];
         return `
-        <label class="v${w ? ' active' : ''}">
+        <label class="v${on ? ' active' : ''}">
+          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleVar('${v.key}')">
           <span class="v-label">${v.label}</span>
-          <input type="range" min="0" max="5" step="1" value="${w}"
-                 oninput="setWeight('${v.key}', this.value)">
-          <span class="v-w">${w || '·'}</span>
+          ${coefHTML(b, maxAbs)}
         </label>`;
       }).join('')}
     </div>`).join('');
 }
 
-function setWeight(key, value) {
-  const v = Number(value);
-  if (v === 0) delete state.weights[key];
-  else state.weights[key] = v;
+/* A coefficient is log-odds per standard deviation of edge. The bar is relative
+ * to the largest coefficient currently fitted, so the comparison is between the
+ * variables actually in the model. */
+function coefHTML(b, maxAbs) {
+  if (b === undefined) return `<span class="coef off">—</span>`;
+  const pct = Math.min(100, Math.abs(b) / maxAbs * 100);
+  const weak = Math.abs(b) < 0.05;
+  return `
+    <span class="coef${b < 0 ? ' neg' : ''}${weak ? ' weak' : ''}" title="${weak ? 'Essentially no effect' : 'Log-odds per standard deviation'}">
+      <span class="coef-bar"><i style="width:${pct}%"></i></span>
+      <span class="coef-n">${b >= 0 ? '+' : ''}${b.toFixed(2)}</span>
+    </span>`;
+}
+
+function toggleVar(key) {
+  if (state.enabled.has(key)) state.enabled.delete(key);
+  else state.enabled.add(key);
+  if (state.mode !== 'vars') setMode('vars');
+  refit();
   renderGroups();
   render();
   updateHint();
 }
 
 function clearWeights() {
-  state.weights = {};
+  state.enabled.clear();
+  refit();
   renderGroups();
   render();
   updateHint();
 }
 
 function updateHint() {
-  const n = Object.keys(state.weights).length;
-  document.getElementById('w-hint').textContent =
-    n === 0 ? '' : n === 1 ? '1 variable deciding' : `${n} variables blended`;
+  const n = state.enabled.size;
+  const el = document.getElementById('w-hint');
+  if (!n) { el.textContent = ''; return; }
+  const f = state.fit;
+  el.textContent = f && f.quality
+    ? `${n} on · ${(f.quality.accuracy * 100).toFixed(1)}% on ${f.n.toLocaleString()} games`
+    : `${n} on`;
 }
 
 /* ---------- team drawer ---------- */
@@ -242,33 +273,19 @@ function openTeam(i) {
         const z = (s.z[v.key] || [])[i] || 0;
         const raw = (s.raw[v.key] || [])[i];
         const pct = Math.max(2, Math.min(98, 50 + z * 16));
-        const w = state.weights[v.key] || 0;
+        const on = state.enabled.has(v.key);
         return `
-        <div class="d-row${w ? ' lit' : ''}">
+        <div class="d-row${on ? ' lit' : ''}">
           <span class="d-lab">${v.label}</span>
           <span class="d-track"><i style="left:${pct}%"></i></span>
           <span class="d-val">${raw === null || raw === undefined ? '—' : fmt(raw)}</span>
-          <button class="d-w" onclick="bump('${v.key}')" title="Weight this variable">${w || '+'}</button>
+          <button class="d-w" onclick="toggleVar('${v.key}')" title="${on ? 'Remove from the model' : 'Add to the model'}">${on ? '✓' : '+'}</button>
         </div>`;
       }).join('')}
     </div>`).join('');
 
   document.getElementById('drawer').hidden = false;
   document.getElementById('scrim').hidden = false;
-}
-
-/* Weighting a variable from the drawer switches to the weights mode, since that
- * is the only mode where a weight changes anything. */
-function bump(key) {
-  const cur = state.weights[key] || 0;
-  const next = cur >= 5 ? 0 : cur + 1;
-  if (next === 0) delete state.weights[key]; else state.weights[key] = next;
-  if (state.mode !== 'vars') setMode('vars');
-  renderGroups();
-  render();
-  updateHint();
-  const openIdx = state.openIdx;
-  if (openIdx !== undefined) openTeam(openIdx);
 }
 
 function fmt(v) {
@@ -303,12 +320,18 @@ async function setYear(year) {
   } catch {
     state.season = null;
   }
+  // Refit: the excluded season changed, so the coefficients must change too.
+  refit();
   renderGroups();
   render();
+  updateHint();
 }
 
 async function init() {
-  const idx = await fetch('data/seasons.json?v=1').then(r => r.json());
+  const [idx] = await Promise.all([
+    fetch('data/seasons.json?v=1').then(r => r.json()),
+    loadTraining(),
+  ]);
   document.getElementById('years').innerHTML = idx.seasons.map(s => `
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
