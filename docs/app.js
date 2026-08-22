@@ -162,12 +162,53 @@ function render() {
       `</span>`;
   }
 
+  document.getElementById('equation').innerHTML =
+    state.mode === 'vars' && anyEnabled() ? equationHTML() : '';
+
   const rounds = state.mode === 'pool' || !anyEnabled() ? solveFromPicks() : solveByFit();
   board.innerHTML = rounds.map((games, r) => `
     <div class="round" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
       ${games.map(g => gameHTML(g)).join('')}
     </div>`).join('');
+}
+
+/* The fitted model, written out.
+ *
+ * Terms are ordered by magnitude rather than by menu position, so the variables
+ * actually carrying the model come first. Every delta is a difference in
+ * standard deviations between the two teams, which is why a coefficient reads as
+ * log-odds per standard deviation of edge.
+ */
+function equationHTML() {
+  const f = state.fit;
+  const label = Object.fromEntries(state.season.variables.map(v => [v.key, v.label]));
+
+  const terms = f.keys
+    .map((k, i) => ({ k, b: f.beta[i], label: label[k] || k }))
+    .sort((a, b) => Math.abs(b.b) - Math.abs(a.b));
+
+  const body = terms.map((t, i) => {
+    const sign = t.b < 0 ? '\u2212' : '+';
+    const mag = Math.abs(t.b).toFixed(2);
+    const weak = Math.abs(t.b) < 0.05;
+    return `<span class="term${weak ? ' weak' : ''}" title="${weak ? 'Essentially no contribution' : ''}">` +
+           `${i === 0 && t.b >= 0 ? '' : `<i class="op">${sign}</i>`}` +
+           `<b>${mag}</b><span class="dv">\u0394${t.label}</span></span>`;
+  }).join('');
+
+  return `
+    <div class="eq">
+      <p class="eq-head">
+        <span class="eq-lhs">log-odds(team A beats team B)</span>
+        <span class="eq-eq">=</span>
+      </p>
+      <p class="eq-body">${body}</p>
+      <p class="eq-foot">
+        \u0394 is team A minus team B, in standard deviations within the season.
+        No intercept: swapping the teams flips the sign exactly.
+      </p>
+    </div>`;
 }
 
 function gameHTML(g) {
