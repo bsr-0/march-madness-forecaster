@@ -15,6 +15,7 @@
   --accent:  #6ea8fe;   /* picked team, positive coefficient */
   --up:      #e0894a;   /* upset, negative coefficient */
   --good:    #5fb98a;
+  --bad:     #e66e6e;
   --r:       8px;
 }
 
@@ -140,34 +141,38 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .side {
   display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: 6px;
+  min-height: 34px;
   padding: 7px 9px; background: var(--panel); text-align: left;
   font-size: 13px; color: var(--ink-3); transition: background .1s, color .1s;
 }
 .side:hover { background: var(--panel-2); }
-/* PICKED is the primary state: this bracket advanced the team. */
-.side.picked { color: var(--accent); font-weight: 600; }
-.side.picked .seed { color: inherit; }
+/* PICKED = advanced by this bracket. Weight, not colour, so it never competes
+   with the correctness signal. */
+.side.picked { font-weight: 600; }
+.side.picked .tname { color: var(--ink); }
 
-/* WRONG: picked, but the team did not actually win. Struck through, muted --
-   the pick is still visible as a pick, just clearly not what happened. */
-.side.picked.wrong { color: var(--ink-3); font-weight: 500; }
-.side.picked.wrong .tname { text-decoration: line-through; text-decoration-thickness: 1px; }
-.side.picked.wrong .sc { color: var(--ink-3); }
+/* RIGHT / WRONG = did the model put this team in this game.
+   Colour is reserved for this, because it is the question being asked. */
+.side.right .tname { color: var(--good); }
+.side.wrong .tname { color: var(--bad); text-decoration: line-through;
+                     text-decoration-thickness: 1px; text-decoration-color: rgba(230,110,110,.5); }
 
-/* MISSED: not picked, but actually won. The answer the bracket did not give. */
-.side.missed { color: var(--good); }
-.side.missed .tname { font-weight: 600; }
+/* The team that actually reached this game, named under the wrong pick. */
+.tcol { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.should {
+  font-size: 10.5px; color: var(--good); opacity: .85;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.should::before { content: "\2192 "; opacity: .6; }
 
-/* UPSET is a property of the PICK, never of correctness. Amber previously did
-   double duty here and read as "wrong"; it is now a small explicit badge. */
-.side.upset .tname { color: var(--up); }
+/* UPSET is a property of the PICK, never of correctness. */
+.badge.up { background: rgba(224, 137, 74, .16); color: var(--up); }
 
 .badge {
   font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
   padding: 1.5px 4px; border-radius: 3px; white-space: nowrap;
 }
-.badge.up  { background: rgba(224, 137, 74, .16); color: var(--up); }
-.badge.won { background: rgba(95, 185, 138, .16); color: var(--good); }
+
 .seed { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -213,7 +218,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%;
   background: var(--ink-3); transform: translate(-50%, -50%);
 }
-.side.picked .sc { color: var(--accent); }
+.side.picked .sc { color: var(--ink-2); }
 .d-row.lit .d-track i { background: var(--accent); }
 .d-val { text-align: right; font-variant-numeric: tabular-nums; }
 .d-w {
@@ -262,3 +267,22 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .term.weak b { color: var(--ink-3); font-weight: 400; }
 .term.weak .dv { color: var(--ink-3); }
 .eq-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+
+/* The prebuilt bracket is an alternative to the entire variable set, so it sits
+   above the grid rather than inside it as a lone one-item column. */
+.prebuilt {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+  padding: 0 0 14px; margin: 0 0 14px; border-bottom: 1px solid var(--line);
+}
+.vopt { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+.vopt input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.vopt-name { color: var(--ink-2); }
+.vopt.active .vopt-name { color: var(--ink); font-weight: 600; }
+.vopt-sub { font-size: 11.5px; color: var(--ink-3); }
+.vopt-or { font-size: 11.5px; color: var(--ink-3); margin-left: auto; }
+.v-tag {
+  flex: none; white-space: nowrap;
+  font-size: 8.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 5px; border-radius: 3px;
+  background: rgba(95, 185, 138, .14); color: var(--good);
+}
