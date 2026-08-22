@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=9">
+<link rel="stylesheet" href="app.css?v=11">
 </head>
 <body>
 
@@ -19,10 +19,7 @@
     <nav class="years" id="years" aria-label="Season"></nav>
   </div>
   <div class="bar-r">
-    <div class="modes" id="modes" role="tablist" aria-label="Method">
-      <button class="mode on" data-mode="pool" role="tab" aria-selected="true">Optimized</button>
-      <button class="mode"    data-mode="vars" role="tab" aria-selected="false">Fit variables</button>
-    </div>
+
   </div>
 </header>
 
@@ -32,12 +29,13 @@
        one weight at full and the rest at zero. -->
   <section class="panel" id="weights" hidden>
     <div class="panel-head">
-      <p class="panel-title">Variables in the model</p>
+      <p class="panel-title">How to fill the bracket</p>
       <div class="panel-actions">
-        <button class="ghost" id="clear-w">Clear all</button>
+        <button class="ghost" id="clear-w">Reset</button>
         <span class="hint" id="w-hint"></span>
       </div>
     </div>
+    <div class="prebuilt" id="prebuilt"></div>
     <div class="groups" id="groups"></div>
   </section>
 
@@ -66,6 +64,6 @@
 <div class="scrim" id="scrim" hidden></div>
 
 <script src="fit.js?v=2"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

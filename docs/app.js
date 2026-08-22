@@ -15,10 +15,11 @@
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
 
+const OPTIMIZED = '__optimized__';
+
 const state = {
   year: 2026,
-  mode: 'pool',
-  enabled: new Set(),   // variable keys switched on
+  enabled: new Set([OPTIMIZED]),   // variable keys, or OPTIMIZED
   fit: null,            // {beta, n, converged}
   training: null,
   season: null,
@@ -51,7 +52,7 @@ async function loadSeason(year) {
  * would be derived from the very games being predicted, and the bracket would
  * look far better than the method deserves. */
 function refit() {
-  const keys = [...state.enabled];
+  const keys = [...state.enabled].filter(k => k !== OPTIMIZED);
   if (!state.training || !keys.length) { state.fit = null; return; }
   const cols = keys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
   const f = fitLogistic(state.training.games, cols, state.year);
@@ -119,8 +120,42 @@ function solveFromPicks() {
   return rounds;
 }
 
+/* Play out what actually happened, in the same shape as the model's bracket.
+ *
+ * Needed because "was this pick right" is a question about a SLOT, not just a
+ * team: Duke reaching the Elite 8 in reality does not make the model right if
+ * the model had Duke in a different half of the draw. Solving reality on the
+ * same structure lets every game be compared position by position.
+ */
+function solveActual() {
+  const a = state.season.actual;
+  if (!a) return null;
+  const won = a.map(r => new Set(r));
+  let current = state.season.first_round.slice();
+  const rounds = [];
+  for (let r = 0; r < 6; r++) {
+    const games = [], next = [];
+    for (let g = 0; g < current.length; g += 2) {
+      const x = current[g], y = current[g + 1];
+      games.push({ a: x, b: y });
+      // A slot is only real while reality is still following this path.
+      next.push(won[r].has(x) ? x : won[r].has(y) ? y : null);
+    }
+    rounds.push(games);
+    current = next;
+  }
+  return rounds;
+}
+
+/* The prebuilt bracket and the fitted one are alternatives, not layers: one is
+ * chosen by a validated pipeline, the other is fitted from whatever the user
+ * enabled. Selecting either clears the other. */
+function usingOptimized() {
+  return state.enabled.has(OPTIMIZED);
+}
+
 function anyEnabled() {
-  return state.enabled.size > 0 && state.fit && state.fit.keys.length > 0;
+  return !usingOptimized() && state.fit && state.fit.keys.length > 0;
 }
 
 /* ---------- render ---------- */
@@ -144,9 +179,9 @@ function render() {
   }
 
   empty.hidden = true;
-  weights.hidden = state.mode !== 'vars';
+  weights.hidden = false;   // the panel is always the control surface now
 
-  if (state.mode === 'pool') {
+  if (usingOptimized()) {
     note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Pick variables</span><span>Switch on any variables above. A model is fitted to real tournament games and its coefficients decide every matchup.</span>`;
@@ -162,14 +197,14 @@ function render() {
       `</span>`;
   }
 
-  document.getElementById('equation').innerHTML =
-    state.mode === 'vars' && anyEnabled() ? equationHTML() : '';
+  document.getElementById('equation').innerHTML = anyEnabled() ? equationHTML() : '';
 
-  const rounds = state.mode === 'pool' || !anyEnabled() ? solveFromPicks() : solveByFit();
+  const rounds = usingOptimized() ? solveFromPicks() : solveByFit();
+  const truth = solveActual();
   board.innerHTML = rounds.map((games, r) => `
     <div class="round" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
-      ${games.map(g => gameHTML(g, r)).join('')}
+      ${games.map((g, gi) => gameHTML(g, r, truth ? truth[r][gi] : null)).join('')}
     </div>`).join('');
 }
 
@@ -211,42 +246,46 @@ function equationHTML() {
     </div>`;
 }
 
-/* Three separate signals, deliberately not conflated:
+/* Colour is about SLOT correctness: did the model put this team in this game?
  *
- *   PICKED   this bracket advanced the team. The primary state.
- *   UPSET    the pick is the lower-seeded team. A property of the pick.
- *   WRONG    the team did not actually win. A property of reality.
+ *   green   the model has the right team here
+ *   red     the model has the wrong team here; the one that belongs is named
+ *           beneath it, struck through
+ *   plain   nothing to grade -- the Round of 64 is given rather than predicted,
+ *           and once reality leaves a branch its later slots never existed
  *
- * They were previously collapsed: upsets were amber, which read as "wrong" even
- * though the board showed no real outcomes at all. Now a pick that lost is
- * struck through and the team that actually won is marked, so "bold choice" and
- * "missed" can never be mistaken for each other.
+ * "Picked" (advanced by this bracket) stays a separate signal from "correct",
+ * because a bold pick that came off and a safe pick that came off should not
+ * look the same as each other, nor as a miss.
  */
-function gameHTML(g, round) {
+function gameHTML(g, round, actualGame) {
   const pa = g.p === undefined ? null : g.p;
-  const truth = state.season.actual ? new Set(state.season.actual[round]) : null;
-  // A game is only gradeable if reality reached it: both teams must be ones the
-  // real tournament actually put in this game.
-  const gradeable = truth && (truth.has(g.a) || truth.has(g.b));
   return `
     <div class="game">
-      ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b, gradeable ? truth.has(g.a) : null)}
-      ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a, gradeable ? truth.has(g.b) : null)}
+      ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b, round, actualGame ? actualGame.a : null)}
+      ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a, round, actualGame ? actualGame.b : null)}
     </div>`;
 }
 
-function sideHTML(i, picked, p, oppI, actuallyWon) {
+function sideHTML(i, picked, p, oppI, round, actualHere) {
   const t = state.season.teams[i];
   const upset = picked && state.season.teams[oppI].seed < t.seed;
-  const wrong = picked && actuallyWon === false;
-  const missed = !picked && actuallyWon === true;   // the team that really won
+
+  // The Round of 64 field is fixed, so being "in" it is not a prediction.
+  const gradeable = round > 0 && actualHere !== null && actualHere !== undefined;
+  const right = gradeable && actualHere === i;
+  const wrong = gradeable && actualHere !== i;
+  const should = wrong ? state.season.teams[actualHere] : null;
+
   return `
     <button class="side${picked ? ' picked' : ''}${upset ? ' upset' : ''}` +
-    `${wrong ? ' wrong' : ''}${missed ? ' missed' : ''}" onclick="openTeam(${i})">
+    `${right ? ' right' : ''}${wrong ? ' wrong' : ''}" onclick="openTeam(${i})">
       <span class="seed">${t.seed}</span>
-      <span class="tname">${t.name}</span>
+      <span class="tcol">
+        <span class="tname">${t.name}</span>
+        ${should ? `<span class="should" title="Actually reached this game">${should.name}</span>` : ''}
+      </span>
       ${upset ? '<span class="badge up" title="Lower seed picked">UPSET</span>' : ''}
-      ${missed ? '<span class="badge won" title="This team actually won">WON</span>' : ''}
       ${p === null ? '' : `<span class="sc">${Math.round(p * 100)}%</span>`}
     </button>`;
 }
@@ -264,6 +303,16 @@ function renderGroups() {
   const beta = {};
   if (state.fit) state.fit.keys.forEach((k, n) => { beta[k] = state.fit.beta[n]; });
   const maxAbs = Math.max(0.001, ...Object.values(beta).map(Math.abs));
+
+  const opt = usingOptimized();
+  document.getElementById('prebuilt').innerHTML = `
+    <label class="vopt${opt ? ' active' : ''}">
+      <input type="checkbox" ${opt ? 'checked' : ''} onchange="toggleVar('${OPTIMIZED}')">
+      <span class="vopt-name">Pool optimized</span>
+      <span class="v-tag">validated</span>
+      <span class="vopt-sub">Built by the backtested pipeline, not fitted here</span>
+    </label>
+    <span class="vopt-or">or fit your own from</span>`;
 
   document.getElementById('groups').innerHTML = Object.entries(groups).map(([g, vars]) => `
     <div class="group">
@@ -296,9 +345,15 @@ function coefHTML(b, maxAbs) {
 }
 
 function toggleVar(key) {
-  if (state.enabled.has(key)) state.enabled.delete(key);
-  else state.enabled.add(key);
-  if (state.mode !== 'vars') setMode('vars');
+  if (key === OPTIMIZED) {
+    // Picking the prebuilt bracket replaces the fitted one entirely.
+    state.enabled.clear();
+    state.enabled.add(OPTIMIZED);
+  } else {
+    state.enabled.delete(OPTIMIZED);
+    if (state.enabled.has(key)) state.enabled.delete(key);
+    else state.enabled.add(key);
+  }
   refit();
   renderGroups();
   render();
@@ -307,6 +362,7 @@ function toggleVar(key) {
 
 function clearWeights() {
   state.enabled.clear();
+  state.enabled.add(OPTIMIZED);
   refit();
   renderGroups();
   render();
@@ -369,16 +425,6 @@ function closeDrawer() {
 
 /* ---------- controls ---------- */
 
-function setMode(mode) {
-  state.mode = mode;
-  document.querySelectorAll('.mode').forEach(b => {
-    const on = b.dataset.mode === mode;
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-selected', String(on));
-  });
-  render();
-}
-
 async function setYear(year) {
   state.year = year;
   document.querySelectorAll('.yr').forEach(b => b.classList.toggle('on', Number(b.dataset.year) === year));
@@ -403,8 +449,6 @@ async function init() {
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
-  document.querySelectorAll('.mode').forEach(b =>
-    b.addEventListener('click', () => setMode(b.dataset.mode)));
   document.getElementById('clear-w').addEventListener('click', clearWeights);
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
