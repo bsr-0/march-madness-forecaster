@@ -10,9 +10,16 @@
  *               already shipped, not a model. Nothing here estimates a
  *               probability or reimplements the tournament engine.
  *
- * Z-scores arrive sign-corrected, so a positive weight always means "more of
- * this is better" -- otherwise weighting defensive efficiency would quietly
- * favour the worst defences.
+ * Z-scores arrive sign-corrected from Python, so "more of this is better" is
+ * already baked into the data. Weights are therefore 0..5 and never negative:
+ * asking a user to decide the sign of a coefficient would be asking them to
+ * re-derive something the payload already knows, and getting it wrong would
+ * silently favour (say) the worst defences.
+ *
+ * One consequence worth knowing: with a SINGLE variable the magnitude does not
+ * matter. Scaling one column by a positive constant cannot reorder it, so
+ * weight 1 and weight 5 give the same bracket. Magnitude only starts to matter
+ * once two or more variables are competing.
  */
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
@@ -20,7 +27,7 @@ const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four
 const state = {
   year: 2026,
   mode: 'pool',
-  weights: {},      // key -> -3..3
+  weights: {},      // key -> 0..5 (never negative; see note below)
   season: null,
   cache: {},
 };
@@ -144,12 +151,12 @@ function describeWeights() {
   const on = Object.entries(state.weights).filter(([, v]) => v);
   const byKey = Object.fromEntries(state.season.variables.map(v => [v.key, v.label]));
   if (on.length === 1) {
-    const [k, v] = on[0];
-    return `Every game goes to the team with ${v < 0 ? 'the <strong>lower</strong>' : 'better'} <strong>${byKey[k]}</strong>.`;
+    // Magnitude is inert for a single variable, so the copy does not mention it.
+    return `Every game goes to the team with better <strong>${byKey[on[0][0]]}</strong>.`;
   }
-  const parts = on.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 3).map(([k, v]) => `${byKey[k]}${v < 0 ? ' (inverted)' : ''}`);
-  return `Blending <strong>${parts.join('</strong>, <strong>')}</strong>${on.length > 3 ? ` and ${on.length - 3} more` : ''}.`;
+  const parts = on.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => byKey[k]);
+  return `Blending <strong>${parts.join('</strong>, <strong>')}</strong>` +
+         `${on.length > 3 ? ` and ${on.length - 3} more` : ''}, weighted.`;
 }
 
 function gameHTML(g) {
@@ -188,9 +195,9 @@ function renderGroups() {
         return `
         <label class="v${w ? ' active' : ''}">
           <span class="v-label">${v.label}</span>
-          <input type="range" min="-3" max="3" step="1" value="${w}"
+          <input type="range" min="0" max="5" step="1" value="${w}"
                  oninput="setWeight('${v.key}', this.value)">
-          <span class="v-w">${w > 0 ? '+' : ''}${w || '·'}</span>
+          <span class="v-w">${w || '·'}</span>
         </label>`;
       }).join('')}
     </div>`).join('');
@@ -241,7 +248,7 @@ function openTeam(i) {
           <span class="d-lab">${v.label}</span>
           <span class="d-track"><i style="left:${pct}%"></i></span>
           <span class="d-val">${raw === null || raw === undefined ? '—' : fmt(raw)}</span>
-          <button class="d-w" onclick="bump('${v.key}')" title="Weight this variable">${w ? (w > 0 ? '+' + w : w) : '+'}</button>
+          <button class="d-w" onclick="bump('${v.key}')" title="Weight this variable">${w || '+'}</button>
         </div>`;
       }).join('')}
     </div>`).join('');
@@ -254,7 +261,7 @@ function openTeam(i) {
  * is the only mode where a weight changes anything. */
 function bump(key) {
   const cur = state.weights[key] || 0;
-  const next = cur >= 3 ? 0 : cur + 1;
+  const next = cur >= 5 ? 0 : cur + 1;
   if (next === 0) delete state.weights[key]; else state.weights[key] = next;
   if (state.mode !== 'vars') setMode('vars');
   renderGroups();
