@@ -2,12 +2,18 @@
 
 The table's whole premise is that every stat column is knowable BEFORE that
 year's tournament tips off, with post-hoc results quarantined in clearly
-labelled `outcome_*` fields. The regular-season volatility columns are
-computed from a game log that (in most years) runs through the national
-championship, so the date filter in
-`scripts/generate_team_stats_table.py::build_regular_season_stats` is the
-only thing standing between "pre-tournament" and silent look-ahead bias.
-These tests fail loudly if that filter regresses.
+labelled `outcome_*` fields. The regular-season volatility columns are the
+risky ones, and they can fail in two opposite directions:
+
+  LOOK-AHEAD — a tournament game folded into a "pre-tournament" column.
+  UNDER-COUNTING — real regular-season games silently dropped, so the column
+    is computed from a fraction of the schedule.
+
+Both were live. The columns used to come from a game log running through the
+national championship, filtered by date; the filter did block every tournament
+game, but the log's per-game dates are largely synthetic and it also threw away
+600-800 genuine regular-season games a season. Median games_played was 22 in
+2012 against a true D1 schedule of ~31. These tests fail loudly on either.
 """
 
 from __future__ import annotations
@@ -145,6 +151,50 @@ def test_pre_tournament_fields_populated():
             for field in PRE_TOURNAMENT_FIELDS:
                 assert field in r, f"{year} {r['team_name']}: missing {field}"
             assert r["games_played"], f"{year} {r['team_name']}: no game-log stats (bridge failure?)"
+
+
+# A Division I team plays ~29-35 games before the tournament: roughly 31
+# regular-season plus a conference tournament run. A median materially below
+# this band means games are being dropped, not that teams played less
+# basketball.
+#
+# 2021 is exempt from both floors, and genuinely so rather than as a fudge:
+# COVID pods and mid-season pauses left Colgate with 15 games and Iona with 17,
+# and those are the real schedules those teams played.
+MIN_PLAUSIBLE_MEDIAN_GAMES = 29
+MIN_PLAUSIBLE_TEAM_GAMES = 20
+SHORT_SEASONS = {"2021"}
+
+
+def test_schedules_are_not_silently_truncated():
+    """Form columns must be computed from a team's whole pre-tournament season.
+
+    This is the regression guard for the defect that motivated moving these
+    columns off the cbbpy game log: a date filter applied to unreliable dates
+    discarded a quarter of most schedules without erroring. Nothing else in the
+    suite noticed, because every surviving value was individually well-formed.
+    """
+    import statistics
+
+    data = _artifact()
+    for year, rows in data["stats_by_year"].items():
+        counts = [r["games_played"] for r in rows if r.get("games_played")]
+        assert counts, f"{year}: no team has games_played"
+
+        if year in SHORT_SEASONS:
+            continue
+
+        median = statistics.median(counts)
+        assert median >= MIN_PLAUSIBLE_MEDIAN_GAMES, (
+            f"{year}: median games_played={median}, below {MIN_PLAUSIBLE_MEDIAN_GAMES}. "
+            "Games are being dropped somewhere between the source and the table."
+        )
+
+        worst = min(counts)
+        assert worst >= MIN_PLAUSIBLE_TEAM_GAMES, (
+            f"{year}: a team has only {worst} games. No tournament qualifier plays "
+            "that few, so its form columns are computed from a partial schedule."
+        )
 
 
 def test_rates_are_in_unit_interval():

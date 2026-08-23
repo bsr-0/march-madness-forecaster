@@ -6,20 +6,30 @@ Produces:
 
   1. Torvik pre-tournament ratings (data/raw/historical/torvik_{year}.json) —
      barthag, adjusted efficiencies, tempo, and the eight four-factor fields.
-  2. Regular-season volatility, computed here from the full game log
-     (data/raw/historical/historical_games_{year}.json) — scoring margin
+  2. Regular-season volatility, computed here from Kaggle's regular-season
+     results (data/kaggle/MRegularSeasonCompactResults.csv) — scoring margin
      mean/spread, close-game rate and record, and rate of losses to
-     lower-ranked opponents.
+     lower-ranked opponents. The in-progress season, which Kaggle has not
+     ingested yet, falls back to data/raw/historical/historical_games_{year}.json.
   3. Post-hoc tournament outcome (tournament_context_{year}.json) — how far
      the team actually got. This is NOT pre-tournament information; it is
      kept in clearly-labelled `outcome_*` fields and rendered as a visually
      separate block in the UI so it can never be mistaken for a feature that
      was knowable before the tournament tipped off.
 
-Leakage guard: family (2) filters the game log to games played strictly
-BEFORE that year's tournament_start. Most years' logs run through the
-national championship, so an unfiltered read would silently fold tournament
-results into a "pre-tournament" column.
+Leakage guard: family (2) needs no date filter, because Kaggle keeps NCAA
+tournament games in a separate file — verified, 0 of 1,449 tournament games
+appear in the regular-season file. Correctness comes from the source's scope
+rather than from trusting a per-game timestamp.
+
+This used to read the cbbpy game log and drop anything dated on or after
+tournament_start. That filter did keep every tournament game out (checked
+game-by-game, 2010-2026, none got through) but it failed the other way: the
+logs' per-game dates are largely synthetic, so 600-800 real regular-season
+games a season were stamped into April and silently discarded. Median
+games_played fell to 22 in 2012 against a true D1 schedule of ~31. The cbbpy
+fallback is therefore restricted to seasons whose log stops before the
+tournament on its own, and refuses rather than guesses otherwise.
 
 Deliberately excluded: data/raw/torvik_shooting_{year}.json (3PT%/FT%).
 docs/data-provenance-and-leakage-audit.md classifies the 2008-2025 shooting
@@ -206,23 +216,67 @@ def _kaggle_norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
-def _load_kaggle_team_map(canonical_ids) -> dict[str, str]:
+def _load_kaggle_team_map(canonical_ids, year: int | None = None) -> dict[str, str]:
     """Kaggle numeric TeamID (as string) -> canonical team_id, via MTeamSpellings.
 
     Shared by every Kaggle-sourced builder below so the name-normalization
     logic exists in exactly one place.
+
+    DISAMBIGUATING QUALIFIED NAMES. Some schools appear in Kaggle only with a
+    state qualifier that the canonical id lacks: `saint_francis` matches neither
+    "saint francis (ny)" nor "saint francis (pa)", so 2025's 16-seed dropped out
+    of every Kaggle-sourced column. Passing `year` enables a second pass that
+    accepts a qualified name as a prefix match, but ONLY when exactly one such
+    school was Division I that season. St Francis NY left D1 after 2023, so 2025
+    resolves to PA unambiguously; "miami" still matches both FL and OH in every
+    year and is therefore left unmapped rather than guessed at.
     """
     spellings = KAGGLE_DIR / "MTeamSpellings.csv"
     if not spellings.exists():
         return {}
     canonical_by_norm = {_kaggle_norm(c): c for c in canonical_ids}
     kaggle_to_canonical: dict[str, str] = {}
+    unmatched: dict[str, list[tuple[str, str]]] = {}
+
     with open(spellings, encoding="latin-1") as f:
         for r in csv.DictReader(f):
-            canonical = canonical_by_norm.get(_kaggle_norm(r["TeamNameSpelling"]))
+            norm = _kaggle_norm(r["TeamNameSpelling"])
+            canonical = canonical_by_norm.get(norm)
             if canonical is not None:
                 kaggle_to_canonical[r["TeamID"]] = canonical
+            elif year is not None:
+                unmatched.setdefault(norm, []).append((r["TeamID"], r["TeamNameSpelling"]))
+
+    if year is None:
+        return kaggle_to_canonical
+
+    d1_span = _kaggle_d1_span()
+    mapped_ids = set(kaggle_to_canonical)
+    for norm_canonical, canonical in canonical_by_norm.items():
+        if canonical in kaggle_to_canonical.values():
+            continue
+        candidates = set()
+        for norm, entries in unmatched.items():
+            if not norm.startswith(norm_canonical) or norm == norm_canonical:
+                continue
+            for team_id, _spelling in entries:
+                if team_id in mapped_ids:
+                    continue
+                first, last = d1_span.get(team_id, (None, None))
+                if first is not None and first <= year <= last:
+                    candidates.add(team_id)
+        if len(candidates) == 1:
+            kaggle_to_canonical[candidates.pop()] = canonical
     return kaggle_to_canonical
+
+
+def _kaggle_d1_span() -> dict[str, tuple[int, int]]:
+    """TeamID -> (FirstD1Season, LastD1Season), for resolving qualified names."""
+    path = KAGGLE_DIR / "MTeams.csv"
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return {r["TeamID"]: (int(r["FirstD1Season"]), int(r["LastD1Season"])) for r in csv.DictReader(f)}
 
 
 def build_overtime_rate(year: int, canonical_ids):
@@ -238,7 +292,7 @@ def build_overtime_rate(year: int, canonical_ids):
     score totals. Those columns are not buildable, full stop.
     """
     results = KAGGLE_DIR / "MRegularSeasonDetailedResults.csv"
-    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
     if not results.exists() or not kaggle_to_canonical:
         return {}
 
@@ -280,7 +334,7 @@ def build_kaggle_box_profile(year: int, canonical_ids):
                              a proxy for tournament (all-neutral-site) readiness.
     """
     results = KAGGLE_DIR / "MRegularSeasonDetailedResults.csv"
-    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
     if not results.exists() or not kaggle_to_canonical:
         return {}
 
@@ -288,9 +342,21 @@ def build_kaggle_box_profile(year: int, canonical_ids):
 
     def team_acc(t):
         return acc.setdefault(
-            t, {"fga": 0, "fgm3": 0, "fga3": 0, "opp_fgm3": 0, "opp_fga3": 0,
-                "ast": 0, "to": 0, "stl": 0, "blk": 0, "games": 0,
-                "away_neutral_games": 0, "away_neutral_wins": 0}
+            t,
+            {
+                "fga": 0,
+                "fgm3": 0,
+                "fga3": 0,
+                "opp_fgm3": 0,
+                "opp_fga3": 0,
+                "ast": 0,
+                "to": 0,
+                "stl": 0,
+                "blk": 0,
+                "games": 0,
+                "away_neutral_games": 0,
+                "away_neutral_wins": 0,
+            },
         )
 
     with open(results) as f:
@@ -343,8 +409,7 @@ def build_kaggle_box_profile(year: int, canonical_ids):
             "ast_to_ratio": round(a["ast"] / a["to"], 4) if a["to"] else None,
             "havoc_rate": round((a["stl"] + a["blk"]) / a["games"], 4),
             "true_road_win_pct": (
-                round(a["away_neutral_wins"] / a["away_neutral_games"], 4)
-                if a["away_neutral_games"] else None
+                round(a["away_neutral_wins"] / a["away_neutral_games"], 4) if a["away_neutral_games"] else None
             ),
         }
     return out
@@ -421,7 +486,7 @@ def build_coach_experience(year: int, canonical_ids):
     columns can't provide.
     """
     coach_of_record, per_coach_games, per_coach_wins = _load_coach_tourney_history()
-    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids)
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
     if not coach_of_record or not kaggle_to_canonical:
         return {}
 
@@ -451,18 +516,64 @@ def _torvik_meta(year: int) -> dict:
     return {"data_type": data.get("data_type"), "tournament_start": data.get("tournament_start")}
 
 
-def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_start):
-    """Per-team regular-season volatility from the pre-tournament game log.
+# Kaggle's DayNum runs to ~132 (Selection Sunday) in a fully-ingested season.
+# Anything materially short of that means the file was pulled mid-season and
+# would understate every team's schedule.
+KAGGLE_SEASON_COMPLETE_DAYNUM = 125
 
-    Returns `{canonical_team_id: {...}}`. Only games strictly before
-    `tournament_start` are counted — the raw log runs through the national
-    championship in most years.
+
+def _kaggle_season_games(year: int, canonical_ids):
+    """Pre-tournament games for one season from Kaggle, or None if incomplete.
+
+    `MRegularSeasonCompactResults` is the right universe by construction: it
+    holds regular-season AND conference-tournament games, and NCAA tournament
+    games live in a separate file. Verified empirically — 0 of 1,449 tournament
+    games appear in it. So there is no date filter here, and nothing to get
+    wrong: correctness comes from the file's scope rather than from trusting a
+    timestamp.
+
+    Returns a list of `(team, opponent, own_score, opp_score)` rows, both
+    orientations, canonical ids. `None` means this season is not usable.
+    """
+    path = KAGGLE_DIR / "MRegularSeasonCompactResults.csv"
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
+    if not path.exists() or not kaggle_to_canonical:
+        return None
+
+    rows = []
+    max_day = -1
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            if int(r["Season"]) != year:
+                continue
+            max_day = max(max_day, int(r["DayNum"]))
+            w = kaggle_to_canonical.get(r["WTeamID"])
+            lo = kaggle_to_canonical.get(r["LTeamID"])
+            ws, ls = int(r["WScore"]), int(r["LScore"])
+            rows.append((w, lo, ws, ls))
+            rows.append((lo, w, ls, ws))
+
+    if max_day < KAGGLE_SEASON_COMPLETE_DAYNUM:
+        return None
+    return rows
+
+
+def _cbbpy_season_games(year: int, canonical_ids, tournament_start):
+    """Fallback: pre-tournament games from the cbbpy log, date-filtered.
+
+    Only correct when the log itself stops before the tournament, which is why
+    the caller restricts this to the in-progress season. The historical logs
+    carry unreliable per-game dates -- roughly 600-800 genuine regular-season
+    games per season are stamped into April and would be silently discarded --
+    so this path must never be used to backfill a completed season.
     """
     path = HIST_DIR / f"historical_games_{year}.json"
-    if not path.exists() or not tournament_start:
-        return {}
+    if not path.exists():
+        return None
     with open(path) as f:
         games = json.load(f).get("games", [])
+    if not games:
+        return None
 
     # Resolve the whole log at once, weighted by schedule length, so a non-D1
     # school that merely starts with a D1 school's name does not fold its
@@ -474,32 +585,63 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
             raw = g.get(key)
             if raw:
                 appearances[raw] = appearances.get(raw, 0) + 1
-
     bridge_map = resolve_cbbpy_bridge(appearances, canonical_ids)
 
-    def bridge(raw_id):
-        return bridge_map.get(raw_id)
+    latest = max((g.get("date") or "") for g in games)
+    if tournament_start and latest >= tournament_start:
+        # The log runs into the tournament, so the per-game dates would have to
+        # be trusted to separate them. They cannot be. Refuse rather than guess.
+        return None
 
-    margins: dict[str, list[int]] = {}
-    bad_losses: dict[str, int] = {}
+    rows = []
     for g in games:
-        date = g.get("date")
-        if not date or date >= tournament_start:
-            continue  # tournament (or post-tournament) game — not pre-tournament
         s1, s2 = g.get("team1_score"), g.get("team2_score")
         if s1 is None or s2 is None:
             continue
-        t1, t2 = bridge(g.get("team1_id", "")), bridge(g.get("team2_id", ""))
-        for team, opp, own_score, opp_score in ((t1, t2, s1, s2), (t2, t1, s2, s1)):
-            if team is None:
-                continue
-            margins.setdefault(team, []).append(own_score - opp_score)
-            # A "bad loss" needs both sides ranked, so non-D1 opponents
-            # (which never bridge) are excluded from the numerator.
-            if own_score < opp_score and opp is not None:
-                own_rank, opp_rank = t_ranks.get(team), t_ranks.get(opp)
-                if own_rank is not None and opp_rank is not None and opp_rank > own_rank:
-                    bad_losses[team] = bad_losses.get(team, 0) + 1
+        t1 = bridge_map.get(g.get("team1_id", ""))
+        t2 = bridge_map.get(g.get("team2_id", ""))
+        rows.append((t1, t2, s1, s2))
+        rows.append((t2, t1, s2, s1))
+    return rows
+
+
+def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_start):
+    """Per-team pre-tournament form: scoring margin, volatility, close games.
+
+    Returns `{canonical_team_id: {...}}` covering everything in the UI's "Form"
+    group except `true_road_win_pct`, which comes from the Kaggle box score.
+
+    SOURCE, AND WHY IT CHANGED. This used to read the cbbpy season log and drop
+    games dated on or after `tournament_start`. That filter did keep every NCAA
+    tournament game out -- checked game-by-game across 2010-2026, zero got
+    through -- so it never leaked. It failed the other way: the logs' per-game
+    dates are largely synthetic, and 600-800 real regular-season games a season
+    were stamped past the cutoff and thrown away. Median games_played fell to
+    22 in 2012 and 23 in 2021 against a true D1 schedule of ~31, and some teams
+    had their entire form profile built from 7 games.
+
+    Kaggle avoids the problem rather than patching it: its regular-season file
+    simply does not contain tournament games, so no date logic is needed.
+    """
+    rows = _kaggle_season_games(year, canonical_ids)
+    if rows is None:
+        # Kaggle has not ingested this season yet -- the in-progress year.
+        rows = _cbbpy_season_games(year, canonical_ids, tournament_start)
+    if rows is None:
+        return {}
+
+    margins: dict[str, list[int]] = {}
+    bad_losses: dict[str, int] = {}
+    for team, opp, own_score, opp_score in rows:
+        if team is None:
+            continue
+        margins.setdefault(team, []).append(own_score - opp_score)
+        # A "bad loss" needs both sides ranked, so non-D1 opponents (which
+        # never bridge) are excluded from the numerator.
+        if own_score < opp_score and opp is not None:
+            own_rank, opp_rank = t_ranks.get(team), t_ranks.get(opp)
+            if own_rank is not None and opp_rank is not None and opp_rank > own_rank:
+                bad_losses[team] = bad_losses.get(team, 0) + 1
 
     out = {}
     for team, vals in margins.items():
