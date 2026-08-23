@@ -163,6 +163,71 @@ it took ~6 weeks of testing to establish.
 
 ## 4. Data provenance & leakage — gotchas worth remembering
 
+### Bracket Lab feature matrix — scope of the leakage audit (2026-08-22)
+
+State this precisely rather than as a blanket clearance, because the earlier
+blanket version is exactly what let a contaminated variable survive:
+
+> The current 24-feature matrix has been audited for known temporal leakage,
+> with `returning_minutes_pct` and `freshman_minutes_pct` explicitly excluded
+> after empirical confirmation that their season aggregates incorporated
+> post-Selection-Sunday games. The remaining features have passed the
+> applicable game-by-game or construction-level causal checks.
+
+What each check actually was, so the claim can be re-verified rather than
+trusted:
+
+| Family | Check | Result |
+|---|---|---|
+| Torvik ratings, four factors | per-season `cutoff_date` = day before `tournament_start` | construction-level, clean |
+| Kaggle box score, `overtime_rate` | is any tournament game present in `MRegularSeasonDetailedResults`? | 0 of 1,449, clean |
+| Form (margin, close games, bad losses) | is any tournament game present in `MRegularSeasonCompactResults`? | 0 of 1,449, clean |
+| Coach history | seasons summed strictly `< year` | construction-level, clean |
+| Roster minute shares | correlation of extra roster games with rounds actually won | **r = +0.71 to +0.96 — excluded** |
+
+**The roster finding.** Every `cbbpy_rosters_*.json` was scraped 2026-02-21, so
+for 2010–2025 a player's minutes-per-game is averaged over a game count that
+includes the team's tournament run. Purdue 2024 carries 39 games against 33
+played before the tournament — exactly its six-game run to the final. 2026 is
+the control: its snapshot is genuinely mid-February and the correlation drops to
+−0.13.
+
+**Performance did not depend on it.** 26 → 24 variables left walk-forward
+accuracy at 78.2% and marginally improved error (RMSE 10.48 → 10.46, R²
+0.536 → 0.538). That is the useful half of the result: the model never needed
+the contaminated information.
+
+**Guards** (`tests/test_training_matrix.py`, both mutation-tested): one fails if
+either key returns to the training matrix; one fails if the matrix and the UI
+menu drift apart. They are built by separate scripts, which is a quiet
+maintenance failure mode on its own.
+
+**Not fixed, and deliberately so.** The honest reconstruction is
+`minutes before tournament_start / team minutes before tournament_start`.
+`player_minutes_*.json` holds only season-level aggregates, so that quantity
+cannot be recovered — inferring it from the aggregate would substitute a new
+approximation for a known contamination. Blocked until game-level box scores
+land.
+
+### Bracket Lab — known limitation, not a data-integrity problem
+
+The shipped 24-variable ridge model is tuned for accuracy, and its coefficients
+are **not interpretable**. With everything enabled it prints large offsetting
+weights on near-substitutes (`−39 × rating + 36 × national rank`) and more than
+half the coefficients change sign between walk-forward folds.
+
+| ridge per 1k rows | accuracy | max abs coefficient | sign-flipping vars |
+|---|---|---|---|
+| 1 (shipped) | 78.2% | 40.7 | 14 of 26 |
+| 20 | 73.7% | 15.3 | 9 |
+| 400 | 73.9% | 3.0 | 4 |
+
+Interpretability costs roughly 4 accuracy points. The decision is to keep the
+accuracy-first model as the forecaster and treat coefficient instability as a
+documented limitation — the equation marks unstable terms rather than presenting
+them as effects. If a readable coefficient vector is wanted, the right move is a
+separate constrained model built for that purpose, not detuning the predictor.
+
 - **Torvik barthag is NOT scraped** — it's locally computed from
   `historical_games_{year}.json` via `scripts/compute_pretournament_barthag.py`
   (15-iteration opponent-strength adjustment + Pythagorean formula). Guarded
