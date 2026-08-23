@@ -7,19 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=12">
+<link rel="stylesheet" href="app.css?v=15">
 </head>
 <body>
 
-<!-- One page. Controls at the top drive one bracket below them; there are no
-     tabs and no second destination. -->
+<!-- Two destinations. The board is the product; Diagnostics is a workbench for
+     interrogating the model that fills it, and changes no pick. They share one
+     variable selection so the diagnostics always describe what is on the board. -->
 <header class="bar">
   <div class="bar-l">
     <span class="mark">Bracket Lab</span>
     <nav class="years" id="years" aria-label="Season"></nav>
   </div>
   <div class="bar-r">
-
+    <nav class="tabs" id="tabs" aria-label="View">
+      <button class="tab on" data-tab="bracket">Bracket</button>
+      <button class="tab" data-tab="diagnostics">Diagnostics</button>
+    </nav>
   </div>
 </header>
 
@@ -48,6 +52,11 @@
 
   <section class="empty" id="empty" hidden></section>
 
+  <!-- Diagnostics. Refits by ordinary least squares on the same rows and
+       columns, because a ridge-penalised coefficient has no standard error in
+       the usual sense. Nothing here feeds the board. -->
+  <section class="diag" id="diagnostics" hidden></section>
+
 </main>
 
 <!-- Team inspector. Opens from any team on the board. -->
@@ -63,7 +72,8 @@
 </aside>
 <div class="scrim" id="scrim" hidden></div>
 
-<script src="fit.js?v=4"></script>
-<script src="app.js?v=13"></script>
+<script src="fit.js?v=6"></script>
+<script src="diag.js?v=2"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
