@@ -65,6 +65,28 @@ def season_z(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
     return out
 
 
+def _orient(game: Dict[str, Any], a: str, b: str, s1: int, s2: int):
+    """Put the better seed first, breaking ties alphabetically by team id.
+
+    Both are settled on Selection Sunday, so the row layout carries no
+    information about the result. Returning the scores alongside keeps them
+    attached to the right team after a swap.
+
+    Orientation does not change the fitted coefficients -- a zero-intercept
+    antisymmetric model is invariant to it, and that invariance is asserted in
+    the tests. It matters for anything computed ABOUT THE MEAN of the target.
+    Winner-first rows have a mean margin near +9.5; a variance-explained figure
+    measured against that mean is scored against a baseline ("team1 wins by
+    9.5") that is only available to someone who already knows who won.
+    """
+    sa, sb = game.get("team1_seed"), game.get("team2_seed")
+    if sa is not None and sb is not None and sa != sb:
+        swap = sa > sb
+    else:
+        swap = a > b
+    return (b, a, s2, s1) if swap else (a, b, s1, s2)
+
+
 def main() -> int:
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
     keys = [v[0] for v in VARIABLES]
@@ -88,10 +110,20 @@ def main() -> int:
             if a not in z or b not in z:
                 skipped_no_stats += 1
                 continue
+            s1, s2 = g.get("team1_score"), g.get("team2_score")
+            if s1 is None or s2 is None:
+                continue  # margin is the target; a game without one is unusable
+
+            # Orient by a PRE-TOURNAMENT fact, never by the result. The source
+            # records are stored winner-first (the championship game is 100%
+            # team1-won, the First Four 95.5% despite being same-seed matchups),
+            # so copying their order would write the answer into the row layout.
+            a, b, s1, s2 = _orient(g, a, b, s1, s2)
+
             x = [round(z[a][k] - z[b][k], 4) for k in keys]
             if not any(x):
                 continue
-            games.append({"y": year, "x": x, "w": 1 if g.get("team1_won") else 0})
+            games.append({"y": year, "x": x, "w": 1 if s1 > s2 else 0, "m": s1 - s2})
             per_year[year] = per_year.get(year, 0) + 1
 
     payload = {
@@ -100,10 +132,17 @@ def main() -> int:
         "n_games": len(games),
         "years": sorted(per_year),
         "per_year": per_year,
-        "orientation": "x = z(team1) - z(team2); w = 1 if team1 won",
+        "orientation": "x = z(team1) - z(team2); w = 1 if team1 won; m = team1 score - team2 score",
+        "target": "m",
+        "target_note": (
+            "m (final scoring margin) is the regression target. w is retained "
+            "because it is what a bracket actually needs -- a winner -- and it "
+            "is what accuracy is scored against. The two agree by construction: "
+            "predicted margin > 0 is the same statement as predicted win."
+        ),
         "fitting_contract": {
             "mirror_rows": True,
-            "mirror_note": "fit on both (x, w) and (-x, 1-w); this forces intercept 0",
+            "mirror_note": "fit on both (x, m) and (-x, -m); this forces intercept 0",
             "intercept": 0,
             "leave_one_year_out": True,
             "loyo_note": (
