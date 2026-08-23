@@ -266,6 +266,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .term .dv { color: var(--ink-2); }
 .term.weak b { color: var(--ink-3); font-weight: 400; }
 .term.weak .dv { color: var(--ink-3); }
+/* The target's unit, trailing the terms so the equation reads as a quantity
+   of points rather than an abstract score. */
+.term.unit { color: var(--ink-3); font-style: italic; margin-left: 2px; }
+
+/* A coefficient that flips sign between folds. Dimmed rather than alarmed:
+   the model is fine, the individual number just is not interpretable. */
+.term.shaky b { color: var(--up); }
+.warn { font-style: normal; color: var(--up); font-size: 10px; vertical-align: super; }
+.eq-warn {
+  margin: 10px 0 0; padding-top: 9px; border-top: 1px solid var(--line);
+  font-size: 11.5px; line-height: 1.55; color: var(--ink-2); max-width: 76ch;
+}
 .eq-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
 
 /* The prebuilt bracket is an alternative to the entire variable set, so it sits
@@ -286,3 +298,82 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   padding: 2px 5px; border-radius: 3px;
   background: rgba(95, 185, 138, .14); color: var(--good);
 }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 2px; background: var(--panel-2); padding: 3px; border-radius: 8px; }
+.tab {
+  appearance: none; border: 0; background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 12.5px; font-weight: 500; padding: 5px 12px;
+  border-radius: 6px; cursor: pointer;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+
+/* ---------- diagnostics ---------- */
+.diag { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 40px; }
+.d-head { padding: 2px 2px 0; }
+.d-h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.d-sub2 { margin: 5px 0 0; font-size: 12px; color: var(--ink-2); }
+.d-warn {
+  margin: 11px 0 0; padding: 10px 12px; font-size: 11.5px; line-height: 1.6;
+  color: var(--ink-2); background: var(--panel-2); border-left: 2px solid var(--up);
+  border-radius: 0 6px 6px 0; max-width: 88ch;
+}
+.d-warn b { color: var(--ink); }
+
+.d-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 15px 16px; }
+.d-card.next { background: var(--panel-2); }
+.d-h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.d-note { margin: 0 0 11px; font-size: 12px; line-height: 1.6; color: var(--ink-2); max-width: 86ch; }
+.d-note b { color: var(--ink); }
+.d-foot { margin: 10px 0 0; font-size: 11px; line-height: 1.55; color: var(--ink-3); max-width: 86ch; }
+
+.d-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.d-table th {
+  text-align: left; font-weight: 500; color: var(--ink-3); font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .04em; padding: 0 8px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.d-table td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); }
+.d-table tr:last-child td { border-bottom: 0; }
+.d-table tr.dim td { color: var(--ink-3); }
+.d-table tr.flag td.k { color: var(--up); }
+.d-table tr.best td { background: rgba(110,168,254,.06); }
+.d-table .n { text-align: right; font-variant-numeric: tabular-nums; }
+.d-table .k { color: var(--ink); }
+.d-table .ci { color: var(--ink-3); font-size: 11px; }
+.d-table .sig { color: var(--good); font-weight: 600; }
+.d-table .sub2 { display: block; font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+
+.pill { display: inline-block; padding: 1px 7px; border-radius: 20px; font-variant-numeric: tabular-nums; }
+.pill.low { background: rgba(95,185,138,.15); color: var(--good); }
+.pill.moderate { background: rgba(224,137,74,.13); color: var(--up); }
+.pill.high { background: rgba(224,137,74,.2); color: var(--up); }
+.pill.severe { background: rgba(230,110,110,.18); color: var(--bad); }
+.sev { font-size: 11px; }
+.sev.low { color: var(--good); } .sev.moderate { color: var(--up); }
+.sev.high { color: var(--up); } .sev.severe { color: var(--bad); }
+
+.d-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; margin: 12px 0 0; }
+.d-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.d-grid .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.d-grid .val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.d-grid .val.good { color: var(--good); } .d-grid .val.bad { color: var(--bad); }
+.d-grid .val.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; letter-spacing: .12em; }
+.d-grid .sub { font-size: 10.5px; color: var(--ink-3); line-height: 1.45; }
+
+.resid { width: 100%; height: auto; display: block; margin: 2px 0 6px; }
+.resid .axis { stroke: var(--line-2); stroke-width: 1; }
+.resid .sig-line { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+.resid .dots circle { fill: var(--accent); fill-opacity: .38; }
+.resid .bandline { fill: none; stroke: var(--up); stroke-width: 1.5; stroke-opacity: .85; }
+.resid .lab { fill: var(--ink-3); font-size: 9.5px; }
+.resid .lab.end { text-anchor: end; }
+
+.d-list { margin: 0; padding-left: 17px; font-size: 12px; line-height: 1.65; color: var(--ink-2); max-width: 88ch; }
+.d-list li { margin-bottom: 7px; }
+.d-list li:last-child { margin-bottom: 0; }
+.d-list b { color: var(--ink); }
+
+.d-empty { padding: 44px 10px; text-align: center; }
+.good { color: var(--good); } .bad { color: var(--bad); }
