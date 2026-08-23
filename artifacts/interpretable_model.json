@@ -1,0 +1,58 @@
+{
+  "purpose": "Companion model built for interpretation, not forecasting. The 24-variable ridge model in fit.js is the predictor; this exists to give a coefficient vector that can be read.",
+  "withheld_variables": [],
+  "confounding_warning": null,
+  "keys": [
+    "t_rank",
+    "true_road_win_pct",
+    "offensive_reb_rate"
+  ],
+  "beta": [
+    7.6394,
+    0.7631,
+    0.7985
+  ],
+  "units": "points of scoring margin per standard deviation of edge",
+  "selection": {
+    "method": "greedy forward, hard sign-stability gate across walk-forward folds",
+    "min_rmse_improvement": 0.02,
+    "max_vars": 8,
+    "ridge_per_1000_rows": 1.0
+  },
+  "walk_forward": {
+    "accuracy": 0.75,
+    "rmse": 11.573,
+    "mae": 9.036,
+    "r2": 0.4344,
+    "n": 756,
+    "folds": 12,
+    "note": "Optimistic: the variable set was chosen with sight of every fold. See nested_walk_forward for the unbiased figure."
+  },
+  "nested_walk_forward": {
+    "accuracy": 0.7547,
+    "rmse": 11.796,
+    "r2": 0.4233,
+    "n": 693,
+    "note": "Selection redone inside each fold. This is the honest number."
+  },
+  "coefficient_range_across_folds": {
+    "t_rank": [
+      7.1116,
+      7.6001
+    ],
+    "true_road_win_pct": [
+      0.1614,
+      0.7196
+    ],
+    "offensive_reb_rate": [
+      0.4935,
+      0.9573
+    ]
+  },
+  "forecaster_for_comparison": {
+    "n_variables": 24,
+    "accuracy": 0.7817,
+    "rmse": 10.465,
+    "sign_flipping_coefficients": 11
+  }
+}
