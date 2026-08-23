@@ -21,6 +21,8 @@
     "outcome_rounds_won",
     "outcome_vs_seed_delta",
     "hist_residual",
-    "hist_appearances"
+    "hist_appearances",
+    "returning_minutes_pct",
+    "freshman_minutes_pct"
   ]
 }

@@ -13,10 +13,26 @@ precomputed here so the client only ever does arithmetic it can be trusted with:
                    weighted mode is then a weighted sum in the browser, which is
                    presentation arithmetic rather than model math.
 
-LEAKAGE. Outcome fields (outcome_rounds_won, outcome_vs_seed_delta,
-hist_residual) are excluded from the selectable variables. Letting someone weight
-"rounds won" would replay the real bracket and look uncannily accurate; it is not
-a pre-tournament property and must not be offered as one.
+LEAKAGE. Two kinds of variable are excluded, and the difference is worth
+keeping straight because only the first kind is obvious.
+
+  OUTCOMES. outcome_rounds_won, outcome_vs_seed_delta, hist_residual. Weighting
+  "rounds won" would replay the real bracket and look uncannily accurate. These
+  are results, not pre-tournament properties, and were never offered.
+
+  SEASON AGGREGATES THAT STRADDLE THE PREDICTION POINT. returning_minutes_pct
+  and freshman_minutes_pct. These LOOK pre-tournament -- a player's class and
+  whether he was on last year's roster are settled in October -- but the
+  minute weights are averaged over a game count that includes the team's
+  tournament run, so the weighting is a function of the thing being predicted.
+  Confirmed by measurement, not inferred from a scrape timestamp: across 2015,
+  2019 and 2024 the number of extra games on a roster correlates with rounds
+  actually won at r = +0.71 to +0.96 (2026, genuinely mid-season, sits at
+  -0.13). See EXCLUDED_AS_LEAKAGE below for the full record.
+
+The second kind is the one to watch for in anything added here. "Is this field
+knowable on Selection Sunday?" is not sufficient -- the question is whether
+every input to it is, including the window it was averaged over.
 
 SEASONS WITHOUT DATA. A season with no candidate artifact is emitted with
 status="not_started" rather than omitted, so the UI can say plainly that the
@@ -47,22 +63,10 @@ SEASONS = [2024, 2025, 2026, 2027]
 # positive weight always means "I want more of this". Without that, weighting
 # defensive efficiency would silently favour the worst defences.
 # A fourth flag marks DESCRIPTIVE variables: ones where "more" is a team
-# property a user might want, not a property that wins games. Roster composition
-# is the clear case. Measured across 1,079-1,085 team-seasons:
+# property a user might want, not a property that wins games.
 #
-#   freshman minutes  vs performance-vs-seed   r = +0.020
-#   returning minutes vs performance-vs-seed   r = -0.028
-#   freshman minutes  vs rounds won            r = +0.052
-#   returning minutes vs rounds won            r = -0.002
-#
-# Standard error at that n is ~0.030, so all four are indistinguishable from
-# zero: neither youth nor experience predicts tournament performance here. They
-# also correlate with each other at r = -0.533, so treating both as "higher is
-# better" was incoherent as well as unsupported.
-#
-# They stay selectable -- "show me a bracket that favours veteran teams" is a
-# legitimate thing to ask -- but the UI labels them as preferences rather than
-# edges, so a weight is not mistaken for a claim.
+# The two roster-composition variables used to live here. They are gone -- see
+# EXCLUDED_AS_LEAKAGE below.
 VARIABLES: List[Dict[str, Any]] = [
     # key, label, group, higher_better, descriptive
     ("barthag", "Overall rating", "Overall", True, False),
@@ -88,17 +92,46 @@ VARIABLES: List[Dict[str, Any]] = [
     ("close_game_win_rate", "Close-game record", "Form", True, False),
     ("true_road_win_pct", "Road wins", "Form", True, False),
     ("losses_to_weaker_rate", "Bad losses", "Form", False, False),
-    ("returning_minutes_pct", "More returning minutes", "Roster", True, True),
-    ("freshman_minutes_pct", "More freshman minutes", "Roster", True, True),
     ("coach_prior_tourney_wins", "Coach tournament wins", "Roster", True, False),
 ]
 
 # Never selectable: these are results, not pre-tournament properties.
+#
+# The last two are the roster-composition shares, and they are here because the
+# roster files are post-tournament for every historical season. Every
+# cbbpy_rosters_*.json was scraped on 2026-02-21, so a team's per-player minute
+# averages are computed over its whole season INCLUDING its tournament run.
+# Measured, rather than inferred from the timestamp:
+#
+#   season   extra games on the roster      corr(extra games, rounds won)
+#   2015       median +2.5, max +6                  +0.927
+#   2019       median +3.0, max +6                  +0.962
+#   2024       median +3.0, max +6                  +0.714
+#   2026       median -5.0                          -0.128   <- genuinely clean
+#
+# Purdue 2024 carries 39 games against 33 played before the tournament: exactly
+# its six-game run to the final. The number of extra games is close to a direct
+# encoding of how far a team got, which is the thing being predicted.
+#
+# The derived quantity is a share of minutes-PER-GAME, so the distortion is
+# second-order rather than a straight readout of the result, and the two
+# variables were measured to contribute nothing: dropping them leaves
+# out-of-sample accuracy at 78.2% and slightly IMPROVES error (RMSE 10.48 ->
+# 10.46, R2 0.536 -> 0.538). Contributing nothing is not the same as being
+# clean, though, and a contaminated variable offered beside clean ones invites a
+# conclusion the data cannot support.
+#
+# Fixable properly once per-game boxscores exist: recompute minutes over games
+# before tournament_start, exactly as the Form columns now do. The current
+# player_minutes_*.json files are themselves season aggregates with no per-game
+# breakdown, so there is nothing to filter yet.
 EXCLUDED_AS_LEAKAGE = (
     "outcome_rounds_won",
     "outcome_vs_seed_delta",
     "hist_residual",
     "hist_appearances",
+    "returning_minutes_pct",
+    "freshman_minutes_pct",
 )
 
 
