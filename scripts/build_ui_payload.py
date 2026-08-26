@@ -73,6 +73,9 @@ VARIABLES: List[Dict[str, Any]] = [
     ("t_rank", "National rank", "Overall", False, False),
     ("massey_avg_rank", "Massey composite rank", "Overall", False, False),
     ("sos_avg_opp_barthag", "Strength of schedule", "Overall", True, False),
+    # Opponent-adjusted rating from game results alone. Present so barthag's
+    # incremental contribution can be measured rather than assumed.
+    ("srs", "Simple rating (margin + SOS)", "Overall", True, False),
     ("adj_offensive_efficiency", "Offense", "Overall", True, False),
     ("adj_defensive_efficiency", "Defense", "Overall", False, False),
     ("adj_tempo", "Tempo", "Overall", True, False),

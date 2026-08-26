@@ -48,6 +48,20 @@ const DEFAULT_OUT = path.join(REPO, 'artifacts', 'model_baseline.json');
 //   log loss 0.4514 -> 0.4513   Brier 0.1470 -> 0.1469   RMSE 10.3256 -> 10.3188
 //   accuracy 0.7804 -> 0.7778, which is 2 games of 756 and inside noise.
 // Evidenced rather than inferred, which is why it is gone rather than flagged.
+// srs is deliberately ABSENT from the fitted model while present in the data.
+// Measured 2026-08-26 against baseline_11key_pre_srs.json, walk-forward warm:
+//   barthag, no srs   0.45296   <- kept
+//   barthag + srs     0.45428   +0.0013, a collinear column costing a degree
+//                               of freedom while adding no information
+//   srs replaces barthag  0.52857   +0.0756, the same catastrophic cost as
+//                               dropping barthag outright -- srs recovers
+//                               almost none of what barthag contributes
+// So barthag is confounded (partial r -0.202, and more conference-biased than
+// srs at +0.213 vs +0.144) AND irreplaceable. Not a contradiction: the
+// conference signal it carries is entangled with genuine predictive content
+// that a margin-and-SOS rating does not reproduce. srs stays in the table as
+// an audit instrument -- it now flows through the same pipeline and id map as
+// every other column -- but it is not a model feature.
 const CANONICAL_KEYS = [
   'barthag', 't_rank', 'sos_avg_opp_barthag',
   'adj_offensive_efficiency', 'adj_defensive_efficiency', 'adj_tempo',
