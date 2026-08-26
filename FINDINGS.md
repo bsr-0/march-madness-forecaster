@@ -208,6 +208,43 @@ it took ~6 weeks of testing to establish.
   Remaining wins are more likely in omitted variables correlated with existing
   features than in further target cleaning.
 
+- **Ridge lambda retuning for the browser model** (2026-08-26): null, and the
+  first two readings of it were both wrong in instructive ways.
+
+  `FIT.LAMBDA` is fixed at 1.0 and never fold-tuned, and a sweep under the OLD
+  self-graded calibration showed log loss improving monotonically toward
+  lambda = 0 (0.45047 vs 0.45127) — which looked like ridge over-penalising.
+  Two errors sat inside that reading:
+
+  1. **`a` is not comparable across the sweep.** nu shifts 3 -> 2 as lambda
+     drops, and a fatter-tailed t needs a larger `a` for the same central
+     sharpness, so the two parameters trade off. The hypothesis that `a > 1`
+     was "undoing ridge shrinkage" is REFUTED: `a` does not fall toward 1 as
+     lambda drops, it RISES to 1.70. Log loss is the only comparable column.
+  2. **`a` was fit globally at each lambda**, i.e. self-graded one level up.
+     Refitting it walk-forward moves the apparent optimum from lambda = 0 to
+     lambda ~ 0.25 and flattens the curve — lambda and `a` are partially
+     redundant knobs, so pairing a lambda with an `a` fitted elsewhere finds
+     the wrong lambda.
+
+  With `a` refit walk-forward inside each lambda, **paired bootstrap on the 630
+  warm-year predictions**:
+      lambda=1 vs lambda=0     +0.00065  95% CI [-0.00399, +0.00335]
+      lambda=1 vs lambda=0.25  +0.00070  95% CI [-0.00285, +0.00278]
+  Both straddle zero. Monotone-improvement-toward-an-unregularised-boundary is
+  a common shape for noise, and that is what this was. **lambda stays at 1.0.**
+
+  Not pursued as a result: nested per-fold lambda selection (nothing to select
+  — everything in [0, 1] is equivalent within noise) and the per-fold
+  coefficient-variance check that would have been required before shipping
+  lambda -> 0 with 30 collinear rating columns.
+
+  **Method note worth keeping.** RMSE and log loss disagreeing across a sweep
+  is not a tie to break by preference: RMSE scores the mean model, log loss
+  scores mean and scale together, so less shrinkage buys sharper probabilities
+  at the cost of point accuracy. When they diverge, the knob is trading between
+  them rather than improving anything, which is what the bootstrap confirmed.
+
 ## 4. Data provenance & leakage — gotchas worth remembering
 
 ### Bracket Lab feature matrix — scope of the leakage audit (2026-08-22)
