@@ -56,6 +56,23 @@ const CANONICAL_KEYS = [
 ];
 
 const WIDTH_SWEEP = [3, 8, 12, 20, 30];
+
+// Shrinkage weight for walk-forward calibration, in units of observations.
+// One season is 63 games, so a year with only one prior season of residuals
+// sits halfway between its own fit and the uninformative a = 1.
+//
+// WHY SHRINK RATHER THAN EXCLUDE THE COLD-START YEARS. 2014 and 2015 have too
+// few prior test years to calibrate from. Dropping them would change what
+// "756 predictions" means and put a permanent asterisk on every later
+// comparison. Shrinking toward a = 1 keeps the row set fixed and makes the
+// cold-start cost visible in the number instead of hiding it by deletion:
+// 2014 falls back to exactly uncalibrated, and the prior fades as residuals
+// accumulate.
+//
+// a IS SHRUNK TOWARD 1, NOT TOWARD THE GLOBAL FIT, because the global fit is
+// computed from all 756 including the year being scored -- the very leak this
+// replaces.
+const CAL_PRIOR_STRENGTH = 63;
 const BINS = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0000001];
 
 function resolveCols(keys, wanted) {
@@ -90,11 +107,45 @@ function walkForward(rows, cols, years, minYear) {
   return out;
 }
 
+/* Per-year calibration fit ONLY on strictly earlier test years.
+ *
+ * The global calibrate() is fit on all 756 walk-forward predictions and then
+ * used to score those same 756. The margins are out of sample; the calibration
+ * is not, and the resulting log loss is flattered by 0.00181 (measured on the
+ * 630 warm-year predictions, which excludes cold-start from the comparison).
+ * Small, but a self-graded constant is not something to leave inside a frozen
+ * baseline that later work is measured against.
+ *
+ * Returns a lookup year -> {a, nu}. Per-year a is NOT used raw: bootstrapped
+ * per-year CIs are enormous (2014 [0.54, 2.33]) and 11 of 12 contain the
+ * global value, with no significant trend (-0.0034 +/- 0.0927 per year), so
+ * the year-to-year spread is sampling noise on ~63 binary outcomes rather than
+ * signal. Shrinkage is what keeps that noise out of the scored numbers.
+ */
+function walkForwardCalibration(pred, years) {
+  const byYear = {};
+  for (const y of years) {
+    const prior = pred.filter(r => r.y < y);
+    if (!prior.length) {
+      byYear[y] = { a: 1, nu: Infinity, priorN: 0 };
+      continue;
+    }
+    const fit = F.calibrate(prior.map(r => ({ m: r.m, p: r.margin, sigma: r.sigma })));
+    const n = prior.length;
+    const w = n / (n + CAL_PRIOR_STRENGTH);
+    byYear[y] = { a: w * fit.a + (1 - w) * 1, nu: fit.nu, priorN: n };
+  }
+  return byYear;
+}
+
 function score(pred, cal) {
   let ll = 0, brier = 0, n = 0, correct = 0, sse = 0, sae = 0, pinned = 0;
   let closest = 1;
   for (const r of pred) {
-    const raw = F.studentTCdf(cal.a * r.margin / r.sigma, cal.nu);
+    // cal may be one object or a per-year lookup, so a walk-forward
+    // calibration can be scored by the same function as a global one.
+    const c = typeof cal === 'function' ? cal(r) : cal;
+    const raw = F.studentTCdf(c.a * r.margin / r.sigma, c.nu);
     const p = F.clipProb(raw);
     sse += (r.m - r.margin) ** 2;
     sae += Math.abs(r.m - r.margin);
@@ -168,6 +219,12 @@ function build(dropKeys = []) {
   const pred = walkForward(t.games, cols, t.years, F.FIT.MIN_TEST_YEAR);
   const cal = F.calibrate(pred.map(r => ({ m: r.m, p: r.margin, sigma: r.sigma })));
   const uncal = { a: 1, nu: Infinity };
+  const wfCal = walkForwardCalibration(pred, t.years.filter(y => y >= F.FIT.MIN_TEST_YEAR));
+  const wfLookup = r => wfCal[r.y];
+  // warm years are those with enough prior residuals for the prior to have
+  // faded; reported separately so the cold-start cost is visible, not hidden.
+  const warmYears = Object.keys(wfCal).filter(y => wfCal[y].priorN >= 100).map(Number);
+  const warm = pred.filter(r => warmYears.includes(r.y));
 
   const sweep = {};
   for (const n of WIDTH_SWEEP) {
@@ -188,6 +245,13 @@ function build(dropKeys = []) {
     droppedKeys: dropKeys,
     minTestYear: F.FIT.MIN_TEST_YEAR,
     calibration: { a: +cal.a.toFixed(4), nu: cal.nu === Infinity ? 'Infinity' : cal.nu },
+    // The headline for any calibration claim. Fit strictly on earlier years,
+    // shrunk toward a = 1 while residuals are scarce.
+    calibratedWalkForward: score(pred, wfLookup),
+    calibratedWalkForwardWarm: score(warm, wfLookup),
+    walkForwardCalibration: Object.fromEntries(
+      Object.entries(wfCal).map(([y, c]) => [y, { a: +c.a.toFixed(4), nu: c.nu === Infinity ? 'Infinity' : c.nu, priorN: c.priorN }])
+    ),
     calibrated: score(pred, cal),
     uncalibrated: score(pred, uncal),
     reliability: reliability(pred, cal),
@@ -224,9 +288,15 @@ function main() {
     fs.writeFileSync(out, JSON.stringify(b, null, 2));
     console.log(`froze baseline -> ${path.relative(REPO, out)}`);
     console.log(`  ${b.calibrated.n} walk-forward predictions over ${b.trainingSource.seasons} seasons`);
-    console.log(`  calibration   a=${b.calibration.a} nu=${b.calibration.nu}`);
-    console.log(`  log loss      ${b.calibrated.logLoss.toFixed(4)}  (uncalibrated ${b.uncalibrated.logLoss.toFixed(4)})`);
-    console.log(`  Brier         ${b.calibrated.brier.toFixed(4)}  (uncalibrated ${b.uncalibrated.brier.toFixed(4)})`);
+    console.log(`  calibration   a=${b.calibration.a} nu=${b.calibration.nu} (global, self-graded)`);
+    // The walk-forward figure is the headline for any calibration claim: the
+    // global one is fit on the same predictions it scores. The warm subset
+    // drops the cold-start years from the COMPARISON only; they stay in the
+    // row set so "756" never changes meaning.
+    console.log(`  log loss      ${b.calibratedWalkForwardWarm.logLoss.toFixed(5)}  walk-forward, warm ${b.calibratedWalkForwardWarm.n}`);
+    console.log(`                ${b.calibratedWalkForward.logLoss.toFixed(5)}  walk-forward, all ${b.calibratedWalkForward.n} (incl. cold start)`);
+    console.log(`                ${b.calibrated.logLoss.toFixed(5)}  global a  (uncalibrated ${b.uncalibrated.logLoss.toFixed(4)})`);
+    console.log(`  Brier         ${b.calibratedWalkForwardWarm.brier.toFixed(5)}  walk-forward warm  (global ${b.calibrated.brier.toFixed(4)})`);
     console.log(`  accuracy      ${(b.calibrated.accuracy * 100).toFixed(2)}%`);
     return;
   }
@@ -273,8 +343,22 @@ function main() {
       ['log loss', 'logLoss', true], ['Brier', 'brier', true],
       ['accuracy', 'accuracy', false], ['RMSE', 'rmse', true], ['MAE', 'mae', true],
     ];
+    // WALK-FORWARD FIRST, because it is the honest number. The global block
+    // below is retained for continuity with older baselines, but a calibration
+    // constant fit on the same predictions it scores flatters log loss by
+    // ~0.0018 and should not be what a change is judged against.
+    if (was.calibratedWalkForwardWarm && now.calibratedWalkForwardWarm) {
+      console.log('  walk-forward calibration (headline, warm years):');
+      for (const [label, key, lower] of M) {
+        const a = was.calibratedWalkForwardWarm[key], b = now.calibratedWalkForwardWarm[key];
+        console.log(`    ${label.padEnd(10)} ${a.toFixed(5)} -> ${b.toFixed(5)}   ${fmtDelta(b, a, lower)}`);
+      }
+      console.log('  global calibration (self-graded, for continuity):');
+    } else {
+      console.log('  baseline predates walk-forward calibration; global only:');
+    }
     for (const [label, key, lower] of M) {
-      console.log(`  ${label.padEnd(10)} ${was.calibrated[key].toFixed(4)} -> ${now.calibrated[key].toFixed(4)}   ${fmtDelta(now.calibrated[key], was.calibrated[key], lower)}`);
+      console.log(`    ${label.padEnd(10)} ${was.calibrated[key].toFixed(4)} -> ${now.calibrated[key].toFixed(4)}   ${fmtDelta(now.calibrated[key], was.calibrated[key], lower)}`);
     }
     console.log(`\n  aggregate calibration gap/SE ${was.reliability.aggregate.gapSE} -> ${now.reliability.aggregate.gapSE}`);
     console.log(`  pinned predictions           ${was.calibrated.pinnedPastTolerance} -> ${now.calibrated.pinnedPastTolerance}`);
