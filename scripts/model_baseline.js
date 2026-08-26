@@ -297,6 +297,9 @@ function main() {
     console.log(`                ${b.calibratedWalkForward.logLoss.toFixed(5)}  walk-forward, all ${b.calibratedWalkForward.n} (incl. cold start)`);
     console.log(`                ${b.calibrated.logLoss.toFixed(5)}  global a  (uncalibrated ${b.uncalibrated.logLoss.toFixed(4)})`);
     console.log(`  Brier         ${b.calibratedWalkForwardWarm.brier.toFixed(5)}  walk-forward warm  (global ${b.calibrated.brier.toFixed(4)})`);
+    // Calibration cannot move these; printed once so they are not mistaken for
+    // a calibration effect.
+    console.log(`  RMSE/MAE      ${b.calibrated.rmse.toFixed(4)} / ${b.calibrated.mae.toFixed(4)}  (margin error; calibration-invariant)`);
     console.log(`  accuracy      ${(b.calibrated.accuracy * 100).toFixed(2)}%`);
     return;
   }
@@ -347,13 +350,20 @@ function main() {
     // below is retained for continuity with older baselines, but a calibration
     // constant fit on the same predictions it scores flatters log loss by
     // ~0.0018 and should not be what a change is judged against.
+    // ONLY THE METRICS CALIBRATION CAN ACTUALLY MOVE. a and nu enter through
+    // p = T(a * margin / sigma), so they touch log loss and Brier and nothing
+    // else. Accuracy is sign(margin); RMSE and MAE are margin error. Printing
+    // those under a "calibration" heading invites the reading that calibration
+    // changed them -- it cannot -- and any apparent difference is only the warm
+    // subset being 630 rows rather than 756. They are reported once, below.
+    const CAL_M = M.filter(([, key]) => key === 'logLoss' || key === 'brier');
     if (was.calibratedWalkForwardWarm && now.calibratedWalkForwardWarm) {
       console.log('  walk-forward calibration (headline, warm years):');
-      for (const [label, key, lower] of M) {
+      for (const [label, key, lower] of CAL_M) {
         const a = was.calibratedWalkForwardWarm[key], b = now.calibratedWalkForwardWarm[key];
         console.log(`    ${label.padEnd(10)} ${a.toFixed(5)} -> ${b.toFixed(5)}   ${fmtDelta(b, a, lower)}`);
       }
-      console.log('  global calibration (self-graded, for continuity):');
+      console.log('  global calibration (self-graded) + calibration-invariant metrics:');
     } else {
       console.log('  baseline predates walk-forward calibration; global only:');
     }
