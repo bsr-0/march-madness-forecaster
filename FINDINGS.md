@@ -161,6 +161,53 @@ it took ~6 weeks of testing to establish.
   massey/ap as correction features (negative training residual correlation
   despite looking individually strong standalone).
 
+- **Target cleaning and game-context features for the per-date matrix**
+  (2026-08-26, measured against the 41,321-row regular-season + conference-
+  tournament matrix, LOYO, scale fit on the training fold only; baseline log
+  loss 0.53184):
+  - **Winsorizing margin** at ±30/25/20/15/12/10: null. ±20 costs +0.00002 log
+    loss; every cap sits within 0.0003. The reason is in the distribution —
+    margin kurtosis is **3.45 against 3.0 for a Gaussian**, so there are no fat
+    tails to clip. 14.1% of games exceed ±20 but the tail is not heavy.
+    **This is also evidence FOR the calibration work, not just an unhelpful
+    null**: if clipping the tails does not move RMSE, the fitted Student-t ν
+    (currently 3) is already absorbing them, which is the t-link doing its job.
+  - **Possession-adjusted margin** (margin / possessions × 100, possessions
+    estimated as FGA − OR + TO + 0.475·FTA): null, −0.00000 log loss and
+    marginally worse RMSE. The `mp` field is retained on each row so this is
+    cheap to re-test; the columns were not.
+  - **Rest days** (days since previous game, differenced): −0.0348 ± 0.0456
+    points per day. CI straddles zero, and the point estimate has the *wrong
+    sign* (more rest → slightly worse), which reads as noise.
+  - **Bid-secured proxy** (top-30 dated barthag in the closing three weeks,
+    differenced): −0.0101 ± 0.6669 on 1,158 rows. A CI 66× the point estimate
+    measures nothing.
+
+  **Scope caveat — do not cite the last two as settled.** Rest and bid-security
+  were hypothesised as *tournament-context* effects, and this row set contains
+  **zero NCAA tournament games** (they are held out by construction; see
+  `scripts/assert_prediction_invariants.py` check 3). Conference-tournament
+  games are ~10.8% of rows. A rest effect that is real in March and absent in
+  January would read as null here. The correct statement is "null on the
+  current row set", not "no rest effect". Winsorization and possession
+  adjustment are different: those are target refinements tested on exactly the
+  population they apply to, so null means null.
+
+  The `rest_diff` and `bid_secured_diff` columns were REMOVED rather than kept
+  as documented nulls. A near-zero column is worse than an inert one because it
+  is visible: a reader scanning the feature list infers the model accounts for
+  rest and bid security, and it does not.
+
+  **Contrast with what did work.** Venue coding moved LOYO RMSE by −0.446 on
+  the same row set. The distinction is that venue fixed a *specification*
+  error — an omitted variable correlated with the features (strong teams buy
+  home games, so strength correlates with home-ness at r = 0.13, and the home
+  effect was being absorbed into the strength coefficients, inflating srs_blend
+  13% and barthag 44%). The step-5 items are target/context refinements and
+  address no specification error, which is the likely reason all four are null.
+  Remaining wins are more likely in omitted variables correlated with existing
+  features than in further target cleaning.
+
 ## 4. Data provenance & leakage — gotchas worth remembering
 
 ### Bracket Lab feature matrix — scope of the leakage audit (2026-08-22)
