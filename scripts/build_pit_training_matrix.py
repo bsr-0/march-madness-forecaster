@@ -69,6 +69,11 @@ from src.data.features.point_in_time_kaggle import (  # noqa: E402
     season_is_complete,
     strength_of_schedule,
 )
+from src.data.features.venue import (  # noqa: E402
+    derive_home_cities,
+    load_game_cities,
+    venue_for,
+)
 from src.data.features.point_in_time_ratings import (  # noqa: E402
     SELECTION_SUNDAY_DAY,
     game_counts,
@@ -223,6 +228,13 @@ def main() -> int:
     use_adjusted = not args.raw_rates
     dayzero = load_dayzero()
     conf_of = load_conferences()
+    # Venue is a property of where the game was played, so it is knowable
+    # before tip-off and carries no point-in-time risk -- unlike every other
+    # feature here it needs no cutoff. Derived home cities come from the whole
+    # season because "which arena does this team host in" is a fact about the
+    # programme, not a running measurement of its form.
+    game_cities = load_game_cities()
+    home_cities = derive_home_cities()
     universe = load_universe()
     keys = [k for k, *_ in VARIABLES if k in TORVIK_DATED | KAGGLE_DERIVED | OPPONENT_DEPENDENT]
     higher_better = {k: hb for k, _l, _g, hb, _d in VARIABLES}
@@ -347,6 +359,10 @@ def main() -> int:
                         "d": boundary,
                         "w": won,
                         "m": margin,
+                        "v": venue_for(
+                            year, g.day, g.winner, g.loser, g.winner_loc,
+                            game_cities, home_cities,
+                        )[0 if a_kid == g.winner else 1],
                         "ic": int(
                             conf_of.get(year, {}).get(a_kid)
                             != conf_of.get(year, {}).get(b_kid)
