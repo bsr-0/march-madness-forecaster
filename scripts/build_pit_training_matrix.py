@@ -58,6 +58,8 @@ sys.path.insert(0, str(REPO))
 from scripts.build_ui_payload import VARIABLES, zscores  # noqa: E402
 from src.data.features.custom_ratings import ratings_to_canonical  # noqa: E402
 from src.data.features.point_in_time_kaggle import (  # noqa: E402
+    ADJUSTABLE_RATES,
+    adjusted_rates,
     box_profile,
     detailed_before,
     form_stats,
@@ -155,6 +157,18 @@ def load_dayzero() -> dict[int, dt.date]:
     return out
 
 
+def load_conferences() -> dict[int, dict[int, str]]:
+    """Season -> {team_id: conference}. Carried onto each row so evaluation can
+    separate inter-conference games, which is where a conference confound can
+    actually bite: in a differential the two teams' conference effects cancel
+    when both sit in the same league."""
+    out: dict[int, dict[int, str]] = {}
+    with open(KAGGLE / "MTeamConferences.csv") as f:
+        for r in csv.DictReader(f):
+            out.setdefault(int(r["Season"]), {})[int(r["TeamID"])] = r["ConfAbbrev"]
+    return out
+
+
 def load_universe() -> dict[int, set[int]]:
     """Season -> set of D1 team ids, the denominator for the connectivity gate."""
     out: dict[int, set[int]] = {}
@@ -199,9 +213,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--seasons", type=int, nargs="*", help="limit to these seasons")
+    ap.add_argument(
+        "--raw-rates",
+        action="store_true",
+        help="use the unadjusted rates (the pre-fix matrix, for A/B comparison)",
+    )
     args = ap.parse_args()
 
+    use_adjusted = not args.raw_rates
     dayzero = load_dayzero()
+    conf_of = load_conferences()
     universe = load_universe()
     keys = [k for k, *_ in VARIABLES if k in TORVIK_DATED | KAGGLE_DERIVED | OPPONENT_DEPENDENT]
     higher_better = {k: hb for k, _l, _g, hb, _d in VARIABLES}
@@ -254,7 +275,13 @@ def main() -> int:
             pit = srs(past)
             blend = shrink_to_prior(pit, prior, game_counts(past))
             form = form_stats(past)
-            box = box_profile(detailed_before(detailed, boundary)) if detailed else {}
+            past_detailed = detailed_before(detailed, boundary) if detailed else []
+            box = box_profile(past_detailed) if past_detailed else {}
+            # Re-solved from THIS slice. The opponent effects that correct the
+            # rates come from the same window as the rates, so a December row
+            # is corrected by December opponents -- reusing a season-final
+            # adjustment here would be the same hindsight in a subtler place.
+            adjr = adjusted_rates(past_detailed) if (use_adjusted and past_detailed) else {}
 
             # Opponent-dependent features need DATED opponent ratings. barthag
             # from the eligible snapshot is the dated stand-in for both the SOS
@@ -278,7 +305,17 @@ def main() -> int:
                 f = form.get(kid, {})
                 b = box.get(kid, {})
                 for k in keys:
-                    if k in TORVIK_DATED:
+                    if use_adjusted and k in ADJUSTABLE_RATES:
+                        # Opponent-adjusted, and therefore NOT the Torvik
+                        # snapshot value for the same name. audit_opponent_
+                        # adjustment measures these four raw rates carrying
+                        # conference strength at |partial r| 0.13-0.33 against
+                        # every instrument tested. This row set is 41x the
+                        # tournament matrix and spans the full D1 range of
+                        # conference strength, so it is the worst place to
+                        # leave the confound in.
+                        v = adjr.get(kid, {}).get(k)
+                    elif k in TORVIK_DATED:
                         v = tvals.get(k)
                     elif k in KAGGLE_DERIVED:
                         v = f.get(k, b.get(k))
@@ -310,6 +347,10 @@ def main() -> int:
                         "d": boundary,
                         "w": won,
                         "m": margin,
+                        "ic": int(
+                            conf_of.get(year, {}).get(a_kid)
+                            != conf_of.get(year, {}).get(b_kid)
+                        ),
                         "x": [round(z[k][ia] - z[k][ib], 4) for k in all_keys],
                     }
                 )
@@ -326,6 +367,7 @@ def main() -> int:
             "m = team1 score - team2 score; team1 is the lexicographically "
             "smaller canonical id, which is independent of the result"
         ),
+        "rates": "opponent-adjusted" if use_adjusted else "raw",
         "point_in_time": (
             "every feature computed from games strictly before d; torvik "
             "snapshot strictly before d; standardised within (season, d)"

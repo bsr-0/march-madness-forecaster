@@ -81,16 +81,24 @@ class BoxGame:
     loser_score: int
     winner_loc: str
     # per-side box stats, winner first
+    w_fgm: int
     w_fga: int
     w_fgm3: int
     w_fga3: int
+    w_fta: int
+    w_oreb: int
+    w_dreb: int
     w_ast: int
     w_to: int
     w_stl: int
     w_blk: int
+    l_fgm: int
     l_fga: int
     l_fgm3: int
     l_fga3: int
+    l_fta: int
+    l_oreb: int
+    l_dreb: int
     l_ast: int
     l_to: int
     l_stl: int
@@ -120,16 +128,24 @@ def load_detailed_games(season: int, data_root: Path = Path("data")) -> List[Box
                     winner_score=int(r["WScore"]),
                     loser_score=int(r["LScore"]),
                     winner_loc=r.get("WLoc", "N"),
+                    w_fgm=int(r["WFGM"]),
                     w_fga=int(r["WFGA"]),
                     w_fgm3=int(r["WFGM3"]),
                     w_fga3=int(r["WFGA3"]),
+                    w_fta=int(r["WFTA"]),
+                    w_oreb=int(r["WOR"]),
+                    w_dreb=int(r["WDR"]),
                     w_ast=int(r["WAst"]),
                     w_to=int(r["WTO"]),
                     w_stl=int(r["WStl"]),
                     w_blk=int(r["WBlk"]),
+                    l_fgm=int(r["LFGM"]),
                     l_fga=int(r["LFGA"]),
                     l_fgm3=int(r["LFGM3"]),
                     l_fga3=int(r["LFGA3"]),
+                    l_fta=int(r["LFTA"]),
+                    l_oreb=int(r["LOR"]),
+                    l_dreb=int(r["LDR"]),
                     l_ast=int(r["LAst"]),
                     l_to=int(r["LTO"]),
                     l_stl=int(r["LStl"]),
@@ -325,3 +341,127 @@ def rank_from_rating(rating: Dict[int, float]) -> Dict[int, int]:
     """Dense 1-based ranking from a rating where higher is better."""
     ordered = sorted(rating, key=lambda t: -rating[t])
     return {t: i + 1 for i, t in enumerate(ordered)}
+
+
+# ---------------------------------------------------------------------------
+# Opponent adjustment
+# ---------------------------------------------------------------------------
+
+# The raw rates that audit_opponent_adjustment found carry conference strength
+# at |partial r| 0.15-0.36 regardless of which quality control is used.
+ADJUSTABLE_RATES = (
+    "effective_fg_pct",
+    "three_pt_pct",
+    "offensive_reb_rate",
+    "turnover_rate",
+)
+
+
+def _side_rates(fgm, fga, fgm3, fga3, fta, oreb, to, opp_dreb) -> Dict[str, Optional[float]]:
+    """One team's rates in one game. None where the denominator is empty."""
+    poss = fga - oreb + to + 0.475 * fta
+    return {
+        "effective_fg_pct": (fgm + 0.5 * fgm3) / fga if fga else None,
+        "three_pt_pct": fgm3 / fga3 if fga3 else None,
+        "offensive_reb_rate": oreb / (oreb + opp_dreb) if (oreb + opp_dreb) else None,
+        "turnover_rate": to / poss if poss > 0 else None,
+    }
+
+
+def per_game_rates(games: Sequence[BoxGame]):
+    """Yield (team, opponent, rates) for both sides of every game.
+
+    Game-level rather than season-aggregate because the opponent adjustment
+    needs to know WHO each performance came against. A season total cannot be
+    attributed back to opponents, which is precisely why the aggregate version
+    of these columns cannot be adjusted after the fact.
+    """
+    for g in games:
+        yield g.winner, g.loser, _side_rates(
+            g.w_fgm, g.w_fga, g.w_fgm3, g.w_fga3, g.w_fta, g.w_oreb, g.w_to, g.l_dreb
+        )
+        yield g.loser, g.winner, _side_rates(
+            g.l_fgm, g.l_fga, g.l_fgm3, g.l_fga3, g.l_fta, g.l_oreb, g.l_to, g.w_dreb
+        )
+
+
+def opponent_adjust(
+    observations: List[tuple],
+    max_iter: int = 200,
+    tol: float = 1e-10,
+) -> Dict[int, float]:
+    """Two-way fit: rate(i vs j) ~ mu + off_i + def_j. Returns mu + off_i.
+
+    WHAT THIS FIXES. A raw rate is measured against whoever a team happened to
+    play, so it encodes the schedule alongside the skill. Splitting each
+    observation into an offensive effect for the team and a defensive effect
+    for the opponent separates them, and reporting mu + off_i states the rate
+    the team would post against an AVERAGE opponent -- same units and roughly
+    the same scale as the raw rate, so it stays interpretable and drops into
+    the same slot.
+
+    Solved by alternating means rather than one big least-squares system: the
+    design matrix is ~11,000 x 720 per season and this reaches the same fixed
+    point in a fraction of the memory. Both effects are centred each pass so
+    mu keeps its meaning as the league average; without that, off and def can
+    drift by equal and opposite constants forever without converging.
+
+    `observations` is (team, opponent, value) with value already non-None.
+    """
+    if not observations:
+        return {}
+    mu = sum(v for _, _, v in observations) / len(observations)
+
+    by_team: Dict[int, List[int]] = {}
+    by_opp: Dict[int, List[int]] = {}
+    for idx, (t, o, _) in enumerate(observations):
+        by_team.setdefault(t, []).append(idx)
+        by_opp.setdefault(o, []).append(idx)
+
+    off = {t: 0.0 for t in by_team}
+    dfn = {o: 0.0 for o in by_opp}
+
+    for _ in range(max_iter):
+        moved = 0.0
+        for t, idxs in by_team.items():
+            new = sum(observations[i][2] - mu - dfn.get(observations[i][1], 0.0) for i in idxs) / len(idxs)
+            moved = max(moved, abs(new - off[t]))
+            off[t] = new
+        c = sum(off.values()) / len(off)
+        for t in off:
+            off[t] -= c
+        for o, idxs in by_opp.items():
+            new = sum(observations[i][2] - mu - off.get(observations[i][0], 0.0) for i in idxs) / len(idxs)
+            dfn[o] = new
+        c = sum(dfn.values()) / len(dfn)
+        for o in dfn:
+            dfn[o] -= c
+        if moved < tol:
+            break
+
+    return {t: mu + v for t, v in off.items()}
+
+
+def adjusted_rates(games: Sequence[BoxGame]) -> Dict[int, Dict[str, float]]:
+    """Opponent-adjusted versions of ADJUSTABLE_RATES, keyed by team.
+
+    Takes games already sliced to the as-of date. The adjustment is a function
+    of the games handed in and nothing else, so a per-date slice yields a
+    per-date adjustment -- the opponent effects are re-solved from the same
+    window as the rates they correct. Reusing a season-final adjustment for a
+    December row would reintroduce exactly the hindsight this module exists to
+    prevent, in a subtler place.
+    """
+    obs: Dict[str, List[tuple]] = {k: [] for k in ADJUSTABLE_RATES}
+    for team, opp, rates in per_game_rates(games):
+        for k in ADJUSTABLE_RATES:
+            v = rates[k]
+            if v is not None:
+                obs[k].append((team, opp, v))
+
+    solved = {k: opponent_adjust(obs[k]) for k in ADJUSTABLE_RATES}
+    out: Dict[int, Dict[str, float]] = {}
+    for k, table in solved.items():
+        for team, v in table.items():
+            out.setdefault(team, {})[k] = round(v, 6)
+    return out
