@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "frozenAt": "2026-08-26T12:37:37.591Z",
+  "frozenAt": "2026-08-26T12:49:00.070Z",
   "note": "Walk-forward baseline for the browser model. Compare with --compare.",
   "trainingSource": {
     "games": 1008,
@@ -51,7 +51,7 @@
     "accuracy": 0.7777777777777778,
     "rmse": 10.318776048297096,
     "mae": 7.851821715060049,
-    "pinnedPastTolerance": 0,
+    "pinnedPastTolerance": 2,
     "closestApproachToBoundPreClip": 0.00013042438153221259
   },
   "calibratedWalkForwardWarm": {
@@ -143,7 +143,7 @@
     "accuracy": 0.7777777777777778,
     "rmse": 10.318776048297096,
     "mae": 7.851821715060049,
-    "pinnedPastTolerance": 0,
+    "pinnedPastTolerance": 20,
     "closestApproachToBoundPreClip": 2.8656028661089294e-9
   },
   "reliability": {

@@ -71,6 +71,193 @@ function normalCdf(t) {
   return 0.5 * (1 + s * (1 - poly * Math.exp(-x * x)));
 }
 
+/* ---------------------------------------------------------------- calibration
+ *
+ * THE LINK IS PART OF THE MODEL, NOT A FORMALITY. The regression predicts a
+ * margin; something has to carry that margin to P(win). Two separate defects
+ * lived in that step, and they need two separate fixes -- rescaling cannot fix
+ * saturation and a fatter tail cannot fix scale.
+ *
+ * 1. SCALE. sigma was the IN-SAMPLE RMS residual, which understates
+ *    out-of-sample error, and ridge shrinks predicted margins toward zero on
+ *    top of that. Measured walk-forward over 756 held-out games, the model was
+ *    systematically UNDER-confident through the 0.6-0.9 band:
+ *
+ *        bin        n   predicted   actual    gap    gap/SE
+ *        0.6-0.7  117       64.9%    73.5%   +8.6      1.94
+ *        0.7-0.8  124       75.0%    81.5%   +6.5      1.66
+ *        0.8-0.9  122       84.8%    91.8%   +7.0      2.15
+ *
+ *    READ THAT TABLE CORRECTLY. No single bin clears two sigma by much; the
+ *    evidence is that three ADJACENT bins all miss in the same direction, not
+ *    any one of them. And the 0.5-0.6 bin's -6.3 point gap is NOT a finding --
+ *    at n=84 and p~0.5 its standard error is 5.4 points, so it sits 1.16 SE
+ *    from zero and points the opposite way from its neighbours, which is what
+ *    noise looks like. It is recorded here so nobody later cites it as an
+ *    S-curve.
+ *
+ *    That warning earned itself immediately. After calibration the same bin
+ *    reads -15.1 points, -2.40 SE, which looks alarming until the bin edge is
+ *    moved: [0.50,0.60) gives -2.40 SE, [0.52,0.62) gives -1.56, [0.54,0.64)
+ *    gives -1.06. A real miscalibration does not care where the boundary falls;
+ *    this one does, because a handful of coin-flip games crossing an arbitrary
+ *    line is the whole effect. Judged on windows that do not depend on that
+ *    choice: the wide [0.45,0.65) block is -0.72 SE over 117 games, and across
+ *    all 756 held-out games the model expects 536.7 wins and observes 541,
+ *    +0.40 SE. DO NOT tune against this bin.
+ *
+ *    Fix: one free parameter `a` in link(a * margin / sigma), fitted by
+ *    minimising LOG LOSS. Log loss, not margin MSE, because probability is what
+ *    the bracket is scored on -- the regression already optimised MSE and that
+ *    is a different objective.
+ *
+ * 2. SATURATION, which is a LINK problem and survives any rescaling. The normal
+ *    CDF has very thin tails: Phi(4) ~ 0.99997, Phi(6) ~ 1 - 1e-9. The shipped
+ *    model already put 10 of 756 held-out predictions past 1e-4 of 0 or 1, the
+ *    most extreme at p = 0.9999999977. None of them happened to lose, which is
+ *    luck rather than safety: a 1-seed over a 16-seed is roughly a 1.3% upset
+ *    historically (2 in ~156), so certainty at that level is wrong on the
+ *    merits, and under log loss one miss at a pinned probability is unbounded.
+ *
+ *    Fix: Student-t link with the degrees of freedom fitted alongside `a`. It
+ *    keeps every property that made margin regression the right choice -- still
+ *    a margin, still antisymmetric, still monotone -- and fattens the tail by
+ *    exactly as much as the held-out games support, rather than by assertion.
+ *    nu = Infinity recovers the normal exactly, so the old behaviour remains
+ *    reachable and is chosen only if the data prefers it.
+ *
+ * PROB_CLIP is a backstop under both, not a substitute for either. It exists so
+ * that a pathological fit cannot produce a literal 0 or 1 and an infinite
+ * score.
+ *
+ * IT DOES BIND, contrary to what this comment claimed until 2026-08-26. Whether
+ * it binds depends entirely on nu. Measured per year on the walk-forward
+ * calibration: with nu = 2-3 the closest any prediction comes to the bound is
+ * 4.9e-3 to 2.9e-2, comfortably clear. With nu = Infinity (2014, the cold-start
+ * fallback) it is 1.3e-4, past the clip, and with nu = 12 (2015) it is 9.5e-4,
+ * also past. Thin tails saturate; fat tails do not. That is the Student-t doing
+ * the job it was added for, and it is visible in the saturation behaviour even
+ * though the mean-log-loss difference against the normal is not statistically
+ * distinguishable (paired bootstrap 95% CI [-0.0032, +0.0159] on 630 games).
+ *
+ * HONEST ACCOUNTING, AND THE FIX. `calibrate()` here fits `a` and `nu` on
+ * whatever rows it is handed, so calling it on the pooled walk-forward
+ * residuals makes the resulting log loss mildly optimistic -- two parameters
+ * informed by the same held-out games they are then scored on. Measured at
+ * 0.00181 log loss on the 630 warm-year predictions.
+ *
+ * This comment used to say the alternative "costs more folds than 16 seasons
+ * can spare". That was wrong: scripts/model_baseline.js now refits the
+ * calibration per year on strictly earlier residuals only, shrunk toward a = 1
+ * with weight n/(n + 63), which needs no extra folds at all -- the walk-forward
+ * predictions already form a time-ordered sequence to calibrate along. The
+ * frozen baseline reports that as the headline. This function is unchanged and
+ * still fits on what it is given; the discipline lives in the caller.
+ */
+
+const PROB_CLIP = 1e-3;
+
+function clipProb(p) {
+  return Math.min(1 - PROB_CLIP, Math.max(PROB_CLIP, p));
+}
+
+/* Log-gamma, Lanczos g=7. Needed only by the incomplete beta below. */
+function logGamma(x) {
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  x -= 1;
+  let a = c[0];
+  const t = x + 7.5;
+  for (let i = 1; i < 9; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+/* Continued fraction for the incomplete beta (Numerical Recipes betacf). */
+function betacf(a, b, x) {
+  const MAXIT = 200, EPS = 3e-14, FPMIN = 1e-300;
+  const qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= MAXIT; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c; h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+
+/* Regularised incomplete beta I_x(a,b). */
+function betai(a, b, x) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(
+    logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x)
+  );
+  return x < (a + 1) / (a + b + 2)
+    ? bt * betacf(a, b, x) / a
+    : 1 - bt * betacf(b, a, 1 - x) / b;
+}
+
+/* Student-t CDF. nu = Infinity is the normal, exactly. */
+function studentTCdf(t, nu) {
+  if (!(nu < 1e6)) return normalCdf(t);
+  if (!isFinite(t)) return t > 0 ? 1 : 0;
+  const p = 0.5 * betai(nu / 2, 0.5, nu / (nu + t * t));
+  return t > 0 ? 1 - p : p;
+}
+
+/* Mean log loss of a calibration (a, nu) over walk-forward rows.
+ * rows: [{m, p, sigma}] -- true margin, predicted margin, that fold's sigma. */
+function logLossFor(rows, a, nu) {
+  let s = 0;
+  for (const r of rows) {
+    if (r.m === 0) continue;              // a tie has no winner to score
+    const p = clipProb(studentTCdf(a * r.p / r.sigma, nu));
+    s += r.m > 0 ? -Math.log(p) : -Math.log(1 - p);
+  }
+  return s / rows.length;
+}
+
+/* Fit the link's scale and tail weight by minimising log loss.
+ *
+ * Two parameters over a coarse nu grid with a golden-section search on `a`
+ * inside each. nu is searched on a grid rather than continuously because log
+ * loss is very flat in it -- the data can tell 3 from 30, not 8 from 9 -- and a
+ * grid keeps this cheap enough to re-run on every variable toggle. */
+function calibrate(rows) {
+  const NUS = [2, 3, 4, 6, 8, 12, 20, 40, Infinity];
+  const GR = (Math.sqrt(5) - 1) / 2;
+  let best = { a: 1, nu: Infinity, logLoss: Infinity };
+
+  for (const nu of NUS) {
+    let lo = 0.2, hi = 3.0;
+    let c = hi - GR * (hi - lo), d = lo + GR * (hi - lo);
+    let fc = logLossFor(rows, c, nu), fd = logLossFor(rows, d, nu);
+    for (let i = 0; i < 30 && hi - lo > 1e-3; i++) {
+      if (fc < fd) { hi = d; d = c; fd = fc; c = hi - GR * (hi - lo); fc = logLossFor(rows, c, nu); }
+      else { lo = c; c = d; fc = fd; d = lo + GR * (hi - lo); fd = logLossFor(rows, d, nu); }
+    }
+    const a = (lo + hi) / 2;
+    const ll = logLossFor(rows, a, nu);
+    if (ll < best.logLoss) best = { a, nu, logLoss: ll };
+  }
+  return best;
+}
+
 /* Solve A d = b by Gauss-Jordan with partial pivoting.
  * n <= 26 here, so an explicit solve is cheaper and clearer than anything
  * cleverer. Returns null on a singular system rather than silently producing
@@ -251,7 +438,11 @@ function crossValidate(rows, cols, years, minYear) {
     perYear[y] = scoreSpread(test, f.beta, cols);
     perYear[y].beta = f.beta.slice();
     f.beta.forEach((b, i) => trajectory[i].push(b));
-    for (const r of test) pooled.push({ x: r.x, m: r.m, p: predictMargin(f.beta, cols, r.x) });
+    // sigma travels with the row: each fold has its own, and the calibration
+    // below is fitted across folds, so the two cannot be collapsed.
+    for (const r of test) {
+      pooled.push({ x: r.x, m: r.m, p: predictMargin(f.beta, cols, r.x), sigma: f.sigma });
+    }
     sigmaSum += f.sigma;
     folds++;
   }
@@ -267,6 +458,25 @@ function crossValidate(rows, cols, years, minYear) {
   }
   const n = pooled.length;
 
+  // Calibrate the link on these held-out rows, and report what it bought
+  // against the old uncalibrated normal so the change is auditable rather
+  // than asserted. Both numbers are over the same games.
+  const calibration = calibrate(pooled);
+  const before = { a: 1, nu: Infinity };
+  const scoreProb = (cal) => {
+    let ll = 0, brier = 0, m = 0, pinned = 0;
+    for (const r of pooled) {
+      if (r.m === 0) continue;
+      const p = clipProb(studentTCdf(cal.a * r.p / r.sigma, cal.nu));
+      const y = r.m > 0 ? 1 : 0;
+      ll += -(y * Math.log(p) + (1 - y) * Math.log(1 - p));
+      brier += (p - y) ** 2;
+      if (p >= 1 - 1e-4 || p <= 1e-4) pinned++;
+      m++;
+    }
+    return m ? { logLoss: ll / m, brier: brier / m, pinned, n: m } : null;
+  };
+
   return {
     n,
     seasons: folds,
@@ -275,6 +485,9 @@ function crossValidate(rows, cols, years, minYear) {
     r2: sst > 0 ? 1 - sse / sst : null,
     accuracy: decided ? correct / decided : null,
     sigma: sigmaSum / folds,
+    calibration,
+    probScore: scoreProb(calibration),
+    probScoreUncalibrated: scoreProb(before),
     perYear,
     stability: stability(trajectory),
   };
@@ -303,14 +516,23 @@ function stability(trajectory) {
   });
 }
 
-/* P(team1 wins), from a predicted margin and the fit's residual spread. */
-function winProbFromMargin(margin, sigma) {
-  return normalCdf(margin / Math.max(sigma, 1e-6));
+/* P(team1 wins), from a predicted margin and the fit's residual spread.
+ *
+ * `cal` is the {a, nu} fitted by calibrate() on held-out games. Omitting it
+ * falls back to the raw normal link (a = 1, nu = Infinity), which is the
+ * pre-calibration behaviour -- kept as the default so the fallback is the
+ * conservative one when no walk-forward evaluation was possible. The clip
+ * applies either way. */
+function winProbFromMargin(margin, sigma, cal) {
+  const a = cal && isFinite(cal.a) ? cal.a : 1;
+  const nu = cal ? cal.nu : Infinity;
+  return clipProb(studentTCdf(a * margin / Math.max(sigma, 1e-6), nu));
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
-    winProbFromMargin, normalCdf, solve, stability, FIT,
+    winProbFromMargin, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
+    solve, stability, FIT, PROB_CLIP,
   };
 }

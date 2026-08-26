@@ -154,7 +154,14 @@ function score(pred, cal) {
     ll += -(y * Math.log(p) + (1 - y) * Math.log(1 - p));
     brier += (p - y) ** 2;
     if ((r.margin > 0) === (r.m > 0)) correct++;
-    if (p >= 1 - 1e-4 || p <= 1e-4) pinned++;
+    // TEST THE RAW VALUE, NOT THE CLIPPED ONE. This previously tested `p`,
+    // which clipProb has already bounded to [1e-3, 1-1e-3] -- tighter than the
+    // 1e-4 tolerance being checked -- so the condition could never fire and the
+    // metric read 0 for every baseline ever frozen. A monitoring number that is
+    // structurally incapable of alarming is worse than none: it reported the
+    // clip as never binding while it was in fact binding. Counting raw values
+    // at or past the clip is the thing actually worth knowing.
+    if (raw <= F.PROB_CLIP || raw >= 1 - F.PROB_CLIP) pinned++;
     closest = Math.min(closest, Math.min(raw, 1 - raw));
     n++;
   }
