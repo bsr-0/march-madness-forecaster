@@ -72,6 +72,7 @@ from src.data.features.point_in_time_kaggle import (  # noqa: E402
 from src.data.features.venue import (  # noqa: E402
     derive_home_cities,
     load_game_cities,
+    split_states,
     venue_for,
 )
 from src.data.features.point_in_time_ratings import (  # noqa: E402
@@ -152,6 +153,20 @@ OPPONENT_DEPENDENT = {"sos_avg_opp_barthag", "losses_to_weaker_rate"}
 # arbitrary date (see validate_point_in_time_srs.py), so it is carried as an
 # extra column rather than discarded.
 EXTRA_KEYS = ["srs_blend"]
+
+# Venue terms live IN the design matrix, not beside it. Stored as a sibling
+# field they were invisible to any consumer that builds its matrix from `keys`,
+# which is the omission failure: with no intercept (mirrored rows force it to
+# zero) the home effect does not surface as a constant offset, it is absorbed
+# into the correlated strength coefficients -- inflating srs_blend 13% and
+# barthag 44%, because strong teams buy home games so strength and home-ness
+# correlate at r = 0.13. Being in `keys` means a consumer gets them by default
+# and must zero them DELIBERATELY for tournament prediction, which is the safe
+# direction for the mistake to run.
+#
+# These are appended to x rather than differenced like every other column,
+# because venue is a property of the GAME, not of either team.
+VENUE_KEYS = ["venue_home", "venue_host_city"]
 
 
 def load_dayzero() -> dict[int, dt.date]:
@@ -236,9 +251,18 @@ def main() -> int:
     game_cities = load_game_cities()
     home_cities = derive_home_cities()
     universe = load_universe()
+    conf_tourney = set()
+    ct_path = KAGGLE / "MConferenceTourneyGames.csv"
+    if ct_path.exists():
+        with open(ct_path) as f:
+            for r in csv.DictReader(f):
+                conf_tourney.add(
+                    (int(r["Season"]), int(r["DayNum"]), int(r["WTeamID"]), int(r["LTeamID"]))
+                )
     keys = [k for k, *_ in VARIABLES if k in TORVIK_DATED | KAGGLE_DERIVED | OPPONENT_DEPENDENT]
     higher_better = {k: hb for k, _l, _g, hb, _d in VARIABLES}
-    all_keys = keys + EXTRA_KEYS
+    diff_keys = keys + EXTRA_KEYS
+    all_keys = diff_keys + VENUE_KEYS
 
     years = args.seasons or sorted(y for y in universe if y >= 2010)
     rows: list[dict] = []
@@ -310,7 +334,7 @@ def main() -> int:
             present = [kid for kid in pit if canon_of_kid.get(kid) in tv]
             if len(present) < 50:
                 continue
-            raw: dict[str, list] = {k: [] for k in all_keys}
+            raw: dict[str, list] = {k: [] for k in diff_keys}
             for kid in present:
                 canon = canon_of_kid[kid]
                 tvals = tv[canon]
@@ -359,15 +383,20 @@ def main() -> int:
                         "d": boundary,
                         "w": won,
                         "m": margin,
-                        "v": venue_for(
-                            year, g.day, g.winner, g.loser, g.winner_loc,
-                            game_cities, home_cities,
-                        )[0 if a_kid == g.winner else 1],
                         "ic": int(
                             conf_of.get(year, {}).get(a_kid)
                             != conf_of.get(year, {}).get(b_kid)
                         ),
-                        "x": [round(z[k][ia] - z[k][ib], 4) for k in all_keys],
+                        "x": [round(z[k][ia] - z[k][ib], 4) for k in diff_keys]
+                        + list(
+                            split_states(
+                                venue_for(
+                                    year, g.day, g.winner, g.loser, g.winner_loc,
+                                    game_cities, home_cities,
+                                    (year, g.day, g.winner, g.loser) in conf_tourney,
+                                )[0 if a_kid == g.winner else 1]
+                            )
+                        ),
                     }
                 )
         per_year[str(year)] = len(rows) - n_before
@@ -392,7 +421,8 @@ def main() -> int:
     args.out.write_text(json.dumps(payload, separators=(",", ":")))
 
     print(f"\n{len(rows):,} rows across {len(payload['years'])} seasons -> {args.out}")
-    print(f"  {len(all_keys)} features: {len(keys)} UI variables + {len(EXTRA_KEYS)} extra")
+    print(f"  {len(all_keys)} features: {len(keys)} UI variables + "
+          f"{len(EXTRA_KEYS)} extra + {len(VENUE_KEYS)} venue")
     print(f"  size {args.out.stat().st_size / 1e6:.1f} MB")
     if skipped_seasons:
         print(f"  seasons skipped: {', '.join(skipped_seasons)}")
