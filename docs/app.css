@@ -21,6 +21,10 @@
 
 * { box-sizing: border-box; }
 
+/* Every section toggled between tabs also sets its own `display` (grid/flex),
+   which otherwise beats the UA stylesheet's [hidden] rule and leaves it visible. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
