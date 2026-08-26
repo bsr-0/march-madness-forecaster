@@ -34,8 +34,22 @@ const DEFAULT_OUT = path.join(REPO, 'artifacts', 'model_baseline.json');
  * between folds. Held fixed so successive runs are comparable to each other,
  * which is the entire point -- this is a measuring stick, not a
  * recommendation about which variables a user should enable. */
+// massey_avg_rank was REMOVED here on 2026-08-25, deliberately and not as a
+// cleanup. audit_opponent_adjustment measured it at partial r = -0.744 against
+// conference strength controlling for team quality -- by a wide margin the
+// worst confound of the twelve, and worse than any raw per-game rate. It is
+// not opponent-adjustable: it pools other people's ranking systems, several of
+// them RPI-like, so the conference reward is baked into inputs this repo does
+// not control. It is also ordinal, so it is on the wrong scale for a margin
+// model regardless.
+//
+// Dropping it measured FREE against the 12-key baseline (archived at
+// artifacts/baselines/baseline_12key_pre_massey_drop.json):
+//   log loss 0.4514 -> 0.4513   Brier 0.1470 -> 0.1469   RMSE 10.3256 -> 10.3188
+//   accuracy 0.7804 -> 0.7778, which is 2 games of 756 and inside noise.
+// Evidenced rather than inferred, which is why it is gone rather than flagged.
 const CANONICAL_KEYS = [
-  'barthag', 't_rank', 'massey_avg_rank', 'sos_avg_opp_barthag',
+  'barthag', 't_rank', 'sos_avg_opp_barthag',
   'adj_offensive_efficiency', 'adj_defensive_efficiency', 'adj_tempo',
   'effective_fg_pct', 'three_pt_pct', 'three_pt_rate',
   'offensive_reb_rate', 'turnover_rate',
@@ -221,9 +235,34 @@ function main() {
     const to = val('--to', DEFAULT_OUT);
     if (!fs.existsSync(to)) { console.error(`no baseline at ${to} -- run --freeze first`); process.exit(1); }
     const was = JSON.parse(fs.readFileSync(to, 'utf8'));
-    const now_keys = CANONICAL_KEYS.filter(k => !dropKeys.includes(k));
-    if ((was.canonicalKeys || []).length !== now_keys.length) {
-      console.log(`  KEY SET DIFFERS: baseline ${was.canonicalKeys.length} keys -> now ${now_keys.length}`);
+
+    // A KEY-SET CHANGE IS NOT A PERFORMANCE CHANGE, AND MUST NOT READ AS ONE.
+    // The whole point of selecting by key rather than index is that a dropped
+    // or renamed variable cannot silently reindex into a different model. That
+    // guarantee is worth nothing if --compare then diffs a 12-key baseline
+    // against an 11-key variant and prints the difference as "better" or
+    // "WORSE" with no indication the models differ. So this refuses outright.
+    // --allow-key-change is the deliberate acknowledgement, and it is exactly
+    // how a measured drop should be recorded: on purpose, in the command.
+    const nowKeys = CANONICAL_KEYS.filter(k => !dropKeys.includes(k));
+    const wasKeys = was.canonicalKeys || [];
+    const added = nowKeys.filter(k => !wasKeys.includes(k));
+    const removed = wasKeys.filter(k => !nowKeys.includes(k));
+    if ((added.length || removed.length) && !has('--allow-key-change')) {
+      console.error(
+        `\nREFUSING TO COMPARE: the key set differs from the baseline.\n` +
+        (removed.length ? `  removed: ${removed.join(', ')}\n` : '') +
+        (added.length ? `  added:   ${added.join(', ')}\n` : '') +
+        `  baseline ${wasKeys.length} keys -> now ${nowKeys.length}\n\n` +
+        `These are different models, so a metric difference is not a change in\n` +
+        `performance. Re-run with --allow-key-change to compare deliberately.\n`
+      );
+      process.exit(2);
+    }
+    if (added.length || removed.length) {
+      console.log(`  KEY SET DIFFERS (acknowledged): ${wasKeys.length} -> ${nowKeys.length} keys`);
+      if (removed.length) console.log(`    removed: ${removed.join(', ')}`);
+      if (added.length) console.log(`    added:   ${added.join(', ')}`);
     }
     const now = build(dropKeys);
     console.log(`comparing against ${path.relative(REPO, to)} (frozen ${was.frozenAt})\n`);
