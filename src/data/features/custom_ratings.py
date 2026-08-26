@@ -222,15 +222,30 @@ def compute_glm_quality(
     n = len(teams)
     idx = {t: i for i, t in enumerate(teams)}
 
-    # Build design matrix: X[k, i] = +1 if team i is winner, -1 if loser
-    # y = 1 for all rows (winner is always team1 in our encoding)
+    # Build the design matrix with BOTH orientations of every game.
+    #
+    # This previously wrote one row per game with y = 1 throughout, because the
+    # winner is always encoded as +1. A single-class target cannot be fit:
+    # LogisticRegression raised "needs samples of at least 2 classes" on every
+    # season, the except branch below caught it, and this function silently
+    # returned average margin under a GLM name -- for every caller, every
+    # season, since it was written. It failed loudly into a log nobody read and
+    # quietly everywhere else.
+    #
+    # Mirroring each game to (-x, 1 - y) supplies the second class and is the
+    # same symmetric augmentation build_training_matrix documents for the
+    # browser fit: if A beating B implies B losing to A, both statements belong
+    # in the design. It also forces the fit through the origin, so no team
+    # gains strength from the arbitrary choice of which side is written first.
     m = len(games)
-    X = np.zeros((m, n))
-    y = np.ones(m)
+    X = np.zeros((2 * m, n))
+    y = np.concatenate([np.ones(m), np.zeros(m)])
 
     for k, (w, los, _, _) in enumerate(games):
         X[k, idx[w]] = 1.0
         X[k, idx[los]] = -1.0
+        X[m + k, idx[w]] = -1.0
+        X[m + k, idx[los]] = 1.0
 
     # Fit logistic regression with no intercept (team effects only)
     try:
