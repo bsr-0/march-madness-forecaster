@@ -791,6 +791,53 @@ def _cbbpy_season_games(year: int, canonical_ids, tournament_start):
     return rows
 
 
+def build_srs(year: int, canonical_ids):
+    """Simple Rating System from this season's regular-season results.
+
+    WHY THIS IS BUILT HERE RATHER THAN BOLTED ONTO THE TRAINING MATRIX. It
+    exists to answer one question -- how much does barthag add once an
+    opponent-adjusted rating computed from game results alone is present -- and
+    that comparison is destroyed by a provenance difference between the two
+    columns. Every other column in this table is cut at this season's
+    tournament boundary; adding SRS from a separate path with its own cutoff
+    semantics would make "barthag's incremental contribution" indistinguishable
+    from "the two columns are bounded differently".
+
+    So it runs through the same builder, on the same Kaggle regular-season file
+    every other Kaggle-derived column here uses, which by construction contains
+    no tournament games. custom_ratings.DEFAULT_CUTOFF_DAY (133, Selection
+    Sunday) matches the tournament_start - 1 boundary audit check A enforces
+    for the Torvik columns.
+
+    Measured on inter-conference games, SRS is less conference-biased than
+    barthag (+0.144 against +0.213, both point-in-time), so this is not a clean
+    instrument replacing a dirty one -- both carry the confound, one carries
+    less of it.
+    """
+    from src.data.features.custom_ratings import compute_srs_ratings
+
+    raw = compute_srs_ratings(year, data_root=PROJECT_ROOT / "data")
+    if not raw:
+        return {}
+    # USE THE SAME ID MAP AS EVERY OTHER KAGGLE-DERIVED COLUMN HERE.
+    # custom_ratings.ratings_to_canonical is a second, independent mapping
+    # (MTeams name -> normalize_team_id) and it dropped 113 of 1,085
+    # team-seasons, 4-14 per year. Those rows would have standardised to 0.0,
+    # i.e. "league average", which for a test of how much barthag adds OVER srs
+    # would have silently handed barthag the credit on 10% of the field. Two id
+    # maps in one table is the same provenance split this column exists to
+    # avoid.
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
+    if not kaggle_to_canonical:
+        return {}
+    out = {}
+    for kid, v in raw.items():
+        tid = kaggle_to_canonical.get(str(kid))
+        if tid is not None and tid in canonical_ids:
+            out[tid] = {"srs": round(v, 4)}
+    return out
+
+
 def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_start, torvik=None):
     """Per-team pre-tournament form: scoring margin, volatility, close games.
 
@@ -945,6 +992,7 @@ def build_year_rows(year: int) -> list[dict]:
     outcomes = build_tournament_outcomes(year)
     rosters = build_roster_stats(year, set(torvik))
     overtime = build_overtime_rate(year, set(torvik))
+    srs_ratings = build_srs(year, set(torvik))
     box_profile = build_kaggle_box_profile(year, set(torvik))
     coach = build_coach_experience(year, set(torvik))
     conf_tourney = build_conf_tourney_result(year, set(torvik))
@@ -989,6 +1037,7 @@ def build_year_rows(year: int) -> list[dict]:
             )
         )
         row.update(overtime.get(tv_id, {"overtime_rate": None}))
+        row.update(srs_ratings.get(tv_id, {"srs": None}))
         row.update(
             box_profile.get(
                 tv_id,
