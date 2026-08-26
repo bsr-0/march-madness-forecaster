@@ -251,6 +251,72 @@ it took ~6 weeks of testing to establish.
   at the cost of point accuracy. When they diverge, the knob is trading between
   them rather than improving anything, which is what the bootstrap confirmed.
 
+- **Pooling regular-season games into the tournament model** (2026-08-26).
+  Closed negative in both standardisation regimes. The expanded matrix is
+  41,321 rows against 1,008 and is leakage-clean, but it does not help.
+
+      D1-field standardised   expanded vs tournament-only  -0.00763
+                              95% CI [-0.00346, +0.01936]  NOT a finding
+      top-100 filtered        expanded vs tournament-only  +0.00498
+                              95% CI [-0.01078, +0.02127]  NOT a finding
+
+  **Two structural costs, both larger than any gain**, measured by decomposing
+  the distance from the 0.45296 baseline:
+      -t_rank (10 keys, same standardisation)   +0.0823
+      D1-field standardisation on top of that   +0.0420
+      expanded training population              -0.0076 (not significant)
+
+  `t_rank` cannot come along: it has no dated snapshot at ANY boundary, and
+  deriving it would ship a guess (ordering by barthag misplaces 324 of 364
+  teams — see rescrape_pretournament_torvik). It is the single most valuable
+  feature in the model, so the per-date pipeline is structurally barred from
+  the thing that matters most.
+
+  Standardisation compresses the signal: the tournament field sits in a narrow
+  band at the top of D1, so z-scoring against all ~350 teams shrinks barthag
+  differentials from sd 0.949 to 0.731, a 1.30x loss of discrimination on
+  exactly the games being predicted. But it is not optional — it is what makes
+  regular-season and tournament rows commensurable at all. The two are in
+  direct tension: what lets you USE 41,321 rows is what degrades the 63 you
+  care about.
+
+  **Filtering instead of rescaling was tried and does not rescue it.** Training
+  only on games between top-100 teams (8,232 rows) makes the population
+  commensurable by construction rather than by transformation. It does raise
+  the differential sd to 1.136 — the 68-team tournament field is actually WIDER
+  than the top 100, because it contains ~30 automatic qualifiers including
+  weak 16 seeds. But the expanded-population effect remains insignificant, and
+  the elite eval numbers are NOT comparable to the D1 ones: filtering removes
+  the most predictable games (1-vs-16 style mismatches), so log loss rises for
+  reasons that have nothing to do with the model.
+
+  **The per-date matrix is not wasted.** It is the only surface on which the
+  point-in-time, venue and confound machinery could be measured, and venue's
+  -0.446 came from there. Research instrument, not a replacement pipeline.
+
+### The stopping rule (adopted 2026-08-26)
+
+**If a change is smaller than its bootstrap CI, it is not a finding.** Applied
+retroactively this session it dissolved three results that had already been
+written up as wins: the lambda sweep (0.0008, CI straddling zero), the
+year-to-year instability in the calibration constant `a` (11 of 12 per-year CIs
+contain the global value, trend -0.0034 +/- 0.0927), and the expanded-training-
+population gain above (-0.00763, CI [-0.00346, +0.01936]) — that last one
+reported as a win one message before the bootstrap was run.
+
+This is not incidental sloppiness; it is what the regime demands. Measured
+effects this session ran 0.00001-0.00004 (target cleaning), 0.0008 (lambda),
+0.0018 (calibration bias) against a test set of 63 games/year. Most differences
+in that range are smaller than the sampling noise. College basketball games
+carry ~10.5 points of residual SD and no feature engineering changes that.
+
+**The one substantial win all session was venue, -0.446 RMSE, and it was a
+specification error** — an omitted variable correlated with the features
+(strong teams buy home games, so venue correlates with strength at r = 0.13,
+and the home effect was being absorbed into the strength coefficients).
+Everything framed as "more data" or "a better target" returned approximately
+nothing. Hunt specification errors, not accuracy.
+
 ## 4. Data provenance & leakage — gotchas worth remembering
 
 ### Bracket Lab feature matrix — scope of the leakage audit (2026-08-22)

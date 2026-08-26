@@ -70,9 +70,11 @@ from src.data.features.point_in_time_kaggle import (  # noqa: E402
     strength_of_schedule,
 )
 from src.data.features.venue import (  # noqa: E402
+    assert_neutral_for_prediction,
     derive_home_cities,
     load_game_cities,
     split_states,
+    tournament_venue,
     venue_for,
 )
 from src.data.features.point_in_time_ratings import (  # noqa: E402
@@ -245,6 +247,30 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--seasons", type=int, nargs="*", help="limit to these seasons")
     ap.add_argument(
+        "--elite",
+        type=int,
+        default=0,
+        metavar="N",
+        help=(
+            "restrict BOTH the standardisation population and the emitted "
+            "games to the top N teams by dated barthag. Attacks scale "
+            "compression at its source: standardising against all ~350 D1 "
+            "teams shrinks tournament-field differentials 1.30x because that "
+            "field occupies a narrow band at the top. Restricting the "
+            "population to the band being predicted makes the rows "
+            "commensurable by construction rather than by transformation."
+        ),
+    )
+    ap.add_argument(
+        "--tournament",
+        action="store_true",
+        help=(
+            "emit NCAA tournament games as an EVALUATION set instead of "
+            "regular-season rows, standardised identically so the two are "
+            "comparable"
+        ),
+    )
+    ap.add_argument(
         "--raw-rates",
         action="store_true",
         help="use the unadjusted rates (the pre-fix matrix, for A/B comparison)",
@@ -262,6 +288,26 @@ def main() -> int:
     game_cities = load_game_cities()
     home_cities = derive_home_cities()
     universe = load_universe()
+    # NCAA tournament results, loaded as Game records so the row builder can
+    # treat them like any other slate.
+    tourney_games: dict[int, list] = {}
+    ncaa_path = KAGGLE / "MNCAATourneyCompactResults.csv"
+    if ncaa_path.exists():
+        from src.data.features.point_in_time_ratings import Game as _G
+
+        with open(ncaa_path) as f:
+            for r in csv.DictReader(f):
+                tourney_games.setdefault(int(r["Season"]), []).append(
+                    _G(
+                        day=int(r["DayNum"]),
+                        winner=int(r["WTeamID"]),
+                        loser=int(r["LTeamID"]),
+                        winner_score=int(r["WScore"]),
+                        loser_score=int(r["LScore"]),
+                        winner_loc="N",
+                    )
+                )
+
     conf_tourney = set()
     ct_path = KAGGLE / "MConferenceTourneyGames.csv"
     if ct_path.exists():
@@ -309,8 +355,20 @@ def main() -> int:
             pl = bg.l_fga - bg.l_oreb + bg.l_to + 0.475 * bg.l_fta
             poss_of[(bg.day, bg.winner, bg.loser)] = max((pw + pl) / 2.0, 1.0)
 
+        # TOURNAMENT MODE EXISTS SO THE TWO POPULATIONS ARE COMPARABLE.
+        # training.json standardises within the 68-team tournament field;
+        # this matrix standardises within the ~350-team D1 field at each
+        # boundary. A +1.5 sigma offense means a different thing in each, so
+        # fitting on one and scoring the other silently compares two scales.
+        # Selection Sunday is just another boundary, so the eval set is built
+        # by the SAME code path with the SAME standardisation population.
+        boundaries = (
+            [SELECTION_SUNDAY_DAY]
+            if args.tournament
+            else list(range(FIRST_BOUNDARY, SELECTION_SUNDAY_DAY, BOUNDARY_STEP))
+        )
         n_before = len(rows)
-        for boundary in range(FIRST_BOUNDARY, SELECTION_SUNDAY_DAY, BOUNDARY_STEP):
+        for boundary in boundaries:
             past = games_before(compact, boundary)
             if not past:
                 continue
@@ -319,7 +377,11 @@ def main() -> int:
                 skipped_boundaries[str(year)] = skipped_boundaries.get(str(year), 0) + 1
                 continue
 
-            future = [g for g in compact if boundary <= g.day < boundary + BOUNDARY_STEP]
+            future = (
+                tourney_games.get(year, [])
+                if args.tournament
+                else [g for g in compact if boundary <= g.day < boundary + BOUNDARY_STEP]
+            )
             if not future:
                 continue
 
@@ -352,6 +414,9 @@ def main() -> int:
 
             # assemble raw per-team values over the teams present at this boundary
             present = [kid for kid in pit if canon_of_kid.get(kid) in tv]
+            if args.elite:
+                elite_rank = rank_from_rating(dated_barthag)
+                present = [k for k in present if elite_rank.get(k, 10**6) <= args.elite]
             if len(present) < 50:
                 continue
             raw: dict[str, list] = {k: [] for k in diff_keys}
@@ -387,6 +452,8 @@ def main() -> int:
             idx = {kid: i for i, kid in enumerate(present)}
 
             for g in future:
+                # With --elite this also drops games involving a non-elite
+                # team, since idx only holds the restricted population.
                 if g.winner not in idx or g.loser not in idx:
                     continue
                 a_kid, b_kid = g.winner, g.loser
@@ -408,13 +475,22 @@ def main() -> int:
                             != conf_of.get(year, {}).get(b_kid)
                         ),
                         "x": [round(z[k][ia] - z[k][ib], 4) for k in diff_keys]
-                        + list(
-                            split_states(
-                                venue_for(
-                                    year, g.day, g.winner, g.loser, g.winner_loc,
-                                    game_cities, home_cities,
-                                    (year, g.day, g.winner, g.loser) in conf_tourney,
-                                )[0 if a_kid == g.winner else 1]
+                        + (
+                            # Every NCAA game is neutral. tournament_venue() is
+                            # unconditional -- routing these through the host
+                            # check would code 4 of 1,001 as home/away because
+                            # a pod landed in a participant's city, which is
+                            # proximity, not home court.
+                            list(split_states(tournament_venue()))
+                            if args.tournament
+                            else list(
+                                split_states(
+                                    venue_for(
+                                        year, g.day, g.winner, g.loser, g.winner_loc,
+                                        game_cities, home_cities,
+                                        (year, g.day, g.winner, g.loser) in conf_tourney,
+                                    )[0 if a_kid == g.winner else 1]
+                                )
                             )
                         ),
                         "mp": round(
@@ -439,11 +515,18 @@ def main() -> int:
             "smaller canonical id, which is independent of the result"
         ),
         "rates": "opponent-adjusted" if use_adjusted else "raw",
+        "elite": args.elite or None,
         "point_in_time": (
             "every feature computed from games strictly before d; torvik "
             "snapshot strictly before d; standardised within (season, d)"
         ),
     }
+    if args.tournament and rows:
+        # The guard finally has a call site: every venue term on the
+        # prediction path must be exactly zero.
+        vi = [all_keys.index(k) for k in VENUE_KEYS]
+        assert_neutral_for_prediction([r["x"][i] for r in rows for i in vi])
+
     args.out.write_text(json.dumps(payload, separators=(",", ":")))
 
     print(f"\n{len(rows):,} rows across {len(payload['years'])} seasons -> {args.out}")
