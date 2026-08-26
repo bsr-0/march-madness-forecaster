@@ -38,6 +38,11 @@ CHECKS
      solve must depend on nothing after its cutoff, must actually differ
      between December and March, and the connectivity gate that decides when
      a solve is meaningful must discriminate 2021 from a normal season.
+  G  venue is coded from the host venue, not from the game type. The NCAA
+     tournament term must be unconditionally zero -- a participant in the host
+     city there is proximity, not home court -- while conference tournaments
+     must NOT be blanket-neutral, because 28% of them are played in a
+     participant's own home city and a game-type flag miscodes every one.
 
 Run: python3 scripts/audit_snapshot_boundary.py
 """
@@ -68,6 +73,12 @@ from scripts.validate_torvik_snapshot_bounds import (  # noqa: E402
     load_shooting_rows,
 )
 from src.data.features.custom_ratings import ratings_to_canonical  # noqa: E402
+from src.data.features.venue import (  # noqa: E402
+    derive_home_cities,
+    load_game_cities,
+    tournament_venue,
+    venue_for,
+)
 from src.pipeline.config import TOURNAMENT_START_DATES  # noqa: E402
 
 HIST = REPO / "data" / "raw" / "historical"
@@ -428,6 +439,78 @@ def main() -> int:
                 f"2021 largest-component share is {early_21:.2f} at day 30; the SRS floor must be "
                 "a per-season connectivity gate, not a calendar date."
             )
+
+    # ---------------------------------------------------------------- G
+    print("\nG. venue coding is a host check, not a game-type flag")
+    cities = load_game_cities()
+    home_cities = derive_home_cities()
+    if not cities:
+        check("kaggle game-city data available", False, "MGameCities.csv missing")
+    else:
+        # G1: the NCAA tournament venue term must be exactly zero, always. The
+        # NCAA bans true home games, so a participant playing in the host city
+        # is a PROXIMITY effect (travel_distance) and not a home-court one.
+        # Routing tournament games through the host check would code 4 of them
+        # as home/away and credit the wrong mechanism.
+        ncaa_path = REPO / "data" / "kaggle" / "MNCAATourneyCompactResults.csv"
+        non_neutral = 0
+        total_ncaa = 0
+        if ncaa_path.exists():
+            import csv as _c
+
+            with open(ncaa_path) as fh:
+                for r in _c.DictReader(fh):
+                    if int(r["Season"]) < 2010:
+                        continue
+                    total_ncaa += 1
+                    ws, ls = venue_for(
+                        int(r["Season"]), int(r["DayNum"]), int(r["WTeamID"]),
+                        int(r["LTeamID"]), r.get("WLoc", "N"), cities, home_cities,
+                    )
+                    if (ws, ls) != (0, 0):
+                        non_neutral += 1
+        check(
+            "tournament_venue() is unconditionally zero",
+            tournament_venue() == 0,
+            f"host check would code {non_neutral} of {total_ncaa:,} NCAA games non-neutral, "
+            f"so the zero must not be derived from it",
+        )
+
+        # G2: conference tournaments must NOT be blanket-coded neutral. If this
+        # ever reads ~0 the host check has silently stopped working, because
+        # conference tournaments are routinely held in a member's home city.
+        ct_path = REPO / "data" / "kaggle" / "MConferenceTourneyGames.csv"
+        hosted = 0
+        total_ct = 0
+        if ct_path.exists():
+            import csv as _c
+
+            with open(ct_path) as fh:
+                for r in _c.DictReader(fh):
+                    s_ = int(r["Season"])
+                    if s_ < 2010:
+                        continue
+                    key = (s_, int(r["DayNum"]), int(r["WTeamID"]), int(r["LTeamID"]))
+                    if key not in cities:
+                        continue
+                    total_ct += 1
+                    ws, ls = venue_for(
+                        s_, key[1], key[2], key[3], "N", cities, home_cities
+                    )
+                    if (ws, ls) != (0, 0):
+                        hosted += 1
+        share = hosted / total_ct if total_ct else 0.0
+        check(
+            "conference tournaments are not blanket-neutral",
+            share > 0.05,
+            f"{hosted:,} of {total_ct:,} ({share * 100:.1f}%) have a participant in its own "
+            f"home city; a game-type flag would miscode every one",
+        )
+        notes.append(
+            f"conference-tournament games with a home participant: {share * 100:.1f}%; "
+            "measured home-court effect there is +1.2 points against +2.9 generally, "
+            "so a home CITY at a neutral arena is a weaker effect than a true home game."
+        )
 
     print()
     if failures:
