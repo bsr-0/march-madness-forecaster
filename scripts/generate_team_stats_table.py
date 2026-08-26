@@ -49,6 +49,11 @@ below, from a different, leakage-safe source — see family (4).
      games/wins BEFORE the season in question. Strictly backward-looking: a
      coach's record going into year Y only counts seasons < Y, so a first-time
      tournament coach reads 0 games / 0 wins, never their own upcoming result.
+  6. Kaggle conference tournament games (data/kaggle/MConferenceTourneyGames.csv)
+     — each team's win count in ITS OWN conference tournament this season.
+     Unlike coach history, no backward-looking filter is needed: conference
+     tournaments finish before Selection Sunday, so this season's result is
+     itself pre-tournament information.
 
 Still not buildable: clutch/late-game splits and blown-lead rate need
 play-by-play, and there is no play-by-play anywhere in this repository —
@@ -69,6 +74,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._common import HIST_DIR, load_seeds_and_regions, load_torvik_and_ff, load_tournament_results
+from src.data.kaggle_loader import KaggleDataLoader
 from src.data.normalize import resolve_cbbpy_bridge
 
 KAGGLE_DIR = PROJECT_ROOT / "data" / "kaggle"
@@ -152,9 +158,16 @@ def build_roster_stats(year: int, canonical_ids):
     `returning_minutes_pct` is the share of this season's minutes played by
     players who were on the SAME team's roster the previous season (matched
     on player_id, which is stable year to year). `freshman_minutes_pct` is
-    the share played by `eligibility_year == 1`.
+    the share played by `eligibility_year == 1`. `n_returning_players` is the
+    raw headcount version of the same match -- how many of this year's roster
+    were on last year's roster, unweighted by minutes. Unlike the two ratios
+    below, it needs no tournament-contamination caveat: it is pure roster
+    membership (was player_id X on both lists), with no minutes or games-played
+    term in it at all, so there is no mechanism for a longer tournament run to
+    move it. `None` when there is no prior-season roster file to compare
+    against, distinct from `0` (compared, and nobody came back).
 
-    Provenance caveat, stated plainly: every `cbbpy_rosters_*.json` carries
+    Provenance caveat, stated plainly, for the two ratios: every `cbbpy_rosters_*.json` carries
     the same scrape timestamp, so for 2010-2025 the per-player minute
     averages are full-season figures that include that year's tournament
     games (2026's snapshot is genuinely mid-February, pre-tournament).
@@ -205,10 +218,79 @@ def build_roster_stats(year: int, canonical_ids):
         returners = prior_ids.get(raw_id, set())
         ret = sum(_num(p.get("minutes_per_game")) for p in players if p.get("player_id") in returners)
         frosh = sum(_num(p.get("minutes_per_game")) for p in players if p.get("eligibility_year") == 1)
+        roster_ids = {p.get("player_id") for p in players if p.get("player_id")}
         out[canonical] = {
             "returning_minutes_pct": round(ret / total, 4) if returners else None,
             "freshman_minutes_pct": round(frosh / total, 4),
+            "n_returning_players": len(roster_ids & returners) if prev_path.exists() else None,
         }
+    return out
+
+
+DOUBLE_DIGIT_PPG = 10.0
+
+
+def build_scoring_depth(year: int, canonical_ids):
+    """Count of double-digit (>= 10 ppg) scorers, from raw ESPN box scores.
+
+    Source is `data/raw/historical/boxscores_{year}.json` -- the same
+    per-game ESPN box-score cache `player_minutes_{year}.json` is built from,
+    one level upstream of that aggregation. `player_minutes_*.json` only kept
+    minutes; points are in the same per-game payload (the scraper's own
+    docstring: "the full stat line is retained, not just minutes"), just never
+    pulled out into a season aggregate before now.
+
+    Pre-tournament by construction, not by date filtering: `EspnBoxscoreScraper`
+    stops at `TOURNAMENT_START_DATES[year]` by default (see
+    boxscore_player_minutes.py / cbbpy_pbp.py), so this file never contains a
+    tournament game to filter out in the first place.
+
+    Only seasons the backfill has reached have this file (2013 on, as of this
+    writing, filling in behind the still-running historical backfill); earlier
+    seasons return {} and the field reads None, same convention as every other
+    partially-backfilled column here.
+    """
+    path = HIST_DIR / f"boxscores_{year}.json"
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        payload = json.load(f)
+    games = payload.get("games", [])
+    if not games:
+        return {}
+
+    points: dict[tuple[str, str], float] = {}
+    games_played: dict[tuple[str, str], int] = {}
+    for game in games:
+        for team in game.get("teams") or []:
+            tid = team["team_id"]
+            for p in team.get("players") or []:
+                minutes = p.get("minutes")
+                if minutes is None:
+                    continue  # DNP
+                pts = _num((p.get("stats") or {}).get("points"))
+                key = (tid, p["athlete_id"])
+                points[key] = points.get(key, 0.0) + pts
+                games_played[key] = games_played.get(key, 0) + 1
+
+    ppg_by_team: dict[str, list[float]] = {}
+    for (tid, athlete_id), total_pts in points.items():
+        gp = games_played[(tid, athlete_id)]
+        if gp > 0:
+            ppg_by_team.setdefault(tid, []).append(total_pts / gp)
+
+    # Bridge raw ESPN team ids to canonical ids, weighted by total scoring
+    # (same idiom as build_roster_stats's minutes weighting), so a collision
+    # resolves to whichever roster is actually the D1 team in question.
+    weights = {tid: sum(ppgs) for tid, ppgs in ppg_by_team.items()}
+    bridge_map = resolve_cbbpy_bridge(weights, canonical_ids)
+
+    out = {}
+    for raw_id, ppgs in ppg_by_team.items():
+        canonical = bridge_map.get(raw_id)
+        if canonical is None:
+            continue
+        out[canonical] = {"n_double_digit_scorers": sum(1 for p in ppgs if p >= DOUBLE_DIGIT_PPG)}
     return out
 
 
@@ -507,6 +589,110 @@ def build_coach_experience(year: int, canonical_ids):
     return out
 
 
+_conf_tourney_cache = None
+
+
+def _load_conf_tourney_history():
+    """Cache of every (season, kaggle_team_id)'s conference-tournament wins.
+
+    Loaded once from data/kaggle/MConferenceTourneyGames.csv (2001-2025) and
+    memoized like `_load_coach_tourney_history`.
+
+    Conference tournaments finish before Selection Sunday, so this season's
+    OWN result is pre-tournament information -- unlike coach experience, no
+    backward-looking `< year` filter is needed here.
+
+    Returns `(wins_by_season_team, played_by_season_team)`:
+      wins_by_season_team[(season, kaggle_team_id)] -> win count.
+      played_by_season_team is the set of (season, kaggle_team_id) that
+      appear in the file at all (as winner OR loser) -- needed to tell "lost
+      its only game" (0 wins, played) apart from "no conference tournament
+      row at all" (independents, or a season this file has not caught up to).
+    """
+    global _conf_tourney_cache
+    if _conf_tourney_cache is not None:
+        return _conf_tourney_cache
+
+    path = KAGGLE_DIR / "MConferenceTourneyGames.csv"
+    if not path.exists():
+        _conf_tourney_cache = ({}, set())
+        return _conf_tourney_cache
+
+    wins_by_season_team: dict[tuple[int, str], int] = {}
+    played_by_season_team: set[tuple[int, str]] = set()
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            season = int(r["Season"])
+            wkey = (season, r["WTeamID"])
+            lkey = (season, r["LTeamID"])
+            wins_by_season_team[wkey] = wins_by_season_team.get(wkey, 0) + 1
+            played_by_season_team.add(wkey)
+            played_by_season_team.add(lkey)
+
+    _conf_tourney_cache = (wins_by_season_team, played_by_season_team)
+    return _conf_tourney_cache
+
+
+def build_conf_tourney_result(year: int, canonical_ids):
+    """Each team's win count in its OWN conference tournament this season.
+
+    A team that lost its conference-tournament opener reads 0; a team that
+    won it outright (the auto-bid path) reads however many rounds that
+    conference's bracket has (typically 3-5). Teams with no row at all
+    (independents, or seasons the Kaggle file has not caught up to yet -- see
+    module docstring on the current season's Kaggle lag) get None, handled
+    the same way every other Kaggle-sourced column's gap is handled in
+    `build_year_rows`.
+    """
+    wins_by_season_team, played_by_season_team = _load_conf_tourney_history()
+    kaggle_to_canonical = _load_kaggle_team_map(canonical_ids, year)
+    if not played_by_season_team or not kaggle_to_canonical:
+        return {}
+
+    canonical_to_kaggle = {v: k for k, v in kaggle_to_canonical.items()}
+    out = {}
+    for canonical, kaggle_id in canonical_to_kaggle.items():
+        key = (year, kaggle_id)
+        if key not in played_by_season_team:
+            continue
+        out[canonical] = {"conf_tourney_wins": wins_by_season_team.get(key, 0)}
+    return out
+
+
+_massey_loader = None
+
+
+def build_massey_composite(year: int):
+    """Each team's average ordinal rank across every computer ranking system.
+
+    Uses `KaggleDataLoader.load_massey_ordinals`, which already auto-computes
+    a safe `max_day` from Selection Sunday and DayZero (data/kaggle/MSeasons.csv)
+    and excludes any ranking day after it -- the same leakage guard
+    `_compute_max_ranking_day` provides for `ExternalRatingsLoader`. This
+    function does no date logic of its own; it only averages what that loader
+    already returns.
+
+    A team's average is taken over whichever systems ranked it that season
+    (system coverage varies year to year, ~54-70 systems), so a team missing
+    from a handful of systems is not penalized -- it is a mean over
+    however many systems actually rated it, not over a fixed denominator.
+    """
+    global _massey_loader
+    if _massey_loader is None:
+        _massey_loader = KaggleDataLoader(str(KAGGLE_DIR))
+
+    ordinals = _massey_loader.load_massey_ordinals(year)
+    if not ordinals:
+        return {}
+
+    ranks_by_team: dict[str, list[int]] = {}
+    for system_map in ordinals.values():
+        for team_id, entry in system_map.items():
+            ranks_by_team.setdefault(team_id, []).append(entry.ordinal_rank)
+
+    return {team_id: {"massey_avg_rank": round(statistics.fmean(ranks), 2)} for team_id, ranks in ranks_by_team.items()}
+
+
 def _torvik_meta(year: int) -> dict:
     path = HIST_DIR / f"torvik_{year}.json"
     if not path.exists():
@@ -605,7 +791,7 @@ def _cbbpy_season_games(year: int, canonical_ids, tournament_start):
     return rows
 
 
-def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_start):
+def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_start, torvik=None):
     """Per-team pre-tournament form: scoring margin, volatility, close games.
 
     Returns `{canonical_team_id: {...}}` covering everything in the UI's "Form"
@@ -622,6 +808,25 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
 
     Kaggle avoids the problem rather than patching it: its regular-season file
     simply does not contain tournament games, so no date logic is needed.
+
+    STRENGTH OF SCHEDULE. `sos_avg_opp_barthag` is the mean of every regular-
+    season opponent's OWN pre-tournament barthag (Torvik's power rating), i.e.
+    "how good were the teams you played" rather than "how good are you." Torvik
+    itself publishes a SOS/WAB column, but the scraper never captured it, so
+    this is computed from what is already on hand instead of re-scraping.
+
+    THIS COLUMN CORRELATES WITH CONFERENCE STRENGTH ON PURPOSE. An
+    opponent-adjustment audit flags it at partial r = +0.29 against conference
+    strength, controlling for team quality -- the same test that correctly
+    flagged `reg_season_margin_avg` at -0.49 as a confound. Here it is not a
+    confound, it is the measurement: a team in a strong conference genuinely
+    played stronger opponents, and a schedule-strength column that did NOT move
+    with conference strength would be broken. Do not "fix" it, and do not
+    opponent-adjust it -- adjusting a measure of opposition for the quality of
+    the opposition would leave nothing behind.
+    Opponents outside the Torvik universe (non-D1, or D1 schools this season's
+    torvik dict lacks) are skipped rather than guessed at, so a team with a lot
+    of buy games has a smaller sample, not a wrong one.
     """
     rows = _kaggle_season_games(year, canonical_ids)
     if rows is None:
@@ -630,8 +835,10 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
     if rows is None:
         return {}
 
+    torvik = torvik or {}
     margins: dict[str, list[int]] = {}
     bad_losses: dict[str, int] = {}
+    opp_barthags: dict[str, list[float]] = {}
     for team, opp, own_score, opp_score in rows:
         if team is None:
             continue
@@ -642,11 +849,15 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
             own_rank, opp_rank = t_ranks.get(team), t_ranks.get(opp)
             if own_rank is not None and opp_rank is not None and opp_rank > own_rank:
                 bad_losses[team] = bad_losses.get(team, 0) + 1
+        opp_barthag = torvik.get(opp, {}).get("barthag") if opp is not None else None
+        if opp_barthag is not None:
+            opp_barthags.setdefault(team, []).append(opp_barthag)
 
     out = {}
     for team, vals in margins.items():
         n = len(vals)
         close = [m for m in vals if abs(m) <= CLOSE_GAME_MARGIN]
+        sos = opp_barthags.get(team)
         out[team] = {
             "games_played": n,
             "reg_season_margin_avg": round(statistics.fmean(vals), 2),
@@ -654,6 +865,7 @@ def build_regular_season_stats(year: int, canonical_ids, t_ranks, tournament_sta
             "close_game_rate": round(len(close) / n, 4),
             "close_game_win_rate": (round(sum(1 for m in close if m > 0) / len(close), 4) if close else None),
             "losses_to_weaker_rate": round(bad_losses.get(team, 0) / n, 4),
+            "sos_avg_opp_barthag": round(statistics.fmean(sos), 4) if sos else None,
         }
     return out
 
@@ -729,12 +941,15 @@ def build_year_rows(year: int) -> list[dict]:
 
     torvik, _ff = load_torvik_and_ff(year)
     t_ranks = {tid: t.get("t_rank") for tid, t in torvik.items()}
-    reg = build_regular_season_stats(year, set(torvik), t_ranks, meta.get("tournament_start"))
+    reg = build_regular_season_stats(year, set(torvik), t_ranks, meta.get("tournament_start"), torvik=torvik)
     outcomes = build_tournament_outcomes(year)
     rosters = build_roster_stats(year, set(torvik))
     overtime = build_overtime_rate(year, set(torvik))
     box_profile = build_kaggle_box_profile(year, set(torvik))
     coach = build_coach_experience(year, set(torvik))
+    conf_tourney = build_conf_tourney_result(year, set(torvik))
+    massey = build_massey_composite(year)
+    scoring_depth = build_scoring_depth(year, set(torvik))
 
     rows = []
     for team_id, seed in seeds.items():
@@ -763,10 +978,16 @@ def build_year_rows(year: int) -> list[dict]:
                     "close_game_rate": None,
                     "close_game_win_rate": None,
                     "losses_to_weaker_rate": None,
+                    "sos_avg_opp_barthag": None,
                 },
             )
         )
-        row.update(rosters.get(tv_id, {"returning_minutes_pct": None, "freshman_minutes_pct": None}))
+        row.update(
+            rosters.get(
+                tv_id,
+                {"returning_minutes_pct": None, "freshman_minutes_pct": None, "n_returning_players": None},
+            )
+        )
         row.update(overtime.get(tv_id, {"overtime_rate": None}))
         row.update(
             box_profile.get(
@@ -793,6 +1014,9 @@ def build_year_rows(year: int) -> list[dict]:
             )
         )
         row.update(outcomes.get(team_id, {"outcome_finish": None, "outcome_rounds_won": None}))
+        row.update(conf_tourney.get(tv_id, {"conf_tourney_wins": None}))
+        row.update(massey.get(tv_id, {"massey_avg_rank": None}))
+        row.update(scoring_depth.get(tv_id, {"n_double_digit_scorers": None}))
         rows.append(row)
 
     rows.sort(key=lambda r: r["t_rank"] if r["t_rank"] is not None else 999)

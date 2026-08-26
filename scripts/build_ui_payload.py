@@ -71,6 +71,8 @@ VARIABLES: List[Dict[str, Any]] = [
     # key, label, group, higher_better, descriptive
     ("barthag", "Overall rating", "Overall", True, False),
     ("t_rank", "National rank", "Overall", False, False),
+    ("massey_avg_rank", "Massey composite rank", "Overall", False, False),
+    ("sos_avg_opp_barthag", "Strength of schedule", "Overall", True, False),
     ("adj_offensive_efficiency", "Offense", "Overall", True, False),
     ("adj_defensive_efficiency", "Defense", "Overall", False, False),
     ("adj_tempo", "Tempo", "Overall", True, False),
@@ -92,7 +94,11 @@ VARIABLES: List[Dict[str, Any]] = [
     ("close_game_win_rate", "Close-game record", "Form", True, False),
     ("true_road_win_pct", "Road wins", "Form", True, False),
     ("losses_to_weaker_rate", "Bad losses", "Form", False, False),
+    ("conf_tourney_wins", "Conf. tournament wins", "Form", True, False),
     ("coach_prior_tourney_wins", "Coach tournament wins", "Roster", True, False),
+    ("hist_residual", "Program's tourney history", "Roster", True, False),
+    ("n_returning_players", "Returning players", "Roster", True, False),
+    ("n_double_digit_scorers", "Double-digit scorers", "Roster", True, False),
 ]
 
 # Never selectable: these are results, not pre-tournament properties.
@@ -125,10 +131,16 @@ VARIABLES: List[Dict[str, Any]] = [
 # before tournament_start, exactly as the Form columns now do. The current
 # player_minutes_*.json files are themselves season aggregates with no per-game
 # breakdown, so there is nothing to filter yet.
+#
+# hist_appearances is NOT leakage either -- like hist_residual (now in
+# VARIABLES as "Program's tourney history"), it only counts tournament
+# appearances strictly before the season in question. It stays out here
+# because it is a sample-size gate for hist_residual's reliability, not a
+# team-quality signal in its own right -- more prior appearances does not
+# mean "better," just "the residual is measured on a bigger n."
 EXCLUDED_AS_LEAKAGE = (
     "outcome_rounds_won",
     "outcome_vs_seed_delta",
-    "hist_residual",
     "hist_appearances",
     "returning_minutes_pct",
     "freshman_minutes_pct",

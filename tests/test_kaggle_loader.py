@@ -208,6 +208,26 @@ def kaggle_dir(tmp_path):
         ],
     )
 
+    # Cities.csv
+    _write_csv(
+        tmp_path / "Cities.csv",
+        ["CityID", "City", "State"],
+        [
+            ["4091", "Dayton", "OH"],
+            ["4301", "Salt Lake City", "UT"],
+        ],
+    )
+
+    # MGameCities.csv
+    _write_csv(
+        tmp_path / "MGameCities.csv",
+        ["Season", "DayNum", "WTeamID", "LTeamID", "CRType", "CityID"],
+        [
+            ["2025", "50", "1181", "1314", "Regular", "4301"],
+            ["2025", "134", "1112", "1104", "NCAA", "4091"],
+        ],
+    )
+
     return tmp_path
 
 
@@ -226,6 +246,35 @@ class TestKaggleDataLoader:
         assert len(teams) == 5
         assert teams[1181] == "Duke"
         assert teams[1314] == "North Carolina"
+
+    def test_load_cities(self, kaggle_dir):
+        loader = KaggleDataLoader(str(kaggle_dir))
+        cities = loader.load_cities()
+        assert cities[4091] == {"city": "Dayton", "state": "OH"}
+        assert cities[4301] == {"city": "Salt Lake City", "state": "UT"}
+
+    def test_load_game_cities(self, kaggle_dir):
+        loader = KaggleDataLoader(str(kaggle_dir))
+        games = loader.load_game_cities(2025)
+        assert len(games) == 2
+        regular = games["kaggle_2025_50_1181_1314"]
+        assert regular == {
+            "city_id": 4301,
+            "city": "Salt Lake City",
+            "state": "UT",
+            "game_type": "Regular",
+        }
+        ncaa = games["kaggle_2025_134_1112_1104"]
+        assert ncaa == {
+            "city_id": 4091,
+            "city": "Dayton",
+            "state": "OH",
+            "game_type": "NCAA",
+        }
+
+    def test_load_game_cities_missing_file(self, kaggle_dir):
+        loader = KaggleDataLoader(str(kaggle_dir))
+        assert loader.load_game_cities(1999) == {}
 
     def test_regular_season_compact(self, kaggle_dir):
         loader = KaggleDataLoader(str(kaggle_dir))

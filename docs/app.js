@@ -4,10 +4,13 @@
  *               Shipped precomputed in the season payload; the browser renders
  *               it and does not re-derive it.
  *
- *   Fit         the user switches variables on and off; a logistic regression
- *               is fitted live on real tournament games and its coefficients
- *               decide every matchup. Nobody has to guess a weight or a sign --
- *               the data supplies both, and they are shown.
+ *   Fit         the user switches variables on and off; a ridge SPREAD
+ *               regression is fitted live on real tournament games and its
+ *               coefficients decide every matchup. Nobody has to guess a weight
+ *               or a sign -- the data supplies both, and they are shown.
+ *               It predicts scoring MARGIN in points, and P(win) follows as
+ *               Phi(margin / sigma); see fit.js. It is not a classifier, and a
+ *               coefficient is not a log-odds.
  *
  * The fit excludes the displayed season (leave-one-year-out), so the
  * coefficients were never derived from the games being predicted.
@@ -84,9 +87,15 @@ function margin(a, b) {
 /* P(team a beats team b): the predicted margin read against the fit's own
  * residual spread. A 6-point edge is near-certain for a model that is usually
  * within 2 points and a coin flip for one that is usually within 12, so the
- * spread is what carries the margin into a probability. */
+ * spread is what carries the margin into a probability.
+ *
+ * The spread alone was not enough. The link is calibrated on held-out games --
+ * a fitted scale and tail weight, see calibrate() in fit.js -- because the raw
+ * in-sample sigma left the model measurably under-confident from 0.6 to 0.9 and
+ * pinned its most lopsided picks against 1.0. Passing the calibration here is
+ * what makes the board's percentages mean what they say. */
 function winProb(a, b) {
-  return winProbFromMargin(margin(a, b), state.fit.sigma);
+  return winProbFromMargin(margin(a, b), state.fit.sigma, state.fit.oos && state.fit.oos.calibration);
 }
 
 /* Play the bracket out under the fit. Exact ties go to the better seed, then
@@ -178,6 +187,7 @@ function render() {
   const empty = document.getElementById('empty');
   const note = document.getElementById('mode-note');
   const weights = document.getElementById('weights');
+  const onBracket = state.tab === 'bracket';
 
   // The two tabs share one variable selection, so any change to it has to reach
   // whichever one is showing.
@@ -187,7 +197,7 @@ function render() {
     board.innerHTML = '';
     weights.hidden = true;
     note.innerHTML = '';
-    empty.hidden = false;
+    empty.hidden = !onBracket;
     empty.innerHTML = `
       <p class="e-title">${s ? s.message : 'Season unavailable.'}</p>
       <p class="e-sub">${s ? s.detail : ''}</p>`;
@@ -195,7 +205,7 @@ function render() {
   }
 
   empty.hidden = true;
-  weights.hidden = false;   // the panel is always the control surface now
+  weights.hidden = !onBracket;   // the panel is always the control surface now, but only on the Bracket tab
 
   if (usingOptimized()) {
     note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
@@ -209,7 +219,12 @@ function render() {
       `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} games from seasons before ${state.year}. ` +
       (o ? `Across ${o.seasons} held-out seasons it is off by <strong>${o.mae.toFixed(1)} points</strong> in a typical game ` +
            `(RMSE ${o.rmse.toFixed(1)}) and calls <strong>${(o.accuracy * 100).toFixed(1)}%</strong> of them correctly ` +
-           `— against ${(f.quality.accuracy * 100).toFixed(1)}% on the games it was fitted to.`
+           `— against ${(f.quality.accuracy * 100).toFixed(1)}% on the games it was fitted to.` +
+           // Accuracy grades the pick; the board also shows a percentage, and
+           // that is a separate claim needing a separate number.
+           (o.probScore ? ` The percentages themselves score <strong>Brier ${o.probScore.brier.toFixed(3)}</strong> ` +
+             `(log loss ${o.probScore.logLoss.toFixed(3)}), after calibrating the margin-to-probability link on those ` +
+             `held-out games${o.calibration ? ` — Student-t, ν=${o.calibration.nu === Infinity ? '∞' : o.calibration.nu}, scale ${o.calibration.a.toFixed(2)}` : ''}.` : '')
          : `Not enough history to test out-of-sample.`) +
       `</span>`;
   }
@@ -230,7 +245,7 @@ function render() {
  * Terms are ordered by magnitude rather than by menu position, so the variables
  * actually carrying the model come first. Every delta is a difference in
  * standard deviations between the two teams, which is why a coefficient reads as
- * log-odds per standard deviation of edge.
+ * POINTS OF MARGIN per standard deviation of edge.
  */
 function equationHTML() {
   const f = state.fit;
@@ -371,15 +386,25 @@ function renderGroups() {
     </div>`).join('');
 }
 
-/* A coefficient is log-odds per standard deviation of edge. The bar is relative
- * to the largest coefficient currently fitted, so the comparison is between the
- * variables actually in the model. */
+/* A coefficient is POINTS OF MARGIN per standard deviation of edge. The bar is
+ * relative to the largest coefficient currently fitted, so the comparison is
+ * between the variables actually in the model.
+ *
+ * WEAK_COEF is in those same points-per-SD units. It was 0.05 while this was a
+ * logistic fit on log-odds; carried over unchanged into margin units it caught
+ * 4% of fitted coefficients and the "no effect" marker was effectively dead
+ * code. At 0.25 a variable has to move the predicted margin by less than half a
+ * point across a full two-sigma swing in team quality to be called negligible,
+ * which flags the bottom ~15% -- the band where a coefficient genuinely cannot
+ * change a pick. */
+const WEAK_COEF = 0.25;
+
 function coefHTML(b, maxAbs) {
   if (b === undefined) return `<span class="coef off">—</span>`;
   const pct = Math.min(100, Math.abs(b) / maxAbs * 100);
-  const weak = Math.abs(b) < 0.05;
+  const weak = Math.abs(b) < WEAK_COEF;
   return `
-    <span class="coef${b < 0 ? ' neg' : ''}${weak ? ' weak' : ''}" title="${weak ? 'Essentially no effect' : 'Log-odds per standard deviation'}">
+    <span class="coef${b < 0 ? ' neg' : ''}${weak ? ' weak' : ''}" title="${weak ? 'Essentially no effect' : 'Points of margin per standard deviation'}">
       <span class="coef-bar"><i style="width:${pct}%"></i></span>
       <span class="coef-n">${b >= 0 ? '+' : ''}${b.toFixed(2)}</span>
     </span>`;
@@ -686,9 +711,9 @@ function diagResiduals(r) {
       <p class="d-note">
         ${het.significant
           ? (het.widensWithMargin
-            ? 'Error spread <b>grows</b> with the size of the predicted margin: the model is least reliable exactly where it is most emphatic. The board converts margin to probability with one σ for every game, so it is <b>over-confident about mismatches</b> and slightly under-confident about close games.'
-            : 'Error spread <b>shrinks</b> as the predicted margin grows: the model is more reliable about mismatches than about close games. Since the board uses one σ everywhere, that makes it <b>under-confident about mismatches</b> — a 20-point favourite deserves a firmer probability than it is being given — and over-confident about coin-flips.')
-          : 'Error spread does not vary detectably with the size of the prediction, so the single σ the board uses to convert margin into probability is a reasonable simplification.'}
+            ? 'Error spread <b>grows</b> with the size of the predicted margin: the model is least reliable exactly where it is most emphatic. The board still uses one σ for every game — calibration fits the overall scale and tail weight, not a σ that varies with the prediction — so it remains <b>over-confident about mismatches</b> and slightly under-confident about close games.'
+            : 'Error spread <b>shrinks</b> as the predicted margin grows: the model is more reliable about mismatches than about close games. The board still uses one σ everywhere — calibration rescales it globally but cannot make it vary with the prediction — so it stays <b>under-confident about mismatches</b> and over-confident about coin-flips.')
+          : 'Error spread does not vary detectably with the size of the prediction, so a single σ is a reasonable simplification. That single σ is not used raw: it is scaled, and the tail is set, by a link calibrated on held-out games.'}
       </p>
       <p class="d-foot">
         Heavy tails are expected here regardless: a tournament blowout is a real event no
@@ -821,7 +846,7 @@ function setTab(tab) {
   document.getElementById('equation').hidden = !onBracket;
   document.getElementById('mode-note').hidden = !onBracket;
   document.getElementById('diagnostics').hidden = onBracket;
-  if (!onBracket) renderDiagnostics();
+  render();   // weights/empty visibility depends on both season status and the active tab
 }
 
 async function setYear(year) {

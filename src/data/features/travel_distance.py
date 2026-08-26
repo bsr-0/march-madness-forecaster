@@ -16,6 +16,7 @@ Reference: Nutting (2019), "Travel and Rest in NCAA March Madness Tournament"
 from __future__ import annotations
 
 import math
+import re
 from typing import Dict, Optional, Tuple
 
 # Geocoordinates for major D1 college basketball programs.
@@ -212,7 +213,50 @@ VENUE_COORDINATES: Dict[str, Tuple[float, float]] = {
     "minneapolis": (44.9778, -93.2650),
     "atlanta": (33.7490, -84.3880),
     "san_francisco_chase": (37.7680, -122.3877),
+    # Remaining host cities found in Cities.csv / MGameCities.csv for actual
+    # 2010-2025 NCAA tournament games (includes campus sites used in the 2021
+    # Indianapolis-bubble tournament, and older regional/first-round hosts).
+    "albuquerque": (35.0844, -106.6504),
+    "anaheim": (33.8366, -117.9143),
+    "arlington": (32.7357, -97.1081),
+    "auburn_hills": (42.6875, -83.2341),
+    "austin": (30.2672, -97.7431),
+    "bloomington": (39.1653, -86.5264),
+    "boston": (42.3601, -71.0589),
+    "buffalo": (42.8864, -78.8784),
+    "chicago": (41.8781, -87.6298),
+    "columbia": (34.0007, -81.0348),
+    "dayton": (39.7589, -84.1916),
+    "fort_worth": (32.7555, -97.3308),
+    "glendale": (33.5387, -112.1860),
+    "houston": (29.7604, -95.3698),
+    "kansas_city": (39.0997, -94.5786),
+    "los_angeles": (34.0522, -118.2437),
+    "louisville": (38.2527, -85.7585),
+    "nashville": (36.1627, -86.7816),
+    "new_york": (40.7128, -74.0060),
+    "oklahoma_city": (35.4676, -97.5164),
+    "orlando": (28.5383, -81.3792),
+    "philadelphia": (39.9526, -75.1652),
+    "providence": (41.8240, -71.4128),
+    "san_diego": (32.7157, -117.1611),
+    "san_francisco": (37.7749, -122.4194),
+    "seattle": (47.6062, -122.3321),
+    "st_louis": (38.6270, -90.1994),
+    "syracuse": (43.0481, -76.1474),
+    "tucson": (32.2226, -110.9747),
+    "washington": (38.9072, -77.0369),
+    "west_lafayette": (40.4259, -86.9081),
+    "wichita": (37.6872, -97.3301),
 }
+
+
+def normalize_city_key(city: str) -> str:
+    """Turn a Cities.csv-style city name into a VENUE_COORDINATES key.
+
+    e.g. "St. Louis" -> "st_louis", "Salt Lake City" -> "salt_lake_city".
+    """
+    return re.sub(r"[^a-z0-9]+", "_", city.lower()).strip("_")
 
 
 def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

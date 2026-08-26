@@ -215,8 +215,58 @@ jobs:
             --ignore-vuln CVE-2026-4539 \
             -r /tmp/audit-reqs.txt
 
+  # ─── Browser Model ─────────────────────────────────────────────
+  # The bracket UI fits its own regression in the browser, so none of the
+  # Python suites above touch it. These checks are pure Node with no network
+  # and no data regeneration, which is why they can be blocking.
+  #
+  # The antisymmetry assertion in particular has to run on every commit rather
+  # than once: the model has no intercept precisely so that swapping the two
+  # teams flips the prediction exactly, and that property is silently
+  # destroyed by anything that touches the link, the fit, or the row
+  # orientation. A one-off check would not notice.
+  browser-model:
+    name: "Browser Model"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check
+        run: for f in docs/fit.js docs/diag.js docs/app.js; do node --check "$f"; done
+
+      - name: Link, calibration and antisymmetry checks
+        run: node tests/test_calibration.js
+
+      - name: Diagnostics checks
+        run: node tests/test_diagnostics.js
+
+      - name: Point-in-time boundary audit
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run boundary audit
+        run: python3 scripts/audit_snapshot_boundary.py
+
+      # Antisymmetry of the LINK is already asserted in test_calibration.js.
+      # This asserts it of the FEATURES, which is a separate property: the link
+      # can be perfectly antisymmetric while the feature vector is not, and the
+      # board still contradicts itself. Differenced columns negate for free;
+      # the venue columns are appended rather than differenced, so their
+      # antisymmetry depends on how they were coded and has to be checked.
+      # Also asserts the venue term is zero on a neutral court -- the failure
+      # there is OMISSION, which looks identical to a correct zero in review.
+      - name: Prediction invariants
+        run: python3 scripts/assert_prediction_invariants.py
+
   # ─── Merge Gate ────────────────────────────────────────────────
   # Blocking:     fast-gate (ruff) — always.
+  #               browser-model   — always; fast, hermetic, and guards the
+  #                                 antisymmetry and point-in-time invariants.
   #               freeze-check    — only Jan 1 – Apr 7 (pre-tournament + tournament window).
   # Non-blocking: freeze-check Apr 8 – Dec 31 (post-tournament edit window), full-tests, audit.
   all-gates:
@@ -224,6 +274,7 @@ jobs:
     if: always()
     needs:
       - fast-gate
+      - browser-model
       - freeze-check
       - full-tests
       - audit
@@ -239,6 +290,10 @@ jobs:
         run: |
           if [[ "${{ needs.fast-gate.result }}" != "success" ]]; then
             echo "::error::Fast gate failed — blocking merge"
+            exit 1
+          fi
+          if [[ "${{ needs.browser-model.result }}" != "success" ]]; then
+            echo "::error::Browser model checks failed — blocking merge (antisymmetry / point-in-time invariants)"
             exit 1
           fi
           if [[ "${{ needs.freeze-check.result }}" == "failure" ]]; then

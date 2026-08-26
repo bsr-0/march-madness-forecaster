@@ -483,14 +483,32 @@ class KaggleDataLoader:
     # Game cities
     # ------------------------------------------------------------------
 
-    def load_game_cities(self, season: int) -> Dict[str, Dict]:
-        """Load MGameCities.csv for a season.
-
-        Returns {game_id_str: {city, state, host_name}}.
-        """
-        path = self._find_csv("MGameCities")
+    def load_cities(self) -> Dict[int, Dict[str, str]]:
+        """Load Cities.csv into {city_id: {city, state}}."""
+        path = self._find_csv("Cities")
         if path is None:
             return {}
+        result: Dict[int, Dict[str, str]] = {}
+        for row in self._read_csv(path):
+            city_id = self._int(row.get("CityID"))
+            result[city_id] = {
+                "city": row.get("City", ""),
+                "state": row.get("State", ""),
+            }
+        return result
+
+    def load_game_cities(self, season: int, prefix: str = "M") -> Dict[str, Dict]:
+        """Load {prefix}GameCities.csv for a season, joined against Cities.csv.
+
+        Returns {game_id_str: {city, state, city_id, game_type}}, where
+        game_id_str matches the ``kaggle_{season}_{day_num}_{w_id}_{l_id}``
+        format used by ``_load_results`` and ``game_type`` is one of
+        Regular/NCAA/Secondary (from the CRType column).
+        """
+        path = self._find_csv(f"{prefix}GameCities")
+        if path is None:
+            return {}
+        cities = self.load_cities()
         result: Dict[str, Dict] = {}
         for row in self._read_csv(path):
             if self._int(row.get("Season")) != season:
@@ -498,11 +516,14 @@ class KaggleDataLoader:
             day = self._int(row.get("DayNum"))
             wid = self._int(row.get("WTeamID"))
             lid = self._int(row.get("LTeamID"))
-            key = f"{season}_{day}_{wid}_{lid}"
-            city_id = self._int(row.get("CRType", row.get("CityID", 0)))
+            key = f"kaggle_{season}_{day}_{wid}_{lid}"
+            city_id = self._int(row.get("CityID"))
+            city = cities.get(city_id, {})
             result[key] = {
                 "city_id": city_id,
-                "host_name": row.get("HostName", ""),
+                "city": city.get("city", ""),
+                "state": city.get("state", ""),
+                "game_type": row.get("CRType", ""),
             }
         return result
 
