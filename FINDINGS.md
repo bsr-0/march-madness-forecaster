@@ -169,9 +169,15 @@ it took ~6 weeks of testing to establish.
     loss; every cap sits within 0.0003. The reason is in the distribution —
     margin kurtosis is **3.45 against 3.0 for a Gaussian**, so there are no fat
     tails to clip. 14.1% of games exceed ±20 but the tail is not heavy.
-    **This is also evidence FOR the calibration work, not just an unhelpful
-    null**: if clipping the tails does not move RMSE, the fitted Student-t ν
-    (currently 3) is already absorbing them, which is the t-link doing its job.
+    **Careful with the inference here** (corrected 2026-08-26). It is tempting
+    to read this as evidence the Student-t link is absorbing the tails. The
+    simpler explanation covers both facts: margins are close to Gaussian, so
+    neither clipping nor a fat-tailed link has much to work with. Measured
+    directly, the t-link is NOT distinguishable from the normal on mean log
+    loss (paired bootstrap 95% CI [-0.0032, +0.0159] on 630 games). It does
+    earn its parameter on SATURATION rather than on average score: with
+    nu = 2-3 no prediction comes within 4.9e-3 of the probability clip, while
+    nu = Infinity produces 1.3e-4 and pins against it.
   - **Possession-adjusted margin** (margin / possessions × 100, possessions
     estimated as FGA − OR + TO + 0.475·FTA): null, −0.00000 log loss and
     marginally worse RMSE. The `mp` field is retained on each row so this is
