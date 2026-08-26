@@ -63,6 +63,13 @@ MONTHLY_CUTOFF_MMDD = [
 
 OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
 
+# Give up after this many refusals in a row. Chosen low deliberately: the
+# observed failure mode is a hard block that every subsequent request extends,
+# so the useful information ("we are blocked") arrives within a handful of
+# attempts and everything after it is just noise aimed at someone else's server.
+FAILURE_ABORT_THRESHOLD = 6
+MAX_BACKOFF_SECONDS = 120.0
+
 
 def _write_torvik_json_preserving_ff(path: Path, payload: dict) -> None:
     """Write `payload` to `path` (a torvik_{year}.json), preserving any
@@ -540,13 +547,87 @@ def _monthly_cutoffs_for_year(year: int) -> list[date]:
     return cutoffs
 
 
+def _weekly_cutoffs_for_year(year: int) -> list[date]:
+    """Weekly cutoffs from the first Monday on/after Nov 15 to the tournament.
+
+    WHY WEEKLY. Measured drift between the Nov 30 and mid-March snapshots is
+    0.55-0.63 standard deviations per team on the four factors, over roughly
+    fifteen weeks -- about 0.04 sigma per week. Monthly snapshots therefore ask
+    a December game to use a rating that is up to four weeks and ~0.16 sigma
+    stale, which is the same class of error the dating exercise exists to
+    remove. Weekly puts the staleness below the noise floor of the ratings
+    themselves. Finer than weekly buys little: teams play one or two games a
+    week, so most days add no new information, and the request count rises for
+    nothing.
+
+    WHY NOT EARLIER THAN MID-NOVEMBER. Seasons open in the first week of
+    November and a team has played one or two games by mid-month, at which
+    point an opponent-adjusted rating is mostly prior. The snapshots are still
+    taken from Nov 15 so the early-season regime is observable rather than
+    assumed -- what is NOT decided here is which of them are fit on. That is a
+    training-eligibility rule, it belongs with the model rather than the
+    scraper, and it should be set by measuring when ratings stabilise rather
+    than by picking a month.
+    """
+    tourney_start = TOURNAMENT_START_DATES.get(year)
+    if not tourney_start:
+        return []
+    start = date(year - 1, 11, 15)
+    start += timedelta(days=(7 - start.weekday()) % 7)  # first Monday on/after
+    end = tourney_start - timedelta(days=1)
+    cutoffs, d = [], start
+    while d < end:
+        cutoffs.append(d)
+        d += timedelta(days=7)
+    cutoffs.append(end)  # always include the pre-tournament cutoff
+    return cutoffs
+
+
+def _existing_snapshot_dates(year: int) -> set[str]:
+    """Dates already stored for `year` that carry the FULL field set.
+
+    A date whose snapshot predates the ratings fix holds only the eight four
+    factors, and must be refetched rather than skipped -- otherwise --resume
+    would preserve exactly the truncated snapshots this change exists to
+    replace, and the backfill would report success having fixed nothing.
+    Completeness is therefore judged on barthag being present, not on the date
+    existing.
+    """
+    path = OUTPUT_DIR / f"torvik_{year}.json"
+    if not path.exists():
+        return set()
+    try:
+        payload = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return set()
+    done = set()
+    for snap in payload.get("four_factors_snapshots") or []:
+        data = snap.get("data") or {}
+        teams = [v for v in data.values() if isinstance(v, dict)]
+        if teams and all("barthag" in t for t in teams[:5]):
+            done.add(snap.get("date"))
+    return done
+
+
 def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
-    """Merge a dated FF snapshot into torvik_{year}.json's
-    four_factors_snapshots array for the monthly scrape.
+    """Merge a dated snapshot into torvik_{year}.json's
+    four_factors_snapshots array for the monthly/weekly scrape.
 
     Requires torvik_{year}.json to already exist (from a prior base
     scrape) since a monthly-only run has no `teams` payload to create
     it from -- skips with a warning rather than crashing if absent."""
+    # SNAPSHOT_FIELDS, not just the four factors. trank.php returns the ratings
+    # and the four factors in one CSV, and _parse_trank_csv has always parsed
+    # both -- but this writer persisted only the eight FF columns, so barthag,
+    # t_rank and the adjusted efficiencies were fetched and then dropped on
+    # every dated pull. That is why an audit of the 30 UI variables found only
+    # 8 with a dated snapshot: not a limitation of the source, a truncation on
+    # write. Anything without a dated value cannot be reconstructed for a
+    # December game, and using its March value there is hindsight.
+    #
+    # The four factors stay FIRST in this tuple: the non-empty guard below
+    # indexes [:4] to mean "the offensive four factors", and reordering would
+    # silently change which fields are checked.
     ff_fields = (
         "effective_fg_pct",
         "turnover_rate",
@@ -556,6 +637,22 @@ def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
         "opp_turnover_rate",
         "defensive_reb_rate",
         "opp_free_throw_rate",
+        # Ratings — the strong predictors, dated for the first time here.
+        #
+        # t_rank is deliberately ABSENT. The no-conyes CSV layout carries no
+        # rank column, so _parse_trank_csv falls back to its 999 sentinel for
+        # every team; persisting that would write a constant, which standardises
+        # to all-zeros and becomes a silently dead feature rather than a visibly
+        # missing one. Torvik's published rank could not be reproduced from the
+        # columns that ARE present -- ordering by barthag leaves 324 of 364
+        # teams misplaced and ordering by adjusted efficiency margin 334 -- so
+        # deriving it would mean shipping a guess. barthag is dated here and
+        # carries the same underlying quality signal, so nothing is lost by
+        # leaving the rank undated and honest.
+        "barthag",
+        "adj_offensive_efficiency",
+        "adj_defensive_efficiency",
+        "adj_tempo",
     )
     date_str = cutoff.isoformat()
     payload = {
@@ -589,6 +686,36 @@ def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
     snapshots.append({"date": date_str, "data": payload})
     snapshots.sort(key=lambda e: e["date"])
     base["four_factors_snapshots"] = snapshots
+
+    # The season-cutoff snapshot and teams[] are the same measurement at the
+    # same date, so they have to come from the same fetch. This writer used to
+    # update only the snapshot, which let teams[] keep an older vintage of
+    # Torvik's numbers while carrying an identical date label -- two surfaces
+    # claiming one date and disagreeing, which is precisely what
+    # audit_snapshot_boundary check B exists to catch. Torvik revises ratings
+    # for past windows, so re-fetching a completed season is not idempotent and
+    # the drift is silent. Writing both surfaces from this one payload makes the
+    # invariant hold by construction instead of by coincidence.
+    #
+    # Zero is skipped rather than written: none of these twelve fields is ever
+    # legitimately 0.0, so a zero means the column was absent from this CSV
+    # layout, and copying it would destroy a good value in teams[].
+    if date_str == base.get("cutoff_date"):
+        refreshed = 0
+        for team in base.get("teams", []):
+            snap = payload.get(team.get("team_id"))
+            if not isinstance(snap, dict):
+                continue
+            for field, value in snap.items():
+                if isinstance(value, (int, float)) and value != 0.0:
+                    team[field] = value
+            refreshed += 1
+        logger.info(
+            "Cutoff snapshot for %d: refreshed %d teams[] entries from the same fetch",
+            year,
+            refreshed,
+        )
+
     with open(torvik_path, "w") as f:
         json.dump(base, f, indent=2)
 
@@ -597,13 +724,33 @@ def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
 
 
 def _run_monthly_scrape(years: list[int], args) -> None:
-    """Scrape monthly FF snapshots for each year."""
+    """Scrape monthly/weekly snapshots for each year."""
     total_success = 0
     total_failed = 0
+    # Counted ACROSS years, not reset per year: a block does not respect
+    # season boundaries, and resetting here would let the loop start a fresh
+    # burst against a host that is already refusing every request.
+    consecutive_failures = 0
 
     for year in years:
-        cutoffs = _monthly_cutoffs_for_year(year)
-        logger.info("Year %d: %d monthly cutoffs: %s", year, len(cutoffs), [c.isoformat() for c in cutoffs])
+        weekly = getattr(args, "weekly", False)
+        cutoffs = _weekly_cutoffs_for_year(year) if weekly else _monthly_cutoffs_for_year(year)
+        # Resumable: a snapshot already on disk for this date is not refetched,
+        # so an interrupted run picks up where it stopped instead of replaying
+        # hundreds of requests against Torvik.
+        if not args.dry_run and getattr(args, "resume", True):
+            have = _existing_snapshot_dates(year)
+            before = len(cutoffs)
+            cutoffs = [c for c in cutoffs if c.isoformat() not in have]
+            if before != len(cutoffs):
+                logger.info("Year %d: skipping %d cutoffs already on disk", year, before - len(cutoffs))
+        logger.info(
+            "Year %d: %d %s cutoffs: %s",
+            year,
+            len(cutoffs),
+            "weekly" if weekly else "monthly",
+            [c.isoformat() for c in cutoffs],
+        )
 
         for cutoff in cutoffs:
             if args.dry_run:
@@ -611,23 +758,46 @@ def _run_monthly_scrape(years: list[int], args) -> None:
                 continue
 
             teams = fetch_trank_csv_for_date(year, cutoff)
-            if not teams:
-                logger.warning("No data for %d cutoff=%s — skipping", year, cutoff)
-                total_failed += 1
-                continue
 
-            if len(teams) < 300:
-                logger.error(
-                    "Year %d cutoff=%s: only %d teams (expected 300+, likely conference-level data) — skipping",
-                    year,
-                    cutoff,
-                    len(teams),
-                )
+            # SLEEP ON EVERY PATH, INCLUDING FAILURE. Both `continue`s below
+            # used to skip the delay, so the moment Torvik started refusing
+            # requests the loop retried as fast as the network allowed --
+            # twelve requests in five seconds, observed. A failing scrape
+            # hammering the host is worse than a slow one: it is what turns a
+            # transient refusal into a sustained block, and it makes the
+            # remaining seasons fail for a reason the scraper caused itself.
+            if not teams or len(teams) < 300:
+                if teams:
+                    logger.error(
+                        "Year %d cutoff=%s: only %d teams (expected 300+, likely conference-level data) — skipping",
+                        year,
+                        cutoff,
+                        len(teams),
+                    )
+                else:
+                    logger.warning("No data for %d cutoff=%s — skipping", year, cutoff)
                 total_failed += 1
+                consecutive_failures += 1
+
+                # Exponential backoff on a failure RUN. One miss is a bad date;
+                # a run of them means the host is refusing us, and the correct
+                # response is to withdraw rather than to keep asking.
+                if consecutive_failures >= FAILURE_ABORT_THRESHOLD:
+                    logger.error(
+                        "%d consecutive failures — aborting. The host is refusing "
+                        "requests; continuing would only deepen the block. Re-run "
+                        "later; --resume will skip what already landed.",
+                        consecutive_failures,
+                    )
+                    return
+                backoff = min(args.delay * (2**consecutive_failures), MAX_BACKOFF_SECONDS)
+                logger.info("backing off %.0fs (failure %d in a row)", backoff, consecutive_failures)
+                time.sleep(backoff)
                 continue
 
             _write_monthly_ff(year, cutoff, teams)
             total_success += 1
+            consecutive_failures = 0
             time.sleep(args.delay)
 
     if not args.dry_run:
@@ -644,7 +814,21 @@ def main():
         action="store_true",
         help="Scrape monthly snapshots (Nov, Dec, Jan, Feb, pre-tournament) for training FF",
     )
+    parser.add_argument(
+        "--weekly",
+        action="store_true",
+        help="Weekly snapshots from mid-November to the tournament (implies --monthly behaviour, denser). "
+        "Ratings drift ~0.04 sigma/week, so monthly leaves a December game up to 0.16 sigma stale.",
+    )
+    parser.add_argument(
+        "--no-resume",
+        dest="resume",
+        action="store_false",
+        help="Refetch dates already stored with the full field set (default: skip them)",
+    )
     args = parser.parse_args()
+    if args.weekly:
+        args.monthly = True  # same code path, denser cutoff list
 
     years = [args.year] if args.year else sorted(TOURNAMENT_START_DATES.keys())
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
