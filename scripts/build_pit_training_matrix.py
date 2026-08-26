@@ -119,6 +119,7 @@ BOUNDARY_STEP = 7
 # not clear it until January. Set from the measured distribution, not tuned.
 CONNECTIVITY_FLOOR = 0.90
 
+
 # Variables reconstructible point-in-time today. Mirrors audit_snapshot_boundary
 # check E; anything outside this set has no dated value and would have to be
 # filled with a season-final number, which is the leak this file exists to avoid.
@@ -167,6 +168,16 @@ EXTRA_KEYS = ["srs_blend"]
 # These are appended to x rather than differenced like every other column,
 # because venue is a property of the GAME, not of either team.
 VENUE_KEYS = ["venue_home", "venue_host_city"]
+
+# rest_diff and bid_secured_diff WERE HERE AND WERE REMOVED after measuring
+# null (2026-08-26; see FINDINGS.md section 3). They are not kept as documented
+# nulls because a near-zero column is worse than an inert one: it is VISIBLE.
+# A reader scanning the feature list sees rest and bid-security represented and
+# reasonably concludes the model accounts for them. It did not. Prose can say
+# "measured null against baseline X on row set Y"; a column cannot.
+#
+# The possession-adjusted target `mp` is kept -- one number per row, and it
+# documents its own negative by being available to re-test cheaply.
 
 
 def load_dayzero() -> dict[int, dt.date]:
@@ -289,6 +300,15 @@ def main() -> int:
         for canon, kid in ratings_to_canonical({k: float(k) for k in kaggle_ids}).items():
             canon_of_kid[int(kid)] = canon
 
+        # Possessions per game, for the possession-adjusted target. Standard
+        # estimator: FGA - OR + TO + 0.475*FTA, averaged over the two teams
+        # since they face nearly the same number by construction.
+        poss_of: dict[tuple, float] = {}
+        for bg in detailed or []:
+            pw = bg.w_fga - bg.w_oreb + bg.w_to + 0.475 * bg.w_fta
+            pl = bg.l_fga - bg.l_oreb + bg.l_to + 0.475 * bg.l_fta
+            poss_of[(bg.day, bg.winner, bg.loser)] = max((pw + pl) / 2.0, 1.0)
+
         n_before = len(rows)
         for boundary in range(FIRST_BOUNDARY, SELECTION_SUNDAY_DAY, BOUNDARY_STEP):
             past = games_before(compact, boundary)
@@ -396,6 +416,12 @@ def main() -> int:
                                     (year, g.day, g.winner, g.loser) in conf_tourney,
                                 )[0 if a_kid == g.winner else 1]
                             )
+                        ),
+                        "mp": round(
+                            margin
+                            / poss_of.get((g.day, g.winner, g.loser), 68.0)
+                            * 100.0,
+                            3,
                         ),
                     }
                 )
