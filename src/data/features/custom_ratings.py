@@ -116,10 +116,8 @@ def compute_colley_ratings(
         wins[wi] += 1
         losses[li] += 1
 
-    # A = 2I + C (diagonal: 2 + total_games_played)
-    A = np.diag(2.0 + wins + losses) + C
-    # But Colley uses negative off-diagonal: A[i][j] = -n_ij
-    # So A = diag(2 + t_i) - C  where t_i = total games for team i
+    # Colley uses a negative off-diagonal: A[i][j] = -n_ij, with the diagonal
+    # carrying 2 + t_i where t_i is team i's total games.
     A = np.diag(2.0 + wins + losses) - C
 
     b = 1.0 + (wins - losses) / 2.0
