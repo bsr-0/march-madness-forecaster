@@ -58,15 +58,24 @@ sys.path.insert(0, str(REPO))
 from src.data.features.venue import (  # noqa: E402
     assert_neutral_for_prediction,
     derive_home_cities,
+    load_city_coords,
     load_game_cities,
     split_states,
+    team_location,
     tournament_venue,
+    travel_advantage,
     venue_for,
 )
 
 MATRIX = REPO / "docs" / "data" / "training_pit.json"
 KAGGLE = REPO / "data" / "kaggle"
-VENUE_KEYS = ("venue_home", "venue_host_city")
+# venue_home / venue_host_city are the COURT terms: signed indicators that must
+# be exactly zero on a neutral court. venue_travel is the PROXIMITY term, which
+# is signed and antisymmetric like them but is legitimately non-zero on neutral
+# courts -- an NCAA pod can land in a participant's back yard. Kept in separate
+# tuples so a check never demands the wrong property of the wrong column.
+COURT_KEYS = ("venue_home", "venue_host_city")
+VENUE_KEYS = COURT_KEYS + ("venue_travel",)
 
 failures: list[str] = []
 
@@ -101,16 +110,31 @@ def main() -> int:
             col = X[:, keys.index(k)]
             pos, neg = int((col > 0).sum()), int((col < 0).sum())
             vals = sorted(set(col.tolist()))
+            # A categorical column is worth printing in full; a continuous one
+            # has tens of thousands of levels and printing them buries the
+            # result it is supposed to show.
+            shape = (
+                f"values {vals}"
+                if len(vals) <= 8
+                else f"continuous, range [{col.min():.3f}, {col.max():.3f}]"
+            )
             check(
                 f"{k} takes both signs",
                 pos > 0 and neg > 0,
-                f"{pos:,} positive, {neg:,} negative, values {vals}",
+                f"{pos:,} positive, {neg:,} negative, {shape}",
             )
 
     # ---------------------------------------------------------------- 2
     print("\n2. the two teams' venue terms negate under a swap")
     cities = load_game_cities()
     homes = derive_home_cities()
+    coords = load_city_coords()
+    _lc: dict = {}
+
+    def loc(season, team):
+        if (season, team) not in _lc:
+            _lc[(season, team)] = team_location(season, team, homes, coords)
+        return _lc[(season, team)]
     ct = set()
     ct_path = KAGGLE / "MConferenceTourneyGames.csv"
     if ct_path.exists():
@@ -133,6 +157,15 @@ def main() -> int:
             )
             wh, wc = split_states(ws)
             lh, lc = split_states(ls)
+            # The travel term is appended to x alongside the court terms, so it
+            # needs the same guarantee. It negates by construction --
+            # (opp - team) flips when the teams swap -- but "by construction"
+            # is exactly the assumption that has failed repeatedly here, so it
+            # is asserted rather than argued.
+            wt = travel_advantage(cities.get(key), loc(season, key[2]), loc(season, key[3]), coords)
+            lt = travel_advantage(cities.get(key), loc(season, key[3]), loc(season, key[2]), coords)
+            if abs(wt + lt) > 1e-9:
+                bad += 1
             tested += 1
             # the loser's terms must be the exact negation of the winner's;
             # a one-hot coding gives (1, 0) and (0, 0), which is not.

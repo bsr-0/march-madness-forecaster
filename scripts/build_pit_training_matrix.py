@@ -72,9 +72,12 @@ from src.data.features.point_in_time_kaggle import (  # noqa: E402
 from src.data.features.venue import (  # noqa: E402
     assert_neutral_for_prediction,
     derive_home_cities,
+    load_city_coords,
     load_game_cities,
     split_states,
+    team_location,
     tournament_venue,
+    travel_advantage,
     venue_for,
 )
 from src.data.features.point_in_time_ratings import (  # noqa: E402
@@ -169,7 +172,13 @@ EXTRA_KEYS = ["srs_blend"]
 #
 # These are appended to x rather than differenced like every other column,
 # because venue is a property of the GAME, not of either team.
-VENUE_KEYS = ["venue_home", "venue_host_city"]
+# venue_travel is the PRINCIPLED version of venue_host_city, carried alongside
+# it so the fit can say whether it subsumes it. The fourth state is defined by
+# game type and pools a heterogeneous population -- MSG is five miles for St
+# John's and 2,400 for a visitor, both currently coded identically. Distance
+# separates them continuously. It is also the only venue term that legitimately
+# applies to NCAA games, which are neutral-court by rule but not travel-neutral.
+VENUE_KEYS = ["venue_home", "venue_host_city", "venue_travel"]
 
 # rest_diff and bid_secured_diff WERE HERE AND WERE REMOVED after measuring
 # null (2026-08-26; see FINDINGS.md section 3). They are not kept as documented
@@ -287,6 +296,14 @@ def main() -> int:
     # programme, not a running measurement of its form.
     game_cities = load_game_cities()
     home_cities = derive_home_cities()
+    city_coords = load_city_coords()
+    _loc_cache: dict = {}
+
+    def _loc(season: int, team: int):
+        key = (season, team)
+        if key not in _loc_cache:
+            _loc_cache[key] = team_location(season, team, home_cities, city_coords)
+        return _loc_cache[key]
     universe = load_universe()
     # NCAA tournament results, loaded as Game records so the row builder can
     # treat them like any other slate.
@@ -492,7 +509,18 @@ def main() -> int:
                                     )[0 if a_kid == g.winner else 1]
                                 )
                             )
-                        ),
+                        )
+                        + [
+                            round(
+                                travel_advantage(
+                                    game_cities.get((year, g.day, g.winner, g.loser)),
+                                    _loc(year, a_kid),
+                                    _loc(year, b_kid),
+                                    city_coords,
+                                ),
+                                4,
+                            )
+                        ],
                         "mp": round(
                             margin
                             / poss_of.get((g.day, g.winner, g.loser), 68.0)
@@ -522,10 +550,18 @@ def main() -> int:
         ),
     }
     if args.tournament and rows:
-        # The guard finally has a call site: every venue term on the
-        # prediction path must be exactly zero.
-        vi = [all_keys.index(k) for k in VENUE_KEYS]
-        assert_neutral_for_prediction([r["x"][i] for r in rows for i in vi])
+        # HOME-COURT terms must be exactly zero on the tournament path; the
+        # TRAVEL term must not be. NCAA games are neutral-court by rule, which
+        # is what venue_home and venue_host_city encode, but they are not
+        # travel-neutral -- a pod can land in a participant's back yard, and
+        # that proximity is a real effect belonging to venue_travel. Asserting
+        # all three to zero would forbid the one venue term that legitimately
+        # applies there.
+        court = [all_keys.index(k) for k in ("venue_home", "venue_host_city")]
+        assert_neutral_for_prediction([r["x"][i] for r in rows for i in court])
+        ti = all_keys.index("venue_travel")
+        nz = sum(1 for r in rows if r["x"][ti] != 0)
+        print(f"  tournament venue: home terms all zero; travel non-zero on {nz:,}/{len(rows):,} rows")
 
     args.out.write_text(json.dumps(payload, separators=(",", ":")))
 
