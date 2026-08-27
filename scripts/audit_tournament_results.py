@@ -51,7 +51,10 @@ def _game_log_winner(year: int, a: str, b: str):
         games = json.load(f).get("games", [])
 
     # Resolve the whole log at once so a lower-division school that shares a
-    # D1 school's name prefix cannot impersonate it (see
+    # D1 school's name prefix cannot impersonate it. `canonical` here is the
+    # full Torvik D1 list, so it doubles as the universe -- passed explicitly
+    # rather than relied on implicitly, because that equivalence is a property
+    # of the caller and not visible at the call site otherwise. (see
     # memory/cbbpy_team_id_bridge_defect.md). `canonical` is already the full
     # Torvik D1 list, which doubles as the disambiguating universe.
     appearances: dict[str, int] = {}
@@ -59,7 +62,7 @@ def _game_log_winner(year: int, a: str, b: str):
         for key in ("team1_id", "team2_id"):
             if g.get(key):
                 appearances[g[key]] = appearances.get(g[key], 0) + 1
-    bridge_map = resolve_cbbpy_bridge(appearances, canonical)
+    bridge_map = resolve_cbbpy_bridge(appearances, canonical, universe=canonical)
 
     def bridge(x):
         return bridge_map.get(x)

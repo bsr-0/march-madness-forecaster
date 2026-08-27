@@ -194,3 +194,32 @@ def test_edge_cases_cover_teams_the_prefix_fallback_cannot_reach():
         universe={"mississippi", "mississippi_state"},
     )
     assert resolved == {"ole_miss_rebels": "mississippi"}
+
+
+def test_resolve_bridge_weight_must_measure_volume_not_roster_size():
+    """A per-game AVERAGE is the wrong weight, and it loses to a tiny impostor.
+
+    This is the second half of the defect that took 17 of 1,084 team-seasons in
+    generate_team_stats_table, and the half the universe argument does NOT fix.
+    virginia_lynchburg is not Division I, so no universe can exclude it -- it
+    has to lose on weight. It does, on any weight that measures how much of the
+    dataset belongs to the team, and it WINS on summed minutes-per-game,
+    because mpg is already a per-game average and summing it measures roster
+    size times rotation depth instead.
+
+    Real 2024 figures: Virginia 13 players, 34 games, 346 player-games, 220.5
+    summed mpg. Virginia-Lynchburg 17 players, 8 games, 78 player-games, 326.1
+    summed mpg.
+    """
+    canonical = {"virginia"}
+    universe = {"virginia", "virginia_tech", "virginia_commonwealth"}
+
+    summed_mpg = {"virginia_cavaliers": 220.5, "virginia_lynchburg_dragons": 326.1}
+    assert resolve_cbbpy_bridge(summed_mpg, canonical, universe=universe) == {
+        "virginia_lynchburg_dragons": "virginia"
+    }, "summed minutes-per-game hands the canonical id to a non-D1 school"
+
+    player_games = {"virginia_cavaliers": 346, "virginia_lynchburg_dragons": 78}
+    assert resolve_cbbpy_bridge(player_games, canonical, universe=universe) == {
+        "virginia_cavaliers": "virginia"
+    }, "player-games measures dataset volume and resolves correctly"
