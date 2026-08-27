@@ -251,6 +251,46 @@ it took ~6 weeks of testing to establish.
   at the cost of point accuracy. When they diverge, the knob is trading between
   them rather than improving anything, which is what the bootstrap confirmed.
 
+- **Pooling PRIOR NCAA tournament games into the regular-season training set**
+  (2026-08-27). Null, and mildly negative under weighting. This is the natural
+  follow-up to the step 3 entry below and gets asked independently, so it is
+  recorded separately.
+
+  Walk-forward, 10 shared features, D1-field standardisation, evaluated on
+  held-out NCAA games (n=634):
+
+      prior NCAA only        865 rows    0.57725
+      regular + conf      41,321 rows    0.56962
+      both pooled                        0.56991
+
+  Plain pooling cannot say much either way -- 865 rows against 41,321 is ~2% of
+  the pool, so the NCAA games are swamped. B - C is -0.00029 with a CI of
+  [-0.00052, -0.00007]: statistically detectable, practically nothing, and
+  pointing AGAINST inclusion. A useful reminder that significance and
+  materiality are different questions at this sample size.
+
+  **Upweighting is the test that removes the arithmetic excuse**, and it is the
+  one that settles it. If tournament rows carried distinct signal, giving them
+  more weight would surface it. Instead log loss degrades monotonically:
+
+      NCAA row weight    1     5    10    25    48   100
+      log loss        .56991 .57036 .57069 .57154 .57254 .57383
+
+  (48 equalises the two pools.) The optimum is the smallest weight tested,
+  which is the shape expected when the extra rows carry no signal worth the
+  variance they add.
+
+  **Conclusion: prior NCAA games contain nothing the regular-season pool does
+  not already have, through these features.** Consistent with the venue result
+  -- once you control for who is playing and where, a tournament game looks
+  like a neutral-court game between two good teams.
+
+  Scope caveat: all three configurations sit near 0.57 against the production
+  baseline's 0.45296, because this comparison runs without t_rank and under
+  D1-field standardisation. Those two costs (+0.0823 and +0.0420, see the step
+  3 entry) dominate everything measured here. This answers "does pooling help
+  within that setting", NOT "should the production model change".
+
 - **Pooling regular-season games into the tournament model** (2026-08-26).
   Closed negative in both standardisation regimes. The expanded matrix is
   41,321 rows against 1,008 and is leakage-clean, but it does not help.
