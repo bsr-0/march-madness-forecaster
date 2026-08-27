@@ -544,15 +544,46 @@ def main() -> int:
         # A team's first tournament appearance has no prior history to
         # residualise against; the dataset starts in 2010.
         "hist_residual",
-        # The Ivy League ran no conference tournament before 2017, and Kaggle's
-        # MConferenceTourneyGames stops at 2025 so 2026 is upstream-missing.
-        "conf_tourney_wins",
     }
+
+    # conf_tourney_wins gets a PRECISE exemption rather than a blanket one.
+    # Its nulls have two legitimate causes -- the Ivy League ran no conference
+    # tournament before 2017, and Kaggle's MConferenceTourneyGames simply stops
+    # at 2025, so every 2026 team is upstream-missing -- but exempting the
+    # whole column would also hide a future regression in it. So the seasons
+    # the source does not cover are computed from the source itself, and
+    # anything null OUTSIDE them still has to answer for itself.
+    import csv as _csv2
+
+    ct_seasons = set()
+    ct_path = REPO / "data" / "kaggle" / "MConferenceTourneyGames.csv"
+    if ct_path.exists():
+        with open(ct_path) as fh:
+            for row in _csv2.DictReader(fh):
+                ct_seasons.add(int(row["Season"]))
+    uncovered = sorted(y for y in years if y not in ct_seasons)
+    ct_nulls_covered = sum(
+        1
+        for y in years
+        if y in ct_seasons
+        for r in stats[str(y)]
+        if r.get("conf_tourney_wins") is None
+    )
+    ct_rows_covered = sum(len(stats[str(y)]) for y in years if y in ct_seasons)
+    check(
+        "conf_tourney_wins nulls are confined to seasons the source lacks",
+        ct_rows_covered == 0 or ct_nulls_covered <= ct_rows_covered * 0.02,
+        f"source covers {min(ct_seasons) if ct_seasons else '-'}-"
+        f"{max(ct_seasons) if ct_seasons else '-'}; "
+        f"uncovered seasons {uncovered or 'none'}; "
+        f"{ct_nulls_covered} null within covered seasons "
+        f"({ct_nulls_covered / max(ct_rows_covered, 1):.1%}, Ivy League pre-2017)",
+    )
     offenders = []
     checked = 0
     for key in sorted({k for r in rows_all for k in r}):
-        if key in structural:
-            continue
+        if key in structural or key == "conf_tourney_wins":
+            continue  # conf_tourney_wins has its own precise check above
         vals = [r.get(key) for r in rows_all]
         if not any(isinstance(v, (int, float)) for v in vals):
             continue  # string/bool column, not a join-sourced measurement
