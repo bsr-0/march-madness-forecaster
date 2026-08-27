@@ -38,6 +38,11 @@ CHECKS
      solve must depend on nothing after its cutoff, must actually differ
      between December and March, and the connectivity gate that decides when
      a solve is meaningful must discriminate 2021 from a normal season.
+  H  join-sourced columns resolve for the whole field. Every column is a join
+     onto canonical team ids, and this repo has hit the same defect three
+     times -- two mapping paths for one join, producing plausible nulls rather
+     than an error. All three were found by chance; this makes looking
+     automatic.
   G  venue is coded from the host venue, not from the game type. The NCAA
      tournament term must be unconditionally zero -- a participant in the host
      city there is proximity, not home court -- while conference tournaments
@@ -511,6 +516,58 @@ def main() -> int:
             "measured home-court effect there is +1.2 points against +2.9 generally, "
             "so a home CITY at a neutral arena is a weaker effect than a true home game."
         )
+
+    # ---------------------------------------------------------------- H
+    # Every column here is produced by joining an external source onto
+    # canonical team ids, and this repo has now hit the same defect three
+    # times: TWO MAPPING PATHS FOR ONE JOIN, where a builder reaches for
+    # whichever mapper was nearest instead of the one that handles awkward
+    # names. Each instance produced plausible-looking nulls or zeros rather
+    # than an error:
+    #   torvik vintage split     two surfaces, one date label      (check B)
+    #   cbbpy roster bridge      142 of 1,084 team-seasons zero    (83d982a)
+    #   massey via KaggleLoader  113 of 1,085 null                 (3036497)
+    # All three were found by someone happening to look. This makes looking
+    # automatic: a join-sourced column that silently stops resolving for a
+    # slice of the field fails here instead of shipping.
+    print("\nH. join-sourced columns resolve for the whole field")
+    rows_all = [r for y in years for r in stats[str(y)]]
+    n_rows = len(rows_all)
+    # Tolerance is deliberately loose. The failures worth catching were 10.4%
+    # and 13% of the field; the surviving legitimate gaps are single teams with
+    # source-side slug drift (new_orleans 2017 is `new_orleans_privateers` in
+    # the rosters and `lsu_new_orleans_privateers` in the box scores). A
+    # threshold that chased those would cry wolf without catching anything the
+    # eye would not.
+    max_null_share = 0.01
+    structural = {
+        # A team's first tournament appearance has no prior history to
+        # residualise against; the dataset starts in 2010.
+        "hist_residual",
+        # The Ivy League ran no conference tournament before 2017, and Kaggle's
+        # MConferenceTourneyGames stops at 2025 so 2026 is upstream-missing.
+        "conf_tourney_wins",
+    }
+    offenders = []
+    checked = 0
+    for key in sorted({k for r in rows_all for k in r}):
+        if key in structural:
+            continue
+        vals = [r.get(key) for r in rows_all]
+        if not any(isinstance(v, (int, float)) for v in vals):
+            continue  # string/bool column, not a join-sourced measurement
+        checked += 1
+        nulls = sum(1 for v in vals if v is None)
+        if nulls > n_rows * max_null_share:
+            offenders.append(f"{key}: {nulls}/{n_rows} null ({nulls / n_rows:.1%})")
+    check(
+        "no join-sourced column is missing for more than 1% of the field",
+        not offenders,
+        f"{checked} numeric columns over {n_rows:,} team-seasons; "
+        f"{len(structural)} structural exemptions"
+        if not offenders
+        else "; ".join(offenders),
+    )
 
     print()
     if failures:
