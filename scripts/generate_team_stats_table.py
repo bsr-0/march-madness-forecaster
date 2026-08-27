@@ -816,7 +816,7 @@ def build_conf_tourney_result(year: int, canonical_ids):
 _massey_loader = None
 
 
-def build_massey_composite(year: int):
+def build_massey_composite(year: int, canonical_ids=None):
     """Each team's average ordinal rank across every computer ranking system.
 
     Uses `KaggleDataLoader.load_massey_ordinals`, which already auto-computes
@@ -843,6 +843,40 @@ def build_massey_composite(year: int):
     for system_map in ordinals.values():
         for team_id, entry in system_map.items():
             ranks_by_team.setdefault(team_id, []).append(entry.ordinal_rank)
+
+    # RE-MAP THROUGH THIS FILE'S OWN KAGGLE MAPPER FOR ANYTHING THE LOADER
+    # MISSED. KaggleDataLoader canonicalises with its own name logic, which
+    # drops teams whose Kaggle name carries punctuation or a state qualifier:
+    # saint_mary_s__ca failed in 10 of 16 seasons, alongside saint_louis,
+    # saint_joseph_s, stephen_f_austin, albany__ny and college_of_charleston --
+    # 113 of 1,085 team-seasons null in total, on a source that covers
+    # 2003-2026 and was never missing the data.
+    #
+    # _load_kaggle_team_map resolves all of them, because it goes through
+    # MTeamSpellings and has a second pass for qualified names. Two mapping
+    # paths for one join is the defect pattern this repo keeps hitting; this
+    # routes the leftovers through the better one rather than adding a third.
+    if canonical_ids:
+        unresolved = set(canonical_ids) - set(ranks_by_team)
+        if unresolved:
+            kaggle_map = _load_kaggle_team_map(canonical_ids, year)
+            by_kaggle_id: dict[str, list[int]] = {}
+            path = KAGGLE_DIR / "MMasseyOrdinals.csv"
+            max_day = _massey_loader._compute_max_ranking_day(year) if hasattr(
+                _massey_loader, "_compute_max_ranking_day"
+            ) else 133
+            if path.exists():
+                with open(path) as f:
+                    for row in csv.DictReader(f):
+                        if int(row["Season"]) != year:
+                            continue
+                        if int(row["RankingDayNum"]) > max_day:
+                            continue
+                        by_kaggle_id.setdefault(row["TeamID"], []).append(int(row["OrdinalRank"]))
+            for kid, ranks in by_kaggle_id.items():
+                canonical = kaggle_map.get(kid)
+                if canonical in unresolved and ranks:
+                    ranks_by_team[canonical] = ranks
 
     return {team_id: {"massey_avg_rank": round(statistics.fmean(ranks), 2)} for team_id, ranks in ranks_by_team.items()}
 
@@ -1151,7 +1185,7 @@ def build_year_rows(year: int) -> list[dict]:
     box_profile = build_kaggle_box_profile(year, set(torvik))
     coach = build_coach_experience(year, set(torvik))
     conf_tourney = build_conf_tourney_result(year, set(torvik))
-    massey = build_massey_composite(year)
+    massey = build_massey_composite(year, set(torvik))
     scoring_depth = build_scoring_depth(year, set(torvik))
 
     rows = []
