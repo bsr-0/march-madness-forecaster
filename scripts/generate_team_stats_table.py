@@ -74,6 +74,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._common import HIST_DIR, load_seeds_and_regions, load_torvik_and_ff, load_tournament_results
+from src.data.normalize import load_d1_team_ids
 from src.data.kaggle_loader import KaggleDataLoader
 from src.data.normalize import resolve_cbbpy_bridge
 
@@ -203,7 +204,19 @@ def build_roster_stats(year: int, canonical_ids):
         for t in teams
         if t.get("team_id")
     }
-    bridge_map = resolve_cbbpy_bridge(minutes, canonical_ids)
+    # BRIDGE ON PLAYER-GAMES, NOT SUMMED MINUTES-PER-GAME. mpg is a per-game
+    # AVERAGE, so summing it measures roster size x rotation depth and does not
+    # scale with how much of the dataset belongs to the team -- which is what
+    # resolve_cbbpy_bridge asks its weight to measure. virginia_lynchburg
+    # (non-D1, 8 games, 17 listed players) summed to 326.1 against real
+    # Virginia's 220.5 and took the canonical `virginia` slot. On player-games
+    # it is 78 against 346, a 4.4x margin the right way.
+    player_games = {
+        t["team_id"]: sum(_num(p.get("games_played")) for p in t.get("players", []))
+        for t in teams
+        if t.get("team_id")
+    }
+    bridge_map = resolve_cbbpy_bridge(player_games, canonical_ids, universe=_d1_universe(year))
 
     out = {}
     for t in teams:
@@ -216,18 +229,159 @@ def build_roster_stats(year: int, canonical_ids):
         if total <= 0:
             continue
         returners = prior_ids.get(raw_id, set())
-        ret = sum(_num(p.get("minutes_per_game")) for p in players if p.get("player_id") in returners)
-        frosh = sum(_num(p.get("minutes_per_game")) for p in players if p.get("eligibility_year") == 1)
         roster_ids = {p.get("player_id") for p in players if p.get("player_id")}
+        # The two minute RATIOS moved to build_roster_minutes, which weights by
+        # pre-tournament box-score minutes instead of cbbpy's tournament-
+        # inclusive minutes_per_game. Only the headcount stays here: it is pure
+        # roster membership with no minutes or games-played term, so it never
+        # had the contamination to begin with.
         out[canonical] = {
-            "returning_minutes_pct": round(ret / total, 4) if returners else None,
-            "freshman_minutes_pct": round(frosh / total, 4),
             "n_returning_players": len(roster_ids & returners) if prev_path.exists() else None,
         }
     return out
 
 
+def build_roster_minutes(year: int, canonical_ids):
+    """returning/freshman minute shares weighted by PRE-TOURNAMENT minutes.
+
+    THE CONTAMINATION THIS REPLACES. d954902 excluded returning_minutes_pct and
+    freshman_minutes_pct because cbbpy's per-player minutes_per_game is
+    averaged over a game count that INCLUDES that season's tournament run.
+    Purdue 2024 carries 39 games against 33 played before the tournament --
+    exactly its six-game run to the final -- and extra games on the roster
+    correlate with rounds actually won at r = +0.93. The weights straddled the
+    prediction point even though every input to them looked settled in October.
+
+    That commit declined to patch it: "the honest reconstruction is minutes
+    before tournament_start over team minutes before tournament_start, and
+    player_minutes_*.json holds only season aggregates with no per-game
+    breakdown. Blocked until game-level box scores land." They have landed.
+
+    WHAT CHANGES AND WHAT DOES NOT. Only the WEIGHTS. Roster membership and
+    eligibility_year stay on cbbpy, because those inputs were never
+    contaminated -- a player's class and whether he was on last year's roster
+    are facts settled long before March. Swapping the weighting for box-score
+    minutes is the minimal correct fix rather than a rebuild.
+
+    PRE-TOURNAMENT BY CONSTRUCTION. EspnBoxscoreScraper stops strictly before
+    TOURNAMENT_START_DATES[year], so the file cannot contain a tournament game
+    to filter out. Verified per season by backfill_pbp_history.
+    verify_season_coverage, which is what caught 2023 and 2024 shipping
+    truncated.
+
+    BOTH SIDES ARE BRIDGED TO CANONICAL BEFORE JOINING. The two sources use
+    different slugs for the same school -- `alabama` in the rosters against
+    `alabama_crimson_tide` in the box scores, 115 such teams -- so a direct
+    join on raw team id silently drops them. Player ids ARE shared
+    (athlete_id == player_id, 100% overlap where teams match), so the join is
+    safe once the team side is canonicalised.
+    """
+    box_path = HIST_DIR / f"boxscores_{year}.json"
+    roster_path = HIST_DIR / f"cbbpy_rosters_{year}.json"
+    prev_path = HIST_DIR / f"cbbpy_rosters_{year - 1}.json"
+    if not box_path.exists() or not roster_path.exists():
+        return {}
+
+    with open(box_path) as f:
+        games = json.load(f).get("games", [])
+    if not games:
+        return {}
+
+    raw_minutes: dict[str, dict[str, float]] = {}
+    for game in games:
+        for team in game.get("teams") or []:
+            tid = team["team_id"]
+            bucket = raw_minutes.setdefault(tid, {})
+            for p in team.get("players") or []:
+                mins = p.get("minutes")
+                if mins is None:
+                    continue  # DNP
+                aid = str(p["athlete_id"])
+                bucket[aid] = bucket.get(aid, 0.0) + float(mins)
+
+    box_bridge = resolve_cbbpy_bridge(
+        {tid: sum(v.values()) for tid, v in raw_minutes.items()},
+        canonical_ids,
+        universe=_d1_universe(year),
+    )
+    canon_minutes: dict[str, dict[str, float]] = {}
+    for tid, players in raw_minutes.items():
+        canonical = box_bridge.get(tid)
+        if canonical is None:
+            continue
+        agg = canon_minutes.setdefault(canonical, {})
+        for aid, m in players.items():
+            agg[aid] = agg.get(aid, 0.0) + m
+
+    with open(roster_path) as f:
+        teams = json.load(f).get("teams", [])
+    prior_ids: dict[str, set] = {}
+    if prev_path.exists():
+        with open(prev_path) as f:
+            for t in json.load(f).get("teams", []):
+                prior_ids[t["team_id"]] = {str(p.get("player_id")) for p in t.get("players", [])}
+
+    roster_bridge = resolve_cbbpy_bridge(
+        # player-games, not summed mpg -- see build_roster_stats for why.
+        {
+            t["team_id"]: sum(_num(p.get("games_played")) for p in t.get("players", []))
+            for t in teams
+            if t.get("team_id")
+        },
+        canonical_ids,
+        universe=_d1_universe(year),
+    )
+    returners_by_canon: dict[str, set] = {}
+    frosh_by_canon: dict[str, set] = {}
+    for t in teams:
+        canonical = roster_bridge.get(t["team_id"])
+        if canonical is None:
+            continue
+        returners_by_canon.setdefault(canonical, set()).update(
+            prior_ids.get(t["team_id"], set())
+        )
+        frosh_by_canon.setdefault(canonical, set()).update(
+            str(p.get("player_id"))
+            for p in t.get("players", [])
+            if p.get("eligibility_year") == 1
+        )
+
+    out = {}
+    for canonical, players in canon_minutes.items():
+        total = sum(players.values())
+        if total <= 0:
+            continue
+        returners = returners_by_canon.get(canonical, set())
+        frosh = frosh_by_canon.get(canonical, set())
+        ret_min = sum(m for aid, m in players.items() if aid in returners)
+        frosh_min = sum(m for aid, m in players.items() if aid in frosh)
+        out[canonical] = {
+            "returning_minutes_pct": (
+                round(ret_min / total, 4) if returners and prev_path.exists() else None
+            ),
+            "freshman_minutes_pct": round(frosh_min / total, 4) if frosh else None,
+        }
+    return out
+
+
 DOUBLE_DIGIT_PPG = 10.0
+
+
+def _d1_universe(year: int):
+    """Full D1 canonical id set for a season, for resolve_cbbpy_bridge.
+
+    WITHOUT THIS THE BRIDGE IS DEMONSTRABLY WRONG, and its own docstring says
+    so: bridging against a 68-team target set lets `north_carolina_a_t_aggies`
+    prefix-match the canonical `north_carolina`, because `north_carolina_a_t`
+    is not in the target set to out-match it. Weighting cannot save it -- the
+    impostor often carries more data than the real team.
+
+    Every caller in this file omitted the argument, so 142 of 1,084
+    team-seasons resolved a canonical id to the wrong school, including North
+    Carolina, Kansas, Texas and Florida. clutch_metrics and pbp_box_scores
+    already passed it; this file did not.
+    """
+    return load_d1_team_ids(year, PROJECT_ROOT / "data")
 
 
 def build_scoring_depth(year: int, canonical_ids):
@@ -283,7 +437,7 @@ def build_scoring_depth(year: int, canonical_ids):
     # (same idiom as build_roster_stats's minutes weighting), so a collision
     # resolves to whichever roster is actually the D1 team in question.
     weights = {tid: sum(ppgs) for tid, ppgs in ppg_by_team.items()}
-    bridge_map = resolve_cbbpy_bridge(weights, canonical_ids)
+    bridge_map = resolve_cbbpy_bridge(weights, canonical_ids, universe=_d1_universe(year))
 
     out = {}
     for raw_id, ppgs in ppg_by_team.items():
@@ -771,7 +925,7 @@ def _cbbpy_season_games(year: int, canonical_ids, tournament_start):
             raw = g.get(key)
             if raw:
                 appearances[raw] = appearances.get(raw, 0) + 1
-    bridge_map = resolve_cbbpy_bridge(appearances, canonical_ids)
+    bridge_map = resolve_cbbpy_bridge(appearances, canonical_ids, universe=_d1_universe(year))
 
     latest = max((g.get("date") or "") for g in games)
     if tournament_start and latest >= tournament_start:
@@ -993,6 +1147,7 @@ def build_year_rows(year: int) -> list[dict]:
     rosters = build_roster_stats(year, set(torvik))
     overtime = build_overtime_rate(year, set(torvik))
     srs_ratings = build_srs(year, set(torvik))
+    roster_minutes = build_roster_minutes(year, set(torvik))
     box_profile = build_kaggle_box_profile(year, set(torvik))
     coach = build_coach_experience(year, set(torvik))
     conf_tourney = build_conf_tourney_result(year, set(torvik))
@@ -1033,11 +1188,17 @@ def build_year_rows(year: int) -> list[dict]:
         row.update(
             rosters.get(
                 tv_id,
-                {"returning_minutes_pct": None, "freshman_minutes_pct": None, "n_returning_players": None},
+                {"n_returning_players": None},
             )
         )
         row.update(overtime.get(tv_id, {"overtime_rate": None}))
         row.update(srs_ratings.get(tv_id, {"srs": None}))
+        row.update(
+            roster_minutes.get(
+                tv_id,
+                {"returning_minutes_pct": None, "freshman_minutes_pct": None},
+            )
+        )
         row.update(
             box_profile.get(
                 tv_id,
