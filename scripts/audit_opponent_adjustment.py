@@ -253,6 +253,13 @@ def main() -> int:
         return np.array(out)
 
     controls = ["q_RTH", "q_SAG", "q_srs", "q_barthag"]
+    # The two held-out Massey systems are the least conference-biased
+    # instruments available (+0.038 and +0.061 against SRS's +0.144 and
+    # barthag's +0.213). A joint over ONLY those asks whether a verdict
+    # survives when the controls themselves are not carrying the confound
+    # being measured -- which matters for any variable where the instruments
+    # disagree, because a joint over all four lets a biased control drive it.
+    clean_controls = ["q_RTH", "q_SAG"]
     labels = {"q_RTH": "RTH", "q_SAG": "SAG", "q_srs": "SRS", "q_barthag": "barthag"}
     n_rows = sum(len(per_season[s]["conf"]) for s in common)
 
@@ -269,18 +276,25 @@ def main() -> int:
         cells = [float("nan") if labels[c].lower() == k else partial_r(x, y, ctrl[c]) for c in controls]
         usable = [ctrl[c] for c in controls if labels[c].lower() != k]
         joint = partial_r(x, y, *usable)
+        clean_usable = [ctrl[c] for c in clean_controls if labels[c].lower() != k]
+        clean_joint = partial_r(x, y, *clean_usable) if clean_usable else float("nan")
 
         if k in BY_DESIGN:
             verdict = "by design (measures opposition)"
-        elif abs(joint) >= CONFOUND_THRESHOLD:
+        elif abs(joint) >= CONFOUND_THRESHOLD and abs(clean_joint) >= CONFOUND_THRESHOLD:
             verdict = "CONFOUNDED"
             confounded.append((abs(joint), k, joint))
+        elif abs(joint) >= CONFOUND_THRESHOLD:
+            # The all-instrument joint flags it but the clean-instrument joint
+            # does not, so a biased control is driving the verdict.
+            verdict = "flagged only by biased instruments"
         elif any(abs(v) >= CONFOUND_THRESHOLD for v in cells if not np.isnan(v)):
             verdict = "unstable across instruments"
         else:
             verdict = "opponent-adjusted"
         cellstr = "".join("      n/a" if np.isnan(v) else f"{v:>+9.3f}" for v in cells)
-        print(f"  {k:<26}{cellstr}{joint:>+9.3f}   {verdict}")
+        cj = "      n/a" if np.isnan(clean_joint) else f"{clean_joint:>+9.3f}"
+        print(f"  {k:<26}{cellstr}{joint:>+9.3f}{cj}   {verdict}")
 
     print()
     if confounded:
