@@ -40,6 +40,7 @@ import json
 import logging
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -195,6 +196,78 @@ def run(
     logger.info("=== Backfill run finished (years %d-%d) ===", start_year, end_year)
 
 
+# A season whose scraped games fall this far short of Kaggle's regular-season
+# count for the same year is treated as incomplete rather than merely thin.
+# Kaggle is authoritative for "which games existed"; the box scores are a
+# separate scrape of the same universe, so a large shortfall means dates were
+# lost, not that fewer games were played.
+COVERAGE_MIN_FRACTION = 0.95
+# The last date carrying games must be within this many days of the cutoff.
+# Catches the failure the count check cannot: a season that is dense early and
+# simply stops, which is what happened to 2024 (last game 2024-02-24 against a
+# 2024-03-19 cutoff, yet 92.8% of Kaggle's count -- it would pass on count
+# alone while missing every conference tournament).
+COVERAGE_MAX_TAIL_GAP_DAYS = 4
+
+
+def _kaggle_regular_season_count(year: int) -> int:
+    """How many regular-season games Kaggle records for this season, or 0."""
+    path = DATA_ROOT / "kaggle" / "MRegularSeasonCompactResults.csv"
+    if not path.exists():
+        return 0
+    import csv as _csv
+
+    n = 0
+    with open(path) as f:
+        for row in _csv.DictReader(f):
+            if int(row["Season"]) == year:
+                n += 1
+    return n
+
+
+def verify_season_coverage(year: int, payload: dict) -> list:
+    """Return a list of coverage problems; empty means the season looks whole.
+
+    WHY THIS EXISTS. The scraper walks every date to the cutoff and counts the
+    ones that returned nothing in metadata.games_missing_boxscore -- 210 for
+    2023, 59 for 2024, 14 for 2025 -- but nothing ever read that number. A date
+    that FAILED and a date that genuinely had no games are indistinguishable in
+    the payload, so both seasons were logged as successful completions. 2024
+    lost all of March, including its conference tournaments, and reported
+    "5201 boxscore games" as success in two seconds.
+
+    That is the same shape as the other silent-success failures found in this
+    repo: a completeness signal that is recorded and never checked. Two
+    independent tests are needed because neither catches both cases -- 2023
+    fails on count (a November hole, tail intact), 2024 fails on tail gap (dense
+    through February, then nothing).
+    """
+    problems = []
+    games = payload.get("games") or []
+    if not games:
+        return ["no games at all"]
+
+    expected = _kaggle_regular_season_count(year)
+    if expected:
+        frac = len(games) / expected
+        if frac < COVERAGE_MIN_FRACTION:
+            problems.append(
+                f"only {len(games):,} games against {expected:,} in Kaggle "
+                f"({frac:.1%}, floor {COVERAGE_MIN_FRACTION:.0%})"
+            )
+
+    cutoff = payload.get("cutoff_date")
+    last = max(g["game_date"] for g in games)
+    if cutoff:
+        gap = (date.fromisoformat(cutoff) - date.fromisoformat(last)).days
+        if gap > COVERAGE_MAX_TAIL_GAP_DAYS:
+            problems.append(
+                f"last game {last} is {gap} days before the cutoff {cutoff} "
+                f"(max {COVERAGE_MAX_TAIL_GAP_DAYS})"
+            )
+    return problems
+
+
 def _run_boxscore_stage(year: int, coverage: dict) -> None:
     """Scrape one season of box scores and build player_minutes from them."""
     t0 = time.time()
@@ -220,6 +293,20 @@ def _run_boxscore_stage(year: int, coverage: dict) -> None:
         logger.error("Season %d: 0 boxscore games -- skipping player_minutes", year)
         coverage[("player_minutes", year)] = None
         return
+
+    problems = verify_season_coverage(year, payload)
+    if problems:
+        # Loud and non-fatal: the partial data is still on disk and still
+        # better than nothing for some uses, but it must not read as success.
+        # Silence here is what let 2023 and 2024 ship truncated.
+        for p in problems:
+            logger.error("Season %d: INCOMPLETE COVERAGE -- %s", year, p)
+        logger.error(
+            "Season %d: delete data/raw/historical/boxscores_%d.json and re-run "
+            "to refetch; the resume checkpoint will otherwise skip these dates",
+            year,
+            year,
+        )
 
     try:
         result = build_season_minutes_features(year, DATA_ROOT, boxscore_payload=payload)
