@@ -20,8 +20,6 @@
   "variables_excluded_as_leakage": [
     "outcome_rounds_won",
     "outcome_vs_seed_delta",
-    "hist_appearances",
-    "returning_minutes_pct",
-    "freshman_minutes_pct"
+    "hist_appearances"
   ]
 }

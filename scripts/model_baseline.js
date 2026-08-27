@@ -62,6 +62,17 @@ const DEFAULT_OUT = path.join(REPO, 'artifacts', 'model_baseline.json');
 // that a margin-and-SOS rating does not reproduce. srs stays in the table as
 // an audit instrument -- it now flows through the same pipeline and id map as
 // every other column -- but it is not a model feature.
+// The roster-minute variables are deliberately ABSENT here while present in
+// the data and in the UI. Measured 2026-08-27 against
+// baseline_11key_pre_minutes.json, walk-forward warm, n=630:
+//   + returning_minutes_pct  0.45296 -> 0.45015
+//     paired bootstrap -0.00280, 95% CI [-0.00469, +0.00681]  NOT a finding
+//   + both                   0.45296 -> 0.45050
+//     paired bootstrap -0.00246, 95% CI [-0.00534, +0.00672]  NOT a finding
+//   + freshman_minutes_pct alone  0.45296 -> 0.45416, worse
+// The point estimate had the right sign and was larger than most effects
+// measured this session, which is exactly the situation the stopping rule
+// exists for.
 const CANONICAL_KEYS = [
   'barthag', 't_rank', 'sos_avg_opp_barthag',
   'adj_offensive_efficiency', 'adj_defensive_efficiency', 'adj_tempo',
