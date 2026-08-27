@@ -17,7 +17,7 @@
     2025,
     2026
   ],
-  "generated": "2026-08-26",
+  "generated": "2026-08-27",
   "expected_rounds_won_by_seed": {
     "1": 3.219,
     "2": 2.234,
@@ -40757,7 +40757,7 @@
         "outcome_rounds_won": 6,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 9.72,
-        "n_double_digit_scorers": 2,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": 4.28,
         "hist_appearances": 6,
         "hist_residual": 1.12
@@ -40957,7 +40957,7 @@
         "outcome_rounds_won": 2,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 12.43,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": 0.28,
         "hist_appearances": 7,
         "hist_residual": -0.04
@@ -41007,7 +41007,7 @@
         "outcome_rounds_won": 3,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 6.47,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": 0.77,
         "hist_appearances": 9,
         "hist_residual": -0.62
@@ -41107,7 +41107,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 8.62,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": -2.23,
         "hist_appearances": 8,
         "hist_residual": -0.03
@@ -41157,7 +41157,7 @@
         "outcome_rounds_won": 3,
         "conf_tourney_wins": 2,
         "massey_avg_rank": 6.47,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": 1.16,
         "hist_appearances": 12,
         "hist_residual": 0.27
@@ -41457,7 +41457,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 16.46,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 2,
         "outcome_vs_seed_delta": -0.16,
         "hist_appearances": 11,
         "hist_residual": 0.22
@@ -41657,7 +41657,7 @@
         "outcome_rounds_won": 2,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 26.09,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": 1.3,
         "hist_appearances": 5,
         "hist_residual": 0.33
@@ -41957,7 +41957,7 @@
         "outcome_rounds_won": 2,
         "conf_tourney_wins": 0,
         "massey_avg_rank": 36.49,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": 1.08,
         "hist_appearances": 12,
         "hist_residual": 0.33
@@ -42607,7 +42607,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 0,
         "massey_avg_rank": 41.57,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 2,
         "outcome_vs_seed_delta": -0.52,
         "hist_appearances": 5,
         "hist_residual": 0.05
@@ -42707,7 +42707,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 0,
         "massey_avg_rank": 38.26,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 2,
         "outcome_vs_seed_delta": -0.73,
         "hist_appearances": 4,
         "hist_residual": -0.4
@@ -42757,7 +42757,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 2,
         "massey_avg_rank": 61.92,
-        "n_double_digit_scorers": 2,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": -0.7,
         "hist_appearances": 3,
         "hist_residual": -0.64
@@ -42857,7 +42857,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 0,
         "massey_avg_rank": 49.45,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": -0.7,
         "hist_appearances": 6,
         "hist_residual": -0.35
@@ -42957,7 +42957,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 49.55,
-        "n_double_digit_scorers": 2,
+        "n_double_digit_scorers": 1,
         "outcome_vs_seed_delta": -0.7,
         "hist_appearances": 1,
         "hist_residual": -1.16
@@ -43057,7 +43057,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 69.22,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.2,
         "hist_appearances": 7,
         "hist_residual": -0.15
@@ -44259,7 +44259,7 @@
         "outcome_rounds_won": 5,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 2.9,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": 1.78,
         "hist_appearances": 11,
         "hist_residual": -0.5
@@ -44709,7 +44709,7 @@
         "outcome_rounds_won": 2,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 19.41,
-        "n_double_digit_scorers": 5,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": 0.84,
         "hist_appearances": 13,
         "hist_residual": 0.34
@@ -44859,7 +44859,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 2,
         "massey_avg_rank": null,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": -1.16,
         "hist_appearances": 7,
         "hist_residual": -0.15
@@ -45209,7 +45209,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 2,
         "massey_avg_rank": 30.22,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": 0.48,
         "hist_appearances": 5,
         "hist_residual": -0.36
@@ -45259,7 +45259,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 19.74,
-        "n_double_digit_scorers": 5,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.75,
         "hist_appearances": 6,
         "hist_residual": -0.31
@@ -45609,7 +45609,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 2,
         "massey_avg_rank": 46.6,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 2,
         "outcome_vs_seed_delta": 0.27,
         "hist_appearances": 5,
         "hist_residual": -0.15
@@ -45809,7 +45809,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 41.08,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": 0.08,
         "hist_appearances": 0,
         "hist_residual": null
@@ -45959,7 +45959,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 37.93,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": 0.27,
         "hist_appearances": 3,
         "hist_residual": -0.08
@@ -46109,7 +46109,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 1,
         "massey_avg_rank": 34.08,
-        "n_double_digit_scorers": 2,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": -0.75,
         "hist_appearances": 1,
         "hist_residual": 3.08
@@ -46259,7 +46259,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 1,
         "massey_avg_rank": null,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": -0.7,
         "hist_appearances": 1,
         "hist_residual": 3.27
@@ -46459,7 +46459,7 @@
         "outcome_rounds_won": 1,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 51.39,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 3,
         "outcome_vs_seed_delta": 0.57,
         "hist_appearances": 1,
         "hist_residual": -0.02
@@ -46659,7 +46659,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 2,
         "massey_avg_rank": 86.43,
-        "n_double_digit_scorers": 4,
+        "n_double_digit_scorers": 5,
         "outcome_vs_seed_delta": -0.2,
         "hist_appearances": 3,
         "hist_residual": 0.11
@@ -46759,7 +46759,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 92.58,
-        "n_double_digit_scorers": 5,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.43,
         "hist_appearances": 3,
         "hist_residual": 0.01
@@ -46909,7 +46909,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": null,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 2,
         "outcome_vs_seed_delta": -0.19,
         "hist_appearances": 2,
         "hist_residual": -0.02
@@ -47159,7 +47159,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 167.23,
-        "n_double_digit_scorers": 3,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.02,
         "hist_appearances": 1,
         "hist_residual": -0.12
@@ -47209,7 +47209,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 160.62,
-        "n_double_digit_scorers": 5,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.19,
         "hist_appearances": 1,
         "hist_residual": -0.43
@@ -47409,7 +47409,7 @@
         "outcome_rounds_won": 0,
         "conf_tourney_wins": 3,
         "massey_avg_rank": 254.95,
-        "n_double_digit_scorers": 2,
+        "n_double_digit_scorers": 4,
         "outcome_vs_seed_delta": -0.02,
         "hist_appearances": 0,
         "hist_residual": null
