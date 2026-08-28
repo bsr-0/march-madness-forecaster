@@ -28,6 +28,8 @@ const state = {
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
   priorWeight: 0,      // 0 = model only; the blend control's rest position
+  model: 'ridge',      // 'ridge' | 'knn'
+  k: 25,               // neighbours, when model === 'knn' 
   cache: {},
 };
 
@@ -79,6 +81,7 @@ function refit() {
 
   const f = fitLinear(state.training.games, cols, state.year);
   f.keys = keys;
+  f.cols = cols;
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
   // The honest number: fit on prior seasons, scored on seasons never seen.
   f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
@@ -89,6 +92,14 @@ function refit() {
  *
  * Antisymmetric by construction: swapping a and b negates the differential and
  * so negates the margin exactly. */
+/* The matchup's standardised differential on the enabled variables, in the
+ * order fit.keys lists them. The ridge model dots this with beta; kNN uses it
+ * as a query point. Both need the same vector, so it is built once here. */
+function diffVector(a, b) {
+  const z = state.season.z, f = state.fit;
+  return f.keys.map(k => { const col = z[k]; return col ? (col[a] || 0) - (col[b] || 0) : 0; });
+}
+
 function margin(a, b) {
   const z = state.season.z, f = state.fit;
   let t = 0;
@@ -110,7 +121,15 @@ function margin(a, b) {
  * pinned its most lopsided picks against 1.0. Passing the calibration here is
  * what makes the board's percentages mean what they say. */
 function winProb(a, b) {
-  return winProbFromMargin(margin(a, b), state.fit.sigma, state.fit.oos && state.fit.oos.calibration);
+  const cal = state.fit.oos && state.fit.oos.calibration;
+  if (state.model === 'knn') {
+    // The kNN board answers a different question -- what happened in the games
+    // that looked most like this one -- so it gets its own margin and its own
+    // LOCAL sigma from the spread of the neighbours that voted.
+    const r = knnPredict(state.training.games, state.fit.cols, diffVector(a, b), state.k, state.year);
+    if (r) return winProbFromMargin(r.margin, r.sigma, cal);
+  }
+  return winProbFromMargin(margin(a, b), state.fit.sigma, cal);
 }
 
 const ROUND_KEYS = ['R64', 'R32', 'S16', 'E8', 'F4', 'NCG'];
@@ -225,7 +244,8 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { const pp = document.getElementById('prior-panel'); if (pp) pp.hidden = true; }
+    { for (const id of ['prior-panel', 'model-panel']) {
+        const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
     empty.innerHTML = `
@@ -238,8 +258,11 @@ function render() {
   weights.hidden = false;   // the panel is the only control surface
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
-  { const pp = document.getElementById('prior-panel');
-    if (pp) pp.hidden = state.enabled.has(OPTIMIZED); }
+  { const fitted = !state.enabled.has(OPTIMIZED);
+    const pp = document.getElementById('prior-panel');
+    const mp = document.getElementById('model-panel');
+    if (pp) pp.hidden = !fitted;
+    if (mp) mp.hidden = !fitted; }
 
   if (usingOptimized()) {
     note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
@@ -550,6 +573,28 @@ async function init() {
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
+  document.querySelectorAll('input[name=model]').forEach(el => {
+    el.addEventListener('change', e => {
+      state.model = e.target.value;
+      document.getElementById('k-row').hidden = state.model !== 'knn';
+      document.getElementById('model-note').textContent = state.model === 'knn'
+        ? `Each pick is the mean margin of the ${state.k} most similar prior tournament games, with its own spread as the uncertainty.`
+        : 'Ridge fits one set of coefficients across every prior tournament game.';
+      render();
+    });
+  });
+  const kEl = document.getElementById('knn-k');
+  if (kEl) {
+    kEl.addEventListener('input', e => {
+      state.k = Number(e.target.value);
+      document.getElementById('knn-v').textContent = e.target.value;
+      if (state.model === 'knn') {
+        document.getElementById('model-note').textContent =
+          `Each pick is the mean margin of the ${state.k} most similar prior tournament games, with its own spread as the uncertainty.`;
+        render();
+      }
+    });
+  }
   const priorEl = document.getElementById('prior-w');
   if (priorEl) {
     priorEl.addEventListener('input', e => {
