@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=16">
+<link rel="stylesheet" href="app.css?v=17">
 </head>
 <body>
 
@@ -22,6 +22,24 @@
 </header>
 
 <main id="main">
+
+  <!-- Historical prior. Blends each pick toward the base rate for that seed
+       pairing in that round, computed from seasons strictly before the one on
+       screen. At 0% the model is untouched. -->
+  <section class="panel" id="prior-panel" hidden>
+    <div class="panel-head">
+      <p class="panel-title">Lean on history</p>
+    </div>
+    <div class="prior-row">
+      <label for="prior-w">Weight on the seed-matchup base rate</label>
+      <input type="range" id="prior-w" min="0" max="100" step="5" value="0">
+      <span class="prior-v" id="prior-v">0%</span>
+    </div>
+    <p class="prior-note">
+      0% uses the fitted model alone. 100% ignores the variables and picks each
+      game at the historical rate for that seed pairing and round.
+    </p>
+  </section>
 
   <!-- Weight controls. Present only in "My weights"; a single variable is just
        one weight at full and the rest at zero. -->
@@ -61,7 +79,7 @@
 </aside>
 <div class="scrim" id="scrim" hidden></div>
 
-<script src="fit.js?v=7"></script>
-<script src="app.js?v=20"></script>
+<script src="fit.js?v=8"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

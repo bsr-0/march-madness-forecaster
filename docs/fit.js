@@ -523,6 +523,28 @@ function stability(trajectory) {
  * pre-calibration behaviour -- kept as the default so the fallback is the
  * conservative one when no walk-forward evaluation was possible. The clip
  * applies either way. */
+/* Blend the model's probability with a historical seed-matchup base rate.
+ *
+ * WHY A BLEND AND NOT A FEATURE. As a feature the fit decides how much the
+ * base rate matters and the user cannot move it; as a blend the user sets the
+ * weight and can see the board respond. That is the point of the control --
+ * "how much do I trust history over the variables for THIS pairing" is a
+ * question the fit cannot answer for someone else.
+ *
+ * ANTISYMMETRY SURVIVES THIS, which is not automatic and is why the blend is
+ * a plain convex combination. Swapping the teams sends p -> 1-p and q -> 1-q,
+ * so (1-w)p + wq -> (1-w)(1-p) + w(1-q) = 1 - [(1-w)p + wq]. Any blend that
+ * is not affine in both arguments would break the guarantee the whole board
+ * rests on -- see the antisymmetry checks in tests/test_calibration.js.
+ *
+ * weight 0 returns the model untouched, so the control is a no-op at rest.
+ */
+function blendWithPrior(pModel, pPrior, weight) {
+  if (!isFinite(pPrior) || !(weight > 0)) return pModel;
+  const w = Math.min(1, Math.max(0, weight));
+  return clipProb((1 - w) * pModel + w * pPrior);
+}
+
 function winProbFromMargin(margin, sigma, cal) {
   const a = cal && isFinite(cal.a) ? cal.a : 1;
   const nu = cal ? cal.nu : Infinity;
@@ -532,7 +554,7 @@ function winProbFromMargin(margin, sigma, cal) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
-    winProbFromMargin, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
+    winProbFromMargin, blendWithPrior, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP,
   };
 }
