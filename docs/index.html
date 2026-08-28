@@ -11,19 +11,13 @@
 </head>
 <body>
 
-<!-- Two destinations. The board is the product; Diagnostics is a workbench for
-     interrogating the model that fills it, and changes no pick. They share one
-     variable selection so the diagnostics always describe what is on the board. -->
+<!-- One destination. The board is the product: pick a season, choose which
+     variables the model fits on, and read the bracket that falls out. The
+     Diagnostics workbench that used to sit beside it was removed 2026-08-27. -->
 <header class="bar">
   <div class="bar-l">
     <span class="mark">Bracket Lab</span>
     <nav class="years" id="years" aria-label="Season"></nav>
-  </div>
-  <div class="bar-r">
-    <nav class="tabs" id="tabs" aria-label="View">
-      <button class="tab on" data-tab="bracket">Bracket</button>
-      <button class="tab" data-tab="diagnostics">Diagnostics</button>
-    </nav>
   </div>
 </header>
 
@@ -52,11 +46,6 @@
 
   <section class="empty" id="empty" hidden></section>
 
-  <!-- Diagnostics. Refits by ordinary least squares on the same rows and
-       columns, because a ridge-penalised coefficient has no standard error in
-       the usual sense. Nothing here feeds the board. -->
-  <section class="diag" id="diagnostics" hidden></section>
-
 </main>
 
 <!-- Team inspector. Opens from any team on the board. -->
@@ -73,7 +62,6 @@
 <div class="scrim" id="scrim" hidden></div>
 
 <script src="fit.js?v=7"></script>
-<script src="diag.js?v=2"></script>
 <script src="app.js?v=20"></script>
 </body>
 </html>

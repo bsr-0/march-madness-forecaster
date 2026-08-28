@@ -238,13 +238,10 @@ jobs:
           node-version: '20'
 
       - name: Syntax check
-        run: for f in docs/fit.js docs/diag.js docs/app.js; do node --check "$f"; done
+        run: for f in docs/fit.js docs/app.js; do node --check "$f"; done
 
       - name: Link, calibration and antisymmetry checks
         run: node tests/test_calibration.js
-
-      - name: Diagnostics checks
-        run: node tests/test_diagnostics.js
 
       - name: Point-in-time boundary audit
         uses: ./.github/actions/setup-python-env

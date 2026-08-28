@@ -27,7 +27,6 @@ const state = {
   training: null,
   season: null,
   cache: {},
-  tab: 'bracket',       // 'bracket' | 'diagnostics'
 };
 
 /* ---------- data ---------- */
@@ -187,17 +186,11 @@ function render() {
   const empty = document.getElementById('empty');
   const note = document.getElementById('mode-note');
   const weights = document.getElementById('weights');
-  const onBracket = state.tab === 'bracket';
-
-  // The two tabs share one variable selection, so any change to it has to reach
-  // whichever one is showing.
-  if (state.tab === 'diagnostics') renderDiagnostics();
-
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
     note.innerHTML = '';
-    empty.hidden = !onBracket;
+    empty.hidden = false;
     empty.innerHTML = `
       <p class="e-title">${s ? s.message : 'Season unavailable.'}</p>
       <p class="e-sub">${s ? s.detail : ''}</p>`;
@@ -205,7 +198,7 @@ function render() {
   }
 
   empty.hidden = true;
-  weights.hidden = !onBracket;   // the panel is always the control surface now, but only on the Bracket tab
+  weights.hidden = false;   // the panel is the only control surface
 
   if (usingOptimized()) {
     note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
@@ -489,365 +482,7 @@ function closeDrawer() {
   document.getElementById('scrim').hidden = true;
 }
 
-/* ---------- diagnostics ---------- */
-
-/* A workbench, not product surface. Everything here refits by ordinary least
- * squares; the board keeps using the ridge fit. Where the two disagree, the
- * ridge was doing real work, and saying so is the point.
- */
-
-const P_FMT = p =>
-  p === null ? '—' : p < 1e-4 ? '&lt;0.0001' : p.toFixed(4);
-
-function fmt(v, d = 2) {
-  return v === null || v === undefined || !isFinite(v) ? '—' : v.toFixed(d);
-}
-
-function renderDiagnostics() {
-  const el = document.getElementById('diagnostics');
-  const keys = state.fit ? state.fit.keys : [];
-
-  if (!state.training || !keys.length) {
-    el.innerHTML = `
-      <div class="d-empty">
-        <p class="e-title">No model to diagnose.</p>
-        <p class="e-sub">Switch on one or more variables on the Bracket tab. The
-        prebuilt bracket is not a regression, so there is nothing to test.</p>
-      </div>`;
-    return;
-  }
-
-  const cols = keys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
-  const r = diagnose(state.training.games, cols, keys, state.year);
-  if (r.error) {
-    el.innerHTML = `<div class="d-empty"><p class="e-title">${r.error}</p></div>`;
-    return;
-  }
-
-  el.innerHTML = [
-    diagPreamble(r),
-    diagSignificance(r),
-    diagVIF(r),
-    diagSigns(r),
-    diagResiduals(r),
-    diagIntercept(r),
-    diagBaselines(r),
-    diagNext(r),
-  ].join('');
-}
-
-function diagPreamble(r) {
-  return `
-    <div class="d-head">
-      <p class="d-h1">Regression diagnostics</p>
-      <p class="d-sub2">
-        Ordinary least squares on ${r.fit.n.toLocaleString()} tournament games from seasons
-        before ${state.year}, ${r.fit.k} variable${r.fit.k > 1 ? 's' : ''}, ${r.fit.df.toLocaleString()} degrees of freedom.
-        Residual spread ${fmt(Math.sqrt(r.fit.sigma2))} points.
-      </p>
-      <p class="d-warn">
-        <b>Read these as screening, not proof.</b> Two reasons. The board's model is
-        ridge-penalised and a penalised coefficient has no standard error in the ordinary
-        sense, so this refits <i>without</i> the penalty — the numbers below will not match
-        the board's equation exactly. And you chose these variables after seeing results,
-        which makes every p-value here optimistic in a way no correction on this page
-        undoes. Fold-to-fold coefficient stability, on the Bracket tab, is the more honest
-        signal.
-      </p>
-    </div>`;
-}
-
-function diagSignificance(r) {
-  const rows = r.coefficients.map(c => `
-    <tr class="${c.significant ? '' : 'dim'}">
-      <td class="k">${c.key}</td>
-      <td class="n">${fmt(c.beta)}</td>
-      <td class="n">${fmt(c.se)}</td>
-      <td class="n">${fmt(c.t, 2)}</td>
-      <td class="n ${c.significant ? 'sig' : ''}">${P_FMT(c.p)}</td>
-      <td class="n ci">${fmt(c.ci[0])} to ${fmt(c.ci[1])}</td>
-    </tr>`).join('');
-  const nSig = r.coefficients.filter(c => c.significant).length;
-  return `
-    <div class="d-card">
-      <p class="d-h2">1 · Significance</p>
-      <p class="d-note">
-        ${nSig} of ${r.coefficients.length} coefficients are distinguishable from zero at
-        the 5% level. A coefficient whose interval straddles zero is not evidence that the
-        variable does nothing — with collinear inputs it usually means the credit could not
-        be assigned between overlapping columns.
-      </p>
-      <table class="d-table">
-        <thead><tr><th>variable</th><th class="n">β</th><th class="n">std. error</th>
-        <th class="n">t</th><th class="n">p</th><th class="n">95% interval</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p class="d-foot">β is points of scoring margin per standard deviation of edge.</p>
-    </div>`;
-}
-
-function diagVIF(r) {
-  const rows = r.vif.map(v => `
-    <tr>
-      <td class="k">${v.key}</td>
-      <td class="n"><span class="pill ${v.severity}">${fmt(v.vif)}</span></td>
-      <td class="n">${fmt(v.seInflation)}&times;</td>
-      <td class="sev ${v.severity}">${v.severity}</td>
-    </tr>`).join('');
-  const worst = r.vif.reduce((a, b) => (b.vif > a.vif ? b : a), r.vif[0]);
-  return `
-    <div class="d-card">
-      <p class="d-h2">2 · Multicollinearity</p>
-      <p class="d-note">
-        Variance inflation measures how much of a variable is already explained by the
-        others. 1 is orthogonal; above 5 the coefficient is being estimated from a thin
-        residual slice of the column; above 10 is conventionally severe.
-        Worst here: <b>${worst.key}</b> at ${fmt(worst.vif)}, which widens its confidence
-        interval by ${fmt(worst.seInflation)}&times; against an uncorrelated column.
-      </p>
-      <table class="d-table">
-        <thead><tr><th>variable</th><th class="n">VIF</th><th class="n">interval widened</th><th>severity</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p class="d-foot">
-        Measured about zero rather than about the column mean, because this model has no
-        intercept to absorb the means — the usual centred formula would report the wrong
-        number here.
-      </p>
-    </div>`;
-}
-
-function diagSigns(r) {
-  const rows = r.signs.map(s => {
-    const flag = s.implausible ? 'implausible' : s.wrongSign ? 'wrong sign' : s.flipped ? 'flipped' : 'ok';
-    return `
-    <tr class="${flag === 'ok' ? '' : 'flag'}">
-      <td class="k">${s.key}</td>
-      <td class="n">${fmt(s.alone)}</td>
-      <td class="n">${fmt(s.joint)}</td>
-      <td class="sev ${flag === 'ok' ? 'low' : flag === 'flipped' ? 'moderate' : 'severe'}">${flag}</td>
-    </tr>`;
-  }).join('');
-  const bad = r.signs.filter(s => s.wrongSign || s.implausible || s.flipped).length;
-  return `
-    <div class="d-card">
-      <p class="d-h2">3 · Signs and magnitudes</p>
-      <p class="d-note">
-        Every variable is standardised upstream so that <b>higher is better</b>. A negative
-        coefficient therefore contradicts the construction of its own column and needs an
-        explanation. The usual one is collinearity, not a reversed effect — so the
-        coefficient fitted <i>alone</i> is shown beside the joint one. A variable positive
-        alone and negative in company has not changed what it does; it has been assigned
-        someone else's credit.
-        ${bad ? `<b>${bad}</b> flagged below.` : 'Nothing flagged.'}
-      </p>
-      <table class="d-table">
-        <thead><tr><th>variable</th><th class="n">β alone</th><th class="n">β jointly</th><th>verdict</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p class="d-foot">
-        A magnitude beyond ±15 points per standard deviation is marked implausible: that is
-        larger than the spread of the thing being predicted, and is one side of a cancelling
-        pair rather than an effect.
-      </p>
-    </div>`;
-}
-
-function residualPlot(res) {
-  const W = 620, H = 240, PAD = 34;
-  const xs = res.points.map(p => p[0]), ys = res.points.map(p => p[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs);
-  const yMax = Math.max(...ys.map(Math.abs));
-  const sx = v => PAD + ((v - x0) / (x1 - x0 || 1)) * (W - PAD - 10);
-  const sy = v => H / 2 - (v / (yMax || 1)) * (H / 2 - 12);
-
-  const dots = res.points
-    .map(([f, e]) => `<circle cx="${sx(f).toFixed(1)}" cy="${sy(e).toFixed(1)}" r="1.6"/>`)
-    .join('');
-
-  // Band means, drawn as a line: a run of same-signed points is curvature the
-  // linear form is not capturing.
-  const path = res.bands.filter(b => b.n > 3)
-    .map((b, i) => `${i ? 'L' : 'M'}${sx((b.lo + b.hi) / 2).toFixed(1)},${sy(b.meanResid).toFixed(1)}`)
-    .join(' ');
-
-  const sigLine = s => `<line x1="${PAD}" y1="${sy(s).toFixed(1)}" x2="${W - 10}" y2="${sy(s).toFixed(1)}" class="sig-line"/>`;
-
-  return `
-    <svg class="resid" viewBox="0 0 ${W} ${H}" role="img"
-         aria-label="Residuals against fitted values">
-      <line x1="${PAD}" y1="${H / 2}" x2="${W - 10}" y2="${H / 2}" class="axis"/>
-      ${sigLine(2 * res.sigma)}${sigLine(-2 * res.sigma)}
-      <g class="dots">${dots}</g>
-      <path d="${path}" class="bandline"/>
-      <text x="${PAD}" y="12" class="lab">residual (points)</text>
-      <text x="${W - 10}" y="${H - 4}" class="lab end">fitted margin →</text>
-      <text x="${PAD - 6}" y="${sy(2 * res.sigma) - 3}" class="lab">+2σ</text>
-    </svg>`;
-}
-
-function diagResiduals(r) {
-  const res = r.residuals;
-  const het = res.heteroscedasticity;
-  const outlierMult = res.outlierRate / res.expectedOutlierRate;
-  const bandRuns = res.bands.filter(b => b.n > 3).map(b => (b.meanResid > 0 ? '+' : '−')).join('');
-  return `
-    <div class="d-card">
-      <p class="d-h2">4 · Residuals</p>
-      ${residualPlot(res)}
-      <div class="d-grid">
-        <div><span class="lbl">Mean residual</span><span class="val">${fmt(res.meanResid, 3)}</span>
-          <span class="sub">≈0 by construction of least squares</span></div>
-        <div><span class="lbl">Heteroscedasticity</span>
-          <span class="val ${het.significant ? 'bad' : 'good'}">${het.significant ? 'present' : 'not detected'}</span>
-          <span class="sub">Breusch–Pagan χ²=${fmt(het.statistic)}, p=${P_FMT(het.p)}${
-            het.significant ? `; error ${het.widensWithMargin ? 'grows' : 'shrinks'} with |predicted margin|` : ''}</span></div>
-        <div><span class="lbl">Outliers beyond 3σ</span>
-          <span class="val ${outlierMult > 2 ? 'bad' : 'good'}">${res.outlierCount}</span>
-          <span class="sub">${(100 * res.outlierRate).toFixed(2)}% vs 0.27% expected — ${fmt(outlierMult, 1)}× normal</span></div>
-        <div><span class="lbl">Band-mean signs</span><span class="val mono">${bandRuns}</span>
-          <span class="sub">low → high fitted; a long run of one sign is curvature</span></div>
-      </div>
-      <p class="d-note">
-        ${het.significant
-          ? (het.widensWithMargin
-            ? 'Error spread <b>grows</b> with the size of the predicted margin: the model is least reliable exactly where it is most emphatic. The board still uses one σ for every game — calibration fits the overall scale and tail weight, not a σ that varies with the prediction — so it remains <b>over-confident about mismatches</b> and slightly under-confident about close games.'
-            : 'Error spread <b>shrinks</b> as the predicted margin grows: the model is more reliable about mismatches than about close games. The board still uses one σ everywhere — calibration rescales it globally but cannot make it vary with the prediction — so it stays <b>under-confident about mismatches</b> and over-confident about coin-flips.')
-          : 'Error spread does not vary detectably with the size of the prediction, so a single σ is a reasonable simplification. That single σ is not used raw: it is scaled, and the tail is set, by a link calibrated on held-out games.'}
-      </p>
-      <p class="d-foot">
-        Heavy tails are expected here regardless: a tournament blowout is a real event no
-        linear model in season averages can anticipate. The line traces mean residual by
-        band — it should wander around zero, not arc.
-      </p>
-    </div>`;
-}
-
-function diagIntercept(r) {
-  const it = r.intercept;
-  if (!it) return '';
-  return `
-    <div class="d-card">
-      <p class="d-h2">5 · The no-intercept assumption</p>
-      <p class="d-note">
-        Forcing the line through the origin is a real restriction, so here is what it costs.
-        Fitting the same variables <i>with</i> a constant gives an intercept of
-        <b>${fmt(it.intercept)}</b> points (std. error ${fmt(it.se)}, t=${fmt(it.t)},
-        p=${P_FMT(it.p)}) — ${it.significant
-          ? '<b class="bad">distinguishable from zero</b>'
-          : '<b class="good">not distinguishable from zero</b>'}.
-      </p>
-      <div class="d-grid">
-        <div><span class="lbl">RMSE without intercept</span><span class="val">${fmt(it.rmseWithout)}</span></div>
-        <div><span class="lbl">RMSE with intercept</span><span class="val">${fmt(it.rmseWith)}</span>
-          <span class="sub">${fmt(it.rmseWith - it.rmseWithout, 3)} difference</span></div>
-        <div><span class="lbl">R² about zero</span><span class="val">${fmt(it.r2ZeroWithout, 3)}</span>
-          <span class="sub">baseline: the teams are even</span></div>
-        <div><span class="lbl">R² about the mean</span><span class="val">${fmt(it.r2MeanWithout, 3)}</span>
-          <span class="sub">baseline: everyone wins by ${fmt(it.meanY, 1)}</span></div>
-      </div>
-      <p class="d-note">
-        <b>Why the two R² figures differ so much.</b> Through the origin, R² is conventionally
-        quoted against "predict zero". About the mean it is quoted against "predict
-        ${fmt(it.meanY, 1)} points every time" — but that baseline is only available to
-        someone who already knows which team to list first. Rows here are ordered
-        better-seed-first, so the mean margin is positive and the mean-centred figure is
-        scored against a baseline that has quietly been told the answer. The
-        <b>about-zero</b> figure is the defensible one for this design, and it is what the
-        board reports.
-      </p>
-      <p class="d-foot">
-        The case for excluding the constant is structural, not statistical: rows are
-        differentials, so swapping the two teams must negate the prediction exactly. A
-        constant would assert that whoever is written first wins by ${fmt(it.intercept)}
-        points before anyone looks at the teams — a fact about row order, not basketball.
-        ${it.significant
-          ? 'That it tests significant reflects the seed-first ordering, and is a reason to distrust the ordering rather than to add a constant.'
-          : 'The test agreeing costs nothing and is reassuring.'}
-      </p>
-    </div>`;
-}
-
-function diagBaselines(r) {
-  const rows = r.baselines.map((b, i) => `
-    <tr class="${i === r.baselines.length - 1 ? 'best' : ''}">
-      <td class="k">${b.name}<span class="sub2">${b.note}</span></td>
-      <td class="n">${fmt(b.rmse)}</td>
-      <td class="n">${fmt(b.mae)}</td>
-      <td class="n">${fmt(b.r2, 3)}</td>
-      <td class="n">${(100 * b.accuracy).toFixed(1)}%</td>
-    </tr>`).join('');
-  return `
-    <div class="d-card">
-      <p class="d-h2">6 · Against a naive baseline</p>
-      <p class="d-note">
-        None of the above means anything without something to beat. These are in-sample on
-        the training seasons, so they are all flattered equally; the out-of-sample figure on
-        the Bracket tab is the one that counts.
-      </p>
-      <table class="d-table">
-        <thead><tr><th>model</th><th class="n">RMSE</th><th class="n">MAE</th>
-        <th class="n">R² (about 0)</th><th class="n">picks right</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <p class="d-foot">
-        The constant-only row is the trap: it looks respectable on accuracy because rows are
-        ordered better-seed-first, so "always favour the first team" is the seed baseline in
-        disguise. Beating it on RMSE is the low bar this model has to clear.
-      </p>
-    </div>`;
-}
-
-function diagNext(r) {
-  const het = r.residuals.heteroscedasticity.significant;
-  const worstVif = Math.max(...r.vif.map(v => v.vif));
-  const items = [];
-  if (worstVif >= 10) {
-    items.push(`<li><b>Collinearity is severe</b> (max VIF ${fmt(worstVif)}). Switching off one of
-      the overlapping ratings will barely move predictions and will make the remaining
-      coefficients readable. This is the single biggest obstacle to interpreting the fit.</li>`);
-  }
-  if (het) {
-    const w = r.residuals.heteroscedasticity.widensWithMargin;
-    items.push(`<li><b>Error spread varies with the size of the prediction</b> — it
-      ${w ? 'grows' : 'shrinks'} as the predicted margin gets larger. One σ is used for every
-      game, so the probabilities are ${w ? 'over' : 'under'}-confident about mismatches and
-      ${w ? 'under' : 'over'}-confident about close games. Modelling σ as a function of
-      |predicted margin| would fix the calibration without moving a single pick, since the
-      winner is decided by the sign of the margin and not by σ.</li>`);
-  }
-  if (r.residuals.outlierRate > 2 * r.residuals.expectedOutlierRate) {
-    items.push(`<li><b>Tails are heavier than normal</b>
-      (${(100 * r.residuals.outlierRate).toFixed(2)}% beyond 3σ against 0.27% expected).
-      Squared error chases blowouts; a robust loss would fit the typical game better at the
-      cost of the extremes.</li>`);
-  }
-  items.push(`<li><b>Regularisation is already in the shipped model</b> — ridge, chosen for
-    out-of-sample error rather than readability. Lasso would drop the redundant ratings
-    outright instead of splitting credit between them, which is worth comparing.</li>`);
-  items.push(`<li><b>Non-linearity looks mild</b> from the band means, so a linear form is not
-    obviously the binding constraint. Interactions between pace and efficiency would be the
-    first thing to test if that changes.</li>`);
-
-  return `
-    <div class="d-card next">
-      <p class="d-h2">Where this points</p>
-      <ul class="d-list">${items.join('')}</ul>
-    </div>`;
-}
-
 /* ---------- controls ---------- */
-
-function setTab(tab) {
-  state.tab = tab;
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  const onBracket = tab === 'bracket';
-  document.getElementById('board').hidden = !onBracket;
-  document.getElementById('equation').hidden = !onBracket;
-  document.getElementById('mode-note').hidden = !onBracket;
-  document.getElementById('diagnostics').hidden = onBracket;
-  render();   // weights/empty visibility depends on both season status and the active tab
-}
 
 async function setYear(year) {
   state.year = year;
@@ -873,9 +508,6 @@ async function init() {
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
-  document.getElementById('tabs').addEventListener('click', e => {
-    if (e.target.dataset.tab) setTab(e.target.dataset.tab);
-  });
   document.getElementById('clear-w').addEventListener('click', clearWeights);
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
