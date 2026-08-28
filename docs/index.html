@@ -38,6 +38,15 @@
         <input type="radio" name="model" value="knn"> Nearest neighbours
       </label>
     </div>
+    <div class="prior-row">
+      <label>
+        <input type="radio" name="tset" value="tournament" checked> Tournament games only
+      </label>
+      <label>
+        <input type="radio" name="tset" value="regular"> + regular season &amp; conf
+      </label>
+    </div>
+    <p class="prior-note" id="tset-note"></p>
     <div class="prior-row" id="k-row" hidden>
       <label for="knn-k">Neighbours (k)</label>
       <input type="range" id="knn-k" min="5" max="200" step="5" value="25">
@@ -105,6 +114,6 @@
 <div class="scrim" id="scrim" hidden></div>
 
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
