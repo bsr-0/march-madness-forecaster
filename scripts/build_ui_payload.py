@@ -76,21 +76,6 @@ VARIABLES: List[Dict[str, Any]] = [
     # Opponent-adjusted rating from game results alone. Present so barthag's
     # incremental contribution can be measured rather than assumed.
     ("srs", "Simple rating (margin + SOS)", "Overall", True, False),
-    # Roster composition. d954902 excluded these as LEAKAGE because cbbpy
-    # weighted them by minutes-per-game averaged over a game count that
-    # included the tournament run. build_roster_minutes now weights by
-    # pre-tournament box-score minutes, so that window no longer straddles the
-    # prediction point and the contamination is gone by construction. They are
-    # therefore back in the UI: leaving them under EXCLUDED_AS_LEAKAGE would
-    # assert something about them that is no longer true.
-    #
-    # They are NOT in the model's CANONICAL_KEYS, and that is a separate fact
-    # with its own measurement rather than an inherited assumption. Added to
-    # the fit they move walk-forward log loss 0.45296 -> 0.45015, but the
-    # paired bootstrap is [-0.00469, +0.00681] and straddles zero. Not a
-    # finding. See the note beside CANONICAL_KEYS in model_baseline.js.
-    ("returning_minutes_pct", "Returning minutes", "Roster", True, False),
-    ("freshman_minutes_pct", "Freshman minutes", "Roster", False, False),
     ("adj_offensive_efficiency", "Offense", "Overall", True, False),
     ("adj_defensive_efficiency", "Defense", "Overall", False, False),
     ("adj_tempo", "Tempo", "Overall", True, False),
@@ -156,10 +141,29 @@ VARIABLES: List[Dict[str, Any]] = [
 # because it is a sample-size gate for hist_residual's reliability, not a
 # team-quality signal in its own right -- more prior appearances does not
 # mean "better," just "the residual is measured on a bigger n."
+# Variables kept OUT of the menu. The name is historical: the list now holds
+# two different reasons, and conflating them would lose information the next
+# reader needs.
+#
+#   LEAKAGE -- outcome_rounds_won, outcome_vs_seed_delta describe the very
+#   tournament being predicted. hist_appearances is a sample-size gate for
+#   hist_residual rather than a quality signal.
+#
+#   MEASURED NULL -- returning_minutes_pct, freshman_minutes_pct. These were
+#   leakage until 2026-08-27: cbbpy weighted them by minutes-per-game averaged
+#   over a game count that included the tournament run. build_roster_minutes
+#   now weights by pre-tournament box-score minutes, so that is fixed by
+#   construction. They stay out on the separate, measured ground that they
+#   contribute nothing: walk-forward warm n=630, log loss 0.45296 -> 0.45015,
+#   paired bootstrap [-0.00469, +0.00681] straddling zero. A variable that
+#   appears in the menu while contributing nothing is worse than an absent
+#   one, because a reader infers the model accounts for it.
 EXCLUDED_AS_LEAKAGE = (
     "outcome_rounds_won",
     "outcome_vs_seed_delta",
     "hist_appearances",
+    "returning_minutes_pct",
+    "freshman_minutes_pct",
 )
 
 

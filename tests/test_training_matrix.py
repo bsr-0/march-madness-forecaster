@@ -155,12 +155,24 @@ def test_mean_dependent_statistics_are_the_reason_orientation_matters():
     )
 
 
-# Variables whose source is post-tournament for historical seasons. These must
-# not reach the model or the menu. The roster shares are here because every
-# cbbpy_rosters_*.json was scraped after the fact, so a team's per-player minute
-# averages are computed over a game count that grows with how far it advanced --
-# measured at r = +0.71 to +0.96 between "extra games on the roster" and "rounds
-# actually won".
+# Variables that must not reach the model or the menu. Two different reasons
+# are bundled here, and the distinction matters if either is ever revisited.
+#
+# outcome_* and hist_residual are RESULTS. They can never be inputs.
+#
+# The roster shares were originally here as CONTAMINATED: every
+# cbbpy_rosters_*.json was scraped after the fact, so per-player minute averages
+# were computed over a game count that grows with how far a team advanced --
+# r = +0.71 to +0.96 between "extra games on the roster" and "rounds actually
+# won". That is no longer true as of 2026-08-27: build_roster_minutes weights by
+# pre-tournament box-score minutes, so the window no longer straddles the
+# prediction point.
+#
+# They stay excluded on a DIFFERENT and now-measured ground: they are null.
+# Added to the fit, walk-forward warm n=630, log loss 0.45296 -> 0.45015 with a
+# paired bootstrap of [-0.00469, +0.00681], straddling zero. A variable that
+# contributes nothing but appears in the menu is worse than an absent one,
+# because a reader reasonably infers the model accounts for it.
 CONTAMINATED = ("returning_minutes_pct", "freshman_minutes_pct")
 
 
@@ -171,7 +183,17 @@ def test_post_hoc_variables_are_absent_from_the_matrix():
             f"{key} is back in the training matrix. Its minute weights include "
             "that season's tournament games for every year before 2026."
         )
-    for key in ("outcome_rounds_won", "outcome_vs_seed_delta", "hist_residual"):
+    # hist_residual was on this list and was deliberately removed from it in
+    # 94aa15d. It is NOT a result in the sense the others are: it averages a
+    # team's outcome_vs_seed_delta over its appearances STRICTLY BEFORE the
+    # season being predicted, and generate_team_stats_table reads that history
+    # before folding the current year in. The tell that it is backward-looking
+    # is that it is null for 255 of 1,085 team-seasons -- every team's first
+    # appearance, which has no prior history to average.
+    #
+    # The genuine results stay: they describe the very tournament being
+    # predicted and can never be inputs.
+    for key in ("outcome_rounds_won", "outcome_vs_seed_delta"):
         assert key not in d["keys"], f"{key} is a result, not a pre-tournament property"
 
 
