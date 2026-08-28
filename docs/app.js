@@ -49,6 +49,46 @@ async function loadPriors() {
   return state.priors;
 }
 
+/* The regular-season + conference-tournament matrix: 41,321 rows against the
+ * tournament set's 1,008. Loaded lazily -- it is 9 MB and most users never
+ * switch to it. */
+async function loadPit() {
+  if (state.pit !== undefined) return state.pit;
+  try {
+    const res = await fetch('data/training_pit.json?v=1');
+    state.pit = await res.json();
+  } catch {
+    state.pit = null;
+  }
+  return state.pit;
+}
+
+/* Per-variable scale factor carrying a season payload's differential onto the
+ * regular-season matrix's scale.
+ *
+ * WHY THIS IS NEEDED AT ALL. The payload standardises within the 68-team
+ * tournament field; training_pit standardises within the ~350-team D1 field at
+ * each week boundary. A differential cancels the location shift but not the
+ * scale, so dz_D1 = dz_68 * (sd_68 / sd_D1) -- ratios run 1.05 to 1.29 here.
+ * Feeding an unconverted query to coefficients fitted on the other scale would
+ * silently shrink every prediction, and the board would simply look
+ * under-confident rather than wrong. */
+function pitScale(key) {
+  if (!state._scale) state._scale = {};
+  if (state._scale[key] !== undefined) return state._scale[key];
+  const sd = (rows, keys) => {
+    const i = keys.indexOf(key);
+    if (i < 0) return null;
+    let m = 0; for (const r of rows) m += r.x[i]; m /= rows.length;
+    let v = 0; for (const r of rows) v += (r.x[i] - m) ** 2;
+    return Math.sqrt(v / rows.length);
+  };
+  const a = sd(state.training.games, state.training.keys);
+  const b = state.pit ? sd(state.pit.games, state.pit.keys) : null;
+  state._scale[key] = (a && b && b > 1e-9) ? a / b : 1;
+  return state._scale[key];
+}
+
 async function loadTraining() {
   if (state.training) return state.training;
   const res = await fetch('data/training.json?v=1');
@@ -72,16 +112,37 @@ async function loadSeason(year) {
  * The displayed season is excluded from the fit. Without that the coefficients
  * would be derived from the very games being predicted, and the bracket would
  * look far better than the method deserves. */
+const VENUE_KEYS = ['venue_home', 'venue_host_city', 'venue_travel'];
+
 function refit() {
-  const keys = [...state.enabled].filter(k => k !== OPTIMIZED);
-  if (!state.training || !keys.length) { state.fit = null; return; }
+  const wanted = [...state.enabled].filter(k => k !== OPTIMIZED);
+  if (!state.training || !wanted.length) { state.fit = null; return; }
 
-  const cols = keys.map(k => state.training.keys.indexOf(k)).filter(i => i >= 0);
-  if (!cols.length) { state.fit = null; return; }
+  const regular = state.trainingSet === 'regular' && state.pit;
+  const src = regular ? state.pit : state.training;
 
-  const f = fitLinear(state.training.games, cols, state.year);
-  f.keys = keys;
+  // Variables the chosen matrix cannot supply are dropped, not zero-filled: a
+  // zero differential is a claim that the two teams are equal on it.
+  const keys = wanted.filter(k => src.keys.indexOf(k) >= 0);
+  if (!keys.length) { state.fit = null; return; }
+
+  // VENUE RIDES ALONG WHEN FITTING ON REGULAR-SEASON ROWS, always, and is not
+  // user-selectable. Those rows are mostly home-or-away games, and omitting
+  // venue pushes the home effect into the correlated strength coefficients --
+  // measured at +13% on srs_blend and +44% on barthag, because strong teams
+  // buy home games. The coefficients would then be applied to all-neutral
+  // tournament games and over-predict. The terms are zeroed at prediction
+  // instead; see diffVector.
+  const extra = regular ? VENUE_KEYS.filter(k => src.keys.indexOf(k) >= 0) : [];
+  const fitKeys = keys.concat(extra);
+  const cols = fitKeys.map(k => src.keys.indexOf(k));
+
+  const f = fitLinear(src.games, cols, state.year);
+  f.keys = fitKeys;
   f.cols = cols;
+  f.userKeys = keys;
+  f.regular = regular;
+  f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
   // The honest number: fit on prior seasons, scored on seasons never seen.
   f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
@@ -97,16 +158,21 @@ function refit() {
  * as a query point. Both need the same vector, so it is built once here. */
 function diffVector(a, b) {
   const z = state.season.z, f = state.fit;
-  return f.keys.map(k => { const col = z[k]; return col ? (col[a] || 0) - (col[b] || 0) : 0; });
+  return f.keys.map(k => {
+    // Venue is zero on a neutral court, which every NCAA game is. This is the
+    // prediction-time counterpart of tournament_venue() on the Python side.
+    if (VENUE_KEYS.includes(k)) return 0;
+    const col = z[k];
+    const d = col ? (col[a] || 0) - (col[b] || 0) : 0;
+    return f.regular ? d * pitScale(k) : d;
+  });
 }
 
 function margin(a, b) {
-  const z = state.season.z, f = state.fit;
+  const f = state.fit;
+  const x = diffVector(a, b);
   let t = 0;
-  for (let j = 0; j < f.keys.length; j++) {
-    const col = z[f.keys[j]];
-    if (col) t += f.beta[j] * ((col[a] || 0) - (col[b] || 0));
-  }
+  for (let j = 0; j < f.keys.length; j++) t += f.beta[j] * x[j];
   return t;
 }
 
@@ -126,7 +192,8 @@ function winProb(a, b) {
     // The kNN board answers a different question -- what happened in the games
     // that looked most like this one -- so it gets its own margin and its own
     // LOCAL sigma from the spread of the neighbours that voted.
-    const r = knnPredict(state.training.games, state.fit.cols, diffVector(a, b), state.k, state.year);
+    const src = state.fit.regular ? state.pit : state.training;
+    const r = knnPredict(src.games, state.fit.cols, diffVector(a, b), state.k, state.year);
     if (r) return winProbFromMargin(r.margin, r.sigma, cal);
   }
   return winProbFromMargin(margin(a, b), state.fit.sigma, cal);
@@ -546,6 +613,28 @@ function closeDrawer() {
   document.getElementById('scrim').hidden = true;
 }
 
+/* Say plainly what the regular-season set costs. It is 41x the rows, and it is
+ * also measurably worse on held-out tournament games (+0.124 log loss in the
+ * step 3 measurement): it cannot carry t_rank, which has no dated snapshot and
+ * is the model's most valuable single variable, and its wider standardisation
+ * compresses tournament differentials. Offering it without saying so would
+ * present a downgrade as a free choice. */
+function updateTsetNote() {
+  const el = document.getElementById('tset-note');
+  if (!el) return;
+  const f = state.fit;
+  if (state.trainingSet !== 'regular') {
+    el.textContent = '1,008 NCAA tournament games. Every variable is available.';
+    return;
+  }
+  if (!state.pit) { el.textContent = 'Regular-season matrix unavailable.'; return; }
+  const dropped = f && f.dropped && f.dropped.length ? f.dropped.join(', ') : 'none';
+  el.innerHTML =
+    `${state.pit.n_games.toLocaleString()} regular-season and conference-tournament games. ` +
+    `Unavailable here: <b>${dropped}</b>. Venue is fitted and then zeroed for the ` +
+    `neutral court. Measured worse than tournament-only on held-out games.`;
+}
+
 /* ---------- controls ---------- */
 
 async function setYear(year) {
@@ -573,6 +662,14 @@ async function init() {
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
+  document.querySelectorAll('input[name=tset]').forEach(el => {
+    el.addEventListener('change', async e => {
+      state.trainingSet = e.target.value;
+      if (state.trainingSet === 'regular') await loadPit();
+      refit(); render();
+      updateTsetNote();
+    });
+  });
   document.querySelectorAll('input[name=model]').forEach(el => {
     el.addEventListener('change', e => {
       state.model = e.target.value;
@@ -603,6 +700,7 @@ async function init() {
       render();   // the blend changes picks, so the whole board is restated
     });
   }
+  updateTsetNote();
   document.getElementById('clear-w').addEventListener('click', clearWeights);
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
