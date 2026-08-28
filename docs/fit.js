@@ -523,6 +523,67 @@ function stability(trajectory) {
  * pre-calibration behaviour -- kept as the default so the fallback is the
  * conservative one when no walk-forward evaluation was possible. The clip
  * applies either way. */
+/* k-nearest-neighbour margin prediction over past tournament games.
+ *
+ * WHAT IT IS. The query is a matchup's standardised differential on whichever
+ * variables are switched on. Its k closest historical matchups by Euclidean
+ * distance vote, and their mean margin is the prediction. Where the ridge fit
+ * asks "what does the average game say about these variables", this asks "what
+ * happened in the games that looked most like this one".
+ *
+ * WALK-FORWARD, same rule as fitLinear. Only rows from seasons strictly before
+ * asOf are eligible, so the season on screen never votes on itself.
+ *
+ * ANTISYMMETRY IS BUILT IN BY SEARCHING BOTH ORIENTATIONS. Every row is
+ * considered as itself and as its mirror (-x, -m). The neighbour set for a
+ * query is therefore the exact mirror of the set for the swapped query, and
+ * their mean margins negate. Without this, kNN would break the property the
+ * board depends on: nothing forces the neighbours of x to be the mirrors of
+ * the neighbours of -x when only one orientation is stored.
+ *
+ * SIGMA IS LOCAL. The spread of the neighbours' margins is a better
+ * uncertainty estimate here than a global residual would be -- a query sitting
+ * among tightly-agreeing games genuinely is more certain than one among
+ * scattered ones. Floored so an unlucky set of identical neighbours cannot
+ * produce infinite confidence.
+ *
+ * The calibration passed to the link was fitted for the ridge model, so the
+ * probabilities this produces are approximate in a way the ridge board's are
+ * not. It is an exploration surface, not the frozen baseline.
+ */
+function knnPredict(rows, cols, x, k, asOf) {
+  const pool = asOf === null || asOf === undefined ? rows : rows.filter(r => r.y < asOf);
+  if (!pool.length || !cols.length) return null;
+
+  const cand = [];
+  for (const r of pool) {
+    let d = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const diff = x[i] - r.x[cols[i]];
+      d += diff * diff;
+    }
+    cand.push({ d, m: r.m });          // as stored
+    let dm = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const diff = x[i] + r.x[cols[i]];
+      dm += diff * diff;
+    }
+    cand.push({ d: dm, m: -r.m });     // mirrored
+  }
+
+  const kk = Math.max(1, Math.min(k, cand.length));
+  cand.sort((p, q) => p.d - q.d);
+  const near = cand.slice(0, kk);
+
+  let mean = 0;
+  for (const c of near) mean += c.m;
+  mean /= kk;
+  let v = 0;
+  for (const c of near) v += (c.m - mean) ** 2;
+  const sigma = Math.max(Math.sqrt(v / Math.max(kk - 1, 1)), 1e-6);
+  return { margin: mean, sigma, n: kk, pool: pool.length };
+}
+
 /* Blend the model's probability with a historical seed-matchup base rate.
  *
  * WHY A BLEND AND NOT A FEATURE. As a feature the fit decides how much the
@@ -554,7 +615,7 @@ function winProbFromMargin(margin, sigma, cal) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
-    winProbFromMargin, blendWithPrior, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
+    winProbFromMargin, blendWithPrior, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP,
   };
 }
