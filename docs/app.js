@@ -1,16 +1,33 @@
-/* Bracket Lab — one page, two ways to fill a bracket.
+/* Bracket Lab — one page, one question: what are you optimising for.
  *
- *   Optimized   the bracket chosen in Python by the LOYO-validated method.
- *               Shipped precomputed in the season payload; the browser renders
- *               it and does not re-derive it.
+ *   Maximise chance of winning   the bracket with the highest P(finishing
+ *                                first), chosen in Python by the LOYO-validated
+ *                                selector and shipped precomputed.
  *
- *   Fit         the user switches variables on and off; a ridge SPREAD
- *               regression is fitted live on real tournament games and its
- *               coefficients decide every matchup. Nobody has to guess a weight
- *               or a sign -- the data supplies both, and they are shown.
- *               It predicts scoring MARGIN in points, and P(win) follows as
- *               Phi(margin / sigma); see fit.js. It is not a classifier, and a
- *               coefficient is not a log-odds.
+ *   Maximise expected points     the bracket with the highest expected ESPN
+ *                                score, from the same validated selector.
+ *
+ *   Fitted model                 a ridge or nearest-neighbour SPREAD regression
+ *                                fitted live on real tournament games. Predicts
+ *                                scoring MARGIN in points, with P(win) following
+ *                                as Phi(margin / sigma); see fit.js. It is not a
+ *                                classifier and a coefficient is not a log-odds.
+ *                                The only strategy the history slider applies to.
+ *
+ * THE FIRST TWO ARE NOT THE SAME BRACKET AND THE DIFFERENCE IS THE POINT. In
+ * 2026 they name different champions: the P(1st) bracket gives up 195 expected
+ * points (727 against 922) to roughly triple its win probability (10.2% against
+ * 3.1%). In a winner-take-all pool the second number is worth nothing and the
+ * trade is free; in a pool paying second and third it is a real decision. Both
+ * scores are shown for whichever strategy is selected so the cost is visible
+ * rather than implied.
+ *
+ * WHAT USED TO BE HERE. The page let the user switch individual variables on
+ * and off and fitted whatever they chose. That was removed: it invited people to
+ * build models nobody had validated, and measurement said the choosing bought
+ * nothing (per-fold feature selection scored 0.46651 against 0.45698 for the
+ * fixed canonical set, inside the bootstrap's noise). Choosing an objective is a
+ * decision the data cannot make for you; choosing predictors is one it can.
  *
  * The fit excludes the displayed season (leave-one-year-out), so the
  * coefficients were never derived from the games being predicted.
@@ -18,11 +35,30 @@
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
 
-const OPTIMIZED = '__optimized__';
+/* The browser-fitted strategy. Anything else is a precomputed bracket read out
+ * of the season payload by id. */
+const MODEL = 'model';
+
+/* Variables the fitted strategy uses.
+ *
+ * FIXED, NOT CHOSEN. This is the key set the frozen baseline in
+ * artifacts/model_baseline.json is defined over, and it is what the shipped
+ * accuracy number (log loss 0.45296 on held-out tournament games) describes.
+ * The UI used to let each variable be switched on and off, which meant the
+ * board could be filled by a model no one had ever validated -- and measurement
+ * said the choosing bought nothing: selecting features per fold scored 0.46651
+ * against 0.45698 for this fixed set, a difference the bootstrap could not
+ * separate from zero. Removing the control removes a decision that felt
+ * meaningful and was not. */
+const CANONICAL_KEYS = [
+  'barthag', 't_rank', 'sos_avg_opp_barthag', 'adj_offensive_efficiency',
+  'adj_defensive_efficiency', 'adj_tempo', 'effective_fg_pct', 'three_pt_pct',
+  'three_pt_rate', 'offensive_reb_rate', 'turnover_rate',
+];
 
 const state = {
   year: 2026,
-  enabled: new Set([OPTIMIZED]),   // variable keys, or OPTIMIZED
+  strategy: 'p1',       // a payload strategy id, or MODEL
   fit: null,            // {beta, n, converged}
   training: null,
   season: null,
@@ -122,7 +158,7 @@ async function loadSeason(year) {
 const VENUE_KEYS = ['venue_home', 'venue_host_city', 'venue_travel'];
 
 function refit() {
-  const wanted = [...state.enabled].filter(k => k !== OPTIMIZED);
+  const wanted = CANONICAL_KEYS;
   if (!state.training || !wanted.length) { state.fit = null; return; }
 
   const regular = state.trainingSet === 'regular' && state.pit;
@@ -149,7 +185,7 @@ function refit() {
   f.cols = cols;
   f.userKeys = keys;
   f.regular = regular;
-  f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);
+  f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);   // e.g. t_rank has no dated snapshot
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
   // The honest number: fit on prior seasons, scored on seasons never seen.
   f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
@@ -250,9 +286,11 @@ function solveByFit() {
   return rounds;
 }
 
-/* Expand the precomputed Optimized picks into the same shape. */
+/* Expand a precomputed strategy's picks into the same shape as the fitted board. */
 function solveFromPicks() {
-  const picks = state.season.pool_optimized.map(r => new Set(r));
+  const s = currentStrategy();
+  const src = s ? s.picks : state.season.pool_optimized;
+  const picks = src.map(r => new Set(r));
   let current = state.season.first_round.slice();
   const rounds = [];
   for (let r = 0; r < 6; r++) {
@@ -296,11 +334,15 @@ function solveActual() {
   return rounds;
 }
 
-/* The prebuilt bracket and the fitted one are alternatives, not layers: one is
- * chosen by a validated pipeline, the other is fitted from whatever the user
- * enabled. Selecting either clears the other. */
+/* Strategies are alternatives, not layers: a precomputed bracket comes from the
+ * validated selector, the fitted one is built here. Exactly one is on screen. */
+function currentStrategy() {
+  const list = (state.season && state.season.strategies) || [];
+  return list.find(s => s.id === state.strategy) || null;
+}
+
 function usingOptimized() {
-  return state.enabled.has(OPTIMIZED);
+  return state.strategy !== MODEL;
 }
 
 function anyEnabled() {
@@ -314,7 +356,7 @@ function render() {
   const board = document.getElementById('board');
   const empty = document.getElementById('empty');
   const note = document.getElementById('mode-note');
-  const weights = document.getElementById('weights');
+  const weights = document.getElementById('strategy');
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
@@ -332,16 +374,22 @@ function render() {
   weights.hidden = false;   // the panel is the only control surface
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
-  { const fitted = !state.enabled.has(OPTIMIZED);
+  { const fitted = !usingOptimized();
     const pp = document.getElementById('prior-panel');
     const mp = document.getElementById('model-panel');
     if (pp) pp.hidden = !fitted;
     if (mp) mp.hidden = !fitted; }
 
   if (usingOptimized()) {
-    note.innerHTML = `<span class="tag">LOYO validated</span><span>${s.pool_optimized_note}</span>`;
+    const st = currentStrategy();
+    // Both scores, always, for whichever strategy is showing. A bracket built to
+    // win outright gives up real expected points to do it, and stating only the
+    // number its own objective optimises would hide exactly that cost.
+    note.innerHTML = `<span class="tag">LOYO validated</span><span>${st ? st.note : s.pool_optimized_note}` +
+      (st ? ` <strong>${(st.p1 * 100).toFixed(1)}%</strong> chance of finishing first, ` +
+            `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
   } else if (!anyEnabled()) {
-    note.innerHTML = `<span class="tag alt">Pick variables</span><span>Switch on any variables above. A model is fitted to real tournament games and its coefficients decide every matchup.</span>`;
+    note.innerHTML = `<span class="tag alt">Unavailable</span><span>The fitted model needs training data for seasons before ${state.year}.</span>`;
   } else {
     const f = state.fit, o = f.oos;
     // Lead with out-of-sample. In-sample is shown second and labelled, because
@@ -427,8 +475,9 @@ function equationHTML() {
         between held-out seasons. The equation as a whole still predicts \u2014
         that is what the out-of-sample figure measures \u2014 but those individual
         numbers are splitting credit between variables that overlap, and are
-        not readable as "what this variable is worth". Switching off the
-        redundant ones gives weights that mean what they look like.
+        not readable as "what this variable is worth". The variable set is fixed
+        because dropping the redundant ones was measured and did not predict any
+        better — it only made the coefficients easier to read.
       </p>` : ''}
     </div>`;
 }
@@ -479,101 +528,49 @@ function sideHTML(i, picked, p, oppI, round, actualHere) {
 
 /* ---------- weights ---------- */
 
-function renderGroups() {
+/* The strategy picker. Replaces the old variable grid.
+
+ * ORDERED BY THE OBJECTIVE, NOT BY SCORE, because the objectives are not
+ * comparable to each other: the P(1st) bracket is supposed to look worse on
+ * expected points and the expected-points bracket is supposed to look worse on
+ * P(1st). Sorting by either number would imply one of them is losing.
+ */
+function renderStrategies() {
   const s = state.season;
   if (!s || s.status !== 'ready') return;
-  const groups = {};
-  for (const v of s.variables) (groups[v.group] ||= []).push(v);
 
-  // Coefficients, keyed for lookup. Shown live so the effect of enabling a
-  // variable is visible immediately -- including when it turns out to be ~0.
-  const beta = {};
-  if (state.fit) state.fit.keys.forEach((k, n) => { beta[k] = state.fit.beta[n]; });
-  const maxAbs = Math.max(0.001, ...Object.values(beta).map(Math.abs));
+  const opts = (s.strategies || []).map(st => ({
+    id: st.id, label: st.label, sub: st.note,
+    tag: 'validated',
+    stat: `${(st.p1 * 100).toFixed(1)}% to win · ${st.ev.toFixed(0)} pts`,
+  }));
+  opts.push({
+    id: MODEL,
+    label: 'Fitted model',
+    sub: 'Fits a ridge or nearest-neighbour model here, on games from seasons before this one. '
+       + 'The only strategy the history slider applies to.',
+    tag: 'live',
+    stat: state.fit && state.fit.oos
+      ? `${(state.fit.oos.accuracy * 100).toFixed(1)}% out-of-sample`
+      : '',
+  });
 
-  const opt = usingOptimized();
-  document.getElementById('prebuilt').innerHTML = `
-    <label class="vopt${opt ? ' active' : ''}">
-      <input type="checkbox" ${opt ? 'checked' : ''} onchange="toggleVar('${OPTIMIZED}')">
-      <span class="vopt-name">Pool optimized</span>
-      <span class="v-tag">validated</span>
-      <span class="vopt-sub">Built by the backtested pipeline, not fitted here</span>
-    </label>
-    <span class="vopt-or">or fit your own from</span>`;
-
-  document.getElementById('groups').innerHTML = Object.entries(groups).map(([g, vars]) => `
-    <div class="group">
-      <p class="g-name">${g}</p>
-      ${vars.map(v => {
-        const on = state.enabled.has(v.key);
-        const b = beta[v.key];
-        return `
-        <label class="v${on ? ' active' : ''}">
-          <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleVar('${v.key}')">
-          <span class="v-label">${v.label}</span>
-          ${coefHTML(b, maxAbs)}
-        </label>`;
-      }).join('')}
-    </div>`).join('');
+  document.getElementById('strat-list').innerHTML = opts.map(o => `
+    <label class="vopt${state.strategy === o.id ? ' active' : ''}">
+      <input type="radio" name="strategy" ${state.strategy === o.id ? 'checked' : ''}
+             onchange="setStrategy('${o.id}')">
+      <span class="vopt-name">${o.label}</span>
+      <span class="v-tag">${o.tag}</span>
+      <span class="vopt-sub">${o.sub}</span>
+      ${o.stat ? `<span class="vopt-stat">${o.stat}</span>` : ''}
+    </label>`).join('');
 }
 
-/* A coefficient is POINTS OF MARGIN per standard deviation of edge. The bar is
- * relative to the largest coefficient currently fitted, so the comparison is
- * between the variables actually in the model.
- *
- * WEAK_COEF is in those same points-per-SD units. It was 0.05 while this was a
- * logistic fit on log-odds; carried over unchanged into margin units it caught
- * 4% of fitted coefficients and the "no effect" marker was effectively dead
- * code. At 0.25 a variable has to move the predicted margin by less than half a
- * point across a full two-sigma swing in team quality to be called negligible,
- * which flags the bottom ~15% -- the band where a coefficient genuinely cannot
- * change a pick. */
-const WEAK_COEF = 0.25;
-
-function coefHTML(b, maxAbs) {
-  if (b === undefined) return `<span class="coef off">—</span>`;
-  const pct = Math.min(100, Math.abs(b) / maxAbs * 100);
-  const weak = Math.abs(b) < WEAK_COEF;
-  return `
-    <span class="coef${b < 0 ? ' neg' : ''}${weak ? ' weak' : ''}" title="${weak ? 'Essentially no effect' : 'Points of margin per standard deviation'}">
-      <span class="coef-bar"><i style="width:${pct}%"></i></span>
-      <span class="coef-n">${b >= 0 ? '+' : ''}${b.toFixed(2)}</span>
-    </span>`;
-}
-
-function toggleVar(key) {
-  if (key === OPTIMIZED) {
-    // Picking the prebuilt bracket replaces the fitted one entirely.
-    state.enabled.clear();
-    state.enabled.add(OPTIMIZED);
-  } else {
-    state.enabled.delete(OPTIMIZED);
-    if (state.enabled.has(key)) state.enabled.delete(key);
-    else state.enabled.add(key);
-  }
+function setStrategy(id) {
+  state.strategy = id;
   refit();
-  renderGroups();
+  renderStrategies();
   render();
-  updateHint();
-}
-
-function clearWeights() {
-  state.enabled.clear();
-  state.enabled.add(OPTIMIZED);
-  refit();
-  renderGroups();
-  render();
-  updateHint();
-}
-
-function updateHint() {
-  const n = state.enabled.size;
-  const el = document.getElementById('w-hint');
-  if (!n) { el.textContent = ''; return; }
-  const f = state.fit;
-  el.textContent = f && f.oos
-    ? `${n} on · ${(f.oos.accuracy * 100).toFixed(1)}% out-of-sample`
-    : `${n} on`;
 }
 
 /* ---------- team drawer ---------- */
@@ -593,13 +590,16 @@ function openTeam(i) {
         const z = (s.z[v.key] || [])[i] || 0;
         const raw = (s.raw[v.key] || [])[i];
         const pct = Math.max(2, Math.min(98, 50 + z * 16));
-        const on = state.enabled.has(v.key);
+        // Lit means "this one is in the fitted model", which is now a fact to
+        // read rather than a control to operate. Every stat is still shown,
+        // because the drawer is for understanding a team, not for configuring
+        // a model.
+        const on = CANONICAL_KEYS.indexOf(v.key) >= 0;
         return `
         <div class="d-row${on ? ' lit' : ''}">
           <span class="d-lab">${v.label}</span>
           <span class="d-track"><i style="left:${pct}%"></i></span>
           <span class="d-val">${raw === null || raw === undefined ? '—' : fmt(raw)}</span>
-          <button class="d-w" onclick="toggleVar('${v.key}')" title="${on ? 'Remove from the model' : 'Add to the model'}">${on ? '✓' : '+'}</button>
         </div>`;
       }).join('')}
     </div>`).join('');
@@ -654,9 +654,8 @@ async function setYear(year) {
   }
   // Refit: the excluded season changed, so the coefficients must change too.
   refit();
-  renderGroups();
+  renderStrategies();
   render();
-  updateHint();
 }
 
 async function init() {
@@ -708,7 +707,6 @@ async function init() {
     });
   }
   updateTsetNote();
-  document.getElementById('clear-w').addEventListener('click', clearWeights);
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });

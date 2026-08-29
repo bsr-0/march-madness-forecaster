@@ -284,17 +284,32 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .eq-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
 
-/* The prebuilt bracket is an alternative to the entire variable set, so it sits
-   above the grid rather than inside it as a lone one-item column. */
-.prebuilt {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
-  padding: 0 0 14px; margin: 0 0 14px; border-bottom: 1px solid var(--line);
+/* Strategy cards. Laid out as equal columns rather than a list, because these
+   are alternatives to be compared against each other, not a menu with a default
+   at the top -- and each carries two scores the user is meant to weigh. */
+.strat-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
 }
-.vopt { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
-.vopt input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.vopt {
+  display: grid; grid-template-columns: 13px 1fr auto; gap: 5px 8px;
+  align-items: center; cursor: pointer; font-size: 13px;
+  padding: 11px 13px; border: 1px solid var(--line); border-radius: 7px;
+}
+.vopt:hover { border-color: var(--line-2); }
+.vopt.active { border-color: var(--accent); background: var(--accent-bg, transparent); }
+.vopt input[type=radio], .vopt input[type=checkbox] {
+  accent-color: var(--accent); width: 13px; height: 13px; margin: 0; cursor: pointer;
+}
 .vopt-name { color: var(--ink-2); }
 .vopt.active .vopt-name { color: var(--ink); font-weight: 600; }
-.vopt-sub { font-size: 11.5px; color: var(--ink-3); }
+.vopt-sub { grid-column: 2 / -1; font-size: 11.5px; color: var(--ink-3); line-height: 1.45; }
+/* Both scores, monospaced so the two cards line up and can be read against
+   each other at a glance. */
+.vopt-stat {
+  grid-column: 2 / -1; font-size: 11.5px; color: var(--ink-2);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.1px;
+}
 .vopt-or { font-size: 11.5px; color: var(--ink-3); margin-left: auto; }
 .v-tag {
   flex: none; white-space: nowrap;

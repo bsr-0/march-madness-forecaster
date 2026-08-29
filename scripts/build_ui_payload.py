@@ -250,8 +250,51 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         raw[key] = [None if v is None else round(float(v), 4) for v in vals]
         z[key] = zscores(vals, higher_better)
 
-    # The LOYO-validated bracket, from the canonical selector.
-    picks = [list(r) for r in art["candidates"][select_diverse(art, "p1", k=1)[0]]["w"]]
+    # One bracket per strategy, from the canonical selector.
+    #
+    # BOTH OBJECTIVES ARE SHIPPED, not just the winner, because they answer
+    # different questions and the artifact already scores every candidate on
+    # each. "p1" maximises the chance of finishing first; "ev" maximises
+    # expected ESPN points. In a winner-take-all pool only the first is worth
+    # anything, but a pool paying second and third makes the second a real
+    # choice, and that is the user's call rather than this script's.
+    #
+    # EACH STRATEGY CARRIES BOTH OF ITS SCORES so the UI can state the trade-off
+    # instead of implying there is none. Measured at a 30-person pool these two
+    # objectives happen to select strategies that agree on which is best, but
+    # that is an empirical fact about a particular table, not a guarantee, and a
+    # bracket that wins on one axis can sit well down the other.
+    strategies = []
+    for obj, label, note in (
+        (
+            "p1",
+            "Maximise chance of winning",
+            "Picked to maximise the probability of finishing FIRST in a 30-person pool. "
+            "Takes upsets the field will not, because second place pays nothing.",
+        ),
+        (
+            "ev",
+            "Maximise expected points",
+            "Picked to maximise expected ESPN scoring. Safer game by game, and better "
+            "if your pool pays for second and third.",
+        ),
+    ):
+        idx = select_diverse(art, obj, k=1)[0]
+        cand = art["candidates"][idx]
+        strategies.append(
+            {
+                "id": obj,
+                "label": label,
+                "note": note,
+                "picks": [list(r) for r in cand["w"]],
+                "ev": cand["ev"],
+                "p1": cand["p1"],
+            }
+        )
+
+    # Retained under its original key so an older cached app.js keeps rendering
+    # a valid bracket rather than an empty board while the new one deploys.
+    picks = strategies[0]["picks"]
 
     actual = actual_winners(year, [t["id"] for t in teams])
 
@@ -270,6 +313,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             for t in teams
         ],
         "first_round": art["first_round"],
+        "strategies": strategies,
         "pool_optimized": picks,
         "pool_optimized_note": (
             "Chosen to maximise the chance of finishing first in a 30-opponent "
