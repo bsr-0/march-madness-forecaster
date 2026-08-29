@@ -583,6 +583,24 @@ def build_pit_base(year, seeds, regions, n_sims=10000):
     less of it, since good calibration pulls toward consensus. Registering the
     base is how that gets tested rather than argued.
 
+    MEASURED, at the real pool size (~30 entrants, ``--n-opponents 29``): pit
+    reaches P(1st) 0.0309 against seed's 0.0414, mean rank -0.9 positions,
+    winning 5 of 15 years, p_adj=0.54 — a null, with the point estimate against
+    it. The mechanism is in the table rather than inferred: pit posts the
+    highest mean score of any base (777, against seed 612 and torvik 662) and
+    the worst mean rank. It converts accuracy into points in games the rest of
+    the pool also wins. meta_region_poolaware stays 2.5x ahead of seed (P(1st)
+    0.1040, 15/15 years, p_adj=0.0000) on construction and opponent modelling.
+
+    RUN THIS AT THE POOL SIZE YOU ACTUALLY PLAY IN. Years before 2023 have no
+    entry in pool_hist_results.json and fall back to ``N_OPPONENTS`` (999),
+    which silently measures a 1000-person pool -- roughly 33x the real one
+    (groupSize 19-33). Absolute P(1st) is mechanically pool-size dependent, so a
+    run at the default is not comparable to one at ~30, and leverage strategy
+    itself depends on pool size: a 1000-person field rewards contrarian risk
+    that a 30-person field does not. An earlier version of this note reported
+    the 999-opponent statistics; the conclusion held, but the numbers did not.
+
     LEAKAGE. ``pairwise_for_year`` fits beta, sigma and the link's (a, nu) on
     seasons strictly before ``year``. Nothing from the tournament being
     predicted enters the model.
