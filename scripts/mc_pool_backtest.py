@@ -108,7 +108,38 @@ BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 15 years (2020 =
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
 POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+# THIS DEFAULT IS NOT THE POOL YOU PLAY IN. pool_hist_results.json only covers
+# 2023 onward (groupSize 19-33), so every earlier year falls back to this value
+# and silently measures a 1000-person field -- roughly 33x too large. Absolute
+# P(1st) is mechanically pool-size dependent, so a default run is not comparable
+# to a real one: at pool 30 meta_region_poolaware scores P(1st) 0.1040, at pool
+# 1000 the same strategy scores 0.0407. Pass --n-opponents 29 for anything you
+# intend to act on.
 N_OPPONENTS = 999  # 1000-person pool
+
+# POOL-SIZE SWEEP, so this does not get re-run. Measured over 2011-2026 with
+# --team-identity --n-repeats 100, seed vs meta_region_poolaware:
+#
+#   pool   seed P(1st)   meta P(1st)   meta/seed   meta mean score   years won
+#     20        0.0495        0.1173       2.37x               865       15/15
+#     30        0.0414        0.1040       2.51x               833       15/15
+#     50        0.0316        0.0780       2.47x               831       15/15
+#    100        0.0243        0.0613       2.52x               781       14/15
+#
+# TWO CONCLUSIONS. The strategy's relative edge is flat at ~2.4-2.5x across a
+# five-fold change in pool size (all four p_adj <= 0.0001), so it is not tuned
+# to one pool and the absolute decline is just the mechanical cost of winning a
+# larger field.
+#
+# And risk should NOT be tuned to pool size. The selector's chosen risk_level
+# (0 = chalk, 1 = max contrarian) means 0.52, 0.59, 0.53, 0.73 across the four
+# sizes; corr(log pool size, risk) = +0.237, 95% CI [-0.030, +0.477] -- not a
+# finding. The pool-100 value looks higher and the direction matches theory, but
+# 20 -> 30 -> 50 is 0.52 -> 0.59 -> 0.53, which is noise on ~13 selections per
+# size. The per-year selection appears to be doing the adaptive work already.
+# Scope limit: this covers 20-100 only. Pool 100 is the one point hinting at a
+# real shift, so a genuinely large pool (500+) is worth re-checking rather than
+# assuming the invariance extends.
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
 N_MODEL_BRACKETS = 50  # Stochastic brackets per mode per repeat
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
