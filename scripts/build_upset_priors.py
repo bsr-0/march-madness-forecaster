@@ -46,6 +46,25 @@ OUT = REPO / "docs" / "data" / "upset_priors.json"
 # Seasons the UI can display. Matches build_ui_payload.SEASONS.
 UI_SEASONS = [2024, 2025, 2026, 2027]
 
+# Earliest season contributing to a prior.
+#
+# THIS IS A PRODUCT DECISION, NOT A MEASURED ONE, and it is set here so that it
+# is visible rather than implied by a missing filter. Seed matchups have drifted:
+# 6-11 upsets run .380 across 1985-2025 but .517 across 2010-2025, which is the
+# difference between calling that game a coin flip and calling it a clear
+# favourite. There is no test that settles which number is "right", because the
+# question is whether the pre-2010 game still describes the tournament being
+# predicted. The judgement here is that it does not.
+#
+# THE COST IS REAL AND IS PAID IN SAMPLE SIZE. Restricting to 2010+ cuts the
+# R64 cells from ~158 games to ~16, and the later rounds far more sharply -- many
+# already sit at n < 5, where the cell rate is nearly pure noise. PRIOR_STRENGTH
+# shrinkage below is what keeps that from reaching the UI as false precision, and
+# it does more of the work at this window than it did at the full one: a cell
+# with 8 games is now typically half the available sample rather than a twentieth
+# of it. Deep-round cells here are close to reporting their round's base rate.
+PRIOR_FIRST_SEASON = 2010
+
 # Games-equivalent weight given to the round rate when shrinking a cell. At 8,
 # a cell with 8 games sits halfway between its own rate and its round's.
 PRIOR_STRENGTH = 8
@@ -98,7 +117,7 @@ def main() -> int:
 
     payload = {}
     for season in UI_SEASONS:
-        prior_games = [g for g in games if g[0] < season]
+        prior_games = [g for g in games if PRIOR_FIRST_SEASON <= g[0] < season]
         if not prior_games:
             continue
 
