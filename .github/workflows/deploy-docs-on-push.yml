@@ -1,20 +1,28 @@
 name: Deploy docs on push
 
-# Deploys the static docs/ folder to GitHub Pages whenever the docs
-# HTML/CSS/JS files change on main. Runs independently of the full ML
-# pipeline so UI changes are visible immediately after a push.
+# Deploys the static docs/ folder to GitHub Pages whenever anything the site
+# actually serves changes on main. Runs independently of the full ML pipeline
+# so UI changes are visible immediately after a push.
 #
-# The full pipeline (run-pipeline.yml) regenerates docs/data/*.json
-# and also deploys. This workflow only handles the static shell files
-# (index.html, app.js, style.css) without touching the JSON data.
+# THE FILTER IS A LIST OF FILES THAT MUST EXIST, and it silently stopped
+# matching. It previously watched "docs/style.css", which is not the name of
+# the stylesheet -- that file is docs/app.css and has presumably never been
+# deployed by this workflow. It also omitted docs/fit.js, where the model
+# lives, and docs/data/**, so regenerating the season payloads and pushing them
+# left the site serving the previous brackets. None of that errors: the push
+# succeeds, no run appears, and the site is quietly stale.
+#
+# Prefer a broad "docs/**" over enumerating files. A path filter that lists
+# filenames breaks the moment one is renamed, and breaks by doing nothing.
+#
+# run-pipeline.yml also regenerates docs/data/*.json and deploys; the overlap
+# is harmless, and this path matters when the payloads are rebuilt by hand.
 
 on:
   push:
     branches: [main]
     paths:
-      - "docs/index.html"
-      - "docs/app.js"
-      - "docs/style.css"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
