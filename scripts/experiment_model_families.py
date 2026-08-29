@@ -63,10 +63,29 @@ BOOT = 4000
 VENUE_KEYS = ("venue_home", "venue_host_city", "venue_travel")
 
 
-def load():
+def load(matrix="regular", drop=()):
+    """Return (keys, Xtr, mtr, ytr, Xev, mev, yev) for one of two populations.
+
+    regular      train on training_pit (41,321 regular-season and conference
+                 rows), test on held-out NCAA games from eval_pit_tournament.
+                 Cannot carry t_rank -- no dated snapshot exists for it.
+    tournament   train AND test on training.json, walk-forward. This is the
+                 production population: the same rows and the same split
+                 model_baseline.js uses, so results here bear directly on the
+                 shipped model rather than on a research surface.
+    """
+    if matrix == "tournament":
+        t = json.loads((REPO / "docs" / "data" / "training.json").read_text())
+        keys = [k for k in t["keys"] if k not in drop]
+        idx = [t["keys"].index(k) for k in keys]
+        X = np.array([g["x"] for g in t["games"]], dtype=float)[:, idx]
+        m = np.array([g["m"] for g in t["games"]], dtype=float)
+        y = np.array([g["y"] for g in t["games"]])
+        return keys, X, m, y, X, m, y  # same pool; walk_forward splits it
+
     tr = json.loads(TRAIN.read_text())
     ev = json.loads(EVAL.read_text())
-    keys = [k for k in tr["keys"] if k in ev["keys"]]
+    keys = [k for k in tr["keys"] if k in ev["keys"] and k not in drop]
     ti = [tr["keys"].index(k) for k in keys]
     ei = [ev["keys"].index(k) for k in keys]
     Xtr = np.array([g["x"] for g in tr["games"]], dtype=float)[:, ti]
@@ -137,16 +156,22 @@ def fit_local_linear(X, m, k=200):
 def fit_lgbm(X, m, **kw):
     import lightgbm as lgb
 
+    # CAPACITY SCALES WITH THE SAMPLE. 400 trees at 31 leaves is reasonable on
+    # 41,000 rows and absurd on 1,000; run that way on the tournament matrix it
+    # measures the configuration rather than the family. Small populations get
+    # a shallow, short, heavily regularised fit.
+    small = len(m) < 5000
     params = dict(
         objective="regression",
-        n_estimators=400,
-        learning_rate=0.05,
-        num_leaves=31,
-        min_child_samples=40,
-        subsample=0.8,
+        n_estimators=120 if small else 400,
+        learning_rate=0.03 if small else 0.05,
+        num_leaves=7 if small else 31,
+        max_depth=3 if small else -1,
+        min_child_samples=60 if small else 40,
+        subsample=0.7,
         subsample_freq=1,
-        colsample_bytree=0.8,
-        reg_lambda=1.0,
+        colsample_bytree=0.7,
+        reg_lambda=10.0 if small else 1.0,
         verbose=-1,
         n_jobs=-1,
     )
@@ -159,35 +184,70 @@ def fit_lgbm(X, m, **kw):
 
 # ---------------------------------------------------------------- evaluation
 def walk_forward(make, Xtr, mtr, ytr, Xev, mev, yev, years):
-    """Per-game held-out log loss, with the link's scale fitted on prior years."""
+    """Per-game held-out log loss, calibrated on genuinely out-of-sample rows.
+
+    TWO PASSES, AND THE REASON IS A BUG THIS HARNESS ORIGINALLY HAD. Pass one
+    fits each season on strictly earlier seasons and predicts it, giving a set
+    of out-of-sample margins. Pass two calibrates the link for each season using
+    only the out-of-sample margins from EARLIER seasons, then scores.
+
+    The single-pass version calibrated on `predict(Xev[prior years])`, which is
+    fine when the train and test pools are different objects but is nonsense on
+    the tournament matrix, where they are the same rows: those "prior test"
+    games were in the model's own training set. A flexible model has memorised
+    them, so its apparent residual collapses -- LightGBM's sigma came out at
+    2.79 against ridge's 9.71 -- and it calibrates itself into overconfidence,
+    pinning 42 of 63 predictions at the bounds. Ridge cannot exploit that, so
+    the harness quietly punished exactly the models it was built to test.
+    """
     wev = (mev > 0).astype(int)
-    per, keep = [], []
+    same_pool = Xtr is Xev
+
+    # ---- pass 1: out-of-sample margins, one model per season
+    oos = {}
     for y in years:
         tr = ytr < y
         te = yev == y
-        if tr.sum() < 500 or te.sum() == 0:
+        if tr.sum() < 200 or te.sum() == 0:
             continue
         predict = make(Xtr[tr], mtr[tr])
-        resid = mtr[tr] - predict(Xtr[tr])
-        sigma = max(float(np.sqrt((resid**2).mean())), 1e-6)
+        oos[y] = (np.where(te)[0], predict(Xev[te]))
 
-        pm = yev < y
-        a = 1.0
-        if pm.sum() >= 100:
-            ppr = predict(Xev[pm])
-            grid = np.arange(0.05, 3.0, 0.01)
+    # ---- pass 2: calibrate on earlier seasons' out-of-sample margins only
+    per, keep = [], []
+    for y in sorted(oos):
+        idx, pte = oos[y]
+        prior_idx = (
+            np.concatenate([oos[p][0] for p in sorted(oos) if p < y]) if any(p < y for p in oos) else np.array([], int)
+        )
+        prior_pred = np.concatenate([oos[p][1] for p in sorted(oos) if p < y]) if len(prior_idx) else np.array([])
+
+        if len(prior_idx) >= 100:
+            sigma = max(float(np.sqrt(((mev[prior_idx] - prior_pred) ** 2).mean())), 1e-6)
             best = (9e9, 1.0)
-            for aa in grid:
-                q = np.clip(norm.cdf(aa * ppr / sigma), 1e-6, 1 - 1e-6)
-                ll = -(wev[pm] * np.log(q) + (1 - wev[pm]) * np.log(1 - q)).mean()
+            for aa in np.arange(0.05, 3.0, 0.01):
+                q = np.clip(norm.cdf(aa * prior_pred / sigma), 1e-6, 1 - 1e-6)
+                ll = -(wev[prior_idx] * np.log(q) + (1 - wev[prior_idx]) * np.log(1 - q)).mean()
                 if ll < best[0]:
                     best = (ll, aa)
-            n = pm.sum()
+            n = len(prior_idx)
             a = (n * best[1] + CAL_PRIOR * 1.0) / (n + CAL_PRIOR)
+        else:
+            # Cold start: no earlier out-of-sample rows yet. Fall back to the
+            # in-sample spread, which is the one place the old bias survives,
+            # and leave the scale uncalibrated rather than guessing.
+            tr = ytr < y
+            sub = np.arange(int(tr.sum()))
+            if len(sub) > 4000:
+                sub = np.random.default_rng(0).choice(len(sub), 4000, replace=False)
+            predict = make(Xtr[tr], mtr[tr])
+            sigma = max(float(np.sqrt(((mtr[tr][sub] - predict(Xtr[tr][sub])) ** 2).mean())), 1e-6)
+            a = 1.0
 
-        p = np.clip(norm.cdf(a * predict(Xev[te]) / sigma), 1e-6, 1 - 1e-6)
-        per.append(-(wev[te] * np.log(p) + (1 - wev[te]) * np.log(1 - p)))
-        keep.append(np.where(te)[0])
+        p = np.clip(norm.cdf(a * pte / sigma), 1e-6, 1 - 1e-6)
+        per.append(-(wev[idx] * np.log(p) + (1 - wev[idx]) * np.log(1 - p)))
+        keep.append(idx)
+    _ = same_pool
     return np.concatenate(per), np.concatenate(keep)
 
 
@@ -204,9 +264,12 @@ def boot_ci(a, b, rng, n=BOOT):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--quick", action="store_true", help="fewer years and models")
+    ap.add_argument("--matrix", choices=["regular", "tournament"], default="regular")
+    ap.add_argument("--drop", default="", help="comma-separated feature keys to exclude")
     args = ap.parse_args()
 
-    keys, Xtr, mtr, ytr, Xev, mev, yev = load()
+    drop = tuple(k.strip() for k in args.drop.split(",") if k.strip())
+    keys, Xtr, mtr, ytr, Xev, mev, yev = load(args.matrix, drop)
     years = [y for y in sorted(set(yev.tolist())) if y >= MIN_TEST_YEAR]
     if args.quick:
         years = years[-4:]

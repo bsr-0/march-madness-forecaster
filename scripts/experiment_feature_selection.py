@@ -38,45 +38,39 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from scripts.experiment_model_families import (  # noqa: E402
-    CAL_PRIOR,
     MIN_TEST_YEAR,
     VENUE_KEYS,
     boot_ci,
     fit_ridge,
     load,
+    walk_forward,
 )
 
 
 def score(cols, Xtr, mtr, ytr, Xev, mev, yev, years):
-    wev = (mev > 0).astype(int)
-    per = []
-    for y in years:
-        tr = ytr < y
-        te = yev == y
-        if tr.sum() < 500 or te.sum() == 0:
-            continue
-        predict = fit_ridge(Xtr[tr][:, cols], mtr[tr])
-        resid = mtr[tr] - predict(Xtr[tr][:, cols])
-        sigma = max(float(np.sqrt((resid**2).mean())), 1e-6)
-        pm = yev < y
-        a = 1.0
-        if pm.sum() >= 100:
-            ppr = predict(Xev[pm][:, cols])
-            best = (9e9, 1.0)
-            for aa in np.arange(0.05, 3.0, 0.01):
-                q = np.clip(norm.cdf(aa * ppr / sigma), 1e-6, 1 - 1e-6)
-                ll = -(wev[pm] * np.log(q) + (1 - wev[pm]) * np.log(1 - q)).mean()
-                if ll < best[0]:
-                    best = (ll, aa)
-            n = pm.sum()
-            a = (n * best[1] + CAL_PRIOR) / (n + CAL_PRIOR)
-        p = np.clip(norm.cdf(a * predict(Xev[te][:, cols]) / sigma), 1e-6, 1 - 1e-6)
-        per.append(-(wev[te] * np.log(p) + (1 - wev[te]) * np.log(1 - p)))
-    return np.concatenate(per)
+    """Held-out per-game log loss for one column subset.
+
+    Delegates to the shared two-pass walk_forward so selection is scored by
+    exactly the evaluator the models are reported on -- including its fix for
+    calibrating on rows the model was trained on, which mattered most for the
+    flexible families but applies to every subset scored here.
+    """
+    per, _ = walk_forward(
+        lambda X, m: fit_ridge(X, m),
+        Xtr[:, cols], mtr, ytr, Xev[:, cols], mev, yev, years,
+    )
+    return per
 
 
 def main() -> int:
-    keys, Xtr, mtr, ytr, Xev, mev, yev = load()
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--matrix", choices=["regular", "tournament"], default="regular")
+    ap.add_argument("--nested", action="store_true",
+                    help="re-run selection inside each fold; the honest version")
+    args = ap.parse_args()
+    keys, Xtr, mtr, ytr, Xev, mev, yev = load(args.matrix)
     years = [y for y in sorted(set(yev.tolist())) if y >= MIN_TEST_YEAR]
 
     venue = [i for i, k in enumerate(keys) if k in VENUE_KEYS]
@@ -87,6 +81,27 @@ def main() -> int:
         f"{len(pool)} selectable features + {len(venue)} venue (always in)"
     )
     print("greedy forward selection on walk-forward log loss\n")
+
+    if args.nested:
+        pa, ps, picks = nested(keys, Xtr, mtr, ytr, Xev, mev, yev, years, venue, pool)
+        rng = np.random.default_rng(0)
+        lo, hi = boot_ci(pa, ps, rng)
+        print("  per-season selections (differences between them are the tell):")
+        for y in sorted(picks):
+            print(f"    {y}: {len(picks[y]):>2}  {', '.join(picks[y][:6])}"
+                  f"{' ...' if len(picks[y]) > 6 else ''}")
+        counts = {}
+        for v in picks.values():
+            for k in v:
+                counts[k] = counts.get(k, 0) + 1
+        print(f"\n  chosen in every fold: "
+              f"{[k for k, c in counts.items() if c == len(picks)] or 'none'}")
+        print(f"\n  all features      {pa.mean():.5f}")
+        print(f"  nested selection  {ps.mean():.5f}")
+        print(f"  difference        {pa.mean() - ps.mean():+.5f}  "
+              f"95% CI [{lo:+.5f}, {hi:+.5f}]  "
+              f"{'FINDING' if lo > 0 else 'not a finding'}")
+        return 0
 
     chosen, history = [], []
     best_so_far = None
@@ -125,6 +140,47 @@ def main() -> int:
         "usable part."
     )
     return 0
+
+
+def nested(keys, Xtr, mtr, ytr, Xev, mev, yev, years, venue, pool):
+    """Selection re-run inside each fold, so no season sees its own selection.
+
+    WHY THE FLAT VERSION IS NOT ENOUGH. Selecting features by walk-forward score
+    over every test season and then reporting that score is circular: the subset
+    was chosen because it happened to suit those seasons. A paired bootstrap
+    does not rescue it, because the bias is in which columns were picked, not in
+    sampling noise -- so the naive run prints "FINDING" for a comparison that
+    cannot support one.
+
+    Here, for test season Y the selection runs on seasons strictly before Y and
+    is judged on Y alone. The chosen subset differs year to year, which is
+    itself the useful output: a set that keeps changing is a set that was fitting
+    the fold.
+    """
+    wev = (mev > 0).astype(int)
+    per_all, per_sel, picks = [], [], {}
+    for y in years:
+        inner = [t for t in years if t < y]
+        if len(inner) < 3:
+            continue
+        chosen, best = [], None
+        remaining = list(pool)
+        while remaining:
+            cand = []
+            for j in remaining:
+                p = score(venue + chosen + [j], Xtr, mtr, ytr, Xev, mev, yev, inner)
+                cand.append((p.mean(), j))
+            cand.sort()
+            val, j = cand[0]
+            if best is not None and val >= best:
+                break
+            best = val
+            chosen.append(j)
+            remaining.remove(j)
+        picks[y] = [keys[i] for i in chosen]
+        per_sel.append(score(venue + chosen, Xtr, mtr, ytr, Xev, mev, yev, [y]))
+        per_all.append(score(venue + pool, Xtr, mtr, ytr, Xev, mev, yev, [y]))
+    return np.concatenate(per_all), np.concatenate(per_sel), picks
 
 
 if __name__ == "__main__":
