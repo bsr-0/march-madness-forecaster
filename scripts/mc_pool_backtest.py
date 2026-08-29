@@ -74,6 +74,7 @@ from src.prediction.pairwise import (
     MissingPairwiseSource,
     PairwiseProbabilities,
     ProbabilityBase,
+    marginals_from_pairwise,
 )
 from src.prediction.pairwise import log5 as _canonical_log5
 from src.simulation.pool_competition import (
@@ -214,6 +215,7 @@ ALL_MODES: Tuple[str, ...] = (
     "noseed",
     "blend",
     "torvik",
+    "pit",
     "champ_first_tv",
     "champ_first_chalkfade_tv",
     "f4_first_tv",
@@ -562,6 +564,48 @@ def build_base_from_ratings(name, seeds, regions, barthag, n_sims=10000):
     pw = PairwiseProbabilities.from_ratings(barthag, source=f"log5({name}_barthag)")
     rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
     return ProbabilityBase(name, rp, pw)
+
+
+def build_pit_base(year, seeds, regions, n_sims=10000):
+    """Build a :class:`ProbabilityBase` from the model the browser actually ships.
+
+    WHY THIS BASE EXISTS. Every other base here is either a rating system
+    (torvik, elo, massey) or a model fitted inside this Python pipeline
+    (noseed, blend). None of them has been scored by the harness that produced
+    the repo's one end-to-end accuracy number: the browser model reaches log
+    loss 0.45296 on held-out tournament games, and until now the pool optimizer
+    could not see it. This base closes that gap so the question "does game-level
+    accuracy buy pool EV?" can be answered by measurement instead of assumed.
+
+    The expected answer is no. ``torvik`` is a strong rating system and scores
+    0.0340 P(1st) against ``seed``'s 0.0405 — a null. Pool EV comes from
+    leverage against the crowd, and a better-calibrated model may well produce
+    less of it, since good calibration pulls toward consensus. Registering the
+    base is how that gets tested rather than argued.
+
+    LEAKAGE. ``pairwise_for_year`` fits beta, sigma and the link's (a, nu) on
+    seasons strictly before ``year``. Nothing from the tournament being
+    predicted enters the model.
+
+    Returns ``None`` when the year cannot be built (too few prior seasons, or
+    teams missing from the stats table), matching the "source unavailable this
+    year" contract of :func:`build_base_from_ratings`.
+    """
+    from src.prediction.pit_production_model import pairwise_for_year
+
+    bracket_order = build_bracket_order(seeds, regions)
+    team_ids = [t for t in bracket_order if not t.startswith("unknown_")]
+    if len(team_ids) < 64:
+        logger.warning("pit base %s: only %d teams resolved, skipping", year, len(team_ids))
+        return None
+    try:
+        pw = pairwise_for_year(year, team_ids)
+    except (ValueError, KeyError) as exc:
+        logger.warning("pit base %s unavailable: %s", year, exc)
+        return None
+    pairwise = PairwiseProbabilities.from_dict(pw, f"pit_production({year})")
+    rp = marginals_from_pairwise(pairwise, bracket_order, team_ids, n_sims=n_sims)
+    return ProbabilityBase("pit", rp, pairwise)
 
 
 def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
@@ -2367,6 +2411,9 @@ def _run_one_year(
     # Torvik barthag-based round probabilities (Log5 + MC simulation)
     barthag = _load_torvik_barthag(year, seeds)
     torvik_base = build_base_from_ratings("torvik", seeds, regions, barthag)
+
+    # The shipped browser model, fitted on seasons strictly before `year`.
+    pit_base = build_pit_base(year, seeds, regions)
     # Alias, not a copy: ProbabilityBase is a Mapping over the marginals, so
     # every `torvik_rp[tid][rnd]` read below is unchanged, while modes that need
     # head-to-head probabilities (simulated_annealing) can reach .pairwise.
@@ -2483,6 +2530,7 @@ def _run_one_year(
         ("ap_strength", ap_strength_base),
         ("stacked", stacked_base),
         ("knn", knn_base),
+        ("pit", pit_base),
     ):
         if _bobj is not None:
             base_round_probs[_bname] = _bobj
@@ -2589,6 +2637,7 @@ def _run_one_year(
         "noseed": ("noseed", noseed_base, sample_model_brackets),
         "blend": ("blend", blend_base, sample_model_brackets),
         "torvik": ("torvik", torvik_base, sample_model_brackets),
+        "pit": ("pit", pit_base, sample_model_brackets),
         "champ_first_tv": (
             "champ_first_tv",
             torvik_base,
@@ -2666,7 +2715,14 @@ def _run_one_year(
             continue
         # Try legacy name first
         if mode_name in legacy_specs:
-            mode_sampler_specs.append(legacy_specs[mode_name])
+            spec = legacy_specs[mode_name]
+            # Data-dependent bases (pit) are None in years they cannot be built.
+            # Appending the spec anyway would hand a None base to the sampler and
+            # fail deep in the simulation, where the cause is no longer visible.
+            if spec[1] is None:
+                logger.warning("mode %s unavailable for %s (no base); skipping", mode_name, year)
+                continue
+            mode_sampler_specs.append(spec)
             continue
 
         # Try simple base×mode cross-product (e.g. "torvik_f4_first")
