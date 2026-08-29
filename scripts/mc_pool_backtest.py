@@ -140,6 +140,37 @@ N_OPPONENTS = 999  # 1000-person pool
 # Scope limit: this covers 20-100 only. Pool 100 is the one point hinting at a
 # real shift, so a genuinely large pool (500+) is worth re-checking rather than
 # assuming the invariance extends.
+#
+# EXPECTED POINTS VS P(1st): THERE IS NO TRADE-OFF TO MAKE AT POOL 30, which is
+# worth recording because it is the natural thing to worry about and the natural
+# thing to re-test. Measured at --n-opponents 29 over 2011-2026:
+#
+#   mode                     P(1st)   mean rank   mean ESPN points
+#   meta_region_poolaware    0.1040        11.7                833
+#   det_e8_tv                0.0461        16.7                778
+#   pit                      0.0309        20.5                777
+#   det_f4_tv                0.0429        17.4                757
+#   det_champ_tv             0.0412        17.3                744
+#   champ_first_tv           0.0331        19.6                677
+#   torvik                   0.0342        19.8                662
+#   seed                     0.0414        19.6                612
+#
+# meta_region_poolaware is first on every column, so optimising for expected
+# points selects the same strategy as optimising for P(1st) and the pool's
+# payout structure does not change the answer. The points-oriented deterministic
+# modes do beat seed on rank (det_e8_tv +2.9 positions, 14/15 years,
+# p_adj=0.0005) without coming close to meta.
+#
+# The two objectives CAN diverge, and the sharpest evidence is in this table:
+# pit and det_e8_tv score essentially identical points (777 vs 778) with P(1st)
+# of 0.0309 against 0.0461. Same expected points, ~50% different win rate. The
+# gap is entirely which games the points come from, so expected points alone
+# would be a misleading target even though it happens not to bite here.
+#
+# READ MEAN RANK, NOT BEST RANK, when comparing these. meta_region_poolaware
+# builds one deterministic bracket (its two rank columns are equal); the other
+# modes sample 50 and their best-rank column is a best-of-50 that flatters them
+# relative to the single bracket you actually submit.
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
 N_MODEL_BRACKETS = 50  # Stochastic brackets per mode per repeat
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]

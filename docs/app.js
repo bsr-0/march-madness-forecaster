@@ -37,11 +37,18 @@ const state = {
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
- * the model alone if it never arrives. */
+ * the model alone if it never arrives.
+ *
+ * BUMP ?v= WHENEVER THE FILE'S CONTENTS CHANGE. It is the only cache-busting
+ * mechanism here -- there is no service worker and the filename is stable -- so
+ * a returning browser will keep serving whatever it cached against the old URL.
+ * v=2 is the 2010-2025 window; v=1 was built from 1985 onward, and the two
+ * disagree by enough to matter (6-11 upsets .380 vs .489). A stale cache would
+ * not error, it would quietly predict with the previous decade's priors. */
 async function loadPriors() {
   if (state.priors) return state.priors;
   try {
-    const res = await fetch('data/upset_priors.json?v=1');
+    const res = await fetch('data/upset_priors.json?v=2');
     state.priors = await res.json();
   } catch {
     state.priors = {};
