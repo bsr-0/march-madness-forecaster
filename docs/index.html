@@ -75,18 +75,17 @@
     </p>
   </section>
 
-  <!-- Weight controls. Present only in "My weights"; a single variable is just
-       one weight at full and the rest at zero. -->
-  <section class="panel" id="weights" hidden>
+  <!-- Strategy choice. Replaces the old per-variable weighting: the question a
+       bracket answers is "what am I optimising for", not "which stats do I
+       like". The first two are precomputed by the validated selector in
+       src/product/selection.py and differ from each other by more than a
+       rounding -- in 2026 they name different champions. The third fits a model
+       here in the browser and is the only one the history slider applies to. -->
+  <section class="panel" id="strategy" hidden>
     <div class="panel-head">
-      <p class="panel-title">How to fill the bracket</p>
-      <div class="panel-actions">
-        <button class="ghost" id="clear-w">Reset</button>
-        <span class="hint" id="w-hint"></span>
-      </div>
+      <p class="panel-title">What are you optimising for</p>
     </div>
-    <div class="prebuilt" id="prebuilt"></div>
-    <div class="groups" id="groups"></div>
+    <div class="strat-list" id="strat-list"></div>
   </section>
 
   <section class="note" id="mode-note"></section>
