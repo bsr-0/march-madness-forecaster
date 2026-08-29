@@ -50,7 +50,7 @@ import json
 import logging
 import math
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -94,24 +94,138 @@ _HISTORICAL_WIN_RATES: Dict[Tuple[int, int], float] = {
 }
 
 
-def _win_rate(seed_a: int, seed_b: int) -> float:
+# ============================================================================
+# Two windows, because this table answers two different questions
+# ============================================================================
+#
+# THE SAME NUMBERS WERE SERVING AS BOTH AN OUTCOME MODEL AND A CROWD MODEL, and
+# those are not the same quantity. Candidate scoring asks "who actually wins
+# this game"; the public-pick machinery asks "who will the field pick". Pool
+# edge is precisely the gap between them:
+#
+#     leverage = P_outcome(team wins) - P_public(team picked)
+#
+# Driving both sides from one table silently assumes the crowd is perfectly
+# calibrated to long-run seed history, and -- worse -- means any update to the
+# table moves both sides together and cancels its own effect exactly. Recency
+# would have looked like it did nothing.
+#
+# So the split is by role, not by preference:
+#
+#   window="full"     1985-2025. What the public has internalised over forty
+#                     years of watching brackets. Crowd beliefs move slowly and
+#                     are anchored on the long run, so the public-pick path
+#                     keeps this and is UNCHANGED by the recency work.
+#
+#   window="recent"   2010-2025. Best available estimate of what actually
+#                     happens now, and therefore what the referee should score
+#                     candidates against. Matches the window chosen for the UI's
+#                     upset priors (scripts/build_upset_priors.py), so the
+#                     model's stated beliefs and the beliefs it is graded
+#                     against are the same beliefs.
+#
+# The headline disagreement is 6-11: the favourite wins 62.2% across the full
+# history and 48.3% since 2010. Under the old shared table the optimiser could
+# not act on that; it now believes the 11 seed is close to even while the public
+# still picks the 6, which is exactly where leverage comes from.
+RECENT_FIRST_SEASON = 2010
+
+# Games-equivalent weight pulling a thin recent cell back toward the logistic
+# seed-difference curve. At 8, a cell with 8 games sits halfway. The deep-round
+# cells are where this matters: 2010+ leaves many matchups with a handful of
+# games, and an unshrunk 2-of-3 would otherwise enter the referee as 0.667.
+_RECENT_PRIOR_STRENGTH = 8
+_RECENT_MIN_GAMES = 8
+
+_recent_cache: Optional[Dict[Tuple[int, int], float]] = None
+
+
+def _logistic_rate(seed_a: int, seed_b: int) -> float:
+    """P(seed_a beats seed_b) from seed difference alone.
+
+    β = 0.175, consistent with tournament_features.py and pipeline config.
+    Fitted to historical seed-vs-seed outcomes by logistic regression.
+    """
+    return 1.0 / (1.0 + math.exp(-0.175 * (seed_b - seed_a)))
+
+
+def _recent_win_rates() -> Dict[Tuple[int, int], float]:
+    """Seed-vs-seed win rates since RECENT_FIRST_SEASON, from Kaggle results.
+
+    Computed rather than hardcoded so the window is a constant to change rather
+    than a table to re-derive by hand. Cells thinner than _RECENT_MIN_GAMES are
+    omitted entirely and fall through to the logistic curve, which is a better
+    estimate than three games of noise.
+
+    Falls back to an empty table if the Kaggle files are absent, which makes
+    window="recent" degrade to the logistic fallback rather than raise. Callers
+    get a coarser referee, not a broken one.
+    """
+    global _recent_cache
+    if _recent_cache is not None:
+        return _recent_cache
+
+    import csv
+    from pathlib import Path
+
+    kaggle = Path(__file__).resolve().parent.parent.parent / "data" / "kaggle"
+    seeds_path = kaggle / "MNCAATourneySeeds.csv"
+    results_path = kaggle / "MNCAATourneyCompactResults.csv"
+    if not seeds_path.exists() or not results_path.exists():
+        logger.warning("Kaggle tournament files missing; recent seed rates unavailable")
+        _recent_cache = {}
+        return _recent_cache
+
+    seeds: Dict[Tuple[int, int], int] = {}
+    with open(seeds_path) as fh:
+        for row in csv.DictReader(fh):
+            seeds[(int(row["Season"]), int(row["TeamID"]))] = int(row["Seed"][1:3])
+
+    tally: Dict[Tuple[int, int], List[int]] = {}
+    with open(results_path) as fh:
+        for row in csv.DictReader(fh):
+            season = int(row["Season"])
+            # DayNum < 136 is the First Four: same seed line, so "favourite"
+            # is undefined and these games would only add noise.
+            if season < RECENT_FIRST_SEASON or int(row["DayNum"]) < 136:
+                continue
+            sw = seeds.get((season, int(row["WTeamID"])))
+            sl = seeds.get((season, int(row["LTeamID"])))
+            if sw is None or sl is None or sw == sl:
+                continue
+            cell = (min(sw, sl), max(sw, sl))
+            entry = tally.setdefault(cell, [0, 0])
+            entry[0] += 1 if sw == cell[0] else 0
+            entry[1] += 1
+
+    out: Dict[Tuple[int, int], float] = {}
+    for (lo, hi), (wins, n) in tally.items():
+        if n < _RECENT_MIN_GAMES:
+            continue
+        w = n / (n + _RECENT_PRIOR_STRENGTH)
+        out[(lo, hi)] = w * (wins / n) + (1 - w) * _logistic_rate(lo, hi)
+    _recent_cache = out
+    return out
+
+
+def _win_rate(seed_a: int, seed_b: int, window: str = "full") -> float:
     """P(seed_a beats seed_b) from historical data.
 
-    Uses direct lookup when available, falls back to a logistic model
-    calibrated from the historical data for unseen matchups.
+    ``window`` selects which question is being asked -- see the block above.
+    It defaults to "full" so every existing caller keeps its current behaviour
+    and only the outcome path opts in.
     """
     if seed_a == seed_b:
         return 0.500
+    if window not in ("full", "recent"):
+        raise ValueError(f"unknown window {window!r}; expected 'full' or 'recent'")
+
     lower, higher = min(seed_a, seed_b), max(seed_a, seed_b)
-    rate = _HISTORICAL_WIN_RATES.get((lower, higher))
+    table = _recent_win_rates() if window == "recent" else _HISTORICAL_WIN_RATES
+    rate = table.get((lower, higher))
     if rate is not None:
         return rate if seed_a == lower else 1.0 - rate
-    # Logistic fallback for unseen matchups.
-    # β = 0.175, consistent with tournament_features.py (line 88) and
-    # pipeline config.  Fitted to historical seed-vs-seed outcomes via
-    # logistic regression on seed difference.
-    diff = seed_b - seed_a
-    return 1.0 / (1.0 + math.exp(-0.175 * diff))
+    return _logistic_rate(seed_a, seed_b)
 
 
 # ============================================================================
@@ -134,8 +248,12 @@ def _r64_opponent(seed: int) -> int:
     return 17 - seed
 
 
-def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
+def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, float]]:
     """Compute P(seed s reaches round R) for all seeds and rounds.
+
+    ``window`` is forwarded to :func:`_win_rate`. The outcome path passes
+    "recent"; the public-pick path leaves it at "full". See the window block
+    above for why those must not be the same.
 
     Uses the bracket structure and historical win rates to compute
     cumulative advancement probabilities.  These represent the TRUE
@@ -153,7 +271,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
     r64 = {}
     for seed in range(1, 17):
         opp = _r64_opponent(seed)
-        r64[seed] = _win_rate(seed, opp)
+        r64[seed] = _win_rate(seed, opp, window)
 
     # Step 2: R32 advancement.
     # After R64, the bracket pairs up:
@@ -188,7 +306,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
             weighted_win = 0.0
             for opp_seed in opp_group:
                 opp_weight = r64[opp_seed]
-                weighted_win += opp_weight * _win_rate(seed, opp_seed)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
 
             # P(reach S16) = P(reach R32) × P(win R32)
             r32[seed] = r64[seed] * weighted_win
@@ -219,7 +337,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
             weighted_win = 0.0
             for opp_seed in opp_seeds:
                 opp_weight = r32[opp_seed] / total_opp_weight
-                weighted_win += opp_weight * _win_rate(seed, opp_seed)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
 
             s16[seed] = r32[seed] * weighted_win
 
@@ -244,7 +362,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
         weighted_win = 0.0
         for opp_seed in opp_seeds:
             opp_weight = s16[opp_seed] / total_opp_weight
-            weighted_win += opp_weight * _win_rate(seed, opp_seed)
+            weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
 
         e8[seed] = s16[seed] * weighted_win
 
@@ -264,7 +382,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
                 weighted_win += opp_weight * 0.50
             else:
                 opp_weight = e8[opp_seed] / total_e8
-                weighted_win += opp_weight * _win_rate(seed, opp_seed)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
 
         f4[seed] = e8[seed] * weighted_win
 
@@ -280,7 +398,7 @@ def _compute_advancement_rates() -> Dict[int, Dict[str, float]]:
                 weighted_win += opp_weight * 0.50
             else:
                 opp_weight = f4[opp_seed] / total_f4
-                weighted_win += opp_weight * _win_rate(seed, opp_seed)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
 
         champ[seed] = f4[seed] * weighted_win
 

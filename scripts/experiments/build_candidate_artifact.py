@@ -29,13 +29,20 @@ Everything here must be knowable the moment the bracket is released:
                            _validate_pretournament raises otherwise
   ESPN public picks        published before tip; require_archived=True
 
-One documented exception: ``seed_pick_model._HISTORICAL_WIN_RATES`` is a
-hardcoded 1985-2025 constant used by the shared P(1st) referee. For a
-forward-looking 2027 artifact it is clean, since all its data precedes 2027.
-For validating a historical season it contains that season's own results --
-roughly 63 of ~2500 games, applied identically to every candidate, so bounded
-and non-differential. Recorded in the artifact's ``provenance`` block rather
-than hidden.
+One documented exception: the shared P(1st) referee reads seed-vs-seed rates
+from ``seed_pick_model._win_rate(window="recent")``, computed from Kaggle
+results since 2010. For a forward-looking 2027 artifact it is clean, since all
+its data precedes 2027. For validating a historical season it contains that
+season's own results, applied identically to every candidate, so bounded and
+non-differential. THE RECENT WINDOW MAKES THAT CONTAMINATION LARGER, not
+smaller -- roughly 63 of ~1000 games rather than 63 of ~2500 -- because fewer
+seasons means each one carries more weight. That is the price of the window and
+it is recorded in the artifact's ``provenance`` block rather than hidden.
+
+The referee is an OUTCOME model and the public-pick distribution is a CROWD
+model, and they deliberately run on different windows. Pool edge is the gap
+between them, so moving both together cancels exactly; see the window block in
+src/data/seed_pick_model.py.
 
 Usage:
     python3 scripts/experiments/build_candidate_artifact.py --year 2024
@@ -101,14 +108,29 @@ def assert_pretournament_inputs(year: int) -> Dict:
     if "torvik" not in prov:
         raise RuntimeError(f"no torvik_{year}.json found; cannot verify provenance")
 
+    from src.data.seed_pick_model import RECENT_FIRST_SEASON
+    from src.prediction.seed_probabilities import OUTCOME_WINDOW
+
     prov["seed_head_to_head"] = {
-        "source": "seed_pick_model._HISTORICAL_WIN_RATES (hardcoded 1985-2025)",
+        "source": (
+            f"seed_pick_model._win_rate(window={OUTCOME_WINDOW!r}) "
+            f"— seed-vs-seed rates computed from Kaggle results, {RECENT_FIRST_SEASON}+"
+        ),
         "clean_for_forward_looking": True,
         "caveat": (
-            "For historical validation this constant includes the target season's own "
-            "results (~63 of ~2500 games). It is used only by the shared P(1st) referee "
-            "and applied identically to every candidate, so it is bounded and does not "
-            "favour one strategy over another."
+            "For historical validation this table includes the target season's own "
+            "results (~63 of ~1000 games in this window). It is used only by the shared "
+            "P(1st) referee and applied identically to every candidate, so it is bounded "
+            "and does not favour one strategy over another. Note the recent window makes "
+            "that share LARGER than it was under the full 1985-2025 table (~63 of ~2500), "
+            "which is the price of the window: fewer games means each season, including "
+            "the one being validated, carries more weight."
+        ),
+        "public_picks_window": (
+            "The public-pick model is deliberately NOT on this window. It uses archived "
+            "ESPN picks where available and falls back to SEED_PICK_RATES (1985-2025), "
+            "because it models crowd belief rather than outcomes. Pool edge is the gap "
+            "between the two, so moving both together would cancel it exactly."
         ),
     }
     return prov
@@ -234,16 +256,11 @@ def load_team_names(year: int) -> Dict[str, str]:
         with open(path) as f:
             ctx = json.load(f)
         entries = (ctx.get("seeds") or {}).get("teams") or ctx.get("teams") or []
-        names = {
-            t["team_id"]: t["team_name"]
-            for t in entries
-            if t.get("team_id") and t.get("team_name")
-        }
+        names = {t["team_id"]: t["team_name"] for t in entries if t.get("team_id") and t.get("team_name")}
         if names:
             return names
     raise RuntimeError(
-        f"no canonical team names found for {year}; the artifact must not ship "
-        "ids for the browser to guess at"
+        f"no canonical team names found for {year}; the artifact must not ship ids for the browser to guess at"
     )
 
 
@@ -443,10 +460,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         # preference or selection behaviour moves, and 2027.v2 is untouched.
         "schema": 5,
         "year": year,
-        "teams": [
-            {"id": t, "name": team_names[t], "seed": seeds[t], "region": regions.get(t, "")}
-            for t in team_ids
-        ],
+        "teams": [{"id": t, "name": team_names[t], "seed": seeds[t], "region": regions.get(t, "")} for t in team_ids],
         # The 64 team indices in bracket order (game g is [2g], [2g+1]). Carried
         # in the artifact so the browser can reconstruct game pairings without
         # reimplementing build_bracket_order -- the artifact is a contract, and
