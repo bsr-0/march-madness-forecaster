@@ -304,8 +304,26 @@ ALL_MODES: Tuple[str, ...] = (
     "lev_tilt_100",
     "lev_tilt_200",
     "fixed_blend_r10",
+    "fixed_blend_r20",
+    "fixed_blend_r30",
+    "fixed_blend_r40",
     "fixed_blend_r50",
+    "fixed_blend_r70",
     "fixed_blend_r90",
+    "fixed_massavg_r10",
+    "fixed_massavg_r20",
+    "fixed_massavg_r30",
+    "fixed_massavg_r40",
+    "fixed_massavg_r50",
+    "fixed_massavg_r70",
+    "fixed_massavg_r90",
+    "fixed_tv_r10",
+    "fixed_tv_r20",
+    "fixed_tv_r30",
+    "fixed_tv_r40",
+    "fixed_tv_r50",
+    "fixed_tv_r70",
+    "fixed_tv_r90",
     "champ_first_tv",
     "champ_first_chalkfade_tv",
     "f4_first_tv",
@@ -2967,15 +2985,6 @@ def _run_one_year(
         # fixed risk level. These are the control that tells adaptivity apart
         # from the candidate family itself. blend is meta's modal base (8 of 15
         # seasons); 0.1 / 0.5 / 0.9 span the risk levels it actually selects.
-        "fixed_blend_r10": ("fixed_blend_r10", blend_base,
-                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
-                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.1, _n)),
-        "fixed_blend_r50": ("fixed_blend_r50", blend_base,
-                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
-                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.5, _n)),
-        "fixed_blend_r90": ("fixed_blend_r90", blend_base,
-                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
-                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.9, _n)),
         # Leverage tilt swept as a dial. tilt=0 reduces exactly to champ_equity_tv,
         # which is the control the sweep needs.
         "lev_tilt_25": (
@@ -2996,8 +3005,26 @@ def _run_one_year(
         "lev_tilt_200": (
             "lev_tilt_200",
     "fixed_blend_r10",
+    "fixed_blend_r20",
+    "fixed_blend_r30",
+    "fixed_blend_r40",
     "fixed_blend_r50",
+    "fixed_blend_r70",
     "fixed_blend_r90",
+    "fixed_massavg_r10",
+    "fixed_massavg_r20",
+    "fixed_massavg_r30",
+    "fixed_massavg_r40",
+    "fixed_massavg_r50",
+    "fixed_massavg_r70",
+    "fixed_massavg_r90",
+    "fixed_tv_r10",
+    "fixed_tv_r20",
+    "fixed_tv_r30",
+    "fixed_tv_r40",
+    "fixed_tv_r50",
+    "fixed_tv_r70",
+    "fixed_tv_r90",
             torvik_base,
             lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 2.0),
         ),
@@ -3067,6 +3094,24 @@ def _run_one_year(
             ),
         ),
     }
+
+    # Frozen members of the family meta actually selects from, generated rather
+    # than hand-written so the sweep is a grid and not a list of guesses. The
+    # base names mirror meta's own candidate labels: blend is its modal choice
+    # (8 of 15 seasons), massey_avg its second (4), torvik the control.
+    for _bname, _bobj in (("blend", blend_base), ("massavg", base_round_probs.get("massey_avg")),
+                          ("tv", torvik_base)):
+        if _bobj is None:
+            continue
+        for _r10 in (10, 20, 30, 40, 50, 70, 90):
+            legacy_specs[f"fixed_{_bname}_r{_r10}"] = (
+                f"fixed_{_bname}_r{_r10}",
+                _bobj,
+                lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist,
+                _n=n_opponents, _rl=_r10 / 100.0:
+                sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, _rl, _n),
+            )
+
 
     from src.prediction.strategy_pipeline import (
         parse_pipeline,
