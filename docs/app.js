@@ -97,7 +97,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 5;
+const DATA_V = 6;
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
@@ -364,6 +364,7 @@ function solveActual() {
  * so there is exactly one list of them, and so the note and the board cannot
  * disagree about which bracket is showing. */
 const CHAMP_PREFIX = 'champ:';
+const DEPTH_PREFIX = 'depth:';
 
 function currentStrategy() {
   if (state.strategy.startsWith(CHAMP_PREFIX)) {
@@ -376,6 +377,19 @@ function currentStrategy() {
       note: `The bracket that best backs ${c.name} (${c.seed} seed): the highest `
           + `P(1st) among the ${c.n} candidates that have them cutting down the nets.`,
       picks: c.picks, ev: c.ev, p1: c.p1,
+    };
+  }
+  if (state.strategy.startsWith(DEPTH_PREFIX)) {
+    const d = Number(state.strategy.slice(DEPTH_PREFIX.length));
+    const sh = ((state.season && state.season.shapes) || []).find(x => x.depth === d);
+    if (!sh) return null;
+    const f4 = sh.f4.map(x => `${x.name} (${x.seed})`).join(', ');
+    return {
+      id: state.strategy,
+      label: `Final Four down to a ${d} seed`,
+      note: `The highest-P(1st) bracket whose deepest Final Four team is a ${d} seed. `
+          + `Final Four: ${f4}.`,
+      picks: sh.picks, ev: sh.ev, p1: sh.p1,
     };
   }
   const list = (state.season && state.season.strategies) || [];
@@ -401,7 +415,7 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { for (const id of ['prior-panel', 'model-panel', 'champions']) {
+    { for (const id of ['prior-panel', 'model-panel', 'champions', 'shapes']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
@@ -432,7 +446,7 @@ function render() {
     // member of the candidate pool for a belief the USER supplied, which is not
     // a validated recommendation at all.
     const kind = !st ? 'LOYO validated'
-      : st.id.startsWith(CHAMP_PREFIX) ? 'Your pick'
+      : (st.id.startsWith(CHAMP_PREFIX) || st.id.startsWith(DEPTH_PREFIX)) ? 'Your pick'
       : st.id === 'ev' ? 'Exact optimum'
       : 'Backtested rule';
     note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
@@ -621,6 +635,7 @@ function renderStrategies() {
     </label>`).join('');
 
   renderChampions();
+  renderShapes();
 }
 
 /* Champion picker.
@@ -636,6 +651,38 @@ function renderStrategies() {
  * scale as the headline strategies. This is a menu of beliefs with prices
  * attached, not a shuffle button.
  */
+/* Final Four depth picker.
+ *
+ * The champion picker moves the top of the bracket and leaves the bottom alone:
+ * across its options 98% of championship games differ but only 22% of first
+ * round games do. This is the other axis -- how far down you are willing to
+ * reach for a Final Four team -- and the two compose.
+ *
+ * Every option is plausible by construction, because the depth is the thing
+ * being chosen rather than a by-product. That is the difference from selecting
+ * on "double-digit seed in the Sweet 16", which buys variety by promoting teams
+ * nobody would actually submit.
+ */
+function renderShapes() {
+  const s = state.season;
+  const host = document.getElementById('shape-list');
+  const panel = document.getElementById('shapes');
+  const list = (s && s.shapes) || [];
+  if (!host || !panel) return;
+  panel.hidden = list.length === 0;
+  host.innerHTML = list.map(sh => {
+    const id = DEPTH_PREFIX + sh.depth;
+    const on = state.strategy === id;
+    const f4 = sh.f4.map(x => `${x.name} (${x.seed})`).join(', ');
+    return `
+      <button class="chip${on ? ' on' : ''}" onclick="setStrategy('${id}')" title="${f4}">
+        <span class="chip-seed">${sh.depth}</span>
+        <span class="chip-name">seed</span>
+        <span class="chip-stat">${(sh.p1 * 100).toFixed(1)}%</span>
+      </button>`;
+  }).join('');
+}
+
 function renderChampions() {
   const s = state.season;
   const host = document.getElementById('champ-list');
