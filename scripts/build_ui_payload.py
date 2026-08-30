@@ -343,6 +343,52 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         }
     )
 
+    # ONE BRACKET PER PLAUSIBLE CHAMPION, because the two objective strategies
+    # are far more alike than their labels suggest. In 2026 they agree on 55 of
+    # 63 games and share an identical Final Four; only the order of the last two
+    # differs. Presenting them as the whole menu implies the model has one
+    # opinion, when the candidate pool deliberately carries twelve viable
+    # champions -- the artifact's champion strata exist precisely to keep
+    # unlikely-but-real champions from being ranked away, and nothing downstream
+    # was surfacing them.
+    #
+    # For each champion, the bracket shown is the one with the highest P(1st)
+    # AMONG CANDIDATES WITH THAT CHAMPION. So this is not a diversity gimmick:
+    # each is the best way to play that belief, and its P(1st) is on the same
+    # scale as the two headline strategies, so a user can see exactly what
+    # backing an underdog costs.
+    #
+    # The cut is by candidate support rather than by model probability. A
+    # champion with only a handful of candidates cannot supply a well-optimised
+    # bracket, and showing one anyway would put a bad bracket next to good ones
+    # with no way to tell them apart.
+    champ_best: Dict[int, Dict[str, Any]] = {}
+    for cand in art["candidates"]:
+        ci = cand["w"][5][0]
+        cur = champ_best.get(ci)
+        if cur is None or cand["p1"] > cur["p1"]:
+            champ_best[ci] = cand
+    counts: Dict[int, int] = {}
+    for cand in art["candidates"]:
+        ci = cand["w"][5][0]
+        counts[ci] = counts.get(ci, 0) + 1
+
+    MIN_CANDIDATES = 30
+    champions = []
+    for ci, cand in champ_best.items():
+        if counts[ci] < MIN_CANDIDATES:
+            continue
+        champions.append({
+            "team": ci,
+            "name": teams[ci]["name"],
+            "seed": teams[ci].get("seed"),
+            "picks": [list(r) for r in cand["w"]],
+            "ev": cand["ev"],
+            "p1": cand["p1"],
+            "n": counts[ci],
+        })
+    champions.sort(key=lambda c: -c["p1"])
+
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.
     picks = strategies[0]["picks"]
@@ -365,6 +411,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         ],
         "first_round": art["first_round"],
         "strategies": strategies,
+        "champions": champions,
         "pool_optimized": picks,
         "pool_optimized_note": (
             "Chosen to maximise the chance of finishing first in a 30-opponent "

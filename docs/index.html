@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=17">
+<link rel="stylesheet" href="app.css?v=18">
 </head>
 <body>
 
@@ -94,6 +94,23 @@
     <div class="strat-list" id="strat-list"></div>
   </section>
 
+  <!-- Champion picker. The two objective strategies agree on 55 of 63 games in
+       2026 and share a Final Four, so a menu of two misrepresented how much the
+       candidate pool actually disagrees. One bracket per plausible champion,
+       each the highest-P(1st) way to back that team, ordered so the cost of an
+       underdog is visible rather than hidden. -->
+  <section class="panel" id="champions" hidden>
+    <div class="panel-head">
+      <p class="panel-title">Or back a champion</p>
+    </div>
+    <div class="chips" id="champ-list"></div>
+    <p class="prior-note">
+      Each is the best bracket available for that team winning, with its chance
+      of finishing first in a 30-person pool. Backing a longer shot costs win
+      probability — the number says how much.
+    </p>
+  </section>
+
   <section class="note" id="mode-note"></section>
 
   <!-- The fitted model, printed. Empty unless variables are enabled. -->
@@ -124,6 +141,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=26"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

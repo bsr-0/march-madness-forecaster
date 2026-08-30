@@ -97,7 +97,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 4;
+const DATA_V = 5;
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
@@ -358,7 +358,26 @@ function solveActual() {
 
 /* Strategies are alternatives, not layers: a precomputed bracket comes from the
  * validated selector, the fitted one is built here. Exactly one is on screen. */
+/* The active bracket, whichever kind it is.
+ *
+ * Champion picks are resolved here rather than being copied into `strategies`
+ * so there is exactly one list of them, and so the note and the board cannot
+ * disagree about which bracket is showing. */
+const CHAMP_PREFIX = 'champ:';
+
 function currentStrategy() {
+  if (state.strategy.startsWith(CHAMP_PREFIX)) {
+    const idx = Number(state.strategy.slice(CHAMP_PREFIX.length));
+    const c = ((state.season && state.season.champions) || []).find(x => x.team === idx);
+    if (!c) return null;
+    return {
+      id: state.strategy,
+      label: `${c.name} wins it`,
+      note: `The bracket that best backs ${c.name} (${c.seed} seed): the highest `
+          + `P(1st) among the ${c.n} candidates that have them cutting down the nets.`,
+      picks: c.picks, ev: c.ev, p1: c.p1,
+    };
+  }
   const list = (state.season && state.season.strategies) || [];
   return list.find(s => s.id === state.strategy) || null;
 }
@@ -382,7 +401,7 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { for (const id of ['prior-panel', 'model-panel']) {
+    { for (const id of ['prior-panel', 'model-panel', 'champions']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
@@ -407,7 +426,15 @@ function render() {
     // Both scores, always, for whichever strategy is showing. A bracket built to
     // win outright gives up real expected points to do it, and stating only the
     // number its own objective optimises would hide exactly that cost.
-    const kind = st && st.id === 'ev' ? 'Exact optimum' : 'Backtested rule';
+    // Three different kinds of claim, and the label must not launder one as
+    // another. The fixed rule has out-of-sample backtest evidence; the expected
+    // points bracket is an exact solution; a champion pick is the best-scoring
+    // member of the candidate pool for a belief the USER supplied, which is not
+    // a validated recommendation at all.
+    const kind = !st ? 'LOYO validated'
+      : st.id.startsWith(CHAMP_PREFIX) ? 'Your pick'
+      : st.id === 'ev' ? 'Exact optimum'
+      : 'Backtested rule';
     note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
       (st ? ` <strong>${(st.p1 * 100).toFixed(1)}%</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
@@ -592,6 +619,41 @@ function renderStrategies() {
       <span class="vopt-sub">${o.sub}</span>
       ${o.stat ? `<span class="vopt-stat">${o.stat}</span>` : ''}
     </label>`).join('');
+
+  renderChampions();
+}
+
+/* Champion picker.
+ *
+ * WHY THIS EXISTS. The two objective strategies are much more alike than their
+ * labels suggest -- in 2026 they agree on 55 of 63 games and share an identical
+ * Final Four -- so a menu of two implied the model has one opinion. It does not:
+ * the candidate pool carries a dozen viable champions by construction, and none
+ * of them were reachable from the page.
+ *
+ * ORDERED BY P(1st), so the cost of backing an underdog is legible: the list
+ * runs from the best available bracket down, and each figure is on the same
+ * scale as the headline strategies. This is a menu of beliefs with prices
+ * attached, not a shuffle button.
+ */
+function renderChampions() {
+  const s = state.season;
+  const host = document.getElementById('champ-list');
+  const panel = document.getElementById('champions');
+  const list = (s && s.champions) || [];
+  if (!host || !panel) return;
+  panel.hidden = list.length === 0;
+  host.innerHTML = list.map(c => {
+    const id = CHAMP_PREFIX + c.team;
+    const on = state.strategy === id;
+    return `
+      <button class="chip${on ? ' on' : ''}" onclick="setStrategy('${id}')"
+              title="${c.n} candidate brackets have ${c.name} winning">
+        <span class="chip-seed">${c.seed}</span>
+        <span class="chip-name">${c.name}</span>
+        <span class="chip-stat">${(c.p1 * 100).toFixed(1)}%</span>
+      </button>`;
+  }).join('');
 }
 
 function setStrategy(id) {
