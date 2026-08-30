@@ -24,24 +24,6 @@
 
 <main id="main">
 
-  <!-- Historical prior. Blends each pick toward the base rate for that seed
-       pairing in that round, computed from seasons strictly before the one on
-       screen. At 0% the model is untouched. -->
-  <section class="panel" id="prior-panel" hidden>
-    <div class="panel-head">
-      <p class="panel-title">Lean on history</p>
-    </div>
-    <div class="prior-row">
-      <label for="prior-w">Weight on the seed-matchup base rate</label>
-      <input type="range" id="prior-w" min="0" max="100" step="5" value="0">
-      <span class="prior-v" id="prior-v">0%</span>
-    </div>
-    <p class="prior-note">
-      0% uses the fitted model alone. 100% ignores the variables and picks each
-      game at the historical rate for that seed pairing and round.
-    </p>
-  </section>
-
   <!-- Strategy choice. Replaces the old per-variable weighting: the question a
        bracket answers is "what am I optimising for", not "which stats do I
        like".
@@ -115,7 +97,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=9"></script>
-<script src="app.js?v=35"></script>
+<script src="fit.js?v=10"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

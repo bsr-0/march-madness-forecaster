@@ -15,7 +15,6 @@
  *                                points, with P(win) following as
  *                                Phi(margin / sigma); see fit.js. It is not a
  *                                classifier and a coefficient is not a log-odds.
- *                                The only strategy the history slider applies to.
  *
  * THE FIRST TWO ARE NOT THE SAME BRACKET AND THE DIFFERENCE IS THE POINT. In
  * 2026 they name different champions: the win-maximising bracket gives up 69
@@ -47,6 +46,17 @@
  *                  ridge, so the control could only select something worse
  *   training set   pooling 41,321 regular-season rows measured null against the
  *                  1,008 tournament rows on the same walk-forward split
+ *   history prior  blending toward the seed-matchup base rate was MONOTONICALLY
+ *                  worse: 0.45454 at weight 0, 0.45566 at 0.1, 0.48189 at 0.5,
+ *                  0.56138 at 1.0. No round benefited -- the two that looked
+ *                  like they did, R32 (+0.0032) and E8 (+0.0055), were the best
+ *                  of 21 weights on 189 and 41 games and neither survived a
+ *                  bootstrap
+ *
+ * The prior was not noise: alone it scores 0.561 against a coin flip's 0.693.
+ * It is simply a cruder measurement of what barthag and t_rank already carry,
+ * so blending it in diluted rather than complemented. Worth remembering before
+ * anyone adds a second source of seed information.
  *
  * Choosing an OBJECTIVE is a decision the data cannot make for you, and those
  * controls stayed. Choosing an ESTIMATOR is a decision it can, and those went.
@@ -98,7 +108,6 @@ const state = {
   training: null,
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
-  priorWeight: 0,      // 0 = model only; the blend control's rest position
   cache: {},
 };
 
@@ -118,22 +127,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 9;
-
-/* Historical seed-matchup upset rates, built walk-forward per season by
- * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
- * the model alone if it never arrives.
- * Versioned by DATA_V like every other payload. */
-async function loadPriors() {
-  if (state.priors) return state.priors;
-  try {
-    const res = await fetch(`data/upset_priors.json?v=${DATA_V}`);
-    state.priors = await res.json();
-  } catch {
-    state.priors = {};
-  }
-  return state.priors;
-}
+const DATA_V = 10;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -252,26 +246,6 @@ function winProb(a, b) {
   return winProbFromMargin(margin(a, b), state.fit.sigma, cal);
 }
 
-const ROUND_KEYS = ['R64', 'R32', 'S16', 'E8', 'F4', 'NCG'];
-
-/* P(team a beats team b) from the historical base rate for their seed pairing,
- * or NaN when there is no cell for it.
- *
- * The stored rate is always P(the WORSE seed wins), so it has to be flipped
- * when `a` is the better seed. Same-seed matchups have no upset to speak of
- * and return NaN, which blendWithPrior passes through untouched. */
-function priorFor(a, b, roundIdx) {
-  const tbl = state.priors && state.priors[String(state.year)];
-  if (!tbl) return NaN;
-  const teams = state.season.teams;
-  const sa = teams[a].seed, sb = teams[b].seed;
-  if (!sa || !sb || sa === sb) return NaN;
-  const better = Math.min(sa, sb), worse = Math.max(sa, sb);
-  const cell = (tbl.cells[ROUND_KEYS[roundIdx]] || {})[`${better}-${worse}`];
-  if (!cell) return NaN;
-  return sa === worse ? cell.p : 1 - cell.p;
-}
-
 /* Play the bracket out under the fit. Exact ties go to the better seed, then
  * lower index, so the board never jitters on a coin-flip game. */
 function solveByFit() {
@@ -282,7 +256,7 @@ function solveByFit() {
     const games = [], next = [];
     for (let g = 0; g < current.length; g += 2) {
       const a = current[g], b = current[g + 1];
-      const p = blendWithPrior(winProb(a, b), priorFor(a, b, r), state.priorWeight);
+      const p = winProb(a, b);
       let win;
       if (p !== 0.5) win = p > 0.5 ? a : b;
       else if (teams[a].seed !== teams[b].seed) win = teams[a].seed < teams[b].seed ? a : b;
@@ -420,7 +394,7 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { for (const id of ['prior-panel', 'champions', 'shapes']) {
+    { for (const id of ['champions', 'shapes']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
@@ -434,11 +408,7 @@ function render() {
   weights.hidden = false;   // the panel is the only control surface
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
-  // Only the history slider is fit-specific now; the model itself has no
-  // user-facing settings left.
-  { const fitted = !usingOptimized();
-    const pp = document.getElementById('prior-panel');
-    if (pp) pp.hidden = !fitted; }
+
 
   if (usingOptimized()) {
     const st = currentStrategy();
@@ -878,20 +848,11 @@ async function init() {
   const [idx] = await Promise.all([
     fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
     loadTraining(),
-    loadPriors(),
   ]);
   document.getElementById('years').innerHTML = idx.seasons.map(s => `
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
-  const priorEl = document.getElementById('prior-w');
-  if (priorEl) {
-    priorEl.addEventListener('input', e => {
-      state.priorWeight = Number(e.target.value) / 100;
-      document.getElementById('prior-v').textContent = `${e.target.value}%`;
-      render();   // the blend changes picks, so the whole board is restated
-    });
-  }
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
