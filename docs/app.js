@@ -88,6 +88,12 @@ const state = {
    * Four stops at a 3 seed" unaskable even though the pool carries 63 such
    * pairs. */
   pick: { champ: null, depth: null },
+  /* Which question the filters narrow. Filtering changes WHICH brackets are
+   * eligible, never what is being maximised over them -- picking a champion
+   * used to silently switch the objective to P(1st), which for Michigan meant
+   * handing back a bracket worth 71 fewer expected points than the one the
+   * user had asked for. */
+  objective: 'p1',      // 'p1' | 'ev'
   fit: null,            // {beta, n, converged}
   training: null,
   season: null,
@@ -112,7 +118,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 8;
+const DATA_V = 9;
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
@@ -351,26 +357,28 @@ function currentStrategy() {
   if (state.strategy === CUSTOM) {
     const s = state.season || {};
     const { champ, depth } = state.pick;
-    let src = null, scope = '';
+    const obj = state.objective;
+    let entry = null, scope = '';
     if (champ !== null && depth !== null) {
-      src = (s.combos || []).find(c => c.team === champ && c.depth === depth);
+      entry = (s.combos || []).find(c => c.team === champ && c.depth === depth);
       scope = `${s.teams[champ].name} winning and a Final Four reaching exactly a ${depth} seed`;
     } else if (champ !== null) {
-      src = (s.champions || []).find(c => c.team === champ);
+      entry = (s.champions || []).find(c => c.team === champ);
       scope = `${s.teams[champ].name} winning`;
     } else if (depth !== null) {
-      src = (s.shapes || []).find(x => x.depth === depth);
+      entry = (s.shapes || []).find(x => x.depth === depth);
       scope = `a Final Four reaching exactly a ${depth} seed`;
     }
-    if (!src) return null;
+    if (!entry) return null;
+    const src = entry.by[obj];
+    const objName = obj === 'ev' ? 'expected points' : 'P(1st)';
     return {
       id: CUSTOM,
-      label: 'Your filters',
+      label: obj === 'ev' ? 'Most points, your filters' : 'Best odds, your filters',
       // The qualifying count is shown deliberately. As filters narrow, the best
       // survivor is chosen from fewer candidates, and best-of-11 sits closer to
-      // the maximum of a short noisy sample than to an optimum. The user should
-      // be able to see which of the two they are looking at.
-      note: `The highest-P(1st) bracket with ${scope}, out of ${src.n} qualifying candidates.`,
+      // the maximum of a short noisy sample than to an optimum.
+      note: `The highest-${objName} bracket with ${scope}, out of ${entry.n} qualifying candidates.`,
       picks: src.picks, ev: src.ev, p1: src.p1,
     };
   }
@@ -593,6 +601,9 @@ function renderStrategies() {
   const opts = (s.strategies || []).map(st => ({
     id: st.id, label: st.label, sub: st.note,
     tag: st.id === 'ev' ? 'exact' : 'backtested',
+    // With filters active the strategy cards show which QUESTION is being
+    // asked, so the objective stays lit rather than every card going dark.
+    active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     stat: `${(st.p1 * 100).toFixed(1)}% to win · ${st.ev.toFixed(0)} pts`,
   }));
   opts.push({
@@ -608,8 +619,8 @@ function renderStrategies() {
   });
 
   document.getElementById('strat-list').innerHTML = opts.map(o => `
-    <label class="vopt${state.strategy === o.id ? ' active' : ''}">
-      <input type="radio" name="strategy" ${state.strategy === o.id ? 'checked' : ''}
+    <label class="vopt${o.active || state.strategy === o.id ? ' active' : ''}">
+      <input type="radio" name="strategy" ${(o.active || state.strategy === o.id) ? 'checked' : ''}
              onchange="setStrategy('${o.id}')">
       <span class="vopt-name">${o.label}</span>
       <span class="v-tag">${o.tag}</span>
@@ -619,6 +630,25 @@ function renderStrategies() {
 
   renderChampions();
   renderShapes();
+  renderFilterNotes();
+}
+
+/* The help text under each filter row states what the numbers mean, so it has
+ * to follow the objective. Under "expected points" the figures are points and
+ * the cost of a longshot is points, not win probability -- describing them the
+ * other way round was the same confusion the filters themselves used to have. */
+function renderFilterNotes() {
+  const inert = state.strategy === MODEL;
+  const ev = state.objective === 'ev';
+  const cn = document.getElementById('champ-note');
+  const sn = document.getElementById('shape-note');
+  const suffix = inert
+    ? 'Filters apply to the two precomputed strategies; the fitted model builds its own board.'
+    : ev
+      ? 'Numbers are expected ESPN points. Backing a longer shot costs points — the number says how many.'
+      : 'Numbers are the chance of finishing first in a 30-person pool. Backing a longer shot costs win probability — the number says how much.';
+  if (cn) cn.textContent = `Each is the best bracket available for that team winning. ${suffix}`;
+  if (sn) sn.textContent = `The best bracket whose deepest Final Four team is exactly that seed. Hover for the four teams. ${suffix}`;
 }
 
 /* Champion picker.
@@ -658,16 +688,20 @@ function renderShapes() {
   // the click would actually produce.
   const champ = state.pick.champ;
   const combos = (s && s.combos) || [];
+  const obj = state.objective;
+  const inert = state.strategy === MODEL;
   host.innerHTML = list.map(sh => {
     const on = state.pick.depth === sh.depth;
     const pair = champ === null ? null : combos.find(x => x.team === champ && x.depth === sh.depth);
-    const ok = champ === null || !!pair;
-    const stat = pair ? pair.p1 : sh.p1;
+    const ok = !inert && (champ === null || !!pair);
+    const src = (pair || sh).by[obj];
+    const stat = obj === 'ev' ? src.ev.toFixed(0) + ' pts' : (src.p1 * 100).toFixed(1) + '%';
     const f4 = sh.f4.map(x => `${x.name} (${x.seed})`).join(', ');
     return `
       <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
               onclick="setFilter('depth', ${sh.depth})"
-              title="${ok ? f4 : 'No bracket reaches exactly a ' + sh.depth + ' seed with that champion'}">
+              title="${inert ? 'Filters apply to the precomputed strategies, not the fitted model'
+                     : ok ? f4 : 'No bracket reaches exactly a ' + sh.depth + ' seed with that champion'}">
         <span class="chip-seed">${sh.depth}</span>
         <span class="chip-name">seed</span>
         <span class="chip-stat">${ok ? (stat * 100).toFixed(1) + '%' : '—'}</span>
@@ -686,19 +720,25 @@ function renderChampions() {
   // you pick a depth reads as a bug; a dimmed one says "not with that depth".
   const depth = state.pick.depth;
   const combos = (s && s.combos) || [];
+  const obj = state.objective;
+  const inert = state.strategy === MODEL;
   host.innerHTML = list.map(c => {
     const on = state.pick.champ === c.team;
     const pair = depth === null ? null : combos.find(x => x.team === c.team && x.depth === depth);
-    const ok = depth === null || !!pair;
-    const stat = pair ? pair.p1 : c.p1;
+    const ok = !inert && (depth === null || !!pair);
+    const src = (pair || c).by[obj];
+    // The figure tracks the selected objective, so it always describes the
+    // bracket this click would return rather than a different one's score.
+    const stat = obj === 'ev' ? src.ev.toFixed(0) + ' pts' : (src.p1 * 100).toFixed(1) + '%';
     return `
       <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
               onclick="setFilter('champ', ${c.team})"
-              title="${ok ? c.n + ' candidate brackets have ' + c.name + ' winning'
+              title="${inert ? 'Filters apply to the precomputed strategies, not the fitted model'
+                     : ok ? c.n + ' candidate brackets have ' + c.name + ' winning'
                           : 'No bracket has ' + c.name + ' winning at that Final Four depth'}">
         <span class="chip-seed">${c.seed}</span>
         <span class="chip-name">${c.name}</span>
-        <span class="chip-stat">${ok ? (stat * 100).toFixed(1) + '%' : '—'}</span>
+        <span class="chip-stat">${ok ? stat : '—'}</span>
       </button>`;
   }).join('');
 }
@@ -708,6 +748,11 @@ function renderChampions() {
  * Clicking an active chip clears it, falling back to whichever filter remains,
  * or to the recommended strategy when none do -- never to a blank board. */
 function setFilter(kind, value) {
+  // Inert under the fitted model: that board is derived live from a regression,
+  // so there is no candidate pool to narrow. The chips are disabled in that
+  // state; this guard is here because "disabled" is a rendering fact and this
+  // is the invariant.
+  if (state.strategy === MODEL) return;
   state.pick[kind] = (state.pick[kind] === value) ? null : value;
   const { champ, depth } = state.pick;
   // A pair the pool cannot fill would resolve to null and blank the board, so
@@ -718,16 +763,24 @@ function setFilter(kind, value) {
       .some(c => c.team === champ && c.depth === depth);
     if (!ok) state.pick[kind === 'champ' ? 'depth' : 'champ'] = null;
   }
-  state.strategy = (state.pick.champ === null && state.pick.depth === null) ? 'p1' : CUSTOM;
+  state.strategy = (state.pick.champ === null && state.pick.depth === null)
+    ? state.objective : CUSTOM;
   refit();
   renderStrategies();
   render();
 }
 
 function setStrategy(id) {
-  // Choosing a named strategy clears the filters; they are alternatives to it.
-  if (id !== CUSTOM) state.pick = { champ: null, depth: null };
-  state.strategy = id;
+  // Choosing an objective KEEPS the filters and re-resolves them under the new
+  // question, which is the whole point of separating the two. Only the fitted
+  // model clears them, because it has no pool to filter.
+  if (id === 'p1' || id === 'ev') {
+    state.objective = id;
+    state.strategy = (state.pick.champ === null && state.pick.depth === null) ? id : CUSTOM;
+  } else {
+    if (id === MODEL) state.pick = { champ: null, depth: null };
+    state.strategy = id;
+  }
   refit();
   renderStrategies();
   render();
