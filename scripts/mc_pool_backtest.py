@@ -107,6 +107,25 @@ HIST_DIR = Path("data/raw/historical")
 BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 15 years (2020 = COVID)
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
 POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
+
+# THE ESPN NATIONAL PICK DISTRIBUTION IS A FAIR MODEL OF THIS POOL, measured
+# rather than assumed. scripts/analyze_pool_history.py tests the 105 real
+# brackets in pool_hist_results.json against it: the champion distribution is
+# indistinguishable from national in every season (Monte-Carlo p = 0.91, 0.97,
+# 0.95, 0.80) and the R64 chalk rate agrees to within 2 points.
+#
+# This is worth stating because the raw numbers invite the opposite conclusion.
+# Champion shares diverge dramatically season to season -- St. John's 21.9%
+# locally against 4.8% nationally in 2025, Arizona 36.7% against 21.9% in 2026
+# -- and those look like a local bias to exploit. They are what drawing ~30
+# brackets from the national distribution looks like. Do not re-open the
+# opponent model expecting to find a tendency here, and do not fit the
+# chalk-bias exponent to this pool: both were checked against the data and
+# neither is supported.
+#
+# Scoring is plain ESPN with no upset bonus, likewise verified against real
+# brackets rather than documentation. The pool is winner-take-all, so P(1st) is
+# the objective and expected points is not.
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 # THIS DEFAULT IS NOT THE POOL YOU PLAY IN. pool_hist_results.json only covers
 # 2023 onward (groupSize 19-33), so every earlier year falls back to this value
