@@ -364,6 +364,75 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, full_rounds) -> Dict
 # ---------------------------------------------------------------------------
 
 
+def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
+    """region_top_n over a seed/no-seed blend at a fixed risk level.
+
+    THE MEASURED RECOMMENDATION, and the reason it is fixed rather than chosen.
+    At pool 30 over 2011-2026 this family reaches P(1st) ~0.10-0.11 at any risk
+    level between 0.2 and 0.5, against 0.064 for the same construction on Torvik
+    ratings and 0.040 for a seed bracket. The base is what matters -- blend beats
+    Torvik at six of seven risk levels with significance and at all seven in
+    direction -- while the risk level sits on a plateau with no resolvable
+    optimum. 0.35 is the middle of that plateau, picked for being unremarkable.
+
+    CHOOSING THE LEVEL PER SEASON IS WORSE THAN FIXING IT. Walk-forward selection
+    over the 21-config grid scores 0.1092 against 0.1317 for a fixed mid-plateau
+    level, a significant loss (CI [-0.0458, -0.0025]): the selector chases early
+    noise, and 15 seasons cannot resolve differences this small. Same result as
+    the feature-selection work on the game model.
+
+    Walk-forward by construction: train_noseed_model(max_year=year) is asserted
+    to have seen only earlier seasons, and the assertion is kept here rather
+    than trusted because this function runs outside the backtest's own guards.
+    """
+    from scripts.mc_pool_backtest import _load_team_stats
+    from src.optimization.bracket_construction import construct_bracket
+    from src.prediction.noseed_model import (
+        build_noseed_round_probabilities,
+        train_noseed_model,
+    )
+    from src.prediction.seed_probabilities import build_seed_round_probabilities
+
+    model = train_noseed_model(max_year=year)
+    if not all(y < year for y in model.train_years):
+        raise RuntimeError(f"walk-forward violation: noseed model for {year} trained on {model.train_years}")
+
+    stats = _load_team_stats(year)
+    seed_rp = build_seed_round_probabilities(seeds)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+    # alpha=0.5 is PoolHyperparameters' default and what the backtest used to
+    # produce the numbers quoted above; changing it would invalidate them.
+    blend_rp = {
+        t: {r: 0.5 * seed_rp[t][r] + 0.5 * noseed_rp.get(t, seed_rp[t])[r] for r in seed_rp[t]} for t in seed_rp
+    }
+
+    picks, _champ, _, _, _ = construct_bracket(
+        mode="region_top_n",
+        seeds=seeds,
+        regions=regions,
+        round_probs=blend_rp,
+        public_picks=build_espn_pick_distribution(year, seeds) or {},
+        risk_level=risk,
+        pool_size=DEFAULT_POOL_SIZE,
+        scoring_system=dict(ESPN_SCORING),
+    )
+
+    winners: List[List[str]] = [[] for _ in range(6)]
+    by_round = defaultdict(set)
+    for key, w in picks.items():
+        by_round[key.split("_")[0]].add(w)
+    current = list(first_round)
+    for ri, rname in enumerate(ROUND_NAMES):
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            w = t1 if t1 in by_round[rname] else t2
+            winners[ri].append(w)
+            nxt.append(w)
+        current = nxt
+    return winners
+
+
 def _ev_optimal_bracket(first_round, marg) -> List[List[str]]:
     """The exact expected-points maximum, by dynamic programming on the bracket.
 
@@ -458,7 +527,7 @@ def _encode_rows(winners, first_round):
     return row
 
 
-def _champion_equity_strategy(first_round, marg, p1_trials) -> Dict:
+def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=None, regions=None) -> Dict:
     """Decide every game by P(champion) rather than by P(winning that game).
 
     A RULE, NOT A SEARCH, which is what makes it worth shipping beside the two
@@ -514,6 +583,22 @@ def _champion_equity_strategy(first_round, marg, p1_trials) -> Dict:
         "ev": round(float(expected_scores([ev_opt], marg, ESPN_SCORING)[0]), 1),
         "p1": round(float(pool_p_first(ev_row, p1_trials, first_round)[0]), 4),
     }
+
+    # The measured recommendation. Scored here, with the same marginals and the
+    # same trials, so its numbers sit beside the others rather than needing a
+    # footnote about where they came from.
+    if year is not None:
+        try:
+            br = _blend_region_bracket(year, seeds, regions, first_round, risk=0.35)
+        except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+            print(f"  [warn] blend_region_35 unavailable for {year}: {exc}")
+        else:
+            row = _encode_rows(br, first_round)
+            out["blend_region_35"] = {
+                "w": br,
+                "ev": round(float(expected_scores([br], marg, ESPN_SCORING)[0]), 1),
+                "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
+            }
     return out
 
 
@@ -549,7 +634,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     )
     p1 = pool_p_first(bank[sel], p1_trials, first_round)
 
-    named = _champion_equity_strategy(first_round, marg, p1_trials)
+    named = _champion_equity_strategy(first_round, marg, p1_trials, year, seeds, regions)
 
     print("[5/5] validating ...")
     checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, rounds)

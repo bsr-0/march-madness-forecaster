@@ -1,11 +1,14 @@
 /* Bracket Lab — one page, one question: what are you optimising for.
  *
- *   Maximise chance of winning   the bracket with the highest P(finishing
- *                                first), chosen in Python by the LOYO-validated
- *                                selector and shipped precomputed.
+ *   Maximise chance of winning   a FIXED RULE, not a search: region-by-region
+ *                                construction over a seed/no-seed probability
+ *                                blend at a constant contrarian risk of 0.35.
+ *                                Backtested at pool 30 across 2011-2026.
  *
- *   Maximise expected points     the bracket with the highest expected ESPN
- *                                score, from the same validated selector.
+ *   Maximise expected points     the exact expected-points maximum, solved by
+ *                                dynamic programming on the bracket. Equivalent
+ *                                to sending whichever team is likelier to win
+ *                                the tournament through every game.
  *
  *   Fitted model                 a ridge or nearest-neighbour SPREAD regression
  *                                fitted live on real tournament games. Predicts
@@ -15,12 +18,21 @@
  *                                The only strategy the history slider applies to.
  *
  * THE FIRST TWO ARE NOT THE SAME BRACKET AND THE DIFFERENCE IS THE POINT. In
- * 2026 they name different champions: the P(1st) bracket gives up 195 expected
- * points (727 against 922) to roughly triple its win probability (10.2% against
- * 3.1%). In a winner-take-all pool the second number is worth nothing and the
- * trade is free; in a pool paying second and third it is a real decision. Both
- * scores are shown for whichever strategy is selected so the cost is visible
- * rather than implied.
+ * 2026 they name different champions: the win-maximising bracket gives up 69
+ * expected points (872 against 941) to roughly two-and-a-half times its win
+ * probability (9.9% against 3.9%). In a winner-take-all pool the points number
+ * is worth nothing and the trade is free; in a pool paying second and third it
+ * is a real decision. Both scores are shown for whichever strategy is selected,
+ * so the cost is visible rather than implied.
+ *
+ * WHY THE FIRST IS A FIXED RULE. It used to be the best of ~3,000 candidates
+ * scored by a P(1st) referee. That route had never been backtested, and its
+ * headline number was the maximum of a noisy estimate and so biased upward. The
+ * fixed rule is the one with out-of-sample evidence: at pool 30 it reaches
+ * P(1st) ~0.10-0.11 at any risk in 0.2-0.5, against 0.064 for the same
+ * construction on Torvik ratings and 0.040 for a seed bracket. Choosing the risk
+ * level per season measured WORSE than fixing it, so 0.35 is the middle of a
+ * plateau rather than an optimum.
  *
  * WHAT USED TO BE HERE. The page let the user switch individual variables on
  * and off and fitted whatever they chose. That was removed: it invited people to
@@ -71,20 +83,30 @@ const state = {
 
 /* ---------- data ---------- */
 
+/* Cache key for EVERY file under data/.
+ *
+ * ONE CONSTANT, NOT ONE PER FILE. These payloads are regenerated together by
+ * scripts/build_ui_payload.py, so per-file versions only create opportunities to
+ * bump four of them and miss the fifth -- which has now happened three times in
+ * this codebase: the priors file, app.js itself, and season_*.json when the
+ * win-maximising strategy changed. The failure is silent every time. The deploy
+ * succeeds, the new file sits on the server, and returning browsers keep reading
+ * the old one, so the bug looks like "the site did not update" rather than an
+ * error.
+ *
+ * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
+ * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
+ * visited before. */
+const DATA_V = 4;
+
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
  * the model alone if it never arrives.
- *
- * BUMP ?v= WHENEVER THE FILE'S CONTENTS CHANGE. It is the only cache-busting
- * mechanism here -- there is no service worker and the filename is stable -- so
- * a returning browser will keep serving whatever it cached against the old URL.
- * v=2 is the 2010-2025 window; v=1 was built from 1985 onward, and the two
- * disagree by enough to matter (6-11 upsets .380 vs .489). A stale cache would
- * not error, it would quietly predict with the previous decade's priors. */
+ * Versioned by DATA_V like every other payload. */
 async function loadPriors() {
   if (state.priors) return state.priors;
   try {
-    const res = await fetch('data/upset_priors.json?v=2');
+    const res = await fetch(`data/upset_priors.json?v=${DATA_V}`);
     state.priors = await res.json();
   } catch {
     state.priors = {};
@@ -98,7 +120,7 @@ async function loadPriors() {
 async function loadPit() {
   if (state.pit !== undefined) return state.pit;
   try {
-    const res = await fetch('data/training_pit.json?v=1');
+    const res = await fetch(`data/training_pit.json?v=${DATA_V}`);
     state.pit = await res.json();
   } catch {
     state.pit = null;
@@ -134,14 +156,14 @@ function pitScale(key) {
 
 async function loadTraining() {
   if (state.training) return state.training;
-  const res = await fetch('data/training.json?v=1');
+  const res = await fetch(`data/training.json?v=${DATA_V}`);
   state.training = await res.json();
   return state.training;
 }
 
 async function loadSeason(year) {
   if (state.cache[year]) return state.cache[year];
-  const res = await fetch(`data/season_${year}.json?v=1`);
+  const res = await fetch(`data/season_${year}.json?v=${DATA_V}`);
   if (!res.ok) throw new Error(`season ${year} unavailable`);
   const data = await res.json();
   state.cache[year] = data;
@@ -385,7 +407,7 @@ function render() {
     // Both scores, always, for whichever strategy is showing. A bracket built to
     // win outright gives up real expected points to do it, and stating only the
     // number its own objective optimises would hide exactly that cost.
-    const kind = st && st.id === 'ev' ? 'Exact optimum' : 'LOYO validated';
+    const kind = st && st.id === 'ev' ? 'Exact optimum' : 'Backtested rule';
     note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
       (st ? ` <strong>${(st.p1 * 100).toFixed(1)}%</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
@@ -540,14 +562,14 @@ function renderStrategies() {
   const s = state.season;
   if (!s || s.status !== 'ready') return;
 
-  // "searched" and "exact" are different claims and the tag should not blur
-  // them. P(1st) has no closed form -- it depends on the whole opponent field --
-  // so it is the best of ~3,000 scored candidates. Expected points does have
-  // one, solved exactly on the bracket, and calling that a search would
-  // understate it while calling the other exact would overstate it.
+  // "backtested" and "exact" are different claims and the tag should not blur
+  // them. The win-maximising rule has no closed form -- P(1st) depends on the
+  // whole opponent field -- so its evidence is out-of-sample performance across
+  // 15 seasons. Expected points does have a closed form and is solved exactly,
+  // which is a stronger claim about this bracket and a weaker one about pools.
   const opts = (s.strategies || []).map(st => ({
     id: st.id, label: st.label, sub: st.note,
-    tag: st.id === 'ev' ? 'exact' : 'searched',
+    tag: st.id === 'ev' ? 'exact' : 'backtested',
     stat: `${(st.p1 * 100).toFixed(1)}% to win · ${st.ev.toFixed(0)} pts`,
   }));
   opts.push({
@@ -666,7 +688,7 @@ async function setYear(year) {
 
 async function init() {
   const [idx] = await Promise.all([
-    fetch('data/seasons.json?v=1').then(r => r.json()),
+    fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
     loadTraining(),
     loadPriors(),
   ]);

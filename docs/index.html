@@ -83,9 +83,10 @@
        The two precomputed strategies are not the same bracket and in 2026 name
        different champions. They are also arrived at differently, which the tags
        say: P(1st) has no closed form, since it depends on the whole opponent
-       field, so it is searched over ~3,000 scored candidates; expected points is
-       solved exactly on the bracket. The third fits a model in the browser and
-       is the only one the history slider applies to. -->
+       field, so the win-maximising card is a FIXED RULE whose evidence is
+       out-of-sample performance across 15 seasons; expected points does have a
+       closed form and is solved exactly on the bracket. The third fits a model
+       in the browser and is the only one the history slider applies to. -->
   <section class="panel" id="strategy" hidden>
     <div class="panel-head">
       <p class="panel-title">What are you optimising for</p>
@@ -123,6 +124,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

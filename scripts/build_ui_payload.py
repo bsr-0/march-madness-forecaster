@@ -266,21 +266,46 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # bracket that wins on one axis can sit well down the other.
     strategies = []
 
-    # P(1st) is a search: the best of ~3,000 scored candidates. There is no
-    # closed form for it, because it depends on the whole opponent field.
-    p1_idx = select_diverse(art, "p1", k=1)[0]
-    p1_cand = art["candidates"][p1_idx]
+    # THE WIN-MAXIMISING STRATEGY IS A FIXED RULE, NOT A SEARCH, and that is a
+    # deliberate change from selecting the best-scoring candidate.
+    #
+    # Two reasons. First, only the fixed rule has out-of-sample evidence: at pool
+    # 30 across 2011-2026 the region_top_n construction over a seed/no-seed blend
+    # reaches P(1st) ~0.10-0.11 at any risk level in 0.2-0.5, against 0.064 for
+    # the same construction on Torvik ratings and 0.040 for a seed bracket. The
+    # candidate-selection route has never been backtested at all.
+    #
+    # Second, the candidate route's headline number is the maximum of ~3,000
+    # brackets scored on a noisy referee, so it is biased upward by construction;
+    # the fixed rule's number is not selected on and is directly comparable
+    # across seasons.
+    #
+    # 0.35 is the middle of a plateau rather than an optimum. Risk levels from
+    # 0.2 to 0.5 are indistinguishable, and choosing one per season measured
+    # WORSE than fixing it (walk-forward selection 0.1092 against 0.1317,
+    # CI [-0.0458, -0.0025]).
+    named = art.get("named_strategies", {})
+    p1_src = named.get("blend_region_35")
+    if p1_src is None:
+        # No silent fallback to a different strategy: say so, then use the old
+        # route so the page still renders a bracket.
+        print("  [warn] blend_region_35 missing; falling back to candidate selection")
+        idx = select_diverse(art, "p1", k=1)[0]
+        cand = art["candidates"][idx]
+        p1_src = {"w": cand["w"], "ev": cand["ev"], "p1": cand["p1"]}
     strategies.append(
         {
             "id": "p1",
             "label": "Maximise chance of winning",
             "note": (
-                "Picked to maximise the probability of finishing FIRST in a 30-person "
-                "pool. Takes upsets the field will not, because second place pays nothing."
+                "Built to maximise the probability of finishing FIRST in a 30-person "
+                "pool: a blend of seed and model probabilities, filled region by region "
+                "at a fixed contrarian risk. Takes upsets the field will not, because "
+                "second place pays nothing."
             ),
-            "picks": [list(r) for r in p1_cand["w"]],
-            "ev": p1_cand["ev"],
-            "p1": p1_cand["p1"],
+            "picks": [list(r) for r in p1_src["w"]],
+            "ev": p1_src["ev"],
+            "p1": p1_src["p1"],
         }
     )
 
