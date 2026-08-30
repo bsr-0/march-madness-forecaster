@@ -297,6 +297,8 @@ ALL_MODES: Tuple[str, ...] = (
     "blend",
     "torvik",
     "pit",
+    "champ_equity_tv",
+    "champ_equity_pit",
     "champ_first_tv",
     "champ_first_chalkfade_tv",
     "f4_first_tv",
@@ -912,6 +914,95 @@ def build_model_bracket_argmax(first_round_matchups, round_probs):
         current_teams = next_round
 
     return winners
+
+
+def build_champ_equity_bracket(first_round_matchups, round_probs):
+    """Decide EVERY game by championship equity rather than by that game.
+
+    build_model_bracket_argmax asks, at each game, "who is more likely to win
+    this round". This asks "who is more likely to win the tournament", and uses
+    that same question all the way down to the 1-vs-16 games.
+
+    THE TWO DISAGREE IN A SPECIFIC PLACE, which is the reason to try it. They
+    agree whenever the stronger team is also the better title bet, so most games
+    are identical. They diverge on the team that is favoured in front of it but
+    goes nowhere after: a 12 seed the model likes against a 5, sitting in a
+    region it cannot survive. Round-argmax takes that upset; championship equity
+    declines it, because the 5 seed carries more title probability despite being
+    the underdog in that single game.
+
+    Whether declining those upsets is good depends entirely on the scoring. ESPN
+    pays 320 for the champion and 10 for a first-round game, so a bracket is
+    mostly a bet on who cuts down the nets, and picks that cannot survive to the
+    rounds that pay are close to worthless. That argues for this. Cutting the
+    other way, a pool is won by being different from the field, and championship
+    equity is more chalk than round-argmax -- the whole field is already betting
+    on the same few title favourites. Which effect dominates is not something to
+    reason out; it is measured against the other modes.
+
+    Deterministic, so it produces one bracket rather than a sample.
+    Returns 63 team_ids in standard bracket order.
+    """
+    winners = []
+    current_teams = list(first_round_matchups)
+
+    for _round_idx in range(6):
+        next_round = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            # "CHAMP" at every round is the point, not a bug: the question being
+            # asked never changes as the bracket deepens.
+            p1 = round_probs.get(t1, {}).get("CHAMP", 0.0)
+            p2 = round_probs.get(t2, {}).get("CHAMP", 0.0)
+            winner = t1 if p1 >= p2 else t2
+            winners.append(winner)
+            next_round.append(winner)
+        current_teams = next_round
+
+    return winners
+
+
+def sample_champ_equity_brackets(first_round_matchups, round_probs, n_brackets, rng):
+    """Sampler interface over a deterministic bracket.
+
+    Returns the harness's shape encoding -- an (n_brackets, 63) boolean array
+    where each entry says whether the FIRST team of that game advanced -- not
+    team ids. The two representations are easy to confuse because both are 63
+    long; the scorer needs the boolean one.
+
+    The construction has no randomness, so all n rows are the same bracket. That
+    is deliberate and it does not flatter the mode: the harness's best-of-n
+    column takes the best rank among the rows, and the best of n identical
+    brackets is simply that bracket's rank. So best rank equals mean rank here,
+    exactly as it does for the other deterministic modes. Returning a single row
+    instead would be the real bug -- callers index up to n_brackets.
+    """
+    del rng
+    out = np.zeros((1, 63), dtype=bool)
+    current_teams = list(first_round_matchups)
+    game_idx = 0
+
+    for _round_idx in range(6):
+        next_round = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            # "CHAMP" at every round is the point, not a bug: the question being
+            # asked never changes as the bracket deepens.
+            p1 = round_probs.get(t1, {}).get("CHAMP", 0.0)
+            p2 = round_probs.get(t2, {}).get("CHAMP", 0.0)
+            first_wins = p1 >= p2
+            out[0, game_idx] = first_wins
+            next_round.append(t1 if first_wins else t2)
+            game_idx += 1
+        current_teams = next_round
+
+    return np.repeat(out, max(1, n_brackets), axis=0)
 
 
 def _wrap_pipeline_base(mode_name, sources, adjustments, pipeline_rp, base_round_probs):
@@ -2737,6 +2828,10 @@ def _run_one_year(
         "blend": ("blend", blend_base, sample_model_brackets),
         "torvik": ("torvik", torvik_base, sample_model_brackets),
         "pit": ("pit", pit_base, sample_model_brackets),
+        # Every game decided by championship equity; see
+        # build_champ_equity_bracket for what that changes and why.
+        "champ_equity_tv": ("champ_equity_tv", torvik_base, sample_champ_equity_brackets),
+        "champ_equity_pit": ("champ_equity_pit", pit_base, sample_champ_equity_brackets),
         "champ_first_tv": (
             "champ_first_tv",
             torvik_base,
