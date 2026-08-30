@@ -154,14 +154,31 @@ async function loadSeason(year) {
  * look far better than the method deserves. */
 function refit() {
   // ONE MATRIX, ONE MODEL, BOTH FIXED BY MEASUREMENT rather than offered as
-  // choices. Ridge was compared against kNN at k=25/100/500, LightGBM and
-  // locally-weighted linear regression on the same walk-forward split: it beat
-  // kNN k=25 (CI [-0.040, -0.011]), LightGBM (CI [-0.018, -0.001]) and local
-  // linear outright, and the remaining kNN settings could not be separated from
-  // it. Nothing beat ridge, so there was no choice to offer -- only a way to
-  // pick something worse. Pooling regular-season rows measured null on the same
-  // split, so the tournament matrix stands alone and training_pit.json (9 MB)
-  // is no longer fetched at all.
+  // choices, and the challengers were each given their best form before being
+  // rejected. On this exact matrix and split:
+  //
+  //   ridge, 11 canonical keys                     0.45698
+  //   LightGBM, best of n_estimators 20..800       0.51601   CI [-0.084, -0.033]
+  //   kNN, best of 3 feature sets x 5 k values     0.53057   CI [-0.100, -0.047]
+  //
+  // THE FIRST VERSION OF THIS COMPARISON WAS UNFAIR AND ITS CONCLUSION STILL
+  // HELD. It handed all 27 features to every model, which is close to neutral
+  // for ridge (regularised) and for LightGBM (splits select implicitly) but
+  // punishing for kNN, whose neighbourhoods dilute in high dimensions. Retested
+  // properly, kNN does improve as features are cut -- 0.53458 at 11 features to
+  // 0.53057 at 3 -- and that is worth 0.004 against a 0.074 deficit. LightGBM's
+  // curve is flat from 120 trees to 800 (0.516 to 0.517), so its whole tuning
+  // range is 0.016 while it trails by 0.059.
+  //
+  // Nothing beat ridge, so there was no choice to offer -- only a way to pick
+  // something worse. The likely reason is the sample: 1,008 games with ~10.3
+  // points of irreducible residual is a regime where eleven regularised
+  // coefficients are about the right amount of structure, and extra flexibility
+  // is spent on noise.
+  //
+  // Pooling regular-season rows measured null on the same split, so the
+  // tournament matrix stands alone and training_pit.json (9 MB) is never
+  // fetched.
   const wanted = CANONICAL_KEYS;
   const src = state.training;
   if (!src || !wanted.length) { state.fit = null; return; }

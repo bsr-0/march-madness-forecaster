@@ -33,6 +33,31 @@ THE STOPPING RULE APPLIES. A difference smaller than its paired bootstrap CI is
 not a finding. Three results dissolved under that test earlier in this work,
 including two that had already been written up as wins.
 
+EVERY MODEL HERE GETS THE SAME FULL FEATURE SET, AND THAT IS NOT NEUTRAL.
+Ridge is regularised and LightGBM selects implicitly at each split, so neither
+is hurt much by carrying 27 columns. kNN is a distance method and is: its
+neighbourhoods dilute as dimensions grow. A comparison run this way measures
+"which family survives an unselected feature set", not "which family is best",
+and for a long time this file was the whole basis for the claim that nothing
+beats ridge.
+
+RETESTED WITH EACH CHALLENGER IN ITS BEST FORM, on the tournament matrix the UI
+actually ships (1,008 rows, 11 canonical keys, same walk-forward split):
+
+    ridge                                        0.45698
+    LightGBM, best of n_estimators 20..800        0.51601   CI [-0.084, -0.033]
+    kNN, best of 3 feature sets x 5 k values      0.53057   CI [-0.100, -0.047]
+
+The conclusion held and the margins widened. kNN does gain from feature cuts,
+0.53458 at 11 features to 0.53057 at 3, which confirms the handicap was real --
+it is just worth 0.004 against a 0.074 deficit. LightGBM is flat from 120 trees
+to 800 (0.516 to 0.517), so its entire tuning range is a quarter of its gap to
+ridge, and the hand-set default of 120 turned out to be its optimum.
+
+Note the absolute numbers here are NOT comparable to those: this script runs on
+the 41,321-row regular-season population, where ridge scores 0.57444. Different
+population, different level, same ordering.
+
 Run: python3 scripts/experiment_model_families.py [--quick]
 """
 
