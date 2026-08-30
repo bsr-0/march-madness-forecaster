@@ -24,40 +24,6 @@
 
 <main id="main">
 
-  <!-- Model choice. Ridge fits every past game at once; kNN answers from the
-       games most like this one. Both walk forward: only seasons before the one
-       on screen are eligible. -->
-  <section class="panel" id="model-panel" hidden>
-    <div class="panel-head">
-      <p class="panel-title">Which model fills the board</p>
-    </div>
-    <div class="prior-row">
-      <label>
-        <input type="radio" name="model" value="ridge" checked> Ridge regression
-      </label>
-      <label>
-        <input type="radio" name="model" value="knn"> Nearest neighbours
-      </label>
-    </div>
-    <div class="prior-row">
-      <label>
-        <input type="radio" name="tset" value="tournament" checked> Tournament games only
-      </label>
-      <label>
-        <input type="radio" name="tset" value="regular"> + regular season &amp; conf
-      </label>
-    </div>
-    <p class="prior-note" id="tset-note"></p>
-    <div class="prior-row" id="k-row" hidden>
-      <label for="knn-k">Neighbours (k)</label>
-      <input type="range" id="knn-k" min="5" max="200" step="5" value="25">
-      <span class="prior-v" id="knn-v">25</span>
-    </div>
-    <p class="prior-note" id="model-note">
-      Ridge fits one set of coefficients across every prior tournament game.
-    </p>
-  </section>
-
   <!-- Historical prior. Blends each pick toward the base rate for that seed
        pairing in that round, computed from seasons strictly before the one on
        screen. At 0% the model is untouched. -->
@@ -158,6 +124,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>

@@ -10,10 +10,10 @@
  *                                to sending whichever team is likelier to win
  *                                the tournament through every game.
  *
- *   Fitted model                 a ridge or nearest-neighbour SPREAD regression
- *                                fitted live on real tournament games. Predicts
- *                                scoring MARGIN in points, with P(win) following
- *                                as Phi(margin / sigma); see fit.js. It is not a
+ *   Fitted model                 a ridge SPREAD regression fitted live on
+ *                                tournament games. Predicts scoring MARGIN in
+ *                                points, with P(win) following as
+ *                                Phi(margin / sigma); see fit.js. It is not a
  *                                classifier and a coefficient is not a log-odds.
  *                                The only strategy the history slider applies to.
  *
@@ -34,12 +34,22 @@
  * level per season measured WORSE than fixing it, so 0.35 is the middle of a
  * plateau rather than an optimum.
  *
- * WHAT USED TO BE HERE. The page let the user switch individual variables on
- * and off and fitted whatever they chose. That was removed: it invited people to
- * build models nobody had validated, and measurement said the choosing bought
- * nothing (per-fold feature selection scored 0.46651 against 0.45698 for the
- * fixed canonical set, inside the bootstrap's noise). Choosing an objective is a
- * decision the data cannot make for you; choosing predictors is one it can.
+ * WHAT USED TO BE HERE, AND WHY IT IS NOT. The page let the user pick the
+ * variables, then the model family, then the training matrix. All three are gone
+ * and all three went for the same reason: measurement said the choosing bought
+ * nothing, or bought something worse.
+ *
+ *   variables      per-fold selection scored 0.46651 against 0.45698 for the
+ *                  fixed canonical set, inside the bootstrap's noise
+ *   model family   ridge beat kNN k=25 (CI [-0.040, -0.011]), LightGBM
+ *                  (CI [-0.018, -0.001]) and local linear outright; kNN at
+ *                  k=100 and k=500 could not be separated from it. Nothing beat
+ *                  ridge, so the control could only select something worse
+ *   training set   pooling 41,321 regular-season rows measured null against the
+ *                  1,008 tournament rows on the same walk-forward split
+ *
+ * Choosing an OBJECTIVE is a decision the data cannot make for you, and those
+ * controls stayed. Choosing an ESTIMATOR is a decision it can, and those went.
  *
  * The fit excludes the displayed season (leave-one-year-out), so the
  * coefficients were never derived from the games being predicted.
@@ -83,8 +93,6 @@ const state = {
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
   priorWeight: 0,      // 0 = model only; the blend control's rest position
-  model: 'ridge',      // 'ridge' | 'knn'
-  k: 25,               // neighbours, when model === 'knn' 
   cache: {},
 };
 
@@ -104,7 +112,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 7;
+const DATA_V = 8;
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
@@ -119,46 +127,6 @@ async function loadPriors() {
     state.priors = {};
   }
   return state.priors;
-}
-
-/* The regular-season + conference-tournament matrix: 41,321 rows against the
- * tournament set's 1,008. Loaded lazily -- it is 9 MB and most users never
- * switch to it. */
-async function loadPit() {
-  if (state.pit !== undefined) return state.pit;
-  try {
-    const res = await fetch(`data/training_pit.json?v=${DATA_V}`);
-    state.pit = await res.json();
-  } catch {
-    state.pit = null;
-  }
-  return state.pit;
-}
-
-/* Per-variable scale factor carrying a season payload's differential onto the
- * regular-season matrix's scale.
- *
- * WHY THIS IS NEEDED AT ALL. The payload standardises within the 68-team
- * tournament field; training_pit standardises within the ~350-team D1 field at
- * each week boundary. A differential cancels the location shift but not the
- * scale, so dz_D1 = dz_68 * (sd_68 / sd_D1) -- ratios run 1.05 to 1.29 here.
- * Feeding an unconverted query to coefficients fitted on the other scale would
- * silently shrink every prediction, and the board would simply look
- * under-confident rather than wrong. */
-function pitScale(key) {
-  if (!state._scale) state._scale = {};
-  if (state._scale[key] !== undefined) return state._scale[key];
-  const sd = (rows, keys) => {
-    const i = keys.indexOf(key);
-    if (i < 0) return null;
-    let m = 0; for (const r of rows) m += r.x[i]; m /= rows.length;
-    let v = 0; for (const r of rows) v += (r.x[i] - m) ** 2;
-    return Math.sqrt(v / rows.length);
-  };
-  const a = sd(state.training.games, state.training.keys);
-  const b = state.pit ? sd(state.pit.games, state.pit.keys) : null;
-  state._scale[key] = (a && b && b > 1e-9) ? a / b : 1;
-  return state._scale[key];
 }
 
 async function loadTraining() {
@@ -184,36 +152,34 @@ async function loadSeason(year) {
  * The displayed season is excluded from the fit. Without that the coefficients
  * would be derived from the very games being predicted, and the bracket would
  * look far better than the method deserves. */
-const VENUE_KEYS = ['venue_home', 'venue_host_city', 'venue_travel'];
-
 function refit() {
+  // ONE MATRIX, ONE MODEL, BOTH FIXED BY MEASUREMENT rather than offered as
+  // choices. Ridge was compared against kNN at k=25/100/500, LightGBM and
+  // locally-weighted linear regression on the same walk-forward split: it beat
+  // kNN k=25 (CI [-0.040, -0.011]), LightGBM (CI [-0.018, -0.001]) and local
+  // linear outright, and the remaining kNN settings could not be separated from
+  // it. Nothing beat ridge, so there was no choice to offer -- only a way to
+  // pick something worse. Pooling regular-season rows measured null on the same
+  // split, so the tournament matrix stands alone and training_pit.json (9 MB)
+  // is no longer fetched at all.
   const wanted = CANONICAL_KEYS;
-  if (!state.training || !wanted.length) { state.fit = null; return; }
+  const src = state.training;
+  if (!src || !wanted.length) { state.fit = null; return; }
 
-  const regular = state.trainingSet === 'regular' && state.pit;
-  const src = regular ? state.pit : state.training;
-
-  // Variables the chosen matrix cannot supply are dropped, not zero-filled: a
-  // zero differential is a claim that the two teams are equal on it.
-  const keys = wanted.filter(k => src.keys.indexOf(k) >= 0);
+  // Variables the matrix cannot supply are dropped, not zero-filled: a zero
+  // differential is a claim that the two teams are equal on it.
+  const cols = [];
+  const keys = [];
+  for (const k of wanted) {
+    const i = src.keys.indexOf(k);
+    if (i >= 0) { keys.push(k); cols.push(i); }
+  }
   if (!keys.length) { state.fit = null; return; }
 
-  // VENUE RIDES ALONG WHEN FITTING ON REGULAR-SEASON ROWS, always, and is not
-  // user-selectable. Those rows are mostly home-or-away games, and omitting
-  // venue pushes the home effect into the correlated strength coefficients --
-  // measured at +13% on srs_blend and +44% on barthag, because strong teams
-  // buy home games. The coefficients would then be applied to all-neutral
-  // tournament games and over-predict. The terms are zeroed at prediction
-  // instead; see diffVector.
-  const extra = regular ? VENUE_KEYS.filter(k => src.keys.indexOf(k) >= 0) : [];
-  const fitKeys = keys.concat(extra);
-  const cols = fitKeys.map(k => src.keys.indexOf(k));
-
   const f = fitLinear(src.games, cols, state.year);
-  f.keys = fitKeys;
+  f.keys = keys;
   f.cols = cols;
   f.userKeys = keys;
-  f.regular = regular;
   f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);   // e.g. t_rank has no dated snapshot
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
   // The honest number: fit on prior seasons, scored on seasons never seen.
@@ -233,10 +199,10 @@ function diffVector(a, b) {
   return f.keys.map(k => {
     // Venue is zero on a neutral court, which every NCAA game is. This is the
     // prediction-time counterpart of tournament_venue() on the Python side.
-    if (VENUE_KEYS.includes(k)) return 0;
+
     const col = z[k];
     const d = col ? (col[a] || 0) - (col[b] || 0) : 0;
-    return f.regular ? d * pitScale(k) : d;
+    return d;
   });
 }
 
@@ -260,14 +226,6 @@ function margin(a, b) {
  * what makes the board's percentages mean what they say. */
 function winProb(a, b) {
   const cal = state.fit.oos && state.fit.oos.calibration;
-  if (state.model === 'knn') {
-    // The kNN board answers a different question -- what happened in the games
-    // that looked most like this one -- so it gets its own margin and its own
-    // LOCAL sigma from the spread of the neighbours that voted.
-    const src = state.fit.regular ? state.pit : state.training;
-    const r = knnPredict(src.games, state.fit.cols, diffVector(a, b), state.k, state.year);
-    if (r) return winProbFromMargin(r.margin, r.sigma, cal);
-  }
   return winProbFromMargin(margin(a, b), state.fit.sigma, cal);
 }
 
@@ -422,7 +380,7 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { for (const id of ['prior-panel', 'model-panel', 'champions', 'shapes']) {
+    { for (const id of ['prior-panel', 'champions', 'shapes']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
@@ -436,11 +394,11 @@ function render() {
   weights.hidden = false;   // the panel is the only control surface
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
+  // Only the history slider is fit-specific now; the model itself has no
+  // user-facing settings left.
   { const fitted = !usingOptimized();
     const pp = document.getElementById('prior-panel');
-    const mp = document.getElementById('model-panel');
-    if (pp) pp.hidden = !fitted;
-    if (mp) mp.hidden = !fitted; }
+    if (pp) pp.hidden = !fitted; }
 
   if (usingOptimized()) {
     const st = currentStrategy();
@@ -623,8 +581,9 @@ function renderStrategies() {
   opts.push({
     id: MODEL,
     label: 'Fitted model',
-    sub: 'Fits a ridge or nearest-neighbour model here, on games from seasons before this one. '
-       + 'The only strategy the history slider applies to.',
+    sub: 'Ridge regression fitted here on tournament games from seasons before this one. '
+       + 'Chosen by measurement, not configurable: it beat kNN, LightGBM and local linear on the '
+       + 'same walk-forward split. The only strategy the history slider applies to.',
     tag: 'live',
     stat: state.fit && state.fit.oos
       ? `${(state.fit.oos.accuracy * 100).toFixed(1)}% out-of-sample`
@@ -804,28 +763,6 @@ function closeDrawer() {
   document.getElementById('scrim').hidden = true;
 }
 
-/* Say plainly what the regular-season set costs. It is 41x the rows, and it is
- * also measurably worse on held-out tournament games (+0.124 log loss in the
- * step 3 measurement): it cannot carry t_rank, which has no dated snapshot and
- * is the model's most valuable single variable, and its wider standardisation
- * compresses tournament differentials. Offering it without saying so would
- * present a downgrade as a free choice. */
-function updateTsetNote() {
-  const el = document.getElementById('tset-note');
-  if (!el) return;
-  const f = state.fit;
-  if (state.trainingSet !== 'regular') {
-    el.textContent = '1,008 NCAA tournament games. Every variable is available.';
-    return;
-  }
-  if (!state.pit) { el.textContent = 'Regular-season matrix unavailable.'; return; }
-  const dropped = f && f.dropped && f.dropped.length ? f.dropped.join(', ') : 'none';
-  el.innerHTML =
-    `${state.pit.n_games.toLocaleString()} regular-season and conference-tournament games. ` +
-    `Unavailable here: <b>${dropped}</b>. Venue is fitted and then zeroed for the ` +
-    `neutral court. Measured worse than tournament-only on held-out games.`;
-}
-
 /* ---------- controls ---------- */
 
 async function setYear(year) {
@@ -852,36 +789,6 @@ async function init() {
     <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
-  document.querySelectorAll('input[name=tset]').forEach(el => {
-    el.addEventListener('change', async e => {
-      state.trainingSet = e.target.value;
-      if (state.trainingSet === 'regular') await loadPit();
-      refit(); render();
-      updateTsetNote();
-    });
-  });
-  document.querySelectorAll('input[name=model]').forEach(el => {
-    el.addEventListener('change', e => {
-      state.model = e.target.value;
-      document.getElementById('k-row').hidden = state.model !== 'knn';
-      document.getElementById('model-note').textContent = state.model === 'knn'
-        ? `Each pick is the mean margin of the ${state.k} most similar prior tournament games, with its own spread as the uncertainty.`
-        : 'Ridge fits one set of coefficients across every prior tournament game.';
-      render();
-    });
-  });
-  const kEl = document.getElementById('knn-k');
-  if (kEl) {
-    kEl.addEventListener('input', e => {
-      state.k = Number(e.target.value);
-      document.getElementById('knn-v').textContent = e.target.value;
-      if (state.model === 'knn') {
-        document.getElementById('model-note').textContent =
-          `Each pick is the mean margin of the ${state.k} most similar prior tournament games, with its own spread as the uncertainty.`;
-        render();
-      }
-    });
-  }
   const priorEl = document.getElementById('prior-w');
   if (priorEl) {
     priorEl.addEventListener('input', e => {
@@ -890,7 +797,6 @@ async function init() {
       render();   // the blend changes picks, so the whole board is restated
     });
   }
-  updateTsetNote();
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
