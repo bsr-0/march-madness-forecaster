@@ -353,23 +353,38 @@ function solveActual() {
  * disagree about which bracket is showing. */
 const CUSTOM = 'custom';
 
+/* The candidate-pool entry the current filters select, and a phrase describing
+ * it. Shared by the board and by the strategy cards so the two cannot disagree
+ * about which brackets are in scope. */
+function filteredEntry() {
+  const s = state.season || {};
+  const { champ, depth } = state.pick;
+  if (champ !== null && depth !== null) {
+    return {
+      entry: (s.combos || []).find(c => c.team === champ && c.depth === depth),
+      scope: `${s.teams[champ].name} winning and a Final Four reaching exactly a ${depth} seed`,
+    };
+  }
+  if (champ !== null) {
+    return {
+      entry: (s.champions || []).find(c => c.team === champ),
+      scope: `${s.teams[champ].name} winning`,
+    };
+  }
+  if (depth !== null) {
+    return {
+      entry: (s.shapes || []).find(x => x.depth === depth),
+      scope: `a Final Four reaching exactly a ${depth} seed`,
+    };
+  }
+  return { entry: null, scope: '' };
+}
+
 function currentStrategy() {
   if (state.strategy === CUSTOM) {
-    const s = state.season || {};
-    const { champ, depth } = state.pick;
-    const obj = state.objective;
-    let entry = null, scope = '';
-    if (champ !== null && depth !== null) {
-      entry = (s.combos || []).find(c => c.team === champ && c.depth === depth);
-      scope = `${s.teams[champ].name} winning and a Final Four reaching exactly a ${depth} seed`;
-    } else if (champ !== null) {
-      entry = (s.champions || []).find(c => c.team === champ);
-      scope = `${s.teams[champ].name} winning`;
-    } else if (depth !== null) {
-      entry = (s.shapes || []).find(x => x.depth === depth);
-      scope = `a Final Four reaching exactly a ${depth} seed`;
-    }
+    const { entry, scope } = filteredEntry();
     if (!entry) return null;
+    const obj = state.objective;
     const src = entry.by[obj];
     const objName = obj === 'ev' ? 'expected points' : 'P(1st)';
     return {
@@ -598,13 +613,23 @@ function renderStrategies() {
   // whole opponent field -- so its evidence is out-of-sample performance across
   // 15 seasons. Expected points does have a closed form and is solved exactly,
   // which is a stronger claim about this bracket and a weaker one about pools.
+  // WITH FILTERS ACTIVE THE CARDS SHOW THE FILTERED SCORES, so each card
+  // answers "what would I get if I asked THIS question of the brackets I have
+  // narrowed to". Showing the unfiltered figures instead made the card and the
+  // board disagree -- 941 on the card against 917 on the board -- which reads as
+  // one of them being wrong rather than as two different scopes.
+  const filt = state.strategy === MODEL ? null : filteredEntry().entry;
   const opts = (s.strategies || []).map(st => ({
     id: st.id, label: st.label, sub: st.note,
     tag: st.id === 'ev' ? 'exact' : 'backtested',
     // With filters active the strategy cards show which QUESTION is being
     // asked, so the objective stays lit rather than every card going dark.
     active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
-    stat: `${(st.p1 * 100).toFixed(1)}% to win · ${st.ev.toFixed(0)} pts`,
+    stat: (() => {
+      const v = (filt && filt.by[st.id]) || st;
+      return `${(v.p1 * 100).toFixed(1)}% to win · ${v.ev.toFixed(0)} pts`
+           + (filt ? ' · filtered' : '');
+    })(),
   }));
   opts.push({
     id: MODEL,
