@@ -385,7 +385,8 @@ function render() {
     // Both scores, always, for whichever strategy is showing. A bracket built to
     // win outright gives up real expected points to do it, and stating only the
     // number its own objective optimises would hide exactly that cost.
-    note.innerHTML = `<span class="tag">LOYO validated</span><span>${st ? st.note : s.pool_optimized_note}` +
+    const kind = st && st.id === 'champ_equity' ? 'Rule' : 'LOYO validated';
+    note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
       (st ? ` <strong>${(st.p1 * 100).toFixed(1)}%</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
   } else if (!anyEnabled()) {
@@ -539,9 +540,14 @@ function renderStrategies() {
   const s = state.season;
   if (!s || s.status !== 'ready') return;
 
+  // "optimised" and "rule" are different claims and the tag should not blur
+  // them. The first two are the best of ~3,000 scored candidates; the third is
+  // a single sentence applied to every game, which a user can verify by hand
+  // and which happens to score competitively. Labelling a rule "validated"
+  // would borrow credibility from a search it never ran.
   const opts = (s.strategies || []).map(st => ({
     id: st.id, label: st.label, sub: st.note,
-    tag: 'validated',
+    tag: st.id === 'champ_equity' ? 'rule' : 'optimised',
     stat: `${(st.p1 * 100).toFixed(1)}% to win · ${st.ev.toFixed(0)} pts`,
   }));
   opts.push({

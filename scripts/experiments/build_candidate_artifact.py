@@ -364,6 +364,54 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, full_rounds) -> Dict
 # ---------------------------------------------------------------------------
 
 
+def _champion_equity_strategy(first_round, marg, p1_trials) -> Dict:
+    """Decide every game by P(champion) rather than by P(winning that game).
+
+    A RULE, NOT A SEARCH, which is what makes it worth shipping beside the two
+    optimised strategies. Those pick the best bracket out of ~3,000 scored
+    candidates; this one is a single sentence you could apply by hand -- at each
+    game take whichever team is likelier to win the whole thing -- and it is
+    still competitive. It is also the only strategy here a user can fully verify
+    without trusting the optimiser.
+
+    IT IS SCORED WITH THE SAME MARGINALS AND THE SAME POOL TRIALS as the
+    candidates, so its ev and p1 sit on the same scale as theirs. Scoring it
+    separately would produce two numbers that look comparable and are not --
+    P(1st) in particular is meaningless except against a specific opponent
+    field.
+
+    Measured at pool 30 over 2011-2026 this beats sampling the same ratings by
+    +0.0226 P(1st) (CI [+0.0033, +0.0439]) but trails the P(1st)-optimised
+    bracket substantially. It earns its place as an interpretable option, not as
+    the recommendation.
+    """
+    champ = marg[5]
+    winners, current = [], list(first_round)
+    row = np.zeros((1, 63), dtype=bool)
+    game = 0
+    for _ in range(6):
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            first_wins = champ.get(t1, 0.0) >= champ.get(t2, 0.0)
+            row[0, game] = first_wins
+            w = t1 if first_wins else t2
+            nxt.append(w)
+            game += 1
+        winners.append(nxt)
+        current = nxt
+
+    ev_val = float(expected_scores([winners], marg, ESPN_SCORING)[0])
+    p1_val = float(pool_p_first(row, p1_trials, first_round)[0])
+    return {
+        "champ_equity": {
+            "w": winners,
+            "ev": round(ev_val, 1),
+            "p1": round(p1_val, 4),
+        }
+    }
+
+
 def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
@@ -395,6 +443,8 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         rng=np.random.default_rng(seed + 7),
     )
     p1 = pool_p_first(bank[sel], p1_trials, first_round)
+
+    named = _champion_equity_strategy(first_round, marg, p1_trials)
 
     print("[5/5] validating ...")
     checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, rounds)
@@ -470,6 +520,12 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         "pairwise": pairwise_flat,
         "team_round_probabilities": team_round_probs,
         "candidates": candidates,
+        # Rule-based strategies, scored on the same marginals and pool trials as
+        # the candidates so every number in the UI is on one scale.
+        "named_strategies": {
+            k: {"w": [[tidx[t] for t in r] for r in v["w"]], "ev": v["ev"], "p1": v["p1"]}
+            for k, v in named.items()
+        },
         "meta": {
             "n_sims": n_sims,
             "n_candidates": len(candidates),

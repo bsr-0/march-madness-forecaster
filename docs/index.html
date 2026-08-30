@@ -112,7 +112,12 @@
 </aside>
 <div class="scrim" id="scrim" hidden></div>
 
+<!-- BUMP ?v= ON EVERY CHANGE TO THESE FILES. It is the only cache-busting
+     mechanism on the page and it fails silently: the deploy succeeds, the new
+     file sits on the server, and returning browsers keep running the old one
+     against the new data. v=23 shipped the strategy picker without a bump, so
+     anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

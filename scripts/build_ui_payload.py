@@ -292,6 +292,28 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
 
+    # Rule-based strategies from the artifact. These are not selected out of the
+    # candidate pool -- they are constructed -- so they are appended rather than
+    # competing for a slot, and they are scored on the same marginals and pool
+    # trials as the two optimised ones.
+    named = art.get("named_strategies", {})
+    if "champ_equity" in named:
+        ce = named["champ_equity"]
+        strategies.append(
+            {
+                "id": "champ_equity",
+                "label": "Best title odds every game",
+                "note": (
+                    "Every game goes to whichever team is likelier to win the whole "
+                    "tournament, not just that game. A rule you can check by hand rather "
+                    "than an optimiser's answer."
+                ),
+                "picks": [list(r) for r in ce["w"]],
+                "ev": ce["ev"],
+                "p1": ce["p1"],
+            }
+        )
+
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.
     picks = strategies[0]["picks"]
