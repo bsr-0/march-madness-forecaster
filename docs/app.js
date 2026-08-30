@@ -70,7 +70,14 @@ const CANONICAL_KEYS = [
 
 const state = {
   year: 2026,
-  strategy: 'p1',       // a payload strategy id, or MODEL
+  strategy: 'p1',       // 'p1' | 'ev' | MODEL | CUSTOM
+  /* CUSTOM is driven by this pair rather than by an id. Champion and depth are
+   * independent properties of a bracket, so they filter JOINTLY: either alone
+   * narrows the pool and both together narrow it further. They were previously
+   * mutually exclusive menu entries, which made "Connecticut wins AND my Final
+   * Four stops at a 3 seed" unaskable even though the pool carries 63 such
+   * pairs. */
+  pick: { champ: null, depth: null },
   fit: null,            // {beta, n, converged}
   training: null,
   season: null,
@@ -97,7 +104,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 6;
+const DATA_V = 7;
 
 /* Historical seed-matchup upset rates, built walk-forward per season by
  * scripts/build_upset_priors.py. Null until loaded, and the blend degrades to
@@ -363,33 +370,33 @@ function solveActual() {
  * Champion picks are resolved here rather than being copied into `strategies`
  * so there is exactly one list of them, and so the note and the board cannot
  * disagree about which bracket is showing. */
-const CHAMP_PREFIX = 'champ:';
-const DEPTH_PREFIX = 'depth:';
+const CUSTOM = 'custom';
 
 function currentStrategy() {
-  if (state.strategy.startsWith(CHAMP_PREFIX)) {
-    const idx = Number(state.strategy.slice(CHAMP_PREFIX.length));
-    const c = ((state.season && state.season.champions) || []).find(x => x.team === idx);
-    if (!c) return null;
+  if (state.strategy === CUSTOM) {
+    const s = state.season || {};
+    const { champ, depth } = state.pick;
+    let src = null, scope = '';
+    if (champ !== null && depth !== null) {
+      src = (s.combos || []).find(c => c.team === champ && c.depth === depth);
+      scope = `${s.teams[champ].name} winning and a Final Four reaching exactly a ${depth} seed`;
+    } else if (champ !== null) {
+      src = (s.champions || []).find(c => c.team === champ);
+      scope = `${s.teams[champ].name} winning`;
+    } else if (depth !== null) {
+      src = (s.shapes || []).find(x => x.depth === depth);
+      scope = `a Final Four reaching exactly a ${depth} seed`;
+    }
+    if (!src) return null;
     return {
-      id: state.strategy,
-      label: `${c.name} wins it`,
-      note: `The bracket that best backs ${c.name} (${c.seed} seed): the highest `
-          + `P(1st) among the ${c.n} candidates that have them cutting down the nets.`,
-      picks: c.picks, ev: c.ev, p1: c.p1,
-    };
-  }
-  if (state.strategy.startsWith(DEPTH_PREFIX)) {
-    const d = Number(state.strategy.slice(DEPTH_PREFIX.length));
-    const sh = ((state.season && state.season.shapes) || []).find(x => x.depth === d);
-    if (!sh) return null;
-    const f4 = sh.f4.map(x => `${x.name} (${x.seed})`).join(', ');
-    return {
-      id: state.strategy,
-      label: `Final Four down to a ${d} seed`,
-      note: `The highest-P(1st) bracket whose deepest Final Four team is a ${d} seed. `
-          + `Final Four: ${f4}.`,
-      picks: sh.picks, ev: sh.ev, p1: sh.p1,
+      id: CUSTOM,
+      label: 'Your filters',
+      // The qualifying count is shown deliberately. As filters narrow, the best
+      // survivor is chosen from fewer candidates, and best-of-11 sits closer to
+      // the maximum of a short noisy sample than to an optimum. The user should
+      // be able to see which of the two they are looking at.
+      note: `The highest-P(1st) bracket with ${scope}, out of ${src.n} qualifying candidates.`,
+      picks: src.picks, ev: src.ev, p1: src.p1,
     };
   }
   const list = (state.season && state.season.strategies) || [];
@@ -446,7 +453,7 @@ function render() {
     // member of the candidate pool for a belief the USER supplied, which is not
     // a validated recommendation at all.
     const kind = !st ? 'LOYO validated'
-      : (st.id.startsWith(CHAMP_PREFIX) || st.id.startsWith(DEPTH_PREFIX)) ? 'Your pick'
+      : st.id === CUSTOM ? 'Your pick'
       : st.id === 'ev' ? 'Exact optimum'
       : 'Backtested rule';
     note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
@@ -670,15 +677,24 @@ function renderShapes() {
   const list = (s && s.shapes) || [];
   if (!host || !panel) return;
   panel.hidden = list.length === 0;
+  // When a champion is already chosen, each depth shows the score of the PAIR
+  // rather than of the depth alone, so the number always describes the bracket
+  // the click would actually produce.
+  const champ = state.pick.champ;
+  const combos = (s && s.combos) || [];
   host.innerHTML = list.map(sh => {
-    const id = DEPTH_PREFIX + sh.depth;
-    const on = state.strategy === id;
+    const on = state.pick.depth === sh.depth;
+    const pair = champ === null ? null : combos.find(x => x.team === champ && x.depth === sh.depth);
+    const ok = champ === null || !!pair;
+    const stat = pair ? pair.p1 : sh.p1;
     const f4 = sh.f4.map(x => `${x.name} (${x.seed})`).join(', ');
     return `
-      <button class="chip${on ? ' on' : ''}" onclick="setStrategy('${id}')" title="${f4}">
+      <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
+              onclick="setFilter('depth', ${sh.depth})"
+              title="${ok ? f4 : 'No bracket reaches exactly a ' + sh.depth + ' seed with that champion'}">
         <span class="chip-seed">${sh.depth}</span>
         <span class="chip-name">seed</span>
-        <span class="chip-stat">${(sh.p1 * 100).toFixed(1)}%</span>
+        <span class="chip-stat">${ok ? (stat * 100).toFixed(1) + '%' : '—'}</span>
       </button>`;
   }).join('');
 }
@@ -690,20 +706,51 @@ function renderChampions() {
   const list = (s && s.champions) || [];
   if (!host || !panel) return;
   panel.hidden = list.length === 0;
+  // Unreachable champions are dimmed, not hidden. A chip that disappears when
+  // you pick a depth reads as a bug; a dimmed one says "not with that depth".
+  const depth = state.pick.depth;
+  const combos = (s && s.combos) || [];
   host.innerHTML = list.map(c => {
-    const id = CHAMP_PREFIX + c.team;
-    const on = state.strategy === id;
+    const on = state.pick.champ === c.team;
+    const pair = depth === null ? null : combos.find(x => x.team === c.team && x.depth === depth);
+    const ok = depth === null || !!pair;
+    const stat = pair ? pair.p1 : c.p1;
     return `
-      <button class="chip${on ? ' on' : ''}" onclick="setStrategy('${id}')"
-              title="${c.n} candidate brackets have ${c.name} winning">
+      <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
+              onclick="setFilter('champ', ${c.team})"
+              title="${ok ? c.n + ' candidate brackets have ' + c.name + ' winning'
+                          : 'No bracket has ' + c.name + ' winning at that Final Four depth'}">
         <span class="chip-seed">${c.seed}</span>
         <span class="chip-name">${c.name}</span>
-        <span class="chip-stat">${(c.p1 * 100).toFixed(1)}%</span>
+        <span class="chip-stat">${ok ? (stat * 100).toFixed(1) + '%' : '—'}</span>
       </button>`;
   }).join('');
 }
 
+/* Toggle one half of the joint filter.
+ *
+ * Clicking an active chip clears it, falling back to whichever filter remains,
+ * or to the recommended strategy when none do -- never to a blank board. */
+function setFilter(kind, value) {
+  state.pick[kind] = (state.pick[kind] === value) ? null : value;
+  const { champ, depth } = state.pick;
+  // A pair the pool cannot fill would resolve to null and blank the board, so
+  // the OTHER selection is dropped rather than showing nothing. Disabled chips
+  // make this rare; it is here because "rare" is not "impossible".
+  if (champ !== null && depth !== null) {
+    const ok = ((state.season && state.season.combos) || [])
+      .some(c => c.team === champ && c.depth === depth);
+    if (!ok) state.pick[kind === 'champ' ? 'depth' : 'champ'] = null;
+  }
+  state.strategy = (state.pick.champ === null && state.pick.depth === null) ? 'p1' : CUSTOM;
+  refit();
+  renderStrategies();
+  render();
+}
+
 function setStrategy(id) {
+  // Choosing a named strategy clears the filters; they are alternatives to it.
+  if (id !== CUSTOM) state.pick = { champ: null, depth: null };
   state.strategy = id;
   refit();
   renderStrategies();
