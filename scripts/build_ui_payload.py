@@ -41,6 +41,7 @@ season has not begun. When 2027 data lands, rebuild and the status flips.
 
 from __future__ import annotations
 
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -362,124 +363,85 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # champion with only a handful of candidates cannot supply a well-optimised
     # bracket, and showing one anyway would put a bad bracket next to good ones
     # with no way to tell them apart.
-    # EVERY FILTER ENTRY CARRIES ONE BRACKET PER OBJECTIVE.
+    # THREE FILTER AXES, ONE UNIFORM TABLE.
     #
-    # The filters used to return the P(1st)-best bracket regardless of which
-    # objective was selected, so choosing a champion while on "maximise expected
-    # points" silently switched what was being maximised -- and it was not a
-    # rounding difference. For Michigan the two answers share 51 of 63 games and
-    # differ by 71 expected points; for Arizona the P(1st)-best bracket scores
-    # 0.057 against the points-best bracket's 0.013.
+    # Champion, Final Four one-seed count, and Final Four depth are independent
+    # properties of a bracket, and the user may fix any subset of them. Rather
+    # than three hand-built lists plus a pair table -- which is what this was,
+    # and which could not express "two one-seeds AND a 3 seed" -- every
+    # combination is enumerated once.
     #
-    # Storing both is what lets a filter narrow the pool without also changing
-    # the question being asked of it.
-    def _by_objective(pool: list) -> Dict[str, Any]:
-        out = {}
-        for obj in ("p1", "ev"):
-            b = max(pool, key=lambda c: c[obj])
-            out[obj] = {"picks": [list(r) for r in b["w"]], "ev": b["ev"], "p1": b["p1"]}
-        return out
+    # WHY ONE-SEED COUNT IS A SEPARATE AXIS FROM DEPTH. They sound alike and are
+    # not. Both of these are depth 3, and they are completely different brackets:
+    #
+    #     Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)     2 one-seeds
+    #     Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)  0 one-seeds
+    #
+    # Depth says how far down you reach; the one-seed count says how much of the
+    # top you keep. Neither implies the other.
+    #
+    # DEDUPED, because it would otherwise be most of the payload. 282 viable
+    # cells reference only 300 distinct brackets -- the same bracket is often the
+    # best answer to several questions -- so brackets live in a pool and cells
+    # hold indices into it. Storing them inline would nearly double the file to
+    # say the same thing.
+    def _profile(cand):
+        f4 = [teams[i]["seed"] for i in cand["w"][3]]
+        return cand["w"][5][0], sum(1 for x in f4 if x == 1), max(f4)
 
-    champ_pool: Dict[int, list] = {}
+    FILTER_FLOOR = 10
+    cell_pool: Dict[tuple, list] = {}
     for cand in art["candidates"]:
-        champ_pool.setdefault(cand["w"][5][0], []).append(cand)
+        ci, ones, depth = _profile(cand)
+        for key in itertools.product((ci, None), (ones, None), (depth, None)):
+            cell_pool.setdefault(key, []).append(cand)
 
-    MIN_CANDIDATES = 30
-    champions = []
-    for ci, pool in champ_pool.items():
-        if len(pool) < MIN_CANDIDATES:
+    pool: list = []
+    seen: Dict[str, int] = {}
+
+    def _intern(cand) -> int:
+        sig = repr(cand["w"])
+        if sig not in seen:
+            seen[sig] = len(pool)
+            pool.append({
+                "picks": [list(r) for r in cand["w"]],
+                "ev": cand["ev"],
+                "p1": cand["p1"],
+            })
+        return seen[sig]
+
+    cells: Dict[str, Any] = {}
+    for (ci, ones, depth), group in cell_pool.items():
+        if (ci, ones, depth) == (None, None, None) or len(group) < FILTER_FLOOR:
             continue
-        champions.append({
-            "team": ci,
-            "name": teams[ci]["name"],
-            "seed": teams[ci].get("seed"),
-            "n": len(pool),
-            "by": _by_objective(pool),
-        })
-    champions.sort(key=lambda c: -c["by"]["p1"]["p1"])
+        key = f"{'' if ci is None else ci}|{'' if ones is None else ones}|{'' if depth is None else depth}"
+        cells[key] = {
+            "p1": _intern(max(group, key=lambda c: c["p1"])),
+            "ev": _intern(max(group, key=lambda c: c["ev"])),
+            "n": len(group),
+        }
 
-    # HOW DEEP THE FINAL FOUR REACHES -- the second axis, and the one the
-    # champion picker cannot supply.
-    #
-    # Choosing a champion forces differences at the top of the bracket and
-    # leaves the bottom alone: across the champion options, 98% of championship
-    # games differ but only 22% of first-round games do. Every bracket on offer
-    # was therefore near-chalk through the opening weekend.
-    #
-    # The obvious fix was wrong. The artifact's supported constraints are about
-    # double-digit seeds in the Sweet 16, and selecting on those buys early-round
-    # variety by promoting teams nobody believes in -- a 13 seed in the Sweet 16
-    # is variance, not a bracket anyone would submit.
-    #
-    # This keys on the DEEPEST SEED IN THE FINAL FOUR instead, which is the
-    # quantity a user actually has an opinion about: how far down am I willing to
-    # reach for a Final Four team. Every option is plausible by construction,
-    # because the depth is the thing being chosen rather than a side effect. Each
-    # entry is the highest-P(1st) bracket at that exact depth, so the menu doubles
-    # as a price list -- reaching to a 4 seed costs about a point of win
-    # probability, reaching to a 9 seed costs four.
-    #
-    # EXACT depth, not "at most". A cap is monotone: "no worse than a 4 seed"
-    # admits every all-chalk bracket too, so the best answer for caps of 3, 4 and
-    # 5 is the same bracket and the menu collapses.
-    depth_pool: Dict[int, list] = {}
+    # Axis metadata for rendering the chips. Only values that appear in at least
+    # one viable cell are offered, so no control can present a dead option.
+    live_champ = {int(k.split("|")[0]) for k in cells if k.split("|")[0]}
+    live_ones = {int(k.split("|")[1]) for k in cells if k.split("|")[1]}
+    live_depth = {int(k.split("|")[2]) for k in cells if k.split("|")[2]}
+    champ_counts: Dict[int, int] = {}
     for cand in art["candidates"]:
-        deepest = max(teams[i]["seed"] for i in cand["w"][3])
-        depth_pool.setdefault(deepest, []).append(cand)
+        ci = cand["w"][5][0]
+        champ_counts[ci] = champ_counts.get(ci, 0) + 1
 
-    MIN_DEPTH_CANDIDATES = 25
-    shapes = []
-    for deepest, pool in sorted(depth_pool.items()):
-        if len(pool) < MIN_DEPTH_CANDIDATES:
-            continue
-        best_p1 = max(pool, key=lambda c: c["p1"])
-        shapes.append({
-            "depth": deepest,
-            "n": len(pool),
-            # The tooltip names the Final Four of the P(1st) bracket. The two
-            # objectives share the depth by construction, so the seeds match even
-            # where the teams do not.
-            "f4": [{"name": teams[i]["name"], "seed": teams[i]["seed"]} for i in best_p1["w"][3]],
-            "by": _by_objective(pool),
-        })
-
-    # THE TWO PICKERS AS A JOINT FILTER, not two menus.
-    #
-    # Champion and depth were shipped as alternatives: choosing one replaced the
-    # other, so "Connecticut wins AND my Final Four stops at a 3 seed" was
-    # unaskable. They are independent properties of a bracket and the pool has
-    # the goods -- 68 of the 132 possible pairs carry at least ten candidates --
-    # so the intersection is real data rather than a cross-product of labels.
-    #
-    # A FLOOR, AND IT IS NOT COSMETIC. As filters narrow, the best-scoring
-    # survivor is chosen from fewer and fewer candidates, and best-of-8 is a
-    # visibly noisier pick than best-of-500: it is closer to the maximum of a
-    # short noisy sample than to an optimum. Pairs below the floor are omitted
-    # entirely so the UI can grey them out, rather than silently serving a
-    # bracket picked from a handful.
-    MIN_COMBO_CANDIDATES = 10
-    combo_pool: Dict[tuple, list] = {}
-    for cand in art["candidates"]:
-        key = (cand["w"][5][0], max(teams[i]["seed"] for i in cand["w"][3]))
-        combo_pool.setdefault(key, []).append(cand)
-
-    # Restricted to champions that actually appear as chips. combo_pool uses a
-    # lower floor than the champion list does, so without this the payload would
-    # carry pairs for champions the user has no way to select -- data that can
-    # only ever be dead.
-    selectable = {c["team"] for c in champions}
-    selectable = {c["team"] for c in champions}
-    combos = []
-    for (ci, depth), pool in combo_pool.items():
-        if ci not in selectable or len(pool) < MIN_COMBO_CANDIDATES:
-            continue
-        combos.append({
-            "team": ci,
-            "depth": depth,
-            "n": len(pool),
-            "by": _by_objective(pool),
-        })
-    combos.sort(key=lambda c: -c["by"]["p1"]["p1"])
+    filters = {
+        "pool": pool,
+        "cells": cells,
+        "champions": sorted(
+            ({"team": ci, "name": teams[ci]["name"], "seed": teams[ci].get("seed"),
+              "n": champ_counts[ci]} for ci in live_champ),
+            key=lambda c: (c["seed"] or 99, c["name"]),
+        ),
+        "ones": sorted(live_ones),
+        "depths": sorted(live_depth),
+    }
 
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.
@@ -503,9 +465,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         ],
         "first_round": art["first_round"],
         "strategies": strategies,
-        "champions": champions,
-        "shapes": shapes,
-        "combos": combos,
+        "filters": filters,
         "pool_optimized": picks,
         "pool_optimized_note": (
             "Chosen to maximise the chance of finishing first in a 30-opponent "

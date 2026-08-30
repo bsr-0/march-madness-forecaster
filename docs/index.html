@@ -42,28 +42,26 @@
     <div class="strat-list" id="strat-list"></div>
   </section>
 
-  <!-- Champion picker. The two objective strategies agree on 55 of 63 games in
-       2026 and share a Final Four, so a menu of two misrepresented how much the
-       candidate pool actually disagrees. One bracket per plausible champion,
-       each the highest-P(1st) way to back that team, ordered so the cost of an
-       underdog is visible rather than hidden. -->
+  <!-- Three filter axes over the precomputed candidate pool. Each narrows WHICH
+       brackets are eligible; the strategy cards decide what is maximised over
+       them. One-seed count and depth sound alike and are not: both of
+       "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and "Michigan
+       State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly a 3 seed,
+       and they are completely different brackets. -->
   <section class="panel" id="champions" hidden>
-    <div class="panel-head">
-      <p class="panel-title">Or back a champion</p>
-    </div>
+    <div class="panel-head"><p class="panel-title">Back a champion</p></div>
     <div class="chips" id="champ-list"></div>
     <p class="prior-note" id="champ-note"></p>
   </section>
 
-  <!-- Final Four depth. The champion picker moves the top of the bracket and
-       leaves the first weekend near-chalk; this is the other axis. Keyed on the
-       deepest Final Four seed because that is a thing a user has an opinion
-       about, unlike "double-digit seeds in the Sweet 16", which buys variety by
-       promoting teams nobody would submit. -->
+  <section class="panel" id="ones" hidden>
+    <div class="panel-head"><p class="panel-title">How many 1 seeds in the Final Four</p></div>
+    <div class="chips" id="ones-list"></div>
+    <p class="prior-note" id="ones-note"></p>
+  </section>
+
   <section class="panel" id="shapes" hidden>
-    <div class="panel-head">
-      <p class="panel-title">How deep does your Final Four reach</p>
-    </div>
+    <div class="panel-head"><p class="panel-title">How deep does your Final Four reach</p></div>
     <div class="chips" id="shape-list"></div>
     <p class="prior-note" id="shape-note"></p>
   </section>
@@ -98,6 +96,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=10"></script>
-<script src="app.js?v=36"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>
