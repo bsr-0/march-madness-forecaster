@@ -437,6 +437,46 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             "f4": f4,
         })
 
+    # THE TWO PICKERS AS A JOINT FILTER, not two menus.
+    #
+    # Champion and depth were shipped as alternatives: choosing one replaced the
+    # other, so "Connecticut wins AND my Final Four stops at a 3 seed" was
+    # unaskable. They are independent properties of a bracket and the pool has
+    # the goods -- 68 of the 132 possible pairs carry at least ten candidates --
+    # so the intersection is real data rather than a cross-product of labels.
+    #
+    # A FLOOR, AND IT IS NOT COSMETIC. As filters narrow, the best-scoring
+    # survivor is chosen from fewer and fewer candidates, and best-of-8 is a
+    # visibly noisier pick than best-of-500: it is closer to the maximum of a
+    # short noisy sample than to an optimum. Pairs below the floor are omitted
+    # entirely so the UI can grey them out, rather than silently serving a
+    # bracket picked from a handful.
+    MIN_COMBO_CANDIDATES = 10
+    combo_pool: Dict[tuple, list] = {}
+    for cand in art["candidates"]:
+        key = (cand["w"][5][0], max(teams[i]["seed"] for i in cand["w"][3]))
+        combo_pool.setdefault(key, []).append(cand)
+
+    # Restricted to champions that actually appear as chips. combo_pool uses a
+    # lower floor than the champion list does, so without this the payload would
+    # carry pairs for champions the user has no way to select -- data that can
+    # only ever be dead.
+    selectable = {c["team"] for c in champions}
+    combos = []
+    for (ci, depth), pool in combo_pool.items():
+        if ci not in selectable or len(pool) < MIN_COMBO_CANDIDATES:
+            continue
+        best = max(pool, key=lambda c: c["p1"])
+        combos.append({
+            "team": ci,
+            "depth": depth,
+            "picks": [list(r) for r in best["w"]],
+            "ev": best["ev"],
+            "p1": best["p1"],
+            "n": len(pool),
+        })
+    combos.sort(key=lambda c: -c["p1"])
+
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.
     picks = strategies[0]["picks"]
@@ -461,6 +501,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "strategies": strategies,
         "champions": champions,
         "shapes": shapes,
+        "combos": combos,
         "pool_optimized": picks,
         "pool_optimized_note": (
             "Chosen to maximise the chance of finishing first in a 30-opponent "

@@ -412,3 +412,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chip.on .chip-seed { color: var(--accent); }
 .chip-stat { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .chip.on .chip-stat { color: var(--ink-2); }
+
+/* Filter chips the current pairing cannot satisfy. Dimmed rather than removed:
+   a chip that vanishes reads as a bug, a dimmed one reads as a constraint. */
+.chip.off { opacity: 0.32; cursor: not-allowed; }
+.chip.off:hover { border-color: var(--line); color: var(--ink-2); }
