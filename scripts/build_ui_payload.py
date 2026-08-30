@@ -389,6 +389,54 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         })
     champions.sort(key=lambda c: -c["p1"])
 
+    # HOW DEEP THE FINAL FOUR REACHES -- the second axis, and the one the
+    # champion picker cannot supply.
+    #
+    # Choosing a champion forces differences at the top of the bracket and
+    # leaves the bottom alone: across the champion options, 98% of championship
+    # games differ but only 22% of first-round games do. Every bracket on offer
+    # was therefore near-chalk through the opening weekend.
+    #
+    # The obvious fix was wrong. The artifact's supported constraints are about
+    # double-digit seeds in the Sweet 16, and selecting on those buys early-round
+    # variety by promoting teams nobody believes in -- a 13 seed in the Sweet 16
+    # is variance, not a bracket anyone would submit.
+    #
+    # This keys on the DEEPEST SEED IN THE FINAL FOUR instead, which is the
+    # quantity a user actually has an opinion about: how far down am I willing to
+    # reach for a Final Four team. Every option is plausible by construction,
+    # because the depth is the thing being chosen rather than a side effect. Each
+    # entry is the highest-P(1st) bracket at that exact depth, so the menu doubles
+    # as a price list -- reaching to a 4 seed costs about a point of win
+    # probability, reaching to a 9 seed costs four.
+    #
+    # EXACT depth, not "at most". A cap is monotone: "no worse than a 4 seed"
+    # admits every all-chalk bracket too, so the best answer for caps of 3, 4 and
+    # 5 is the same bracket and the menu collapses.
+    by_depth: Dict[int, Dict[str, Any]] = {}
+    depth_n: Dict[int, int] = {}
+    for cand in art["candidates"]:
+        deepest = max(teams[i]["seed"] for i in cand["w"][3])
+        depth_n[deepest] = depth_n.get(deepest, 0) + 1
+        cur = by_depth.get(deepest)
+        if cur is None or cand["p1"] > cur["p1"]:
+            by_depth[deepest] = cand
+
+    MIN_DEPTH_CANDIDATES = 25
+    shapes = []
+    for deepest, cand in sorted(by_depth.items()):
+        if depth_n[deepest] < MIN_DEPTH_CANDIDATES:
+            continue
+        f4 = [{"name": teams[i]["name"], "seed": teams[i]["seed"]} for i in cand["w"][3]]
+        shapes.append({
+            "depth": deepest,
+            "picks": [list(r) for r in cand["w"]],
+            "ev": cand["ev"],
+            "p1": cand["p1"],
+            "n": depth_n[deepest],
+            "f4": f4,
+        })
+
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.
     picks = strategies[0]["picks"]
@@ -412,6 +460,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "first_round": art["first_round"],
         "strategies": strategies,
         "champions": champions,
+        "shapes": shapes,
         "pool_optimized": picks,
         "pool_optimized_note": (
             "Chosen to maximise the chance of finishing first in a 30-opponent "

@@ -111,6 +111,23 @@
     </p>
   </section>
 
+  <!-- Final Four depth. The champion picker moves the top of the bracket and
+       leaves the first weekend near-chalk; this is the other axis. Keyed on the
+       deepest Final Four seed because that is a thing a user has an opinion
+       about, unlike "double-digit seeds in the Sweet 16", which buys variety by
+       promoting teams nobody would submit. -->
+  <section class="panel" id="shapes" hidden>
+    <div class="panel-head">
+      <p class="panel-title">How deep does your Final Four reach</p>
+    </div>
+    <div class="chips" id="shape-list"></div>
+    <p class="prior-note">
+      The best bracket whose deepest Final Four team is exactly that seed. Hover
+      for the four teams. Reaching further down costs win probability, and the
+      number says how much.
+    </p>
+  </section>
+
   <section class="note" id="mode-note"></section>
 
   <!-- The fitted model, printed. Empty unless variables are enabled. -->
@@ -141,6 +158,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>
