@@ -38,25 +38,33 @@ objective for it regardless. Second place pays what thirtieth pays. The scoring
 check matters anyway, because the ev figures are shown in the UI and would be
 wrong if the rule were wrong.
 
-A KNOWN UNRESOLVED DISCREPANCY, recorded rather than smoothed over. 2026
-reproduces for 28 of 30 brackets; 2024 and 2025 reproduce for only 4 of 25 and
-3 of 32, with residuals running roughly -50 to +80 points against totals near
-1,400. The residuals go in BOTH directions, which is the informative part: a
-scoring rule this code did not implement -- an upset bonus, a seed-difference
-term -- would push every affected bracket the same way. Bidirectional error
-looks like noise in the scraped picks or scores, not a different rule.
+A KNOWN DISCREPANCY IN 2024-2025, recorded rather than smoothed over. 2026
+recomputes to the point for 28 of 30 brackets (mean error -0.3). 2024 and 2025
+manage only 4 of 25 and 3 of 32, and the errors are SYSTEMATICALLY POSITIVE:
+mean +37.6 and +31.6 against totals of ~730 and ~1,024, with 19 of 25 and 27 of
+32 brackets over-credited and only two negative in each season.
+
+The sign is the informative part. Recomputing HIGH means ESPN awarded fewer
+points than plain scoring implies for those picks. An upset bonus -- the rule
+most likely to be missing here -- would push ESPN's reported total the other
+way, so the direction rules it out rather than merely failing to detect it.
 
 It is not the actual results (checked against the real Final Fours) and not
 name resolution (1 unresolved pick in 1,572 for 2024, none at all for 2025 or
-2026). Beyond that it is unexplained, and it is worth knowing that the two
-seasons in question are also the two whose `pts` values disagree with a scoring
-system the third season matches almost perfectly. Treat 2024-2025 pool scores
-as approximate; 2026 is sound.
+2026). The leading explanation is the scrape rather than the rules:
+pool_hist_results.json was captured on 2026-04-12, long after those seasons
+finished, and a bracket view rendered post-hoc can show advanced or actual
+teams in place of a user's eliminated picks. That would inflate a
+recomputation in exactly one direction and would not affect 2026, which was
+scraped close to live. Unconfirmed, so treat 2024-2025 pool SCORES as
+approximate. The PICKS still reproduce and resolve cleanly, so the
+pick-distribution results above are unaffected.
 
-The first version of this analysis inspected only the top six brackets per
-season, saw residuals of one sign, and concluded the scoring was systematically
-different. Reading the full set reversed that. Sampling the leaderboard is not
-sampling the pool.
+TWO EARLIER READINGS OF THIS WERE WRONG, both from looking at too little. The
+first inspected only the top six brackets per season; the second quoted the
+min/max range and called the residuals bidirectional without looking at their
+distribution. Sampling the leaderboard is not sampling the pool, and a range is
+not a distribution.
 
 Run: python3 scripts/analyze_pool_history.py
 """
@@ -212,11 +220,16 @@ def main() -> int:
             continue
         exact, n, deltas = res
         arr = np.array(deltas)
-        note = "" if exact == n else f"   deltas min {arr.min():+d} max {arr.max():+d}"
+        # Report the mean and the sign split, not the range. The range alone
+        # once led to calling these residuals bidirectional when they are
+        # strongly one-sided, which inverted the diagnosis.
+        note = ""
+        if exact != n:
+            note = f"   mean {arr.mean():+.1f}  ({(arr > 0).sum()} over / {(arr < 0).sum()} under)"
         print(f"    {y}: {exact}/{n} brackets reproduce exactly{note}")
-    print("\n  A pool using an upset bonus would report MORE than this recomputes.")
-    print("  None does, so no bonus is in play. See the docstring for the 2024/2025")
-    print("  over-computation, which is unexplained and in the opposite direction.")
+    print("\n  A pool using an upset bonus would report MORE than this recomputes,")
+    print("  i.e. negative residuals. 2024-2025 are systematically POSITIVE, so no")
+    print("  bonus is in play; see the docstring for what those residuals likely are.")
     return 0
 
 
