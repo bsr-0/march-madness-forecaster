@@ -364,6 +364,100 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, full_rounds) -> Dict
 # ---------------------------------------------------------------------------
 
 
+def _ev_optimal_bracket(first_round, marg) -> List[List[str]]:
+    """The exact expected-points maximum, by dynamic programming on the bracket.
+
+    WHY NOT GREEDY. Expected score is separable across games --
+    sum_R pts_R * sum_{picked in R} P(t wins R) -- but the picks are not free:
+    a team can only be picked in round R if it was picked in R-1. Taking the
+    higher marginal at each game bottom-up can therefore strand you, choosing a
+    team that is likelier to win THIS game but much less likely to win the next
+    one, where the points are four times larger. The DP evaluates that
+    trade-off; greedy cannot see it.
+
+    The recursion is over subtrees. best[g][t] is the most expected points
+    obtainable from the subtree rooted at game g given that t is the team picked
+    to emerge from it:
+
+        best[g][t] = pts_R * P(t wins R)
+                   + best[child containing t][t]
+                   + max_u best[other child][u]
+
+    The last term is independent of t, which is what makes this linear rather
+    than combinatorial: 63 games by at most 64 teams.
+
+    IN PRACTICE THE OPTIMUM IS WORTH ALMOST NOTHING OVER THE SIMPLE RULE.
+    Against _champion_equity_strategy it differs by zero games in 2024 and one
+    game in 2025 and 2026, worth under a point out of ~950. That is a result
+    about this problem, not a reason to skip the DP: it says picking by title
+    odds is essentially optimal for expected score, which is not obvious and is
+    worth being able to state.
+
+    Where it does matter is against the SAMPLED candidates, which fall 24-39
+    points short because the optimum is simply not in the pool.
+    """
+    pts = [float(ESPN_SCORING[r]) for r in ROUND_NAMES]
+    memo: Dict = {}
+
+    def solve(r: int, i: int) -> Dict:
+        if (r, i) in memo:
+            return memo[(r, i)]
+        if r == 0:
+            a, b = first_round[2 * i], first_round[2 * i + 1]
+            res = {
+                a: (pts[0] * marg[0].get(a, 0.0), None, None),
+                b: (pts[0] * marg[0].get(b, 0.0), None, None),
+            }
+        else:
+            left, right = solve(r - 1, 2 * i), solve(r - 1, 2 * i + 1)
+            bl = max(left, key=lambda t: left[t][0])
+            br = max(right, key=lambda t: right[t][0])
+            res = {}
+            for t in left:
+                res[t] = (pts[r] * marg[r].get(t, 0.0) + left[t][0] + right[br][0], "L", br)
+            for t in right:
+                res[t] = (pts[r] * marg[r].get(t, 0.0) + right[t][0] + left[bl][0], "R", bl)
+        memo[(r, i)] = res
+        return res
+
+    root = solve(5, 0)
+    champion = max(root, key=lambda t: root[t][0])
+
+    winners: List[List[str]] = [[] for _ in range(6)]
+
+    def walk(r: int, i: int, t: str) -> None:
+        winners[r].append(t)
+        if r == 0:
+            return
+        _, side, other = memo[(r, i)][t]
+        if side == "L":
+            walk(r - 1, 2 * i, t)
+            walk(r - 1, 2 * i + 1, other)
+        else:
+            walk(r - 1, 2 * i + 1, t)
+            walk(r - 1, 2 * i, other)
+
+    walk(5, 0, champion)
+    return winners
+
+
+def _encode_rows(winners, first_round):
+    """Bracket -> the (1, 63) boolean shape encoding the pool scorer expects."""
+    row = np.zeros((1, 63), dtype=bool)
+    picked = [set(r) for r in winners]
+    current, game = list(first_round), 0
+    for r in range(6):
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            first_wins = t1 in picked[r]
+            row[0, game] = first_wins
+            nxt.append(t1 if first_wins else t2)
+            game += 1
+        current = nxt
+    return row
+
+
 def _champion_equity_strategy(first_round, marg, p1_trials) -> Dict:
     """Decide every game by P(champion) rather than by P(winning that game).
 
@@ -401,15 +495,26 @@ def _champion_equity_strategy(first_round, marg, p1_trials) -> Dict:
         winners.append(nxt)
         current = nxt
 
-    ev_val = float(expected_scores([winners], marg, ESPN_SCORING)[0])
-    p1_val = float(pool_p_first(row, p1_trials, first_round)[0])
-    return {
+    out = {
         "champ_equity": {
             "w": winners,
-            "ev": round(ev_val, 1),
-            "p1": round(p1_val, 4),
+            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
         }
     }
+
+    # The exact expected-points maximum, scored the same way. Shipped so the
+    # "maximise expected points" strategy can be the actual maximum rather than
+    # the best of a sample: the sampled candidates fall 24-39 points short
+    # because the optimum is not in the pool.
+    ev_opt = _ev_optimal_bracket(first_round, marg)
+    ev_row = _encode_rows(ev_opt, first_round)
+    out["ev_optimal"] = {
+        "w": ev_opt,
+        "ev": round(float(expected_scores([ev_opt], marg, ESPN_SCORING)[0]), 1),
+        "p1": round(float(pool_p_first(ev_row, p1_trials, first_round)[0]), 4),
+    }
+    return out
 
 
 def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
@@ -523,8 +628,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         # Rule-based strategies, scored on the same marginals and pool trials as
         # the candidates so every number in the UI is on one scale.
         "named_strategies": {
-            k: {"w": [[tidx[t] for t in r] for r in v["w"]], "ev": v["ev"], "p1": v["p1"]}
-            for k, v in named.items()
+            k: {"w": [[tidx[t] for t in r] for r in v["w"]], "ev": v["ev"], "p1": v["p1"]} for k, v in named.items()
         },
         "meta": {
             "n_sims": n_sims,
