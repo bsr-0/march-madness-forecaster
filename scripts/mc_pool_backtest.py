@@ -303,6 +303,9 @@ ALL_MODES: Tuple[str, ...] = (
     "lev_tilt_50",
     "lev_tilt_100",
     "lev_tilt_200",
+    "fixed_blend_r10",
+    "fixed_blend_r50",
+    "fixed_blend_r90",
     "champ_first_tv",
     "champ_first_chalkfade_tv",
     "f4_first_tv",
@@ -1071,6 +1074,66 @@ def sample_leverage_tilted_brackets(first_round, round_probs, n_brackets, rng, p
             nxt.append(t1 if first_wins else t2)
             game += 1
         current = nxt
+    return np.repeat(row, max(1, n_brackets), axis=0)
+
+
+def sample_fixed_region_risk(first_round, round_probs, n_brackets, rng, seeds, regions, pick_dist, risk, pool_size):
+    """One meta candidate, frozen: region_top_n at a FIXED risk level.
+
+    WHAT THIS IS FOR. meta_region_poolaware reaches P(1st) 0.1187 where every
+    fixed rule tried so far tops out near 0.05, and the natural story is that it
+    adapts -- it picks a different risk level each season (0.1, 0.5, 0.7, 0.9
+    with no stability) and that is where the edge lives. That story is testable
+    and has not been tested. If a single frozen risk level matches meta, the
+    adaptivity is decoration and the edge belongs to the candidate FAMILY --
+    region_top_n over a blend base -- which no fixed rule tested so far has
+    actually used. If meta beats every frozen level, the per-season choice is
+    doing real work.
+
+    The distinction matters for what to build next. A better fixed construction
+    is a small change; a selector that has to be right about which season is
+    which is a much larger one, and worth attempting only if the evidence says
+    the choosing is what pays.
+
+    MEASURED, AND THE CHOOSING DOES NOT PAY. At pool 30 over 2011-2026:
+
+        mode                P(1st)   mean rank
+        fixed_blend_r10     0.0940         9.1
+        fixed_blend_r50     0.1087         9.4
+        fixed_blend_r90     0.0740        13.8
+        meta_region_poolaware 0.1187      10.7
+
+    Paired by season, meta is indistinguishable from the two sensible frozen
+    levels on P(1st) (+0.0100 against r50, CI [-0.0067, +0.0333], winning 5 of
+    15; +0.0247 against r10, CI [-0.0013, +0.0527]) and significantly WORSE than
+    both on mean rank (r10 better by 1.62 positions, CI [+0.77, +2.63]; r50 by
+    1.31, CI [+0.41, +2.39]). It beats only the badly chosen level, 0.9.
+
+    So the edge is the candidate family, not the selection. That also explains
+    why every other fixed rule tested here failed: champ_equity, the leverage
+    tilt sweep and det_champ_tv are all different constructions on different
+    bases. None of them was a fixed member of the family that actually wins.
+
+    CAVEAT ON THIS COMPARISON. The frozen levels were chosen after looking at
+    which levels meta selects across these same 15 seasons, so the margins are
+    optimistic. It is not load-bearing -- 0.1 and 0.5 both beat meta on rank, so
+    the conclusion does not rest on one lucky level -- but a clean version would
+    fix the levels in advance.
+    """
+    del rng
+    from src.optimization.bracket_construction import construct_bracket
+
+    picks, _champ, _, _, _ = construct_bracket(
+        mode="region_top_n",
+        seeds=seeds,
+        regions=regions,
+        round_probs=dict(round_probs),
+        public_picks=pick_dist or {},
+        risk_level=risk,
+        pool_size=pool_size,
+        scoring_system=dict(ESPN_SCORING),
+    )
+    row = _picks_dict_to_bool_array(picks, first_round).reshape(1, 63)
     return np.repeat(row, max(1, n_brackets), axis=0)
 
 
@@ -2900,16 +2963,44 @@ def _run_one_year(
         # Every game decided by championship equity; see
         # build_champ_equity_bracket for what that changes and why.
         "champ_equity_tv": ("champ_equity_tv", torvik_base, sample_champ_equity_brackets),
+        # Frozen meta candidates: the same construction meta chooses among, at a
+        # fixed risk level. These are the control that tells adaptivity apart
+        # from the candidate family itself. blend is meta's modal base (8 of 15
+        # seasons); 0.1 / 0.5 / 0.9 span the risk levels it actually selects.
+        "fixed_blend_r10": ("fixed_blend_r10", blend_base,
+                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
+                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.1, _n)),
+        "fixed_blend_r50": ("fixed_blend_r50", blend_base,
+                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
+                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.5, _n)),
+        "fixed_blend_r90": ("fixed_blend_r90", blend_base,
+                            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
+                            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.9, _n)),
         # Leverage tilt swept as a dial. tilt=0 reduces exactly to champ_equity_tv,
         # which is the control the sweep needs.
-        "lev_tilt_25": ("lev_tilt_25", torvik_base,
-                        lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.25)),
-        "lev_tilt_50": ("lev_tilt_50", torvik_base,
-                        lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.5)),
-        "lev_tilt_100": ("lev_tilt_100", torvik_base,
-                         lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 1.0)),
-        "lev_tilt_200": ("lev_tilt_200", torvik_base,
-                         lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 2.0)),
+        "lev_tilt_25": (
+            "lev_tilt_25",
+            torvik_base,
+            lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.25),
+        ),
+        "lev_tilt_50": (
+            "lev_tilt_50",
+            torvik_base,
+            lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.5),
+        ),
+        "lev_tilt_100": (
+            "lev_tilt_100",
+            torvik_base,
+            lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 1.0),
+        ),
+        "lev_tilt_200": (
+            "lev_tilt_200",
+    "fixed_blend_r10",
+    "fixed_blend_r50",
+    "fixed_blend_r90",
+            torvik_base,
+            lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 2.0),
+        ),
         "champ_equity_pit": ("champ_equity_pit", pit_base, sample_champ_equity_brackets),
         "champ_first_tv": (
             "champ_first_tv",
