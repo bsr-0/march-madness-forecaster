@@ -299,6 +299,10 @@ ALL_MODES: Tuple[str, ...] = (
     "pit",
     "champ_equity_tv",
     "champ_equity_pit",
+    "lev_tilt_25",
+    "lev_tilt_50",
+    "lev_tilt_100",
+    "lev_tilt_200",
     "champ_first_tv",
     "champ_first_chalkfade_tv",
     "f4_first_tv",
@@ -1003,6 +1007,71 @@ def sample_champ_equity_brackets(first_round_matchups, round_probs, n_brackets, 
         current_teams = next_round
 
     return np.repeat(out, max(1, n_brackets), axis=0)
+
+
+def sample_leverage_tilted_brackets(first_round, round_probs, n_brackets, rng, pick_dist, tilt):
+    """Championship-equity construction on LEVERAGE-TILTED probabilities.
+
+    Pool edge is P_outcome minus P_public, and this is the one construction here
+    that acts on the second term directly. Each team's probability is pushed away
+    from the public's view of it before the bracket is built:
+
+        tilted = model_prob + tilt * (model_prob - public_pct)
+
+    WHY TILT RATHER THAN MAXIMISE LEVERAGE PER GAME. Picking, at each game, the
+    team with the largest P(win) - P(picked) is catastrophic and was measured as
+    such: it produces 17 first-round upsets and an expected score of 333 against
+    the optimum's 941. The objective is blind to two things -- that a first-round
+    game is worth 10 points and the final 320, and that a losing pick kills every
+    downstream pick in its region. Tilting keeps model_prob as the base, so
+    lopsided games do not move (a 1-seed at 0.97 model / 0.98 public stays 0.97)
+    and only close games where the public is over-invested flip. The strength is
+    a dial rather than a switch, which is what makes it sweepable.
+
+    Applied to the championship marginal, because that is where public ownership
+    actually concentrates -- a 2026 field is 28% on one team -- and where a
+    correct contrarian call is worth 320 points rather than 10.
+
+    build_leverage_tilted_round_probs had existed unused in this file; this is
+    its first caller.
+
+    MEASURED, AND IT DOES NOT WORK. Swept at pool 30 over 2011-2026 against the
+    untilted control, no tilt strength improves P(1st):
+
+        tilt 0.25   +0.0040  CI [-0.0013, +0.0100]  wins  6/15
+        tilt 0.50   -0.0027  CI [-0.0100, +0.0053]  wins  4/15
+        tilt 1.00   -0.0027  CI [-0.0133, +0.0087]  wins  5/15
+        tilt 2.00   -0.0040  CI [-0.0180, +0.0113]  wins  5/15
+
+    The best point estimate wins 6 of 15 seasons, worse than a coin flip, so not
+    even its sign is supported. Mean rank meanwhile degrades monotonically and
+    significantly with tilt, 11.4 to 17.0. Differentiation bought by moving every
+    game away from the public is paid for in accuracy and does not return the
+    cost.
+
+    Kept as a registered, measured dead end rather than deleted, because
+    "tilt toward the leverage signal" is an obvious idea that will be proposed
+    again. meta_region_poolaware reaches P(1st) 0.1187 where the best tilt here
+    reaches 0.0587, so whatever it is doing is not this: its edge appears to come
+    from choosing a different structure per season, not from a fixed push away
+    from public ownership.
+    """
+    del rng
+    tilted = build_leverage_tilted_round_probs(dict(round_probs), pick_dist, tilt)
+    row = np.zeros((1, 63), dtype=bool)
+    current, game = list(first_round), 0
+    for _ in range(6):
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            p1 = tilted.get(t1, {}).get("CHAMP", 0.0)
+            p2 = tilted.get(t2, {}).get("CHAMP", 0.0)
+            first_wins = p1 >= p2
+            row[0, game] = first_wins
+            nxt.append(t1 if first_wins else t2)
+            game += 1
+        current = nxt
+    return np.repeat(row, max(1, n_brackets), axis=0)
 
 
 def _wrap_pipeline_base(mode_name, sources, adjustments, pipeline_rp, base_round_probs):
@@ -2831,6 +2900,16 @@ def _run_one_year(
         # Every game decided by championship equity; see
         # build_champ_equity_bracket for what that changes and why.
         "champ_equity_tv": ("champ_equity_tv", torvik_base, sample_champ_equity_brackets),
+        # Leverage tilt swept as a dial. tilt=0 reduces exactly to champ_equity_tv,
+        # which is the control the sweep needs.
+        "lev_tilt_25": ("lev_tilt_25", torvik_base,
+                        lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.25)),
+        "lev_tilt_50": ("lev_tilt_50", torvik_base,
+                        lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 0.5)),
+        "lev_tilt_100": ("lev_tilt_100", torvik_base,
+                         lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 1.0)),
+        "lev_tilt_200": ("lev_tilt_200", torvik_base,
+                         lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 2.0)),
         "champ_equity_pit": ("champ_equity_pit", pit_base, sample_champ_equity_brackets),
         "champ_first_tv": (
             "champ_first_tv",
