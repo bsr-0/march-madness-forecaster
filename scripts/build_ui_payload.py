@@ -362,32 +362,41 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # champion with only a handful of candidates cannot supply a well-optimised
     # bracket, and showing one anyway would put a bad bracket next to good ones
     # with no way to tell them apart.
-    champ_best: Dict[int, Dict[str, Any]] = {}
+    # EVERY FILTER ENTRY CARRIES ONE BRACKET PER OBJECTIVE.
+    #
+    # The filters used to return the P(1st)-best bracket regardless of which
+    # objective was selected, so choosing a champion while on "maximise expected
+    # points" silently switched what was being maximised -- and it was not a
+    # rounding difference. For Michigan the two answers share 51 of 63 games and
+    # differ by 71 expected points; for Arizona the P(1st)-best bracket scores
+    # 0.057 against the points-best bracket's 0.013.
+    #
+    # Storing both is what lets a filter narrow the pool without also changing
+    # the question being asked of it.
+    def _by_objective(pool: list) -> Dict[str, Any]:
+        out = {}
+        for obj in ("p1", "ev"):
+            b = max(pool, key=lambda c: c[obj])
+            out[obj] = {"picks": [list(r) for r in b["w"]], "ev": b["ev"], "p1": b["p1"]}
+        return out
+
+    champ_pool: Dict[int, list] = {}
     for cand in art["candidates"]:
-        ci = cand["w"][5][0]
-        cur = champ_best.get(ci)
-        if cur is None or cand["p1"] > cur["p1"]:
-            champ_best[ci] = cand
-    counts: Dict[int, int] = {}
-    for cand in art["candidates"]:
-        ci = cand["w"][5][0]
-        counts[ci] = counts.get(ci, 0) + 1
+        champ_pool.setdefault(cand["w"][5][0], []).append(cand)
 
     MIN_CANDIDATES = 30
     champions = []
-    for ci, cand in champ_best.items():
-        if counts[ci] < MIN_CANDIDATES:
+    for ci, pool in champ_pool.items():
+        if len(pool) < MIN_CANDIDATES:
             continue
         champions.append({
             "team": ci,
             "name": teams[ci]["name"],
             "seed": teams[ci].get("seed"),
-            "picks": [list(r) for r in cand["w"]],
-            "ev": cand["ev"],
-            "p1": cand["p1"],
-            "n": counts[ci],
+            "n": len(pool),
+            "by": _by_objective(pool),
         })
-    champions.sort(key=lambda c: -c["p1"])
+    champions.sort(key=lambda c: -c["by"]["p1"]["p1"])
 
     # HOW DEEP THE FINAL FOUR REACHES -- the second axis, and the one the
     # champion picker cannot supply.
@@ -413,28 +422,25 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # EXACT depth, not "at most". A cap is monotone: "no worse than a 4 seed"
     # admits every all-chalk bracket too, so the best answer for caps of 3, 4 and
     # 5 is the same bracket and the menu collapses.
-    by_depth: Dict[int, Dict[str, Any]] = {}
-    depth_n: Dict[int, int] = {}
+    depth_pool: Dict[int, list] = {}
     for cand in art["candidates"]:
         deepest = max(teams[i]["seed"] for i in cand["w"][3])
-        depth_n[deepest] = depth_n.get(deepest, 0) + 1
-        cur = by_depth.get(deepest)
-        if cur is None or cand["p1"] > cur["p1"]:
-            by_depth[deepest] = cand
+        depth_pool.setdefault(deepest, []).append(cand)
 
     MIN_DEPTH_CANDIDATES = 25
     shapes = []
-    for deepest, cand in sorted(by_depth.items()):
-        if depth_n[deepest] < MIN_DEPTH_CANDIDATES:
+    for deepest, pool in sorted(depth_pool.items()):
+        if len(pool) < MIN_DEPTH_CANDIDATES:
             continue
-        f4 = [{"name": teams[i]["name"], "seed": teams[i]["seed"]} for i in cand["w"][3]]
+        best_p1 = max(pool, key=lambda c: c["p1"])
         shapes.append({
             "depth": deepest,
-            "picks": [list(r) for r in cand["w"]],
-            "ev": cand["ev"],
-            "p1": cand["p1"],
-            "n": depth_n[deepest],
-            "f4": f4,
+            "n": len(pool),
+            # The tooltip names the Final Four of the P(1st) bracket. The two
+            # objectives share the depth by construction, so the seeds match even
+            # where the teams do not.
+            "f4": [{"name": teams[i]["name"], "seed": teams[i]["seed"]} for i in best_p1["w"][3]],
+            "by": _by_objective(pool),
         })
 
     # THE TWO PICKERS AS A JOINT FILTER, not two menus.
@@ -462,20 +468,18 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # carry pairs for champions the user has no way to select -- data that can
     # only ever be dead.
     selectable = {c["team"] for c in champions}
+    selectable = {c["team"] for c in champions}
     combos = []
     for (ci, depth), pool in combo_pool.items():
         if ci not in selectable or len(pool) < MIN_COMBO_CANDIDATES:
             continue
-        best = max(pool, key=lambda c: c["p1"])
         combos.append({
             "team": ci,
             "depth": depth,
-            "picks": [list(r) for r in best["w"]],
-            "ev": best["ev"],
-            "p1": best["p1"],
             "n": len(pool),
+            "by": _by_objective(pool),
         })
-    combos.sort(key=lambda c: -c["p1"])
+    combos.sort(key=lambda c: -c["by"]["p1"]["p1"])
 
     # Retained under its original key so an older cached app.js keeps rendering
     # a valid bracket rather than an empty board while the new one deploys.

@@ -70,11 +70,7 @@
       <p class="panel-title">Or back a champion</p>
     </div>
     <div class="chips" id="champ-list"></div>
-    <p class="prior-note">
-      Each is the best bracket available for that team winning, with its chance
-      of finishing first in a 30-person pool. Backing a longer shot costs win
-      probability — the number says how much.
-    </p>
+    <p class="prior-note" id="champ-note"></p>
   </section>
 
   <!-- Final Four depth. The champion picker moves the top of the bracket and
@@ -87,11 +83,7 @@
       <p class="panel-title">How deep does your Final Four reach</p>
     </div>
     <div class="chips" id="shape-list"></div>
-    <p class="prior-note">
-      The best bracket whose deepest Final Four team is exactly that seed. Hover
-      for the four teams. Reaching further down costs win probability, and the
-      number says how much.
-    </p>
+    <p class="prior-note" id="shape-note"></p>
   </section>
 
   <section class="note" id="mode-note"></section>
@@ -124,6 +116,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=9"></script>
-<script src="app.js?v=32"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
