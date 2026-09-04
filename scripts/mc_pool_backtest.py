@@ -303,6 +303,11 @@ ALL_MODES: Tuple[str, ...] = (
     "lev_tilt_50",
     "lev_tilt_100",
     "lev_tilt_200",
+    "fixed_blendA0_r35",
+    "fixed_blendA25_r35",
+    "fixed_blendA50_r35",
+    "fixed_blendA75_r35",
+    "fixed_blendA100_r35",
     "fixed_blend_r10",
     "fixed_blend_r20",
     "fixed_blend_r30",
@@ -3004,6 +3009,11 @@ def _run_one_year(
         ),
         "lev_tilt_200": (
             "lev_tilt_200",
+    "fixed_blendA0_r35",
+    "fixed_blendA25_r35",
+    "fixed_blendA50_r35",
+    "fixed_blendA75_r35",
+    "fixed_blendA100_r35",
     "fixed_blend_r10",
     "fixed_blend_r20",
     "fixed_blend_r30",
@@ -3099,6 +3109,52 @@ def _run_one_year(
     # than hand-written so the sweep is a grid and not a list of guesses. The
     # base names mirror meta's own candidate labels: blend is its modal choice
     # (8 of 15 seasons), massey_avg its second (4), torvik the control.
+    # THE MIXTURE WEIGHT INSIDE blend, swept and found not to matter.
+    #
+    # MEASURED at pool 30 over 2011-2026, risk pinned at 0.35:
+    #
+    #     alpha   0.00    0.25    0.50    0.75    1.00
+    #     P(1st)  .0840   .1000   .1033   .1033   .1207
+    #     rank    10.0     9.5     9.3     9.2     9.6
+    #
+    # alpha=1.0 tops the P(1st) column and does not survive: it wins 8 of 15
+    # seasons against the shipped 0.5, CI [-0.0247, +0.0567], and is WORSE on
+    # mean rank than 0.75. The shape is the usable part and it is another
+    # plateau -- .1000/.1033/.1033 across 0.25 to 0.75, dropping only at pure
+    # no-seed. The hard-coded 0.5 sits in the middle of it, as risk 0.35 sits in
+    # the middle of its own.
+    #
+    # WORTH KNOWING ANYWAY: alpha=1.0 is pure seed, no no-seed model at all, and
+    # it is not measurably worse than the blend. That is not a contradiction of
+    # `seed` scoring 0.0395 -- `seed` uses forward sampling while this uses
+    # region_top_n at risk 0.35. The construction is doing the work, not the
+    # probability source, which is the same conclusion the meta comparison
+    # reached from the other direction.
+    #
+    # Kept registered so the sweep is repeatable rather than a claim in a commit
+    # message. blend = alpha * seed + (1 - alpha) * noseed at a
+    # hard-coded alpha of 0.5. Since blend beats both of its own components, the
+    # mixture is doing real work and its weight is a free parameter, not a
+    # formality: alpha=1 is pure seed and alpha=0 is pure no-seed, so the sweep
+    # spans two known-worse endpoints and asks whether 0.5 sits anywhere near the
+    # best point between them. Risk is pinned at 0.35 -- the shipped value, and
+    # the middle of a plateau -- so this varies one thing.
+    _alpha_bases = []
+    for _a100 in (0, 25, 50, 75, 100):
+        _rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=_a100 / 100.0)
+        _pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=_a100 / 100.0)
+        _alpha_bases.append((
+            f"blendA{_a100}",
+            ProbabilityBase(f"blendA{_a100}", _rp, PairwiseProbabilities.from_dict(_pw, f"blend(a={_a100 / 100})")),
+        ))
+    for _bname, _bobj in _alpha_bases:
+        legacy_specs[f"fixed_{_bname}_r35"] = (
+            f"fixed_{_bname}_r35",
+            _bobj,
+            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
+            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.35, _n),
+        )
+
     for _bname, _bobj in (("blend", blend_base), ("massavg", base_round_probs.get("massey_avg")),
                           ("tv", torvik_base)):
         if _bobj is None:
