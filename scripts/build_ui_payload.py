@@ -503,11 +503,13 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
 
     # Only values with enough support to yield a non-degenerate best are offered.
     AXIS_FLOOR = 8
-    def _live(field):
+
+    def _live(field, floor=None):
         n: Dict[Any, int] = {}
         for r in cand_rows:
             n[r[field]] = n.get(r[field], 0) + 1
-        return sorted(k for k, v in n.items() if v >= AXIS_FLOOR)
+        cut = AXIS_FLOOR if floor is None else floor
+        return sorted(k for k, v in n.items() if v >= cut)
 
     filters = {
         "candidates": cand_rows,
@@ -519,7 +521,14 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "ones": _live("o"),
         "depths": _live("d"),
         "dd16": _live("dd"),
-        "sources": _live("s"),
+        # THE SOURCE AXIS IS EXEMPT FROM THE FLOOR. The floor guards against a
+        # degenerate best-of-N when a filter leaves only a handful of noisy
+        # samples to choose from. A source is not a sample: "shipped" is exactly
+        # three brackets because the product recommends exactly three, and
+        # excluding it for being small put the recommended brackets in the
+        # payload with no way to select them -- the precise gap council item 1
+        # existed to close.
+        "sources": _live("s", floor=1),
         # Labels are derived from the predicate names so the UI cannot drift out
         # of sync with what src/product/selection.py actually supports.
         # Labels written out rather than derived from the key names. Munging
