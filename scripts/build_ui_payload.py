@@ -391,38 +391,61 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # choosing among them should be able to see which worldview produced an
     # option instead of being shown them all as "the model".
     MAX_CANDIDATES = 1200
-    ranked = sorted(art["candidates"], key=lambda c: -c["p1"])
-    constructed = [c for c in art["candidates"] if str(c.get("src", "")).startswith("region_top_n")]
+    constructed = [c for c in art["candidates"] if not str(c.get("src", "")).startswith(("torvik", "massey", "elo"))]
+    sampled = [c for c in art["candidates"] if c not in constructed]
 
     chosen, seen_sig = [], set()
 
     def _take(c):
         sig = repr(c["w"])
         if sig in seen_sig:
-            return
+            return False
         seen_sig.add(sig)
         chosen.append(c)
+        return True
 
-    # Constructed brackets are taken first and unconditionally. They score far
-    # below the sampled candidates on the artifact's own referee -- 0.040 against
-    # 0.0975 for 2026 -- but that comparison is not fair to them: the sampled
-    # figure is the maximum of ~3,000 noisy estimates and is inflated by
-    # selection, while a constructed bracket's score is unselected. Ranking them
-    # together would drop the construction that has out-of-sample evidence in
-    # favour of whichever sample got lucky, so they are kept and made selectable
-    # by provenance instead.
+    # Constructed and shipped brackets are taken first and unconditionally. They
+    # score far below the sampled candidates on the artifact's own referee --
+    # 0.040 against 0.0975 for 2026 -- but that comparison is not fair to them:
+    # the sampled figure is the maximum of ~3,000 noisy estimates and is inflated
+    # by selection, while a constructed bracket's score is unselected. Ranking
+    # them together would drop the construction that has out-of-sample evidence.
     for c in constructed:
         _take(c)
-    for c in ranked:
-        if len(chosen) >= MAX_CANDIDATES:
-            break
-        _take(c)
 
+    # ROUND-ROBIN BY SOURCE, NOT GLOBAL p1 RANK. Taking the top 1,200 by p1
+    # looked reasonable and quietly undid the artifact's diversity work: Elo is
+    # 35.6% of the bank and came out as 3.6% of what users could reach, because
+    # whichever source happens to produce high referee scores crowds out the
+    # rest. That is the opposite of broadening the worldview. Each source now
+    # contributes in turn, so representation in the UI reflects the bank.
+    from collections import defaultdict as _dd
+    by_src = _dd(list)
+    for c in sampled:
+        by_src[str(c.get("src", "?"))].append(c)
+    for v in by_src.values():
+        v.sort(key=lambda c: -c["p1"])
+    order = sorted(by_src)
+    i = 0
+    while len(chosen) < MAX_CANDIDATES and any(i < len(by_src[k]) for k in order):
+        for k in order:
+            if len(chosen) >= MAX_CANDIDATES:
+                break
+            if i < len(by_src[k]):
+                _take(by_src[k][i])
+        i += 1
+
+    # ITEM 4, DONE PROPERLY: evaluate the artifact's OWN preference predicates
+    # rather than recomputing a lookalike. The first pass hand-rolled a
+    # double-digit count, which covered the three s16_* predicates by accident
+    # and left the three f4_* ones with no path to the UI at all. These come from
+    # src/product/selection.py, so a predicate added there reaches the page
+    # without a second implementation drifting away from it.
     # A BRACKET IS 63 BINARY CHOICES, not 63 team indices. Walking the bracket
     # in order, each game is decided by which of two known teams advanced, so one
     # character per game says everything -- and the browser already walks that
-    # same order to render. Shipping indices instead cost roughly three times the
-    # bytes to carry the same information: 338 KB against 118 KB per season.
+    # same order to render. Indices cost roughly three times the bytes: 338 KB
+    # against 198 KB per season.
     fr_order = art["first_round"]
 
     def _encode(w):
@@ -438,6 +461,11 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             current = nxt
         return "".join(bits)
 
+    from src.product.selection import preference_predicates
+
+    preds = {k: f for k, f in preference_predicates(art).items() if k != "none"}
+    pred_keys = sorted(preds)
+
     def _attrs(cand):
         f4 = [teams[i]["seed"] for i in cand["w"][3]]
         src = str(cand.get("src", "?"))
@@ -449,7 +477,10 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             "o": sum(1 for x in f4 if x == 1),
             "d": max(f4),
             "dd": min(2, sum(1 for i in cand["w"][1] if teams[i]["seed"] >= 10)),
-            "s": "region_top_n" if src.startswith("region_top_n") else src,
+            "s": "shipped" if src.startswith("shipped") else (
+                "region_top_n" if src.startswith("region_top_n") else src),
+            # Bit flags, one per shipped predicate, in pred_keys order.
+            "k": "".join("1" if preds[k](cand["w"]) else "0" for k in pred_keys),
         }
 
     cand_rows = [_attrs(c) for c in chosen]
@@ -476,6 +507,24 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "depths": _live("d"),
         "dd16": _live("dd"),
         "sources": _live("s"),
+        # Labels are derived from the predicate names so the UI cannot drift out
+        # of sync with what src/product/selection.py actually supports.
+        "predicates": [
+            {"key": k, "i": i,
+             "label": k.replace("f4_", "Final Four: ").replace("s16_", "Sweet 16: ")
+                       .replace("at_least_", "at least ").replace("_", " "),
+             "n": sum(1 for r in cand_rows if r["k"][i] == "1")}
+            for i, k in enumerate(pred_keys)
+        ],
+        # The true frequency of each predicate over the FULL bank. Counting rows
+        # in the shipped candidates would be wrong -- the pool over-samples
+        # unlikely champions by design, which the artifact warns about directly.
+        "predicate_probabilities": art.get("constraint_probabilities", {}),
+        # The referee's Monte-Carlo standard error, shipped so the browser can
+        # define "near-tied" from the measurement instead of asserting it. The
+        # first pass showed a fixed top-3 and called them near-tied; for 2026 the
+        # 1st and 3rd were 1.7 SE apart, which is a ranking, not a tie.
+        "p1_se": art.get("meta", {}).get("p1_se_estimate"),
     }
 
     # Retained under its original key so an older cached app.js keeps rendering

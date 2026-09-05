@@ -527,6 +527,20 @@ def _encode_rows(winners, first_round):
     return row
 
 
+def _champ_equity_rounds(first_round, marg):
+    """Championship-equity construction as rounds; shared with the pool."""
+    champ = marg[5]
+    winners, current = [], list(first_round)
+    for _ in range(6):
+        nxt = []
+        for g in range(0, len(current), 2):
+            t1, t2 = current[g], current[g + 1]
+            nxt.append(t1 if champ.get(t1, 0.0) >= champ.get(t2, 0.0) else t2)
+        winners.append(nxt)
+        current = nxt
+    return winners
+
+
 def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=None, regions=None) -> Dict:
     """Decide every game by P(champion) rather than by P(winning that game).
 
@@ -739,6 +753,20 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     # the pool the filters search -- so filtering could not reach the method that
     # wins. Forced in rather than left to the sampler, which would drop them.
     constructed = _constructed_candidates(year, seeds, regions, first_round, sources)
+
+    # THE SHIPPED STRATEGIES ARE POOL MEMBERS, not neighbours of the pool.
+    # Adding region_top_n over the rating sources did NOT close the gap the
+    # council item named: the shipped win-maximiser is region_top_n over the
+    # seed/no-seed BLEND, and the points strategy is a dynamic program, so
+    # neither was among the constructions added. A user filtering to "Michigan
+    # winning" still could not be handed the bracket the product recommends.
+    # They are appended here by the same path as any other candidate.
+    for _lbl, _w in (
+        ("shipped(blend_region_35)", _blend_region_bracket(year, seeds, regions, first_round, 0.35)),
+        ("shipped(ev_optimal)", _ev_optimal_bracket(first_round, marg)),
+        ("shipped(champ_equity)", _champ_equity_rounds(first_round, marg)),
+    ):
+        constructed.append((_lbl, _w))
     if constructed:
         extra_rounds = [w for _lbl, w in constructed]
         extra_bank = np.vstack([_encode_rows(w, first_round) for w in extra_rounds])
