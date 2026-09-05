@@ -97,7 +97,11 @@ const state = {
    * mutually exclusive menu entries, which made "Connecticut wins AND my Final
    * Four stops at a 3 seed" unaskable even though the pool carries 63 such
    * pairs. */
-  pick: { champ: null, ones: null, depth: null },
+  pick: { champ: null, ones: null, depth: null, dd: null, src: null },
+  /* Which of the matching brackets to show. The referee's standard error is
+   * about half a point, so within a filtered set the top few are statistically
+   * tied and picking only the argmax presents a coin flip as a verdict. */
+  alt: 0,
   /* Which question the filters narrow. Filtering changes WHICH brackets are
    * eligible, never what is being maximised over them -- picking a champion
    * used to silently switch the objective to P(1st), which for Michigan meant
@@ -127,7 +131,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 11;
+const DATA_V = 12;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -327,55 +331,81 @@ function solveActual() {
  * disagree about which bracket is showing. */
 const CUSTOM = 'custom';
 
-/* The cell the current filters select, resolved against one uniform table.
+/* Filtering happens here rather than in a precomputed table.
  *
- * Three axes -- champion, Final Four one-seed count, Final Four depth -- each
- * optional. The key is built the same way the payload builds it, with an empty
- * segment meaning "any", so a subset of filters is just a key with blanks in it
- * and there is no special case per combination.
- *
- * Cells below the payload's floor are absent rather than thin, so a missing
- * lookup means "no bracket satisfies this", which is what the chips grey out on. */
-function filterKey(pick) {
-  const p = pick || state.pick;
-  return `${p.champ ?? ''}|${p.ones ?? ''}|${p.depth ?? ''}`;
+ * The payload used to ship a cell per subset of the filter axes, which grew
+ * multiplicatively: three axes were 282 cells, four 675, five 1,496. It now
+ * ships the candidates themselves with their attributes, so a filter is a scan
+ * and a new axis is one more field. Selecting a maximum over a filtered array
+ * is presentation arithmetic; the modelling that produced the candidates stays
+ * in Python.
+ */
+const AXIS_FIELD = { champ: 'c', ones: 'o', depth: 'd', dd: 'dd', src: 's' };
+
+function candidates() {
+  return ((state.season && state.season.filters) || {}).candidates || [];
 }
 
-function cellFor(pick) {
-  const f = (state.season && state.season.filters) || null;
-  if (!f) return null;
-  return f.cells[filterKey(pick)] || null;
+function matching(pick) {
+  const p = pick || state.pick;
+  return candidates().filter(r =>
+    Object.entries(AXIS_FIELD).every(([k, f]) => p[k] === null || r[f] === p[k]));
 }
 
 function anyFilter() {
-  const { champ, ones, depth } = state.pick;
-  return champ !== null || ones !== null || depth !== null;
+  return Object.keys(AXIS_FIELD).some(k => state.pick[k] !== null);
 }
 
+/* A bracket is 63 binary choices against the known first-round order. */
+function decodeBracket(bits) {
+  const fr = state.season.first_round;
+  const rounds = [];
+  let cur = fr.slice(), i = 0;
+  for (let r = 0; r < 6; r++) {
+    const nxt = [];
+    for (let g = 0; g < cur.length; g += 2) {
+      const t1 = cur[g], t2 = cur[g + 1];
+      const w = bits[i++] === '1' ? t1 : t2;
+      nxt.push(w);
+    }
+    rounds.push(nxt);
+    cur = nxt;
+  }
+  return rounds;
+}
+
+const SRC_LABEL = {
+  torvik: 'Torvik', massey_avg: 'Massey', elo: 'Elo',
+  region_top_n: 'region construction',
+};
+
 function filteredEntry() {
-  const f = (state.season && state.season.filters) || null;
-  const cell = cellFor();
-  if (!f || !cell) return { entry: null, scope: '' };
-  const { champ, ones, depth } = state.pick;
+  const rows = matching();
+  if (!rows.length) return { entry: null, scope: '', alts: [] };
+  const obj = state.objective;
+  const alts = rows.slice().sort((a, b) => b[obj] - a[obj]).slice(0, 3);
+  const pick = alts[Math.min(state.alt, alts.length - 1)];
+  const { champ, ones, depth, dd, src } = state.pick;
   const bits = [];
   if (champ !== null) bits.push(`${state.season.teams[champ].name} winning`);
   if (ones !== null) bits.push(`${ones} one-seed${ones === 1 ? '' : 's'} in the Final Four`);
   if (depth !== null) bits.push(`a Final Four reaching exactly a ${depth} seed`);
+  if (dd !== null) bits.push(dd === 0 ? 'no double-digit seed in the Sweet 16'
+                    : `${dd}${dd === 2 ? '+' : ''} double-digit seed${dd === 1 ? '' : 's'} in the Sweet 16`);
+  if (src !== null) bits.push(`brackets from ${SRC_LABEL[src] || src}`);
   return {
-    entry: {
-      n: cell.n,
-      by: { p1: f.pool[cell.p1], ev: f.pool[cell.ev] },
-    },
+    entry: { n: rows.length, row: pick, by: { p1: pick, ev: pick } },
     scope: bits.join(' and '),
+    alts,
   };
 }
 
 function currentStrategy() {
   if (state.strategy === CUSTOM) {
-    const { entry, scope } = filteredEntry();
+    const { entry, scope, alts } = filteredEntry();
     if (!entry) return null;
     const obj = state.objective;
-    const src = entry.by[obj];
+    const src = entry.row;
     const objName = obj === 'ev' ? 'expected points' : 'P(1st)';
     return {
       id: CUSTOM,
@@ -383,8 +413,11 @@ function currentStrategy() {
       // The qualifying count is shown deliberately. As filters narrow, the best
       // survivor is chosen from fewer candidates, and best-of-11 sits closer to
       // the maximum of a short noisy sample than to an optimum.
-      note: `The highest-${objName} bracket with ${scope}, out of ${entry.n} qualifying candidates.`,
-      picks: src.picks, ev: src.ev, p1: src.p1,
+      note: `The highest-${objName} bracket with ${scope}, out of ${entry.n} qualifying candidates.`
+          + (alts.length > 1 ? ` Showing ${Math.min(state.alt, alts.length - 1) + 1} of ${alts.length} near-tied options.` : ''),
+      picks: decodeBracket(src.b), ev: src.ev, p1: src.p1,
+      alts: alts.length, altIndex: Math.min(state.alt, alts.length - 1),
+      source: SRC_LABEL[src.s] || src.s,
     };
   }
   const list = (state.season && state.season.strategies) || [];
@@ -410,7 +443,7 @@ function render() {
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     weights.hidden = true;
-    { for (const id of ['champions', 'ones', 'shapes']) {
+    { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     empty.hidden = false;
@@ -612,7 +645,7 @@ function renderStrategies() {
     // asked, so the objective stays lit rather than every card going dark.
     active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     stat: (() => {
-      const v = (filt && filt.by[st.id]) || st;
+      const v = (filt && filt.by && filt.by[st.id]) || st;
       return `${(v.p1 * 100).toFixed(1)}% to win · ${v.ev.toFixed(0)} pts`
            + (filt ? ' · filtered' : '');
     })(),
@@ -650,7 +683,8 @@ function renderStrategies() {
 function renderFilterNotes() {
   const inert = state.strategy === MODEL;
   const ev = state.objective === 'ev';
-  const notes = ['champ-note', 'ones-note', 'shape-note'].map(id => document.getElementById(id));
+  const notes = ['champ-note', 'ones-note', 'shape-note', 'dd-note', 'src-note']
+    .map(id => document.getElementById(id));
   const suffix = inert
     ? 'Filters apply to the two precomputed strategies; the fitted model builds its own board.'
     : ev
@@ -660,6 +694,8 @@ function renderFilterNotes() {
     'Each is the best bracket available with that team winning.',
     'How many 1 seeds reach the Final Four. Depth says how far DOWN you reach; this says how much of the top you keep.',
     'The deepest seed your Final Four reaches.',
+    'Double-digit seeds surviving to the Sweet 16.',
+    'Which model imagined the bracket. These disagree about real teams, which is the point.',
   ];
   notes.forEach((el, i) => { if (el) el.textContent = `${lead[i]} ${suffix}`; });
 }
@@ -692,6 +728,8 @@ const FILTER_ROWS = [
   { kind: 'champ', host: 'champ-list', panel: 'champions' },
   { kind: 'ones', host: 'ones-list', panel: 'ones' },
   { kind: 'depth', host: 'shape-list', panel: 'shapes' },
+  { kind: 'dd', host: 'dd-list', panel: 'dd16' },
+  { kind: 'src', host: 'src-list', panel: 'sources' },
 ];
 
 function renderFilters() {
@@ -708,17 +746,21 @@ function renderFilters() {
 
     const values = row.kind === 'champ' ? f.champions.map(c => c.team)
                  : row.kind === 'ones' ? f.ones
-                 : f.depths;
-    panel.hidden = values.length === 0;
+                 : row.kind === 'depth' ? f.depths
+                 : row.kind === 'dd' ? f.dd16
+                 : f.sources;
+    panel.hidden = !values || values.length === 0;
+    if (panel.hidden) continue;
 
     host.innerHTML = values.map(v => {
       const on = state.pick[row.kind] === v;
-      const probe = { ...state.pick, [row.kind]: v };
-      const cell = inert ? null : cellFor(probe);
-      const ok = !!cell;
-      const src = cell ? f.pool[cell[obj]] : null;
-      const stat = !src ? '—'
-        : obj === 'ev' ? `${src.ev.toFixed(0)} pts` : `${(src.p1 * 100).toFixed(1)}%`;
+      // Availability is a query, not a table: does anything survive with this
+      // value plus whatever else is selected.
+      const rows = inert ? [] : matching({ ...state.pick, [row.kind]: v });
+      const ok = rows.length > 0;
+      const best = ok ? rows.reduce((a, b) => (b[obj] > a[obj] ? b : a)) : null;
+      const stat = !best ? '—'
+        : obj === 'ev' ? `${best.ev.toFixed(0)} pts` : `${(best.p1 * 100).toFixed(1)}%`;
 
       let lead = '', name = '';
       if (row.kind === 'champ') {
@@ -726,24 +768,65 @@ function renderFilters() {
         lead = String(c.seed); name = c.name;
       } else if (row.kind === 'ones') {
         lead = String(v); name = v === 1 ? 'one-seed' : 'one-seeds';
-      } else {
+      } else if (row.kind === 'depth') {
         lead = String(v); name = 'seed';
+      } else if (row.kind === 'dd') {
+        lead = v === 2 ? '2+' : String(v); name = v === 1 ? 'upset in S16' : 'upsets in S16';
+      } else {
+        lead = ''; name = SRC_LABEL[v] || v;
       }
       const title = inert ? 'Filters apply to the precomputed strategies, not the fitted model'
-                  : ok ? `${cell.n} candidate brackets`
-                       : 'No bracket combines that with your other filters';
+                  : ok ? `${rows.length} matching brackets`
+                       : 'Nothing matches that with your other filters';
       return `
         <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
-                onclick="setFilter('${row.kind}', ${v})" title="${title}">
-          <span class="chip-seed">${lead}</span>
+                onclick="setFilter('${row.kind}', ${typeof v === 'string' ? `'${v}'` : v})" title="${title}">
+          ${lead ? `<span class="chip-seed">${lead}</span>` : ''}
           <span class="chip-name">${name}</span>
           <span class="chip-stat">${stat}</span>
         </button>`;
     }).join('');
   }
+
+  renderAlts();
+}
+
+/* Near-tied alternates.
+ *
+ * The referee's standard error is about half a point, so the top few brackets in
+ * any filtered set are not meaningfully ranked. Showing only the argmax presents
+ * a coin flip as a verdict; this offers the tie and lets the user break it on
+ * something the model cannot see. */
+function renderAlts() {
+  const host = document.getElementById('alt-list');
+  const panel = document.getElementById('alts');
+  if (!host || !panel) return;
+  const { alts } = filteredEntry();
+  const show = state.strategy === CUSTOM && alts && alts.length > 1;
+  panel.hidden = !show;
+  if (!show) { host.innerHTML = ''; return; }
+  const obj = state.objective;
+  host.innerHTML = alts.map((r, i) => {
+    const on = Math.min(state.alt, alts.length - 1) === i;
+    const stat = obj === 'ev' ? `${r.ev.toFixed(0)} pts` : `${(r.p1 * 100).toFixed(1)}%`;
+    return `
+      <button class="chip${on ? ' on' : ''}" onclick="setAlt(${i})"
+              title="${SRC_LABEL[r.s] || r.s}">
+        <span class="chip-seed">${i + 1}</span>
+        <span class="chip-name">${state.season.teams[r.c].name}</span>
+        <span class="chip-stat">${stat}</span>
+      </button>`;
+  }).join('');
+}
+
+function setAlt(i) {
+  state.alt = i;
+  renderStrategies();
+  render();
 }
 
 function setFilter(kind, value) {
+  state.alt = 0;
   // Inert under the fitted model: that board is derived live from a regression,
   // so there is no candidate pool to narrow.
   if (state.strategy === MODEL) return;
@@ -753,15 +836,20 @@ function setFilter(kind, value) {
   // A combination the pool cannot fill would blank the board. Rather than
   // refuse the click, drop the OTHER axes in the order they were least recently
   // meaningful -- the user's newest intent is the one to honour.
-  if (!cellFor()) {
-    for (const other of ['depth', 'ones', 'champ']) {
+  // A combination nothing satisfies would blank the board. Drop other axes
+  // rather than refuse the click -- the newest intent is the one to honour.
+  if (!matching().length) {
+    for (const other of ['dd', 'src', 'depth', 'ones', 'champ']) {
       if (other === kind || state.pick[other] === null) continue;
       state.pick[other] = null;
-      if (cellFor()) break;
+      if (matching().length) break;
     }
   }
-  if (!cellFor()) state.pick = { champ: null, ones: null, depth: null, [kind]: value };
-  if (!cellFor()) state.pick = prev;
+  if (!matching().length) {
+    state.pick = { champ: null, ones: null, depth: null, dd: null, src: null };
+    state.pick[kind] = value;
+  }
+  if (!matching().length) state.pick = prev;
 
   state.strategy = anyFilter() ? CUSTOM : state.objective;
   refit();
@@ -777,7 +865,7 @@ function setStrategy(id) {
     state.objective = id;
     state.strategy = anyFilter() ? CUSTOM : id;
   } else {
-    if (id === MODEL) state.pick = { champ: null, ones: null, depth: null };
+    if (id === MODEL) state.pick = { champ: null, ones: null, depth: null, dd: null, src: null };
     state.strategy = id;
   }
   refit();

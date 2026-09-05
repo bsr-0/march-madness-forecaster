@@ -363,84 +363,119 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # champion with only a handful of candidates cannot supply a well-optimised
     # bracket, and showing one anyway would put a bad bracket next to good ones
     # with no way to tell them apart.
-    # THREE FILTER AXES, ONE UNIFORM TABLE.
+    # A FLAT CANDIDATE LIST, FILTERED IN THE BROWSER.
     #
-    # Champion, Final Four one-seed count, and Final Four depth are independent
-    # properties of a bracket, and the user may fix any subset of them. Rather
-    # than three hand-built lists plus a pair table -- which is what this was,
-    # and which could not express "two one-seeds AND a 3 seed" -- every
-    # combination is enumerated once.
+    # This replaces a precomputed cell table. That table enumerated every subset
+    # of the filter axes, so each new axis multiplied it: three axes were 282
+    # cells, four were 675, five were 1,496, and shipping top-k per cell
+    # multiplied the bracket count on top of that. The structure was the reason
+    # adding an axis felt expensive.
     #
-    # WHY ONE-SEED COUNT IS A SEPARATE AXIS FROM DEPTH. They sound alike and are
-    # not. Both of these are depth 3, and they are completely different brackets:
+    # Shipping the candidates themselves with their attributes inverts that. Any
+    # combination of filters is a scan, any new axis is one more field, and the
+    # browser can return the top few rather than a single argmax. Filtering and
+    # taking a maximum is presentation arithmetic -- the same class as the
+    # weighted sums the browser already does -- not modelling, which stays in
+    # Python.
     #
-    #     Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)     2 one-seeds
-    #     Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)  0 one-seeds
+    # WHAT EACH ATTRIBUTE IS FOR:
+    #   c    champion team index
+    #   o    one-seeds in the Final Four   (how much of the top you keep)
+    #   d    deepest Final Four seed       (how far down you reach)
+    #   dd   double-digit seeds in the Sweet 16, capped at 2
+    #   s    provenance: which model imagined it, or which construction built it
     #
-    # Depth says how far down you reach; the one-seed count says how much of the
-    # top you keep. Neither implies the other.
-    #
-    # DEDUPED, because it would otherwise be most of the payload. 282 viable
-    # cells reference only 300 distinct brackets -- the same bracket is often the
-    # best answer to several questions -- so brackets live in a pool and cells
-    # hold indices into it. Storing them inline would nearly double the file to
-    # say the same thing.
-    def _profile(cand):
+    # PROVENANCE IS SHIPPED BECAUSE THE POOL IS NO LONGER ONE MODEL'S OPINION.
+    # Candidates now come from Torvik, Elo and the Massey composite, plus
+    # region_top_n constructions. Those disagree about real teams, and a user
+    # choosing among them should be able to see which worldview produced an
+    # option instead of being shown them all as "the model".
+    MAX_CANDIDATES = 1200
+    ranked = sorted(art["candidates"], key=lambda c: -c["p1"])
+    constructed = [c for c in art["candidates"] if str(c.get("src", "")).startswith("region_top_n")]
+
+    chosen, seen_sig = [], set()
+
+    def _take(c):
+        sig = repr(c["w"])
+        if sig in seen_sig:
+            return
+        seen_sig.add(sig)
+        chosen.append(c)
+
+    # Constructed brackets are taken first and unconditionally. They score far
+    # below the sampled candidates on the artifact's own referee -- 0.040 against
+    # 0.0975 for 2026 -- but that comparison is not fair to them: the sampled
+    # figure is the maximum of ~3,000 noisy estimates and is inflated by
+    # selection, while a constructed bracket's score is unselected. Ranking them
+    # together would drop the construction that has out-of-sample evidence in
+    # favour of whichever sample got lucky, so they are kept and made selectable
+    # by provenance instead.
+    for c in constructed:
+        _take(c)
+    for c in ranked:
+        if len(chosen) >= MAX_CANDIDATES:
+            break
+        _take(c)
+
+    # A BRACKET IS 63 BINARY CHOICES, not 63 team indices. Walking the bracket
+    # in order, each game is decided by which of two known teams advanced, so one
+    # character per game says everything -- and the browser already walks that
+    # same order to render. Shipping indices instead cost roughly three times the
+    # bytes to carry the same information: 338 KB against 118 KB per season.
+    fr_order = art["first_round"]
+
+    def _encode(w):
+        picked = [set(r) for r in w]
+        bits, current = [], list(fr_order)
+        for ri in range(6):
+            nxt = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                first = t1 in picked[ri]
+                bits.append("1" if first else "0")
+                nxt.append(t1 if first else t2)
+            current = nxt
+        return "".join(bits)
+
+    def _attrs(cand):
         f4 = [teams[i]["seed"] for i in cand["w"][3]]
-        return cand["w"][5][0], sum(1 for x in f4 if x == 1), max(f4)
-
-    FILTER_FLOOR = 10
-    cell_pool: Dict[tuple, list] = {}
-    for cand in art["candidates"]:
-        ci, ones, depth = _profile(cand)
-        for key in itertools.product((ci, None), (ones, None), (depth, None)):
-            cell_pool.setdefault(key, []).append(cand)
-
-    pool: list = []
-    seen: Dict[str, int] = {}
-
-    def _intern(cand) -> int:
-        sig = repr(cand["w"])
-        if sig not in seen:
-            seen[sig] = len(pool)
-            pool.append({
-                "picks": [list(r) for r in cand["w"]],
-                "ev": cand["ev"],
-                "p1": cand["p1"],
-            })
-        return seen[sig]
-
-    cells: Dict[str, Any] = {}
-    for (ci, ones, depth), group in cell_pool.items():
-        if (ci, ones, depth) == (None, None, None) or len(group) < FILTER_FLOOR:
-            continue
-        key = f"{'' if ci is None else ci}|{'' if ones is None else ones}|{'' if depth is None else depth}"
-        cells[key] = {
-            "p1": _intern(max(group, key=lambda c: c["p1"])),
-            "ev": _intern(max(group, key=lambda c: c["ev"])),
-            "n": len(group),
+        src = str(cand.get("src", "?"))
+        return {
+            "b": _encode(cand["w"]),
+            "ev": cand["ev"],
+            "p1": cand["p1"],
+            "c": cand["w"][5][0],
+            "o": sum(1 for x in f4 if x == 1),
+            "d": max(f4),
+            "dd": min(2, sum(1 for i in cand["w"][1] if teams[i]["seed"] >= 10)),
+            "s": "region_top_n" if src.startswith("region_top_n") else src,
         }
 
-    # Axis metadata for rendering the chips. Only values that appear in at least
-    # one viable cell are offered, so no control can present a dead option.
-    live_champ = {int(k.split("|")[0]) for k in cells if k.split("|")[0]}
-    live_ones = {int(k.split("|")[1]) for k in cells if k.split("|")[1]}
-    live_depth = {int(k.split("|")[2]) for k in cells if k.split("|")[2]}
+    cand_rows = [_attrs(c) for c in chosen]
     champ_counts: Dict[int, int] = {}
-    for cand in art["candidates"]:
-        ci = cand["w"][5][0]
-        champ_counts[ci] = champ_counts.get(ci, 0) + 1
+    for r in cand_rows:
+        champ_counts[r["c"]] = champ_counts.get(r["c"], 0) + 1
+
+    # Only values with enough support to yield a non-degenerate best are offered.
+    AXIS_FLOOR = 8
+    def _live(field):
+        n: Dict[Any, int] = {}
+        for r in cand_rows:
+            n[r[field]] = n.get(r[field], 0) + 1
+        return sorted(k for k, v in n.items() if v >= AXIS_FLOOR)
 
     filters = {
-        "pool": pool,
-        "cells": cells,
+        "candidates": cand_rows,
         "champions": sorted(
-            ({"team": ci, "name": teams[ci]["name"], "seed": teams[ci].get("seed"),
-              "n": champ_counts[ci]} for ci in live_champ),
+            ({"team": ci, "name": teams[ci]["name"], "seed": teams[ci].get("seed"), "n": n}
+             for ci, n in champ_counts.items() if n >= AXIS_FLOOR),
             key=lambda c: (c["seed"] or 99, c["name"]),
         ),
-        "ones": sorted(live_ones),
-        "depths": sorted(live_depth),
+        "ones": _live("o"),
+        "depths": _live("d"),
+        "dd16": _live("dd"),
+        "sources": _live("s"),
     }
 
     # Retained under its original key so an older cached app.js keeps rendering
