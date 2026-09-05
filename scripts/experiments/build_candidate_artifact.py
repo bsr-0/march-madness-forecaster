@@ -602,23 +602,153 @@ def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=Non
     return out
 
 
+def _rating_sources(year, seeds):
+    """Barthag-equivalent ratings from every source available for this year.
+
+    THE BANK USED TO COME FROM ONE MODEL'S IMAGINATION. Every candidate was a
+    forward simulation under Torvik log5, so the filters offered variety within
+    a single worldview: a bracket Torvik would never sample was unreachable no
+    matter how the user filtered. Elo and the Massey composite disagree with
+    Torvik about real teams, and those disagreements are exactly the brackets
+    worth being able to select.
+
+    Torvik is required -- its absence is a provenance failure and already raises
+    upstream. The others are best-effort: a missing file narrows the bank rather
+    than breaking the build, and the provenance block records which were used.
+    """
+    out = [("torvik", _load_torvik_barthag(year, seeds))]
+    try:
+        from src.prediction.massey_probabilities import load_massey_avg_barthag
+
+        mass = load_massey_avg_barthag(year, seeds, Path("data"))
+        if mass:
+            out.append(("massey_avg", mass))
+    except Exception as exc:  # noqa: BLE001 - reported, never silent
+        print(f"  [warn] massey ratings unavailable: {exc}")
+    try:
+        from src.prediction.elo_probabilities import load_elo_barthag
+
+        elo = load_elo_barthag(year, seeds, Path("data"))
+        if elo:
+            out.append(("elo", elo))
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [warn] elo ratings unavailable: {exc}")
+    return out
+
+
+def _constructed_candidates(year, seeds, regions, first_round, bases):
+    """region_top_n brackets across a base x risk grid.
+
+    WHY THESE HAVE TO BE IN THE POOL. region_top_n is the construction with
+    out-of-sample evidence -- P(1st) ~0.10-0.11 at pool 30 across 2011-2026,
+    against 0.064 for the same ratings under forward sampling. Until now it
+    produced exactly one bracket, bolted on beside the artifact, while the
+    2,975 candidates the filters actually search were built entirely by the
+    construction that measured WORSE. Filtering therefore could not reach the
+    method that wins.
+
+    The risk grid spans the measured plateau (0.2-0.5) plus its edges, so a
+    filtered query can land on a construction-built bracket rather than only on
+    a sampled one.
+    """
+    from src.optimization.bracket_construction import construct_bracket
+
+    pub = build_espn_pick_distribution(year, seeds) or {}
+    out = []
+    for bname, ratings in bases:
+        rp = _round_probs_from_ratings(ratings, seeds, regions, first_round)
+        if rp is None:
+            continue
+        for risk in (0.1, 0.2, 0.35, 0.5, 0.7):
+            try:
+                picks, _c, _, _, _ = construct_bracket(
+                    mode="region_top_n", seeds=seeds, regions=regions, round_probs=rp,
+                    public_picks=pub, risk_level=risk, pool_size=DEFAULT_POOL_SIZE,
+                    scoring_system=dict(ESPN_SCORING),
+                )
+            except Exception:  # noqa: BLE001 - one grid cell failing is not fatal
+                continue
+            by_round = defaultdict(set)
+            for key, w in picks.items():
+                by_round[key.split("_")[0]].add(w)
+            winners, current = [], list(first_round)
+            for rname in ROUND_NAMES:
+                nxt = []
+                for g in range(0, len(current), 2):
+                    t1, t2 = current[g], current[g + 1]
+                    w = t1 if t1 in by_round[rname] else t2
+                    nxt.append(w)
+                winners.append(nxt)
+                current = nxt
+            out.append((f"region_top_n({bname},risk={risk})", winners))
+    return out
+
+
+def _round_probs_from_ratings(ratings, seeds, regions, first_round, n_sims=20000):
+    """Marginal round probabilities for a ratings source, via the sanctioned path."""
+    from src.prediction.pairwise import marginals_from_pairwise
+
+    pw = PairwiseProbabilities.from_ratings(ratings, source="log5")
+    teams = [t for t in first_round if not t.startswith("unknown_")]
+    if len(teams) < 64:
+        return None
+    return marginals_from_pairwise(pw, first_round, teams, n_sims=n_sims)
+
+
 def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
     first_round = build_bracket_order(seeds, regions)
-    barthag = _load_torvik_barthag(year, seeds)
+    sources = _rating_sources(year, seeds)
+    barthag = sources[0][1]
+    rng = np.random.default_rng(seed)
+
+    # THE BANK IS DRAWN FROM EVERY AVAILABLE RATING SOURCE, not just Torvik.
+    # Simulating one source means the filters can only ever offer variety inside
+    # that model's worldview; a bracket Elo or Massey finds plausible and Torvik
+    # does not was previously unreachable however the user filtered. The sims are
+    # split evenly so no source dominates by volume.
+    per = max(1, n_sims // len(sources))
+    banks, all_rounds, origin = [], [], []
+    for sname, ratings in sources:
+        spw = PairwiseProbabilities.from_ratings(ratings, source=f"log5({sname}_{year})")
+        print(f"[1/5] simulating {per:,} tournaments from {sname} ...")
+        b, r = simulate_bracket_outcomes(spw, first_round, per, rng, noise_std=0.0)
+        banks.append(b)
+        all_rounds.extend(r)
+        origin.extend([sname] * len(r))
+    bank = np.vstack(banks)
+    rounds = all_rounds
+
+    # Torvik stays the marginal reference: expected score must be measured
+    # against ONE distribution or the numbers are not comparable across
+    # candidates, and Torvik is the source the leakage gate actually verifies.
     pw = PairwiseProbabilities.from_ratings(barthag, source=f"log5(torvik_{year})")
 
-    rng = np.random.default_rng(seed)
-    print(f"[1/5] simulating {n_sims:,} tournaments ...")
-    bank, rounds = simulate_bracket_outcomes(pw, first_round, n_sims, rng, noise_std=0.0)
-
     print("[2/5] exact expected scores ...")
-    marg = round_marginals(rounds)
+    marg = round_marginals(
+        [r for r, o in zip(rounds, origin) if o == "torvik"]
+    )
     ev = expected_scores(rounds, marg, ESPN_SCORING)
 
     print(f"[3/5] diversity-preserving sample -> {target:,} ...")
     sel = stratified_sample(rounds, ev, target, rng)
+
+    # CONSTRUCTED CANDIDATES, appended rather than sampled. region_top_n is the
+    # construction with out-of-sample evidence and it was previously absent from
+    # the pool the filters search -- so filtering could not reach the method that
+    # wins. Forced in rather than left to the sampler, which would drop them.
+    constructed = _constructed_candidates(year, seeds, regions, first_round, sources)
+    if constructed:
+        extra_rounds = [w for _lbl, w in constructed]
+        extra_bank = np.vstack([_encode_rows(w, first_round) for w in extra_rounds])
+        base_n = len(rounds)
+        rounds = rounds + extra_rounds
+        origin = origin + [lbl for lbl, _w in constructed]
+        bank = np.vstack([bank, extra_bank])
+        ev = np.concatenate([ev, expected_scores(extra_rounds, marg, ESPN_SCORING)])
+        sel = np.concatenate([sel, np.arange(base_n, base_n + len(extra_rounds))])
+        print(f"      + {len(extra_rounds)} constructed (region_top_n) candidates")
 
     print(f"[4/5] P(1st) for {len(sel):,} candidates, {trials:,} shared trials ...")
     seed_pw = build_seed_probabilities(seeds)
@@ -659,6 +789,10 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
                 "ev": round(float(ev[i]), 1),
                 "p1": round(float(p1[j]), 4),
                 "dd16": sum(1 for t in r[_REACHES["S16"]] if seeds.get(t, 0) >= 10),
+                # Which model imagined this bracket, or which construction built
+                # it. Shipped so the UI can say where an option came from rather
+                # than presenting every candidate as equally "the model".
+                "src": origin[i],
             }
         )
 

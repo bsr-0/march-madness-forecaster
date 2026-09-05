@@ -66,6 +66,34 @@
     <p class="prior-note" id="shape-note"></p>
   </section>
 
+  <section class="panel" id="dd16" hidden>
+    <div class="panel-head"><p class="panel-title">Upsets surviving to the Sweet 16</p></div>
+    <div class="chips" id="dd-list"></div>
+    <p class="prior-note" id="dd-note"></p>
+  </section>
+
+  <!-- Provenance. The candidate pool is no longer one model's opinion: it is
+       simulated from Torvik, Elo and the Massey composite, plus region_top_n
+       constructions. Those disagree about real teams, and that disagreement is
+       the point -- a bracket Torvik would never sample is now reachable. -->
+  <section class="panel" id="sources" hidden>
+    <div class="panel-head"><p class="panel-title">Whose view of the tournament</p></div>
+    <div class="chips" id="src-list"></div>
+    <p class="prior-note" id="src-note"></p>
+  </section>
+
+  <!-- Near-tied alternates. The referee's standard error is about half a point,
+       so the top few in any filtered set are not meaningfully ranked. Offering
+       only the argmax would present a coin flip as a verdict. -->
+  <section class="panel" id="alts" hidden>
+    <div class="panel-head"><p class="panel-title">Near-tied alternatives</p></div>
+    <div class="chips" id="alt-list"></div>
+    <p class="prior-note">
+      These are within the referee's noise of each other. Pick on something it
+      cannot see — a team you believe in, or one you refuse to pick.
+    </p>
+  </section>
+
   <section class="note" id="mode-note"></section>
 
   <!-- The fitted model, printed. Empty unless variables are enabled. -->
@@ -96,6 +124,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=10"></script>
-<script src="app.js?v=37"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>
