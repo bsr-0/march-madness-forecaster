@@ -131,7 +131,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 13;
+const DATA_V = 14;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -390,6 +390,12 @@ const SRC_LABEL = {
 };
 
 function filteredEntry() {
+  // WITH NOTHING SELECTED THERE IS NO FILTERED SET. matching() returns every
+  // candidate in that case, which is correct as a query and wrong as an answer:
+  // it made both strategy cards show the pool-wide best and label it
+  // "filtered", so they read as identical and as narrowed when neither was
+  // true. An empty filter is not a filter.
+  if (!anyFilter()) return { entry: null, scope: '', alts: [] };
   const rows = matching();
   if (!rows.length) return { entry: null, scope: '', alts: [] };
   const obj = state.objective;
@@ -417,7 +423,18 @@ function filteredEntry() {
   }
   if (src !== null) bits.push(`brackets from ${SRC_LABEL[src] || src}`);
   return {
-    entry: { n: rows.length, row: pick, by: { p1: pick, ev: pick } },
+    entry: {
+      n: rows.length,
+      row: pick,
+      // The cards ask "what would I get if I asked THIS question of the set I
+      // have narrowed to", so each objective needs its own best -- not the
+      // current objective's pick echoed twice, which made both cards show the
+      // same number and hid the trade the two strategies exist to express.
+      by: {
+        p1: rows.reduce((a, b) => (b.p1 > a.p1 ? b : a)),
+        ev: rows.reduce((a, b) => (b.ev > a.ev ? b : a)),
+      },
+    },
     scope: bits.join(' and '),
     alts,
   };
