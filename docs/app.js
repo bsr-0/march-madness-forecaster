@@ -97,7 +97,7 @@ const state = {
    * mutually exclusive menu entries, which made "Connecticut wins AND my Final
    * Four stops at a 3 seed" unaskable even though the pool carries 63 such
    * pairs. */
-  pick: { champ: null, ones: null, depth: null, dd: null, src: null },
+  pick: { champ: null, ones: null, depth: null, pred: null, src: null },
   /* Which of the matching brackets to show. The referee's standard error is
    * about half a point, so within a filtered set the top few are statistically
    * tied and picking only the argmax presents a coin flip as a verdict. */
@@ -131,7 +131,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 12;
+const DATA_V = 13;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -340,7 +340,16 @@ const CUSTOM = 'custom';
  * is presentation arithmetic; the modelling that produced the candidates stays
  * in Python.
  */
-const AXIS_FIELD = { champ: 'c', ones: 'o', depth: 'd', dd: 'dd', src: 's' };
+const AXIS_FIELD = { champ: 'c', ones: 'o', depth: 'd', src: 's' };
+
+/* Preference predicates are a bit string rather than a scalar, so they are
+ * matched separately. These come from src/product/selection.py -- the same
+ * definitions the artifact scores its constraint coverage against -- rather
+ * than being recomputed here, so a predicate added there reaches the page
+ * without a second implementation drifting away from it. */
+function matchesPred(row, i) {
+  return i === null || row.k[i] === '1';
+}
 
 function candidates() {
   return ((state.season && state.season.filters) || {}).candidates || [];
@@ -349,7 +358,8 @@ function candidates() {
 function matching(pick) {
   const p = pick || state.pick;
   return candidates().filter(r =>
-    Object.entries(AXIS_FIELD).every(([k, f]) => p[k] === null || r[f] === p[k]));
+    Object.entries(AXIS_FIELD).every(([k, f]) => p[k] === null || r[f] === p[k])
+    && matchesPred(r, p.pred));
 }
 
 function anyFilter() {
@@ -383,15 +393,28 @@ function filteredEntry() {
   const rows = matching();
   if (!rows.length) return { entry: null, scope: '', alts: [] };
   const obj = state.objective;
-  const alts = rows.slice().sort((a, b) => b[obj] - a[obj]).slice(0, 3);
+  // NEAR-TIED IS DEFINED BY THE REFEREE'S ERROR, NOT BY A FIXED COUNT. The
+  // first version showed a top-3 and called them tied; for 2026's depth=3 the
+  // 1st and 3rd were 1.7 SE apart, so that label was doing work the numbers did
+  // not support. Only candidates within one standard error of the best are
+  // offered, capped at 5, so a genuine gap collapses the list to one entry
+  // rather than dressing a ranking up as a choice.
+  const sorted = rows.slice().sort((a, b) => b[obj] - a[obj]);
+  const se = obj === 'p1' ? ((state.season.filters || {}).p1_se || 0) : 0;
+  const cut = sorted[0][obj] - se;
+  const alts = se > 0
+    ? sorted.filter(r => r[obj] >= cut).slice(0, 5)
+    : sorted.slice(0, 3);
   const pick = alts[Math.min(state.alt, alts.length - 1)];
-  const { champ, ones, depth, dd, src } = state.pick;
+  const { champ, ones, depth, pred, src } = state.pick;
   const bits = [];
   if (champ !== null) bits.push(`${state.season.teams[champ].name} winning`);
   if (ones !== null) bits.push(`${ones} one-seed${ones === 1 ? '' : 's'} in the Final Four`);
   if (depth !== null) bits.push(`a Final Four reaching exactly a ${depth} seed`);
-  if (dd !== null) bits.push(dd === 0 ? 'no double-digit seed in the Sweet 16'
-                    : `${dd}${dd === 2 ? '+' : ''} double-digit seed${dd === 1 ? '' : 's'} in the Sweet 16`);
+  if (pred !== null) {
+    const pd = (state.season.filters.predicates || []).find(x => x.i === pred);
+    if (pd) bits.push(pd.label.toLowerCase());
+  }
   if (src !== null) bits.push(`brackets from ${SRC_LABEL[src] || src}`);
   return {
     entry: { n: rows.length, row: pick, by: { p1: pick, ev: pick } },
@@ -414,7 +437,9 @@ function currentStrategy() {
       // survivor is chosen from fewer candidates, and best-of-11 sits closer to
       // the maximum of a short noisy sample than to an optimum.
       note: `The highest-${objName} bracket with ${scope}, out of ${entry.n} qualifying candidates.`
-          + (alts.length > 1 ? ` Showing ${Math.min(state.alt, alts.length - 1) + 1} of ${alts.length} near-tied options.` : ''),
+          + (alts.length > 1
+              ? ` Showing ${Math.min(state.alt, alts.length - 1) + 1} of ${alts.length} within the referee's margin.`
+              : ''),
       picks: decodeBracket(src.b), ev: src.ev, p1: src.p1,
       alts: alts.length, altIndex: Math.min(state.alt, alts.length - 1),
       source: SRC_LABEL[src.s] || src.s,
@@ -694,7 +719,7 @@ function renderFilterNotes() {
     'Each is the best bracket available with that team winning.',
     'How many 1 seeds reach the Final Four. Depth says how far DOWN you reach; this says how much of the top you keep.',
     'The deepest seed your Final Four reaches.',
-    'Double-digit seeds surviving to the Sweet 16.',
+    'Bracket shapes the pipeline already scores, from src/product/selection.py.',
     'Which model imagined the bracket. These disagree about real teams, which is the point.',
   ];
   notes.forEach((el, i) => { if (el) el.textContent = `${lead[i]} ${suffix}`; });
@@ -728,7 +753,7 @@ const FILTER_ROWS = [
   { kind: 'champ', host: 'champ-list', panel: 'champions' },
   { kind: 'ones', host: 'ones-list', panel: 'ones' },
   { kind: 'depth', host: 'shape-list', panel: 'shapes' },
-  { kind: 'dd', host: 'dd-list', panel: 'dd16' },
+  { kind: 'pred', host: 'dd-list', panel: 'dd16' },
   { kind: 'src', host: 'src-list', panel: 'sources' },
 ];
 
@@ -747,7 +772,7 @@ function renderFilters() {
     const values = row.kind === 'champ' ? f.champions.map(c => c.team)
                  : row.kind === 'ones' ? f.ones
                  : row.kind === 'depth' ? f.depths
-                 : row.kind === 'dd' ? f.dd16
+                 : row.kind === 'pred' ? (f.predicates || []).map(x => x.i)
                  : f.sources;
     panel.hidden = !values || values.length === 0;
     if (panel.hidden) continue;
@@ -770,8 +795,9 @@ function renderFilters() {
         lead = String(v); name = v === 1 ? 'one-seed' : 'one-seeds';
       } else if (row.kind === 'depth') {
         lead = String(v); name = 'seed';
-      } else if (row.kind === 'dd') {
-        lead = v === 2 ? '2+' : String(v); name = v === 1 ? 'upset in S16' : 'upsets in S16';
+      } else if (row.kind === 'pred') {
+        const pd = (f.predicates || []).find(x => x.i === v);
+        lead = ''; name = pd ? pd.label : String(v);
       } else {
         lead = ''; name = SRC_LABEL[v] || v;
       }
@@ -839,14 +865,14 @@ function setFilter(kind, value) {
   // A combination nothing satisfies would blank the board. Drop other axes
   // rather than refuse the click -- the newest intent is the one to honour.
   if (!matching().length) {
-    for (const other of ['dd', 'src', 'depth', 'ones', 'champ']) {
+    for (const other of ['pred', 'src', 'depth', 'ones', 'champ']) {
       if (other === kind || state.pick[other] === null) continue;
       state.pick[other] = null;
       if (matching().length) break;
     }
   }
   if (!matching().length) {
-    state.pick = { champ: null, ones: null, depth: null, dd: null, src: null };
+    state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.pick[kind] = value;
   }
   if (!matching().length) state.pick = prev;
@@ -865,7 +891,7 @@ function setStrategy(id) {
     state.objective = id;
     state.strategy = anyFilter() ? CUSTOM : id;
   } else {
-    if (id === MODEL) state.pick = { champ: null, ones: null, depth: null, dd: null, src: null };
+    if (id === MODEL) state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.strategy = id;
   }
   refit();
