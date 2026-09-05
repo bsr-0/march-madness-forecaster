@@ -221,6 +221,19 @@ def actual_winners(year: int, team_ids: List[str]) -> Any:
     return None
 
 
+# Human labels for the frozen predicates in src/product/selection.py. Kept
+# beside the payload rather than in the browser so the definition and its
+# description travel together.
+PREDICATE_LABELS = {
+    "f4_at_least_1_two_three": "Final Four: a 2 or 3 seed",
+    "f4_at_least_2_two_three": "Final Four: two 2-or-3 seeds",
+    "f4_mostly_favorites": "Final Four: three 1 seeds",
+    "s16_at_least_1_double_digit": "Sweet 16: a double-digit seed",
+    "s16_at_least_2_double_digit": "Sweet 16: two double-digit seeds",
+    "s16_no_double_digit": "Sweet 16: no double-digit seed",
+}
+
+
 def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     art_path = CANDIDATES_DIR / f"candidates_{year}.json"
     rows = stats_by_year.get(str(year))
@@ -509,10 +522,16 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "sources": _live("s"),
         # Labels are derived from the predicate names so the UI cannot drift out
         # of sync with what src/product/selection.py actually supports.
+        # Labels written out rather than derived from the key names. Munging
+        # "f4_at_least_1_two_three" produced "Final Four: at least 1 two three",
+        # which is not English and does not say what the predicate tests --
+        # f4_mostly_favorites is "three or more 1 seeds", which no amount of
+        # underscore replacement would have revealed. An unknown key falls back
+        # to its raw name so a predicate added upstream shows up visibly
+        # unlabelled rather than silently mislabelled.
         "predicates": [
             {"key": k, "i": i,
-             "label": k.replace("f4_", "Final Four: ").replace("s16_", "Sweet 16: ")
-                       .replace("at_least_", "at least ").replace("_", " "),
+             "label": PREDICATE_LABELS.get(k, k),
              "n": sum(1 for r in cand_rows if r["k"][i] == "1")}
             for i, k in enumerate(pred_keys)
         ],
