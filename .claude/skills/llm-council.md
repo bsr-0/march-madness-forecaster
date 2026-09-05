@@ -1,13 +1,13 @@
 ---
 name: llm-council
-description: "Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other anonymously, and surface a lightweight summary of where they agree, where they clash, and suggested actions — without a chairman agent picking sides. Adapted from Karpathy's LLM Council methodology. MANDATORY TRIGGERS: 'council this', 'run the council', 'war room this', 'pressure-test this', 'stress-test this', 'debate this'. STRONG TRIGGERS (use when combined with a real decision or tradeoff): 'should I X or Y', 'which option', 'what would you do', 'is this the right move', 'validate this', 'get multiple perspectives', 'I can't decide', 'I'm torn between'. Do NOT trigger on simple yes/no questions, factual lookups, or casual 'should I' without a meaningful tradeoff (e.g. 'should I use markdown' is not a council question). DO trigger when the user presents a genuine decision with stakes, multiple options, and context that suggests they want it pressure-tested from multiple angles."
+description: "Run any question, idea, or decision through a council of 5 AI advisors who independently analyze it, peer-review each other anonymously, and surface a lightweight summary of each advisor's key point and action, where they agree, and where they clash — without a chairman agent picking sides. Adapted from Karpathy's LLM Council methodology. MANDATORY TRIGGERS: 'council this', 'run the council', 'war room this', 'pressure-test this', 'stress-test this', 'debate this'. STRONG TRIGGERS (use when combined with a real decision or tradeoff): 'should I X or Y', 'which option', 'what would you do', 'is this the right move', 'validate this', 'get multiple perspectives', 'I can't decide', 'I'm torn between'. Do NOT trigger on simple yes/no questions, factual lookups, or casual 'should I' without a meaningful tradeoff (e.g. 'should I use markdown' is not a council question). DO trigger when the user presents a genuine decision with stakes, multiple options, and context that suggests they want it pressure-tested from multiple angles."
 ---
 
 # LLM Council
 
 You ask one AI a question, you get one answer. That answer might be great. It might be mid. You have no way to tell because you only saw one perspective.
 
-The council fixes this. It runs your question through 5 independent advisors, each thinking from a fundamentally different angle. They optionally review each other's work. Then a lightweight summary — produced in the main thread, not by another sub-agent — pulls out each advisor's bottom line, the themes they agree on most, and where they clash.
+The council fixes this. It runs your question through 5 independent advisors, each thinking from a fundamentally different angle. They optionally review each other's work. Then a lightweight summary — produced in the main thread, not by another sub-agent — pulls out each advisor's key point and concrete action, the themes they agree on most, and where they clash.
 
 This is adapted from Andrej Karpathy's LLM Council. He dispatches queries to multiple models, has them peer-review each other anonymously, then a chairman produces the final answer. We do the same fan-out and peer review inside Claude using sub-agents with different thinking lenses — but the chairman sub-agent is replaced with a mechanical summary in the main thread. That saves one sub-agent spawn per session (the single most expensive step after the advisor fan-out) and keeps the user in the driver's seat on the clashes instead of deferring the call to a sixth agent.
 
@@ -315,28 +315,34 @@ separate `council-transcript-*.md`.
 3. **Metadata block** — bucket (A/B/C/D/E), panel size + composition,
    peer-review status (`ran (3 reviewers)` / `skipped (convergence)` /
    `skipped (panel size)`), timestamp.
-4. **Suggested Actions** — rendered as a blockquote callout (`>`
-   prefix) near the top. Up to 3 concrete actions that follow from
-   the agreement themes below, dependency-ordered, one sentence each.
-   No rationale; the agreement/clash sections carry it. List one if
-   one is enough — do not pad to three.
-5. **Per-Advisor Bottom Line** (H2) — one bullet per advisor, 2-3
-   sentences. Name the advisor, state their bottom-line recommendation
-   in their own words, and the single strongest reason. Extract from
-   the draft; do NOT paraphrase for flavor or embellish.
-6. **Where Advisors Agree Most** (H2) — the 2-3 themes that 3+
+4. **Per-Advisor Key Point + Action** (H2) — one bullet per advisor,
+   in panel order. Each bullet has exactly two parts: the advisor's
+   **key point** (one sentence — the core of their draft, not a
+   recommendation) and their **action** (one imperative sentence — the
+   concrete thing they would do). Extract both from the draft; do NOT
+   paraphrase for flavor, embellish, or invent an action the advisor
+   did not state. If an advisor's draft contains no concrete action,
+   write `Action: none stated.` rather than manufacturing one.
+
+   There is deliberately NO synthesized cross-advisor action list. The
+   old "Suggested Actions" callout merged five voices into three
+   dependency-ordered bullets, which is a chairman verdict wearing a
+   different hat — it decided which advisor won before the user had
+   read them. Each advisor's action now stands attributed and
+   unranked; the user does the merging.
+5. **Where Advisors Agree Most** (H2) — the 2-3 themes that 3+
    advisors (or both, on a 2-advisor panel) converged on
    independently. One line each. If fewer than 2 themes meet the bar,
    list only those. Do not invent agreement to fill space. On a
    1-advisor panel, omit this section entirely.
-7. **Where Advisors Clash** (H2) — material disagreements, one line
+6. **Where Advisors Clash** (H2) — material disagreements, one line
    each, naming which advisor argued which side. If there is no
    material clash, write exactly `No material clash.` On a 1-advisor
    panel, omit this section entirely.
-8. **Blind Spots from Peer Review** (H2) — include ONLY when Step 3
+7. **Blind Spots from Peer Review** (H2) — include ONLY when Step 3
    ran. One line per item flagged by ≥ 2 of the 3 reviewers. Omit
    this section entirely when peer review was skipped.
-9. **Load-Bearing Assumptions** (H2) — one line each on the categories
+8. **Load-Bearing Assumptions** (H2) — one line each on the categories
    below. Use `N/A` inline for categories that are truly unrelated;
    do NOT omit the category. MEMORY.md and
    `tests/test_lesson_citations.py` grep these rows to detect
@@ -351,33 +357,33 @@ separate `council-transcript-*.md`.
    - **Year scope**: e.g., `2011–2025 ex. 2020`.
    - **Baseline anchor**: e.g., `vs champ_first_tv` or `vs IID`.
    - **Data sources**: file paths for load-bearing artifacts (must survive the stale-citation gate in `tests/test_lesson_citations.py`).
-10. **Framed Question + Prior Art** (H2) — the enriched prompt that
+9. **Framed Question + Prior Art** (H2) — the enriched prompt that
     was sent to every advisor, plus the `Ox`/lessons block that was
     injected.
-11. **Advisor Responses** (H2) — each advisor's full 150-250 word
+10. **Advisor Responses** (H2) — each advisor's full 150-250 word
     draft under an H3 (`### The Contrarian`, etc.). Use
     `<details><summary>` only if you want them collapsed by default;
     otherwise plain H3s are fine.
-12. **Peer Review** (H2) — either all 3 reviewer outputs, or a single
+11. **Peer Review** (H2) — either all 3 reviewer outputs, or a single
     line `_Peer review skipped (convergence)._` / `_Peer review
     skipped (panel size = N)._`
-13. **Footer** — one-line timestamp + what was counciled.
+12. **Footer** — one-line timestamp + what was counciled.
 
 **Panel-size adjustments:**
 
 | Panel | Sections to include |
 |---|---|
-| 5-advisor, peer-reviewed (Step 3 ran) | all 13 |
-| 5-advisor, converged (Step 2.5 short-circuited) | all except 8; add one line above section 9: `_Convergence: ≥4/5 advisors aligned; peer review skipped — calibrate confidence accordingly._` |
-| 2-advisor (bucket A / D) | all except 8; if advisors disagree, section 6 is `_No agreement — both positions stand._` |
-| 1-advisor (bucket B) | 1, 2, 3, 4, 5, 9, 10, 11, 13 (omit 6, 7, 8, 12 — no panel to compare, no peer review) |
+| 5-advisor, peer-reviewed (Step 3 ran) | all 12 |
+| 5-advisor, converged (Step 2.5 short-circuited) | all except 7; add one line above section 8: `_Convergence: ≥4/5 advisors aligned; peer review skipped — calibrate confidence accordingly._` |
+| 2-advisor (bucket A / D) | all except 7; if advisors disagree, section 5 is `_No agreement — both positions stand._` |
+| 1-advisor (bucket B) | 1, 2, 3, 4, 8, 9, 10, 12 (omit 5, 6, 7, 11 — no panel to compare, no peer review) |
 
 **Deduplication rule:** every piece of information appears exactly
-once. Suggested Actions live only in the callout (section 4). Advisor
-drafts live only in section 11. Sections 5-8 (summary) never re-state
-advisor drafts verbatim. There is no longer an "agreement /
-disagreement" table — section 5 already carries the per-advisor
-bottom lines in a scannable form, and a second table rendering the
+once. Per-advisor key points and actions live only in section 4.
+Advisor drafts live only in section 10. Sections 4-7 (summary)
+never re-state advisor drafts verbatim. There is no longer an "agreement /
+disagreement" table — section 4 already carries the per-advisor
+key points and actions in a scannable form, and a second table rendering the
 same data in different syntax was redundant.
 
 **Why writing the summary straight into the file:** producing the
@@ -427,8 +433,10 @@ evidentiary weight than a full bucket-E verdict.
 4 update rule:
 
 - Append one row to §3 with: next sequential `#`, date, one-line framed
-  question, one-line verdict (extracted from the report's Suggested
-  Actions callout).
+  question, one-line verdict. With no synthesized action list to quote,
+  derive the verdict from the strongest agreement theme (section 5); if
+  there is no material agreement, write `no consensus — see report`
+  rather than elevating one advisor's action into a council verdict.
 - If the verdict closes an open `Ox` item in §2 → move the item to §1 and
   leave `[closed <date>]` in §2.
 - If the verdict opens a new unresolved item → add a new `Ox` row with
@@ -471,9 +479,9 @@ Every council session produces exactly one file:
 council-report-[timestamp].md   # single markdown artifact: report + transcript
 ```
 
-The top of the file is the scannable verdict (question, suggested
-actions, per-advisor bottom lines, agreement and clash sections,
-peer-review blind spots when applicable, load-bearing assumptions).
+The top of the file is the scannable verdict (question, per-advisor
+key point + action, agreement and clash sections, peer-review blind
+spots when applicable, load-bearing assumptions).
 The bottom holds the framed question, advisor drafts, and peer review
 for later reference. No HTML, no PDF, no second transcript file — the
 old `council-report-*.html` + `council-transcript-*.md` split is
