@@ -131,7 +131,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 14;
+const DATA_V = 15;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -363,7 +363,13 @@ function matching(pick) {
 }
 
 function anyFilter() {
-  return Object.keys(AXIS_FIELD).some(k => state.pick[k] !== null);
+  // `pred` is matched separately from AXIS_FIELD because it is a bit string
+  // rather than a scalar, and it has to be counted here too. It was not, so
+  // selecting a bracket shape on its own set the chip active while leaving the
+  // strategy unfiltered -- the board kept showing the recommended bracket and
+  // the control looked broken in the one way that is hard to notice: it did
+  // nothing.
+  return Object.keys(AXIS_FIELD).some(k => state.pick[k] !== null) || state.pick.pred !== null;
 }
 
 /* A bracket is 63 binary choices against the known first-round order. */
@@ -386,7 +392,7 @@ function decodeBracket(bits) {
 
 const SRC_LABEL = {
   torvik: 'Torvik', massey_avg: 'Massey', elo: 'Elo',
-  region_top_n: 'region construction',
+  region_top_n: 'region construction', shipped: 'the recommended brackets',
 };
 
 function filteredEntry() {
@@ -849,14 +855,26 @@ function renderAlts() {
   panel.hidden = !show;
   if (!show) { host.innerHTML = ''; return; }
   const obj = state.objective;
+  // LABEL BY WHAT DIFFERS, NOT BY THE CHAMPION. Filtering to a champion makes
+  // every alternate carry that same name, so a row of identical labels is no
+  // help in choosing between them. The Final Four is the first place these
+  // brackets actually diverge, so the label is whichever of its teams the
+  // options disagree about.
+  const f4Of = r => decodeBracket(r.b)[3];
+  const common = f4Of(alts[0]).filter(x => alts.every(r => f4Of(r).includes(x)));
   host.innerHTML = alts.map((r, i) => {
     const on = Math.min(state.alt, alts.length - 1) === i;
     const stat = obj === 'ev' ? `${r.ev.toFixed(0)} pts` : `${(r.p1 * 100).toFixed(1)}%`;
+    const t = state.season.teams;
+    const distinct = f4Of(r).filter(x => !common.includes(x));
+    const name = distinct.length
+      ? distinct.map(x => t[x].name).join(' + ')
+      : `${t[r.c].name} (${SRC_LABEL[r.s] || r.s})`;
     return `
       <button class="chip${on ? ' on' : ''}" onclick="setAlt(${i})"
-              title="${SRC_LABEL[r.s] || r.s}">
+              title="Final Four: ${f4Of(r).map(x => `${t[x].name} (${t[x].seed})`).join(', ')}">
         <span class="chip-seed">${i + 1}</span>
-        <span class="chip-name">${state.season.teams[r.c].name}</span>
+        <span class="chip-name">${name}</span>
         <span class="chip-stat">${stat}</span>
       </button>`;
   }).join('');
