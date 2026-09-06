@@ -89,6 +89,11 @@ const CANONICAL_KEYS = [
 ];
 
 const state = {
+  // Replaced at init() by the newest season with status "ready". This literal
+  // is only the pre-load placeholder: it used to be the actual default, which
+  // meant that on Selection Sunday 2027 the page would open on the 2026
+  // bracket with 2027 greyed out beside it -- a launch-day failure on the one
+  // season the system was frozen to be judged on.
   year: 2026,
   strategy: 'p1',       // 'p1' | 'ev' | MODEL | CUSTOM
   /* CUSTOM is driven by this pair rather than by an id. Champion and depth are
@@ -490,6 +495,8 @@ function render() {
   const weights = document.getElementById('strategy');
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
+    state.rounds = null;
+    { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -544,10 +551,20 @@ function render() {
       `</span>`;
   }
 
+  // The disclosure rides with the numbers. Shown whenever a P(1st) figure is on
+  // screen, which is every "% to win" on the strategy cards and every chip.
+  const p1note = document.getElementById('p1-note');
+  if (p1note) p1note.textContent = s.p1_assumption || '';
+
   document.getElementById('equation').innerHTML = anyEnabled() ? equationHTML() : '';
 
   const rounds = usingOptimized() ? solveFromPicks() : solveByFit();
   const truth = solveActual();
+  // Kept for the exporter. Presentation state only -- copyPicks() serialises
+  // exactly what is on screen rather than re-deriving it, so the two can never
+  // disagree about which bracket the user is looking at.
+  state.rounds = rounds;
+  { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
   board.innerHTML = rounds.map((games, r) => `
     <div class="round" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
@@ -824,14 +841,29 @@ function renderFilters() {
       } else {
         lead = ''; name = SRC_LABEL[v] || v;
       }
+      // How often this shape actually happens, from the simulated bank --
+      // f.predicate_probabilities, which shipped in the payload and was read by
+      // nothing. The candidate pool deliberately over-samples unlikely
+      // champions for diversity, so counting matching rows is NOT a frequency
+      // and the artifact says so in as many words. This is the honest number,
+      // and it belongs on the chip rather than in a tooltip no phone can show.
+      // Keyed by predicate NAME, while the chip's value is its index -- the
+      // payload carries both on f.predicates, so go through the record.
+      const predKey = row.kind === 'pred'
+        ? ((f.predicates || []).find(x => x.i === v) || {}).key
+        : undefined;
+      const freq = predKey ? (f.predicate_probabilities || {})[predKey] : undefined;
+      const freqText = freq === undefined ? '' : `${(freq * 100).toFixed(0)}% of simulated tournaments`;
+
       const title = inert ? 'Filters apply to the precomputed strategies, not the fitted model'
-                  : ok ? `${rows.length} matching brackets`
-                       : 'Nothing matches that with your other filters';
+                  : !ok ? 'Nothing matches that with your other filters'
+                  : freqText || 'Best bracket available with this choice';
       return `
         <button class="chip${on ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled'}
                 onclick="setFilter('${row.kind}', ${typeof v === 'string' ? `'${v}'` : v})" title="${title}">
           ${lead ? `<span class="chip-seed">${lead}</span>` : ''}
           <span class="chip-name">${name}</span>
+          ${freqText ? `<span class="chip-freq">${freqText}</span>` : ''}
           <span class="chip-stat">${stat}</span>
         </button>`;
     }).join('');
@@ -884,6 +916,71 @@ function setAlt(i) {
   state.alt = i;
   renderStrategies();
   render();
+}
+
+/* ---------- getting the bracket out ----------
+ *
+ * The job this page exists to finish is 63 picks typed into a pool site. Until
+ * now the only way to collect them was to read a six-column horizontally
+ * scrolling board -- on a phone, one column at a time -- and retype it from
+ * memory. Every modelling decision in this repo sits upstream of that step.
+ *
+ * Round-by-round winners, in bracket order, because that is the order the entry
+ * form asks for them.
+ */
+function picksAsText() {
+  if (!state.rounds || !state.season) return '';
+  const st = usingOptimized() ? currentStrategy() : null;
+  // g.win is an INDEX into season.teams, the same thing sideHTML() resolves.
+  // Treating it as a team id silently produced "undefined 8" for every pick.
+  const team = i => state.season.teams[i] || {};
+
+  const head = [
+    `${state.year} bracket — ${st ? st.label : 'Fitted model'}`,
+    st && st.p1 !== undefined
+      ? `${(st.p1 * 100).toFixed(1)}% to finish first, ${st.ev.toFixed(0)} expected points`
+      : '',
+    // The disclosure travels with the picks. A bracket pasted into a group chat
+    // outlives the page it came from, and the number goes with it.
+    state.season.p1_assumption || '',
+  ].filter(Boolean);
+
+  const body = state.rounds.map((games, r) => {
+    const winners = games.map(g => { const t = team(g.win); return `${t.seed} ${t.name}`; });
+    return `${ROUNDS[r]}\n${winners.map(w => `  ${w}`).join('\n')}`;
+  });
+
+  return `${head.join('\n')}\n\n${body.join('\n\n')}\n`;
+}
+
+function copyPicks() {
+  const text = picksAsText();
+  const msg = document.getElementById('copy-msg');
+  const say = t => { if (msg) { msg.textContent = t; setTimeout(() => { msg.textContent = ''; }, 4000); } };
+  if (!text) return say('Nothing to copy yet.');
+
+  // navigator.clipboard needs a secure context. The published site is https, but
+  // a local file:// or plain-http preview is not, and failing silently there
+  // would make this look broken exactly where it gets tested.
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    document.body.removeChild(ta);
+    say(ok ? 'Picks copied.' : 'Copy failed — use Print instead.');
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => say('Picks copied.'), fallback);
+  } else {
+    fallback();
+  }
 }
 
 function setFilter(kind, value) {
@@ -1002,6 +1099,13 @@ async function init() {
     fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
     loadTraining(),
   ]);
+  // Open on the newest season that actually has a bracket. Not max(year):
+  // 2027 is listed from the moment the calendar knows about it and stays
+  // "not_started" until Selection Sunday, so the newest LISTED season is an
+  // empty state for most of the year.
+  const ready = idx.seasons.filter(s => s.status === 'ready').map(s => s.year);
+  if (ready.length) state.year = Math.max(...ready);
+
   document.getElementById('years').innerHTML = idx.seasons.map(s => `
     <button class="yr${s.year === state.year ? ' on' : ''}${s.status === 'ready' ? '' : ' na'}"
             data-year="${s.year}" title="${s.status === 'ready' ? '' : `No bracket available for ${s.year}`}"
