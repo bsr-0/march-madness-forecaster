@@ -66,7 +66,7 @@ function loadApp(hash) {
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, '
-    + 'pickDefaultSeason };', ctx);
+    + 'pickDefaultSeason, p1Pct };', ctx);
   return ctx.__api;
 }
 
@@ -247,6 +247,30 @@ check('no ready season falls back to the newest listed, not to nothing', () => {
 check('an empty index does not throw', () => {
   assert.strictEqual(app0.pickDefaultSeason([]), null);
   assert.strictEqual(app0.pickDefaultSeason(undefined), null);
+});
+
+
+/* ---------- how P(1st) is printed ---------- */
+console.log('\nP(1st) display');
+
+check('whole points, because the error is about 0.7pp', () => {
+  const app = loadApp('');
+  assert.strictEqual(app.p1Pct(0.099), '10%');
+  assert.strictEqual(app.p1Pct(0.043), '4%');
+});
+
+check('an unlikely bracket is not printed as impossible', () => {
+  // Rounding to whole points sent 0.4% to "0%", which reads as "cannot happen".
+  // Three of 2026's candidates sit there.
+  const app = loadApp('');
+  assert.strictEqual(app.p1Pct(0.004), '<1%');
+  assert.strictEqual(app.p1Pct(0.0049), '<1%');
+  assert.strictEqual(app.p1Pct(0.005), '1%');
+});
+
+check('a genuine zero still prints as zero', () => {
+  const app = loadApp('');
+  assert.strictEqual(app.p1Pct(0), '0%');
 });
 
 console.log(`\n${passed} checks passed`);

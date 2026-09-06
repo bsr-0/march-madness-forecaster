@@ -292,3 +292,64 @@ class TestCacheBustCannotGoStale:
 
         (docs / "app.js").write_text((docs / "app.js").read_text() + "\n// edited\n")
         assert st.stamp(check=True) == 1, "an edited asset must fail the check"
+
+
+class TestUserTextThatShipsFromPython:
+    """The jargon audit checked app.js and index.html and missed the payload.
+
+    ``pool_optimized_note`` and the strategy notes are written in
+    build_ui_payload.py and rendered verbatim, so they are user-visible text
+    that no amount of reading the JS will reveal. The miss was not cosmetic:
+    the note claimed the method was "validated by leave-one-year-out
+    backtesting across 2005-2025" when the evidence is 2011-2026 excluding
+    2020 -- a wrong provenance claim on the headline recommendation, shipped on
+    every season.
+    """
+
+    @staticmethod
+    def _payload_text(payload) -> str:
+        parts = [payload.get("pool_optimized_note", "")]
+        parts += [s.get("note", "") for s in payload.get("strategies", [])]
+        return " ".join(parts)
+
+    @pytest.mark.parametrize("term", ["leave-one-year-out", "LOYO", "walk-forward", "Brier", "RMSE"])
+    def test_no_jargon_in_payload_text(self, term):
+        for path in sorted((REPO / "docs" / "data").glob("season_*.json")):
+            payload = json.loads(path.read_text())
+            if payload.get("status") != "ready":
+                continue
+            assert term not in self._payload_text(payload), f"{path.name} shows {term!r} to users"
+
+    def test_the_validation_range_is_the_one_we_actually_measured(self):
+        """2011-2026 excluding 2020, at pool 30 -- see FINDINGS and the artifact."""
+        for path in sorted((REPO / "docs" / "data").glob("season_*.json")):
+            payload = json.loads(path.read_text())
+            if payload.get("status") != "ready":
+                continue
+            note = payload["pool_optimized_note"]
+            assert "2005-2025" not in note, f"{path.name} still claims the wrong range"
+            assert "2011-2026" in note, f"{path.name} does not state the real evidence range"
+
+
+class TestAStaleLinkSaysSo:
+    """A shared link can outlive the pool it points at.
+
+    Filters are indices into a season's candidates, so a link made before an
+    artifact rebuild can name a bracket that no longer resolves. That used to
+    leave the page in CUSTOM matching nothing, rendering the ORDINARY default
+    bracket under the ordinary recommendation note -- telling the visitor they
+    were looking at the shared bracket while showing them something else.
+    """
+
+    def test_the_reconciler_exists_and_is_called_after_the_season_loads(self):
+        src = (REPO / "docs" / "app.js").read_text()
+        assert "function reconcileFiltersWithSeason()" in src
+        setyear = src.split("async function setYear(")[1].split("\nfunction ")[0]
+        assert "reconcileFiltersWithSeason()" in setyear, (
+            "filters must be reconciled once the season is loaded, not before"
+        )
+
+    def test_a_pasted_hash_is_honoured(self):
+        """Fragment-only navigation does not reload; without this, nothing happens."""
+        src = (REPO / "docs" / "app.js").read_text()
+        assert "'hashchange'" in src, "editing the hash in place must take effect"

@@ -664,10 +664,16 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "strategies": strategies,
         "filters": filters,
         "pool_optimized": picks,
+        # Two defects here, both shipped on all 14 seasons. "2005-2025" was
+        # simply wrong: the pool method's evidence is 2011-2026 excluding 2020
+        # (15 seasons, pool 30) -- see FINDINGS and build_candidate_artifact.
+        # A wrong provenance claim on the headline recommendation is worse than
+        # the jargon beside it. And "leave-one-year-out backtesting" is a term
+        # for people who already know what it means.
         "pool_optimized_note": (
-            "Chosen to maximise the chance of finishing first in a 30-opponent "
-            "pool, using the method validated by leave-one-year-out backtesting "
-            "across 2005-2025."
+            "Built to win a 30-person pool outright, not to score well on average. "
+            "The method was tested on 15 past tournaments (2011-2026, no 2020), "
+            "each time using only what was known before that tournament started."
         ),
         "z": z,
         "raw": raw,
