@@ -616,9 +616,19 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
 
     actual = actual_winners(year, [t["id"] for t in teams])
 
+    # The P(1st) disclosure travels WITH the numbers it qualifies rather than
+    # being retyped in JS. It is mandatory (PROSPECTIVE_2027 v2, product.v3):
+    # every P(1st) on the page assumes a 30-opponent pool with ESPN public pick
+    # behaviour, and is not a universal probability of winning any pool. Until
+    # 2026-09-06 it reached the browser not at all -- the page showed
+    # "9.9% to win" with no qualifier anywhere near it.
+    meta = art.get("meta", {})
+
     return {
         "year": year,
         "status": "ready",
+        "p1_assumption": meta.get("p1_assumption"),
+        "p1_pool_size": meta.get("p1_pool_size"),
         # Per-round actual winners, or null for a season not yet played.
         "actual": actual,
         "teams": [

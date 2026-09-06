@@ -433,3 +433,40 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    a chip that vanishes reads as a bug, a dimmed one reads as a constraint. */
 .chip.off { opacity: 0.32; cursor: not-allowed; }
 .chip.off:hover { border-color: var(--line); color: var(--ink-2); }
+
+
+/* ---------- disclosure ----------
+   Under the strategy cards, because that is where "% to win" is printed. Muted
+   but not hidden: it is a qualifier on the headline number, not a footnote. */
+.disclosure {
+  margin: 10px 2px 0; font-size: 12px; line-height: 1.5;
+  color: var(--ink-3); max-width: 68ch;
+}
+
+/* ---------- getting the bracket out ---------- */
+.board-tools { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.tool {
+  padding: 7px 13px; border-radius: 7px; font-size: 13px; font-weight: 500;
+  color: var(--ink); background: var(--panel-2);
+  transition: background .12s, color .12s;
+}
+.tool:hover { background: var(--line); }
+.tool-msg { font-size: 12px; color: var(--ink-3); }
+
+/* How often a bracket shape actually occurs, from the simulated bank. Visually
+   subordinate to .chip-stat so the two numbers cannot be confused: one is a
+   base rate, the other is the best bracket available under this choice. */
+.chip-freq { font-size: 11px; color: var(--ink-3); }
+
+/* ---------- print ----------
+   A bracket on paper next to the entry form is a legitimate way to finish the
+   job, and it is the fallback when the clipboard is unavailable. Drop every
+   control and let the board wrap instead of scrolling off the page. */
+@media print {
+  .bar, .board-tools, .drawer, .scrim, .panel, #equation, .note { display: none !important; }
+  #main { padding: 0; }
+  .board { display: block !important; }
+  .round { break-inside: avoid; page-break-inside: avoid; margin: 0 0 12px; }
+  body { background: #fff; color: #000; }
+  .game, .side { border-color: #bbb !important; }
+}

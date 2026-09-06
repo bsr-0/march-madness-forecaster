@@ -282,6 +282,12 @@ jobs:
       - name: Link, calibration and antisymmetry checks
         run: node tests/test_calibration.js
 
+      - name: Pick export
+        # The exporter is the last step before a user types the bracket into a
+        # pool site. Its first version resolved winners by team id when they are
+        # indices, printing "undefined" for all 63 picks without throwing.
+        run: node tests/test_picks_export.js
+
       - name: Point-in-time boundary audit
         uses: ./.github/actions/setup-python-env
 

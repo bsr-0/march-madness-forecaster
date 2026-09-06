@@ -40,6 +40,13 @@
       <p class="panel-title">What are you optimising for</p>
     </div>
     <div class="strat-list" id="strat-list"></div>
+    <!-- Mandatory disclosure (product.v3). It sits HERE, under the cards that
+         print "% to win", because that is the number it qualifies. It used to
+         appear only as a suffix on filter helper text, and only on one branch,
+         which meant the one sentence we are obliged to show was the one
+         sentence most users never saw. Text comes from the artifact via the
+         payload; it is not retyped here. -->
+    <p class="disclosure" id="p1-note"></p>
   </section>
 
   <!-- Three filter axes over the precomputed candidate pool. Each narrows WHICH
@@ -98,6 +105,15 @@
 
   <!-- The fitted model, printed. Empty unless variables are enabled. -->
   <section id="equation"></section>
+
+  <!-- Getting the bracket OUT. The deliverable of this whole system is 63
+       picks, and until now the only way to collect them was to read a
+       six-column horizontally-scrolling board and retype it into ESPN. -->
+  <section class="board-tools" id="board-tools" hidden>
+    <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
+    <button class="tool" id="print-picks" onclick="window.print()">Print</button>
+    <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
+  </section>
 
   <section class="board" id="board"></section>
 
