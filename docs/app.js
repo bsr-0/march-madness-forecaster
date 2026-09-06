@@ -509,6 +509,9 @@ function p1StandardError(p) {
  * (10% against 4%) without inviting a user to read 9.9 as beating 9.8.
  */
 function p1Pct(p) {
+  // Whole points, except at the bottom: rounding 0.4% to "0%" reads as
+  // impossible rather than unlikely, and three of 2026's candidates land there.
+  if (p > 0 && p * 100 < 0.5) return '<1%';
   return `${(p * 100).toFixed(0)}%`;
 }
 
@@ -603,6 +606,34 @@ function readHash() {
     if (tune) tune.open = true;
   }
   return Number.isFinite(year) ? year : null;
+}
+
+/* A shared link can outlive the thing it points at.
+ *
+ * The filters are indices into a season's candidate pool, so a link made before
+ * an artifact rebuild -- or hand-edited, or moved to another season -- can name
+ * a champion or a shape that no longer resolves. That used to leave the page in
+ * CUSTOM with filters matching nothing, which rendered the ORDINARY default
+ * bracket under the ordinary "chosen to maximise..." note: the visitor was told
+ * they were looking at the shared bracket while looking at something else. It
+ * is the same failure as restoring filters without CUSTOM, arriving from the
+ * other side.
+ *
+ * Called once the season is loaded, because until then there is nothing to
+ * resolve against.
+ */
+function reconcileFiltersWithSeason() {
+  if (!state.season || state.season.status !== 'ready') return;
+  if (!anyFilter() || state.strategy === MODEL) return;
+  if (matching().length) return;
+
+  state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
+  state.alt = 0;
+  state.strategy = state.objective;
+  state.notice =
+    'That link points at a bracket this season no longer has, so it is showing '
+    + 'the standard recommendation instead.';
+  writeHash();
 }
 
 function usingOptimized() {
@@ -1201,6 +1232,7 @@ function setStrategy(id) {
     if (id === MODEL) state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.strategy = id;
   }
+  state.notice = '';
   refit();
   writeHash();
   renderStrategies();
@@ -1265,6 +1297,7 @@ async function setYear(year) {
   } catch {
     state.season = null;
   }
+  reconcileFiltersWithSeason();
   writeHash();
   // Refit: the excluded season changed, so the coefficients must change too.
   refit();
@@ -1298,6 +1331,12 @@ async function init() {
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  // Pasting a link into the address bar of the page you are already on is a
+  // same-document navigation: nothing reloads and, without this, nothing
+  // happens. writeHash() uses replaceState, which does NOT fire hashchange, so
+  // this cannot loop on our own writes.
+  window.addEventListener('hashchange', () => location.reload());
 
   await setYear(state.year);
 
