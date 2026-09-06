@@ -110,18 +110,27 @@ def _build_seed_map(
     seeds: Dict[str, int],
     regions: Dict[str, str],
 ) -> Dict[str, Dict[int, str]]:
-    """Normalize a (possibly 68-team) seeds/regions input to a 16-per-region map.
+    """Normalize a resolved 64-team seeds/regions input to a 16-per-region map.
 
-    Uses dict-overwrite for duplicate seeds (First Four play-ins): whichever
-    team is iterated last for a given (region, seed) pair wins the slot and
-    the other is silently dropped. This matches the existing dict-overwrite
-    behavior in ``leverage.py::_build_seed_map`` and ``mc_pool_backtest.py``,
-    so the construction modes produce brackets consistent with what the
-    backtest script's stochastic samplers operate on.
+    REQUIRES A RESOLVED FIELD. This used to take the entered field (68 teams,
+    76 from 2027) and settle duplicate (region, seed) slots by dict overwrite --
+    last iterated wins, the other silently dropped -- and the docstring called
+    that intentional on the grounds that it matched ``leverage.py`` and
+    ``mc_pool_backtest.py``. Three copies of a rule agreeing with each other is
+    not the same as the rule being right. It was not: resolving play-in slots by
+    iteration order put a team in the Round of 64 that never played there in
+    every one of the fourteen seasons the site has shipped.
+
+    Callers must resolve the play-in games first (``resolve_first_four`` /
+    ``build_candidate_artifact.resolve_field``). Those games finish before
+    brackets lock, so their results are ordinary pre-tournament information.
 
     Returns: ``{region: {seed: team_id}}`` with seeds 1-16 represented in
-    each of the 4 regions. Raises ValueError if any region is missing a seed
-    1-16 after normalization.
+    each of the 4 regions.
+
+    Raises:
+        ValueError: if a (region, seed) slot holds more than one team, or if
+            any region is missing a seed 1-16 after normalization.
     """
     by_region: Dict[str, Dict[int, str]] = {r: {} for r in _REGION_ORDER}
     for tid in seeds:
@@ -132,6 +141,12 @@ def _build_seed_map(
         seed = seeds[tid]
         if seed <= 0:
             continue
+        if seed in by_region[region]:
+            raise ValueError(
+                f"{region} {seed} holds both {by_region[region][seed]!r} and {tid!r}: "
+                f"the play-in game for that slot has not been resolved, so the draw is "
+                f"not determined. Resolve it before constructing a bracket."
+            )
         by_region[region][seed] = tid
 
     # Verify every region has all seeds 1-16
