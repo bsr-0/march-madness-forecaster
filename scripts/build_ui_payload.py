@@ -34,9 +34,12 @@ The second kind is the one to watch for in anything added here. "Is this field
 knowable on Selection Sunday?" is not sufficient -- the question is whether
 every input to it is, including the window it was averaged over.
 
-SEASONS WITHOUT DATA. A season with no candidate artifact is emitted with
-status="not_started" rather than omitted, so the UI can say plainly that the
-season has not begun. When 2027 data lands, rebuild and the status flips.
+SEASONS WITHOUT DATA. A season with no candidate artifact is emitted rather
+than omitted, so the UI can say plainly what is missing. Two statuses, because
+the absences are not the same thing: "not_started" for a season that has not
+been played (no team stats), "unavailable" for one that was played but whose
+bracket cannot be built. Calling the second "not started" put a false sentence
+on screen for 2012. When 2027 data lands, rebuild and its status flips.
 """
 
 from __future__ import annotations
@@ -56,7 +59,21 @@ STATS_PATH = REPO / "docs" / "data" / "team_stats_by_year.json"
 CANDIDATES_DIR = REPO / "artifacts" / "candidates"
 OUT_DIR = REPO / "docs" / "data"
 
-SEASONS = [2024, 2025, 2026, 2027]
+def _seasons() -> List[int]:
+    """Every season the UI offers, derived rather than listed.
+
+    A hardcoded list went stale the moment artifacts existed for seasons that
+    were not on it -- the UI showed four years while the repo held sixteen. The
+    set is the union of the seasons we have team stats for (the floor, since
+    without stats there is nothing to standardise) and the latest season on the
+    calendar (the ceiling, so the forecast year appears before it is played).
+    Seasons in between with no artifact are still emitted, with a status that
+    says which of the two reasons applies -- see ``build_season``.
+    """
+    from src.data.season_calendar import latest_season
+
+    stats_years = {int(y) for y in json.loads(STATS_PATH.read_text())["stats_by_year"]}
+    return sorted(stats_years | {latest_season()})
 
 # Selectable variables, grouped for the menu.
 #
@@ -234,21 +251,59 @@ PREDICATE_LABELS = {
 }
 
 
+def _unavailable_reason(year: int) -> str:
+    """Explain why a played season has no candidate artifact.
+
+    Detected rather than transcribed, so the text cannot drift from the reason.
+    Both known cases are data limits, not defects, and both are worth stating
+    plainly on screen instead of leaving a year that silently does nothing.
+    """
+    from src.prediction.noseed_model import TRAIN_YEARS
+
+    picks = REPO / "data" / "raw" / "historical_public_picks" / f"espn_picks_{year}.json"
+    if not picks.exists():
+        return (
+            f"The {year} bracket needs archived public pick percentages to judge "
+            f"which brackets are contrarian, and no archive for {year} survives. "
+            f"Every other season from 2008 on has one."
+        )
+
+    prior = [y for y in TRAIN_YEARS if y < year]
+    if len(prior) < 3:
+        return (
+            f"The model is trained only on seasons before the one it predicts, and "
+            f"{year} has just {len(prior)} of them. Three is the minimum, so the "
+            f"earliest seasons cannot be forecast without looking ahead."
+        )
+
+    return f"No candidate bracket has been generated for {year} yet."
+
+
 def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     art_path = CANDIDATES_DIR / f"candidates_{year}.json"
     rows = stats_by_year.get(str(year))
 
     if not art_path.exists() or not rows:
-        # The season has not been played (or not yet ingested). Say so, rather
-        # than shipping an empty bracket that looks broken.
+        # Two different absences, and conflating them puts a false statement on
+        # screen. A season with no stats has not been played; a season with
+        # stats but no artifact was played and we cannot show it, which is a
+        # gap to name rather than a season to misdescribe. The UI renders
+        # `message`/`detail` verbatim for any status other than "ready".
+        if not rows:
+            return {
+                "year": year,
+                "status": "not_started",
+                "message": f"The {year} season hasn't started yet.",
+                "detail": (
+                    "Brackets appear here once the field is announced on Selection "
+                    "Sunday and pre-tournament ratings are available."
+                ),
+            }
         return {
             "year": year,
-            "status": "not_started",
-            "message": f"The {year} season hasn't started yet.",
-            "detail": (
-                "Brackets appear here once the field is announced on Selection "
-                "Sunday and pre-tournament ratings are available."
-            ),
+            "status": "unavailable",
+            "message": f"No bracket is available for {year}.",
+            "detail": _unavailable_reason(year),
         }
 
     art = json.loads(art_path.read_text())
@@ -596,7 +651,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
 def main() -> int:
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
     index = []
-    for year in SEASONS:
+    for year in _seasons():
         payload = build_season(year, stats)
         out = OUT_DIR / f"season_{year}.json"
         out.write_text(json.dumps(payload, separators=(",", ":")))

@@ -1003,7 +1003,8 @@ async function init() {
     loadTraining(),
   ]);
   document.getElementById('years').innerHTML = idx.seasons.map(s => `
-    <button class="yr${s.year === state.year ? ' on' : ''}" data-year="${s.year}"
+    <button class="yr${s.year === state.year ? ' on' : ''}${s.status === 'ready' ? '' : ' na'}"
+            data-year="${s.year}" title="${s.status === 'ready' ? '' : `No bracket available for ${s.year}`}"
             onclick="setYear(${s.year})">${s.year}</button>`).join('');
 
   document.getElementById('d-close').addEventListener('click', closeDrawer);
@@ -1011,6 +1012,10 @@ async function init() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
   await setYear(state.year);
+
+  // The row scrolls on a narrow viewport and the default season sits at the
+  // far right of seventeen, so it would otherwise open out of view.
+  document.querySelector('.yr.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 // Track which team the drawer is showing so a weight change can refresh it.

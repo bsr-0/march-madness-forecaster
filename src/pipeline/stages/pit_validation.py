@@ -17,23 +17,17 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-logger = logging.getLogger(__name__)
+# Selection Sunday dates by year — the dates by which all Tier 2/3 features must
+# be frozen.  Re-exported here because several modules already import the name
+# from this one; add new seasons in src/data/season_calendar.py, which is the
+# single source of truth.
+from ...data.season_calendar import (
+    SELECTION_SUNDAY_DATES,
+    UnknownSeasonError,
+    get_selection_sunday,
+)
 
-# Selection Sunday approximate dates by year (used for PIT enforcement)
-# These are the dates by which all Tier 2/3 features must be frozen.
-SELECTION_SUNDAY_DATES: Dict[int, date] = {
-    2016: date(2016, 3, 13),
-    2017: date(2017, 3, 12),
-    2018: date(2018, 3, 11),
-    2019: date(2019, 3, 17),
-    # 2020: COVID — no tournament
-    2021: date(2021, 3, 14),
-    2022: date(2022, 3, 13),
-    2023: date(2023, 3, 12),
-    2024: date(2024, 3, 17),
-    2025: date(2025, 3, 16),
-    2026: date(2026, 3, 15),
-}
+logger = logging.getLogger(__name__)
 
 
 class PITViolationError(Exception):
@@ -184,11 +178,19 @@ class PITValidator:
             result.warnings.append(msg)
             logger.warning(msg)
 
-        selection_sunday = SELECTION_SUNDAY_DATES.get(year)
-        if selection_sunday is None:
-            msg = f"PIT: No Selection Sunday date for year {year}. Cannot validate temporal bounds."
-            result.warnings.append(msg)
-            logger.warning(msg)
+        # A season with no Selection Sunday on record used to downgrade to a
+        # warning and return a *passing* result, which silently disabled every
+        # temporal check below — the fold reported green while enforcing
+        # nothing.  A fold whose freeze boundary is unknown is a failed fold.
+        try:
+            selection_sunday = get_selection_sunday(year)
+        except UnknownSeasonError as exc:
+            violation = f"PIT: cannot validate temporal bounds for year {year}. {exc}"
+            result.violations.append(violation)
+            result.passed = False
+            logger.error(violation)
+            if strict:
+                raise PITViolationError(f"PIT validation failed for year {year}: {violation}") from exc
             return result
 
         if feature_metadata is None:

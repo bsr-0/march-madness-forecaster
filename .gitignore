@@ -51,6 +51,18 @@ data/governance/
 *.log
 artifacts/backtest_runs/
 
+# Generated candidate artifacts (~770 KB per season, 14 seasons).
+# These are build inputs, not build outputs: docs/data/season_*.json is what
+# the site actually serves, and those stay tracked. Regenerate any season with
+#   python scripts/experiments/build_candidate_artifact.py --year YYYY
+# (~75s each), then rebuild the payloads with scripts/build_ui_payload.py.
+#
+# The .sha256 sidecars are deliberately NOT ignored. For an official
+# prospective season the digest is the record that matters -- it is what makes
+# "this is the bracket that was predicted before the tournament" checkable --
+# and 87 bytes of it is worth keeping when the 770 KB it describes is not.
+artifacts/candidates/*.json
+
 # Pytest
 .pytest_cache/
 pytest-cache-files-*/

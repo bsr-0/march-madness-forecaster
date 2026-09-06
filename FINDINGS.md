@@ -820,6 +820,44 @@ plausibly close. Not investigated.
 noseed is a real model the optimal alpha may differ, so `blend` in particular deserves a
 refit before its 3.43% is treated as final.
 
+### 6c-ii. The guard did not cover the path the defect took (2026-09-05)
+
+**The `validate_stats_payload` fix above was wired into `train_noseed_model` only.
+The inference path — the one that actually produced the skew — never called it.**
+
+Found while auditing 2027 readiness, not from a failure. A second route reaches the
+identical symptom: `noseed_model._load_team_stats` probes `data/raw/historical/` then
+`data/raw/` for `torvik_{year}.json`, and returns `{}` when neither has it. That is the
+ordinary state of a new season before its pre-tournament snapshot is scraped. Every team
+then falls through to per-key defaults, every differential is 0.0, and the model returns
+~0.5 for every matchup — the exact 6c signature, with a green pipeline.
+
+`build_candidate_artifact.py` (the 2027 bracket path) called the loader with no
+validation, so a March-2027 run before scraping would have reproduced 6c in full.
+
+Fix: the guard now lives in `noseed_model._load_team_stats` itself — a `FileNotFoundError`
+for the empty case that names the expected path and points at
+`rescrape_pretournament_torvik.py` (the operator failure here is "snapshot not scraped
+yet", and "empty stats payload" does not tell them that), followed by
+`validate_stats_payload` on the way out.
+
+**The first attempt at this fix repeated the very mistake it was written up for.** It
+guarded `mc_pool_backtest._load_team_stats`, the wrapper the 2027 artifact path happens
+to import. But `src/cli/pool_cmds.py` imports the loader *directly* for both the `noseed`
+and `blend` pool modes, so the production CLI stayed on the silent path. There are six
+routes into this loader and no caller wants an empty payload, which is what makes the
+loader the only correct place for the check. `tests/test_inference_stats_guard.py` pins
+it at the loader and separately asserts that the re-exporting callers inherit it.
+
+**Generalisable lesson, and the reason this is written down:** a guard added in response
+to an incident is only worth what its *placement* covers. 6c's guard was attached to the
+function that was convenient (training, where the payload is assembled) rather than the
+one where the defect manifested (inference). Both call sites load the same data through
+the same helper, which is precisely why the gap was invisible. When fixing a silent-data
+defect, guard the shared loader, not the caller in the traceback — and enumerate the
+callers before deciding you have. The correction above is the same lesson learned twice
+in one sitting, which is the honest argument for its being worth writing down.
+
 ## 6d. ESPN publishes no substitution events before 2025-02-11 (2026-08-19)
 
 **Hard external boundary. Expensive to rediscover — measured, not inferred.**
@@ -931,6 +969,66 @@ in the doc-consolidation commit), so no paired per-year comparison is possible.
 - `src/ml/ensemble/stacking_weights.py` + `src/forecaster/stacking.py` —
   unconditional module-level imports from several files despite
   `enable_stacking=false`; removal needs a call-site refactor first.
+
+## 6f. `lev_tilt_200` has been unrunnable since 2026-08-29 (found 2026-09-05)
+
+**A registry entry can be malformed in a way no test and no lint reaches, and stay
+that way for a week.** Found in the same 2027-readiness audit as 6c-ii.
+
+`mc_pool_backtest`'s `legacy_specs` maps a mode name to a `(mode_name, base, sampler)`
+triple, consumed by `for mode_name, rp, sampler in mode_sampler_specs`. The
+`lev_tilt_200` entry carried 26 stray mode-name strings between its name and its base
+— a duplicate of the block that already exists in `ALL_MODES`, pasted one level too
+deep by `ed78439`/`e90b154`. Enabling the mode raised `ValueError: too many values to
+unpack`, in a loop far from the registry.
+
+Three things hid it. The only shape check on the path is `if spec[1] is None`, and a
+stray string is not `None`. The specs are built inside `_run_one_year`, so nothing
+imports them cheaply enough to have been unit-tested. And the strings were indented to
+4 spaces, so they read as entries of the enclosing dict rather than elements of the
+tuple — a reformat is what made the defect visible at all.
+
+**No measured result is affected.** The tilt sweep was run and recorded by `59227ee` at
+22:10 on 2026-08-29; the paste landed at 22:52 in a later commit. The reported nulls
+(+0.0040 / -0.0027 / -0.0027 / -0.0040 at tilt 0.25/0.5/1.0/2.0) stand. Every run since
+that would have exercised the mode simply crashed rather than producing a wrong number,
+which is the one merciful property of this class of bug.
+
+`tests/test_mode_spec_shape.py` now reads the registry statically — deliberately, since
+building it for real needs a season of probability bases on disk, and that cost is
+exactly what let this through — and asserts every entry is a 3-tuple whose first element
+matches its key.
+
+## 6g. The First Four is not the leakage boundary for public picks (2026-09-05)
+
+**A design error caught by the decision it was meant to enforce.** Written down
+because the wrong table is the obvious one to reach for and reads as correct.
+
+Building the CHECKPOINT 2 provenance gate, the natural boundary for "were these pick
+shares observed before the tournament?" is `TOURNAMENT_START_DATES`. That table holds
+the **Tuesday First Four / play-in date**, two days after Selection Sunday — not the
+R64 tip. Using it rejects the ordinary, correct behaviour of every bracket in every
+pool, because a bracket cannot be filled in until the First Four decides who occupies
+four of the 64 slots. The declared 2027 picks cutoff (2027-03-18 12:00 ET) failed the
+first version of the check for exactly this reason, which is how the error surfaced.
+
+The boundary that means anything is the first R64 tip, when brackets lock:
+`season_calendar.get_round_of_64_tip`, Selection Sunday + 4 days at 12:00 ET. Noon is a
+deliberately conservative stand-in for the ~12:15 first tip.
+
+**2021 breaks the offset.** The bubble tournament ran on a compressed Indianapolis
+schedule — First Four Thursday 3/18, R64 opening Friday 3/19 — so Selection Sunday + 4
+lands on the First Four, not the R64. It is the only such season in 2008-2027, and it
+is listed in `_R64_DATE_OVERRIDES` rather than special-cased at the call site. The test
+that guards it *derives* the exception set from `TOURNAMENT_START_DATES` (any season
+whose First Four is not Selection Sunday + 2) rather than restating the list, so a
+future irregular season fails the test instead of silently shifting a leakage boundary
+by one day.
+
+**The correction worth carrying:** "before the tournament" is not one date. It is at
+least three — bracket release, First Four, R64 tip — and which one is right depends on
+what the input is. For anything observed about the *field's behaviour*, it is the lock,
+because that is when the behaviour stops.
 
 ## 8. Known open technical debt (not yet fixed, roughly prioritized)
 

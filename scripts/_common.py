@@ -24,9 +24,17 @@ Intentionally NOT consolidated:
   and `pool_multiyear_analysis` use a round→list-of-picks structure
   that is semantically different from the ESPN-style team→round dict
   this module's `score_bracket_espn` handles.
-- `load_seeds_and_regions` for `mc_pool_backtest.py`: that caller
-  applies a region-alias lookup (`_REGION_ALIASES`) the other two
-  don't. Left in-place; the simpler version is in this module.
+- `load_seeds_and_regions` for `mc_pool_backtest.py`: that caller keeps
+  its own body (it reads a slightly different context path), but the
+  region-alias lookup is no longer duplicated -- `REGION_ALIASES` lives
+  here and both apply it. RESOLVED 2026-09-05, and the earlier note
+  ("left in-place; the simpler version is in this module") was wrong in
+  a way worth recording: the "simpler version" is what
+  `build_candidate_artifact` uses, so 2011 -- the one season that needs
+  the aliases -- silently produced a bracket with four `unknown_South_*`
+  placeholder slots and crashed when they were looked up by team index.
+  A divergence documented as harmless was load-bearing for the shipped
+  product path.
 """
 
 from __future__ import annotations
@@ -173,12 +181,23 @@ def load_seeds(year: int) -> Dict[str, int]:
     return {t["team_id"]: t["seed"] for t in teams}
 
 
+# 2011 is the only season in the modern era that named its regions
+# "Southeast"/"Southwest" rather than "South"/"Midwest". Every bracket
+# layout here keys on the canonical four, so an unnormalized 2011 drops
+# half its field into placeholder slots rather than failing outright.
+REGION_ALIASES: Dict[str, str] = {
+    "Southeast": "South",
+    "Southwest": "Midwest",
+}
+
+
 def load_seeds_and_regions(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
     """Return `(seeds, regions)` mapping for `year`, or ({}, {}).
 
     Consolidates `diagnose_leverage` and `divergence_diagnostic`
-    (identical hash 3e6441d1). `mc_pool_backtest.py` has its own
-    region-alias-aware variant and is NOT migrated to this helper.
+    (identical hash 3e6441d1). Region names are normalized through
+    `REGION_ALIASES`, which `mc_pool_backtest.py` also imports, so the
+    two loaders cannot disagree about 2011 again.
     Reads from the consolidated `tournament_context_{year}.json` (key
     "seeds") when present, falling back to the old
     `tournament_seeds_{year}.json`."""
@@ -190,7 +209,8 @@ def load_seeds_and_regions(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
     if isinstance(data, dict) and "teams" in data:
         for t in data["teams"]:
             seeds[t["team_id"]] = t["seed"]
-            regions[t["team_id"]] = t.get("region", "")
+            raw_region = t.get("region", "")
+            regions[t["team_id"]] = REGION_ALIASES.get(raw_region, raw_region)
     return seeds, regions
 
 

@@ -48,11 +48,27 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .bar-l { display: flex; align-items: center; gap: 20px; min-width: 0; }
 .mark { font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
 
-.years { display: flex; gap: 2px; }
+/* Seventeen seasons, not four: the row has to survive a narrow viewport.
+   Scrolls horizontally rather than wrapping, so the bar keeps its height and
+   the buttons keep their hit area; the scrollbar itself is hidden because the
+   overflowing row is self-evidently scrollable. */
+.years {
+  display: flex; gap: 2px;
+  overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+  scroll-snap-type: x proximity;
+}
+.years::-webkit-scrollbar { display: none; }
 .yr {
-  padding: 5px 11px; border-radius: 6px; font-size: 13px; font-weight: 500;
+  flex: 0 0 auto; scroll-snap-align: end;
+  padding: 5px 9px; border-radius: 6px; font-size: 13px; font-weight: 500;
   color: var(--ink-3); transition: color .12s, background .12s;
 }
+/* A season we cannot show is still listed -- omitting it silently would make
+   the gap look like it never happened -- but it should not look clickable in
+   the same way as one that works. It stays focusable and still explains
+   itself when chosen. */
+.yr.na { opacity: 0.45; }
+.yr.na.on { opacity: 1; }
 .yr:hover { color: var(--ink); }
 .yr.on { color: var(--ink); background: var(--panel-2); }
 

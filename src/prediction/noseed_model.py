@@ -217,6 +217,26 @@ def _load_team_stats(year: int) -> dict:
     Validates pre-tournament provenance on every file before reading. Raises
     LeakageError if a file's data_type indicates post-tournament data, preventing
     silent look-ahead bias from contaminating training or prediction.
+
+    Also refuses to return an unusable payload, which is the FINDINGS.md 6c
+    failure reached by its other route. This function used to return ``{}`` when
+    neither directory held ``torvik_{year}.json`` -- the ordinary state of a new
+    season before its pre-tournament snapshot is scraped. Every team then fell
+    through to per-key defaults, every differential became 0.0, and the model
+    returned ~0.5 for every matchup while the pipeline reported success.
+
+    The guard lives here rather than at a call site because there are six
+    callers -- ``mc_pool_backtest``, ``build_candidate_artifact``, the ``mmf
+    pool`` noseed and blend modes in ``cli/pool_cmds.py``, the recency fitter
+    and ``train_noseed_model`` -- and a guard placed on one of them is exactly
+    the mistake 6c-ii records: the first fix was attached to training, where the
+    payload is assembled, rather than to inference, where the defect showed up.
+    No caller wants an empty payload, so none needs an opt-out.
+
+    Raises:
+        FileNotFoundError: if no snapshot exists for ``year``.
+        FeatureSkewError: if a snapshot exists but cannot populate the feature
+            vector.
     """
     stats = {}
     ff_data = None
@@ -252,6 +272,17 @@ def _load_team_stats(year: int) -> dict:
                         stats[tid].setdefault(k, v)
             else:
                 stats[tid] = ff
+
+    if not stats:
+        raise FileNotFoundError(
+            f"No Torvik team stats for {year}: expected "
+            f"{HIST_DIR / f'torvik_{year}.json'} or {DATA_DIR / f'torvik_{year}.json'}. "
+            f"For a new season, generate a pre-tournament snapshot with "
+            f"scripts/rescrape_pretournament_torvik.py. Refusing to continue: "
+            f"an empty payload builds every matchup from per-key defaults and "
+            f"returns ~0.5 for every team without failing."
+        )
+    validate_stats_payload(stats, context=f"team stats for {year}")
     return stats
 
 
