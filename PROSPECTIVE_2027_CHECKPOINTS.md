@@ -145,4 +145,48 @@ The distinction to hold: a bug in the *implementation* of a frozen parameter can
 be fixed under v1 (the parameter's value is unchanged). A change to the
 parameter's *value or definition* cannot.
 
-**Status:** OPEN, pending the integration pass.
+**Run 2026-09-05: 30/32, then 32/32 after two fixes. Neither fix touched a
+frozen parameter, so v2 stands and this is NOT a v3 event.**
+
+Both failures were defects in the *checks*, not in the system, and both are
+worth stating rather than filing as green:
+
+**1. "system matches the 2027.v1 freeze — 9 drifted."** The test named
+`configs/frozen/prospective_2027.json` explicitly, overriding
+`diff_against_frozen`'s default of `FROZEN_SPEC_PATH` — which is the operative
+`prospective_2027_v2_scoped.json` that `tests/test_frozen_2027_spec.py` actually
+gates on. So it was measuring the live system against the **superseded** v1
+spec. All 9 drifted fields were the documented v2 changes: `train_years` and
+`training_cutoff_season` extended to 2026, the three fields reclassified to
+`product.v3`, and v2's own bookkeeping (`spec_version`, `supersedes`,
+`scope_correction`, `holdout.contaminated_for_evaluation_only`). Against the
+operative spec the live system drifts on **zero** fields. It was exactly as
+frozen the whole time; the test was pinned to the wrong freeze.
+
+**2. "EV recomputes exactly — max err 1.14e+02."** `validate` re-derived
+marginals from whatever rounds list it was passed, and the call site passed
+every candidate from all three rating sources — while EV is defined against
+Torvik's marginals alone, deliberately, so scores stay comparable. The check
+compared a Torvik EV to a three-source EV and reported the gap between two
+rating systems as an arithmetic error. It now takes the marginals rather than
+re-deriving them, and the error is exactly 0.0.
+
+This one was failing in the shipped artifacts, not just in the test: every
+`candidates_*.json` built since the pool was broadened carries
+`ev_max_abs_error` between 81 and 142. All artifacts were rebuilt after the fix
+and now record 0.0; the rebuilt candidates are otherwise byte-identical, so no
+UI payload changed.
+
+**Both checks passed when they were written.** The record committed at
+`aa4f104` shows 32/32 with `max err 0.00e+00`, from a time when there was one
+rating source and v1 was operative. Two ordinary changes -- `ae617ce`
+broadening the pool to three sources, and the v2 freeze -- invalidated them,
+and the test is referenced by no workflow and no test file, so nothing re-ran
+it. **This is the thing to fix if the pass is to mean anything in 2027:**
+either wire `integration_test_2026.py` into CI or treat its recorded result as
+describing whatever system existed when someone last typed its name.
+
+**Status:** CLOSED. v2 survives the integration pass. The two defects were in
+the verification layer, which is its own small lesson: the checks are code too,
+and 32/32 on a check that measures the wrong thing is worth less than a
+failure that means something.

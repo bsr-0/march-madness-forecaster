@@ -42,11 +42,11 @@ def picks_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _write_archive(picks_dir, year, captured_at=None):
+def _write_archive(picks_dir, year, captured_at=None, name=None):
     payload = {"year": year, "source": "test fixture", "teams": {}}
     if captured_at is not None:
         payload["captured_at"] = captured_at
-    (picks_dir / f"espn_picks_{year}.json").write_text(json.dumps(payload))
+    (picks_dir / (name or f"espn_picks_{year}.json")).write_text(json.dumps(payload))
 
 
 class TestDeclaredSeasonRequiresACheckableCaptureTime:
@@ -130,6 +130,40 @@ class TestMissingArchiveFailsBeforeCompute:
         with pytest.raises(RuntimeError, match="no archived public picks"):
             _public_picks_provenance(UNDECLARED_SEASON)
 
+    def test_the_error_names_every_accepted_filename(self, picks_dir):
+        """So the operator knows what to produce, not just that nothing was found."""
+        with pytest.raises(RuntimeError) as exc:
+            _public_picks_provenance(UNDECLARED_SEASON)
+        for name in ("espn_picks_", "public_picks_", f"{UNDECLARED_SEASON}.json"):
+            assert name in str(exc.value)
+
+
+class TestTheGateChecksTheFileTheBuildReads:
+    """The loader accepts three filenames; the gate used to check only one.
+
+    ``load_historical_public_picks`` resolves ``espn_picks_{year}.json``, then
+    ``public_picks_{year}.json``, then ``{year}.json``. The gate hardcoded the
+    first -- the name every *historical* archive happens to use -- so a season
+    captured under the name the live collector writes would have been refused
+    as missing while the build loaded it without complaint. That is the shape
+    of failure this whole gate exists to prevent, one level up.
+    """
+
+    @pytest.mark.parametrize("name_for", ["espn_picks_{y}.json", "public_picks_{y}.json", "{y}.json"])
+    def test_every_accepted_name_is_found(self, picks_dir, name_for):
+        name = name_for.format(y=UNDECLARED_SEASON)
+        _write_archive(picks_dir, UNDECLARED_SEASON, name=name)
+        assert _public_picks_provenance(UNDECLARED_SEASON)["file"].endswith(name)
+
+    def test_priority_order_matches_the_loader(self, picks_dir):
+        """Two archives present: the gate must describe the one that wins."""
+        from src.data.historical_picks import archive_candidates
+
+        for candidate in archive_candidates(UNDECLARED_SEASON, picks_dir):
+            _write_archive(picks_dir, UNDECLARED_SEASON, name=candidate.name)
+        expected = archive_candidates(UNDECLARED_SEASON, picks_dir)[0]
+        assert _public_picks_provenance(UNDECLARED_SEASON)["file"] == str(expected)
+
 
 class TestOfficialArtifactsAreImmutable:
     def test_official_season_is_never_overwritten(self, tmp_path):
@@ -154,3 +188,47 @@ class TestOfficialArtifactsAreImmutable:
 
     def test_a_fresh_path_is_always_allowed(self, tmp_path):
         _refuse_to_overwrite(tmp_path / "candidates_2027.json", DECLARED_SEASON, force=False)
+
+
+class TestEVIsCheckedAgainstItsOwnDistribution:
+    """The EV self-check must use the marginals EV was computed from.
+
+    ``build`` defines expected score against Torvik's marginals alone --
+    deliberately, so scores are comparable across candidates drawn from three
+    rating sources. ``validate`` used to re-derive marginals from whatever rounds
+    list it was handed, and the call site handed it every candidate from every
+    source. The check therefore compared a Torvik EV against a three-source EV
+    and reported the difference between two rating systems as an arithmetic
+    error: ~100 points on a ~950-point bracket, in every artifact built since
+    the pool was broadened, including the ones already shipped.
+
+    Passing the marginals instead of re-deriving them is what makes the check
+    mean what its name says.
+    """
+
+    def test_validate_takes_marginals_not_a_rounds_list(self):
+        """A rounds list would silently re-derive the wrong distribution."""
+        import inspect
+
+        from scripts.experiments.build_candidate_artifact import validate
+
+        params = list(inspect.signature(validate).parameters)
+        assert params[-1] == "ev_marginals", (
+            "validate's last parameter must be the marginals EV used, not a rounds "
+            f"list to re-derive them from; got {params[-1]!r}"
+        )
+
+    def test_the_call_site_passes_the_ev_marginals(self):
+        """Pinned at the source, because the defect was in the argument passed."""
+        import re
+        from pathlib import Path
+
+        src = Path(__file__).resolve().parents[1] / "scripts" / "experiments" / "build_candidate_artifact.py"
+        # (?<!def ) so the function's own signature is not mistaken for a call.
+        calls = re.findall(r"(?<!def )validate\(\s*bank[^)]*\)", src.read_text())
+        assert calls, "no validate(...) call site found"
+        for call in calls:
+            last_arg = call.rstrip(")").split(",")[-1].strip()
+            assert last_arg == "marg", (
+                f"validate() must be called with the EV marginals (`marg`); got {last_arg!r}"
+            )

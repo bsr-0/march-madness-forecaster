@@ -1030,6 +1030,51 @@ least three — bracket release, First Four, R64 tip — and which one is right 
 what the input is. For anything observed about the *field's behaviour*, it is the lock,
 because that is when the behaviour stops.
 
+## 6h. A validation check that measured the wrong thing for weeks (2026-09-05)
+
+**The EV self-check in `build_candidate_artifact.validate` compared a Torvik EV to
+a three-source EV and called the difference an arithmetic error.** Found by running
+the 2026 integration test for CHECKPOINT 3.
+
+**Both checks in that test were correct when written and were invalidated by later
+commits that nobody re-ran them against.** The committed record from `aa4f104` shows
+32/32 with `EV recomputes exactly: max err 0.00e+00` -- genuinely passing, at a time
+when there was one rating source. `ae617ce` then broadened the pool to three, and the
+v2 freeze superseded v1, and the test has been failing both checks ever since. It is
+referenced by no workflow and no test file: it runs only when someone types its name,
+and between 2026-08 and 2026-09-05 nobody did.
+
+`build` computes expected score against **Torvik's marginals alone** -- deliberately,
+because scores have to be comparable across candidates drawn from three rating
+sources. `validate` took a rounds list and re-derived marginals from it, and the call
+site handed it `rounds`, i.e. every candidate from every source. So the check
+recomputed EV under a *different distribution* than EV is defined on and reported the
+residual as error: `ev_max_abs_error` of 81-142 points on a ~950-point bracket, in
+every artifact built since the change, including the three already shipped.
+
+Fixed by passing `marg` -- the marginals EV actually used -- instead of a rounds list
+to re-derive them from. The error is then exactly 0.0. All artifacts were rebuilt.
+
+**Three things worth carrying:**
+
+**A verification artifact outside CI decays to nothing.** The failure here is not
+that the check was wrong -- it was right when written -- but that two ordinary,
+correct changes silently invalidated it and the gap went unmeasured for weeks. Either
+wire it into CI or accept that its last recorded result describes a system that no
+longer exists. The recorded numbers make the drift visible in hindsight: 45 distinct
+champions where the current run has 64, mean Hamming 21.7 against 25.1.
+
+The check failed continuously while the system was correct, which is its own hazard:
+a check that cries wolf gets read as a known quirk rather than a defect, and there is
+no signal left to notice when something real breaks.
+
+**Deriving a quantity twice is the defect.** The fix is not "pass the right rounds
+list" but "do not re-derive at all". Any check that recomputes its reference from
+scratch can drift from the thing it is checking, and the drift is invisible precisely
+because the recomputation looks like independence. Independent *arithmetic* on the
+*same* distribution is the useful test; independent choice of distribution is not a
+test of anything.
+
 ## 8. Known open technical debt (not yet fixed, roughly prioritized)
 
 - **`blend_alpha` should be refitted** (P2, opened 2026-08-20): `recency_hparam_fitter`
