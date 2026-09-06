@@ -82,7 +82,21 @@ KAGGLE_DIR = PROJECT_ROOT / "data" / "kaggle"
 OUT = PROJECT_ROOT / "docs" / "data"
 OUT.mkdir(parents=True, exist_ok=True)
 
-YEARS = range(2010, 2027)
+# Derived from the season calendar, not typed. This was range(2010, 2027) --
+# excluding the very season the site exists to forecast -- so once a 2027
+# artifact existed, build_ui_payload would still find no stats rows for 2027 and
+# emit status="not_started". The UI would have said "the 2027 season hasn't
+# started yet" on the day it started. main() skips years with no data, so
+# covering the forecast season early costs nothing.
+
+def _latest_season() -> int:
+    """Newest season the calendar knows about — the one being forecast."""
+    from src.data.season_calendar import latest_season
+
+    return latest_season()
+
+
+YEARS = range(2010, _latest_season() + 1)
 VALID_PRETOURNAMENT_TYPES = {"pre_tournament", "pre_tournament_computed"}
 
 CLOSE_GAME_MARGIN = 6  # points; a "close game" is decided by <= this

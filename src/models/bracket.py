@@ -27,8 +27,16 @@ class Bracket:
 
     def _validate_teams(self):
         """Validate that we have correct number of teams and seeds."""
-        if len(self.teams) not in [64, 68]:  # 64 main bracket or 68 with First Four
-            raise ValueError(f"Expected 64 or 68 teams, got {len(self.teams)}")
+        # 64 is the main draw; anything larger is the ENTERED field, which
+        # includes play-in participants. That was an enumerated [64, 68] until
+        # 2026-09-06, which silently ruled out the 2027 expansion to 76 teams
+        # (12 play-in games) and would have ruled out the next one too. The
+        # invariant that matters is a complete main draw, checked per region
+        # below; the entered field is only ever at least that big.
+        if len(self.teams) < 64:
+            raise ValueError(
+                f"Expected at least 64 teams (the main draw), got {len(self.teams)}"
+            )
 
         # Validate each region has seeds 1-16
         for region in self.REGIONS:

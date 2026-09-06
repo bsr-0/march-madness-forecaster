@@ -61,6 +61,13 @@ def rehearsal(tmp_path, monkeypatch):
         )
     (candidates / f"candidates_{REHEARSAL}.json").write_text(json.dumps(art))
 
+    # SYNTHETIC, and the seam worth naming: the payload needs stats rows for the
+    # season, and injecting them here is what lets the rest of this file test the
+    # payload SHAPE. It also means this fixture cannot notice whether the real
+    # stats table covers the forecast season -- and it did not, which would have
+    # left 2027 reporting "hasn't started yet" on the day it started.
+    # TestTheRealStatsTableCoversTheForecastSeason below is the compensating
+    # check; do not delete it on the grounds that this fixture passes.
     stats = json.loads((REPO / "docs" / "data" / "team_stats_by_year.json").read_text())
     stats["stats_by_year"][str(REHEARSAL)] = stats["stats_by_year"][str(DONOR)]
     stats_path = tmp_path / "team_stats_by_year.json"
@@ -383,3 +390,66 @@ class TestAStaleLinkSaysSo:
         """Fragment-only navigation does not reload; without this, nothing happens."""
         src = (REPO / "docs" / "app.js").read_text()
         assert "'hashchange'" in src, "editing the hash in place must take effect"
+
+
+class TestTheRealStatsTableCoversTheForecastSeason:
+    """The rehearsal fixture injects stats for 2027. Reality has to supply them.
+
+    ``build_season`` reports "not_started" when a season has no stats rows,
+    regardless of whether an artifact exists -- so a stats table that stops at
+    2026 means the UI says "the 2027 season hasn't started yet" on the day it
+    starts, with a finished bracket sitting on disk. That is exactly what
+    ``YEARS = range(2010, 2027)`` did, and no rehearsal that supplies its own
+    stats can see it.
+    """
+
+    def test_the_generator_covers_the_calendars_latest_season(self):
+        import importlib.util
+
+        from src.data.season_calendar import latest_season
+
+        spec = importlib.util.spec_from_file_location(
+            "gen_stats", REPO / "scripts" / "generate_team_stats_table.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert latest_season() in module.YEARS, (
+            f"the stats table stops before {latest_season()}, so that season can never "
+            f"reach the UI as 'ready'"
+        )
+
+    def test_the_range_is_derived_not_typed(self):
+        """A literal end-year is what went stale; it must not come back.
+
+        Asserted against the ASSIGNMENT, not the file text: the comment above it
+        quotes the old literal on purpose, and a naive substring check matches
+        its own documentation.
+        """
+        import re
+
+        src = (REPO / "scripts" / "generate_team_stats_table.py").read_text()
+        assignment = re.search(r"^YEARS = .*$", src, re.M)
+        assert assignment, "YEARS is no longer a module-level assignment"
+        assert not re.search(r"\b20\d\d\s*\)", assignment.group(0)), (
+            f"the end of the range is a literal year: {assignment.group(0)!r}"
+        )
+        assert "_latest_season()" in assignment.group(0)
+
+
+class TestTheEnteredFieldMayGrow:
+    def test_a_76_team_field_is_accepted_by_the_bracket_model(self):
+        """[64, 68] was enumerated, which ruled out 2027 and every later format."""
+        src = (REPO / "src" / "models" / "bracket.py").read_text()
+        assert "not in [64, 68]" not in src
+        assert "len(self.teams) < 64" in src
+
+    def test_the_construction_seed_map_refuses_an_unresolved_slot(self):
+        """The second of three copies of the last-writer-wins rule."""
+        from src.optimization.bracket_construction import _build_seed_map
+
+        seeds = {f"east_{s}": s for s in range(1, 17)}
+        regions = {t: "East" for t in seeds}
+        seeds["east_16_challenger"] = 16
+        regions["east_16_challenger"] = "East"
+        with pytest.raises(ValueError, match="has not been resolved|holds both"):
+            _build_seed_map(seeds, regions)

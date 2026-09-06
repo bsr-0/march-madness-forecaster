@@ -1597,14 +1597,35 @@ class ParetoOptimizer:
         return team1_id if team1_id < team2_id else team2_id
 
     def _build_seed_map(self) -> Dict[str, Dict[int, str]]:
+        """Map each region's seeds to the team holding that slot.
+
+        The third copy of a rule that was wrong in the other two: duplicate
+        (region, seed) slots -- unresolved play-in games -- used to be settled
+        by whichever team came last in iteration order. See
+        ``bracket_construction._build_seed_map`` for what that cost. Reported
+        here rather than raised, because this optimizer runs over whatever
+        probability map it is handed and a caller may legitimately be exploring
+        a partial field; ``_can_build_full_bracket`` is the gate that decides
+        whether a bracket is buildable at all.
+        """
         by_region: Dict[str, Dict[int, str]] = {r: {} for r in ("East", "West", "South", "Midwest")}
+        contested = []
         for team_id in self.calculator.model_probs.keys():
             meta = self.calculator._team_meta(team_id)
             if meta.region not in by_region:
                 continue
             if meta.seed <= 0:
                 continue
+            if meta.seed in by_region[meta.region]:
+                contested.append(f"{meta.region} {meta.seed}: {by_region[meta.region][meta.seed]}/{team_id}")
             by_region[meta.region][meta.seed] = team_id
+        if contested:
+            logger.warning(
+                "Leverage seed map: %d unresolved play-in slot(s) settled by iteration "
+                "order, so the bracket may contain a team that does not play: %s",
+                len(contested),
+                "; ".join(sorted(contested)),
+            )
         return by_region
 
     def _can_build_full_bracket(self) -> bool:
