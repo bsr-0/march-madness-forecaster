@@ -1,12 +1,12 @@
 {
   "year": 2026,
-  "passed": 32,
+  "passed": 31,
   "total": 32,
   "checks": [
     {
-      "check": "system matches the 2027.v2 freeze",
-      "pass": true,
-      "detail": "2027.v2"
+      "check": "system matches the 2027.v1 freeze",
+      "pass": false,
+      "detail": "9 drifted: ['candidate_selection.diversity_algorithm', 'candidate_selection.k_returned', 'holdout.contaminated_for_evaluation_only', 'model.train_years', 'model.training_cutoff_season', 'product.strategies', 'scope_correction', 'spec_version', 'supersedes']"
     },
     {
       "check": "pre-tournament gate accepts 2026 inputs",

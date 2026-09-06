@@ -193,6 +193,45 @@ jobs:
           TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
           echo "Total tests collected: ${TEST_COUNT}"
 
+  # ─── Prospective Integration (Checkpoint 3) ──────────────────────────────
+  # Runs the 2026 end-to-end pass that PROSPECTIVE_2027_CHECKPOINTS.md Checkpoint 3
+  # is decided on. It lives here because it was previously in NO workflow and no
+  # test file: it ran when someone typed its name, and two ordinary commits
+  # (broadening the candidate pool to three rating sources, and the v2 freeze
+  # superseding v1) silently invalidated two of its checks for weeks. Its last
+  # recorded result described a system that no longer existed — 45 distinct
+  # champions where the current run has 64. A verification artifact outside CI
+  # decays to nothing; see FINDINGS.md 6h.
+  #
+  # Everything it needs is committed (torvik, ESPN picks, seeds/context,
+  # external ratings, historical games), so it is deterministic and hermetic.
+  # ~2 minutes at 60k sims.
+  #
+  # Blocking window matches freeze-check for the same reason: during the live
+  # forecast window a broken prospective pipeline must stop a merge, while the
+  # rest of the year it stays visible without blocking experimentation.
+  prospective-integration:
+    name: "Prospective Integration (2026)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: 2026 integration pass
+        # No pipe: piping would replace the script's exit status with the
+        # pipeline's and turn a real failure green.
+        run: python scripts/experiments/integration_test_2026.py
+
+      - name: Upload the record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospective-integration-2026
+          path: artifacts/integration/integration_2026.json
+
   # ─── Dependency Audit (non-blocking) ─────────────────────────────
   audit:
     name: Dependency Audit
@@ -265,7 +304,12 @@ jobs:
   #               browser-model   — always; fast, hermetic, and guards the
   #                                 antisymmetry and point-in-time invariants.
   #               freeze-check    — only Jan 1 – Apr 7 (pre-tournament + tournament window).
-  # Non-blocking: freeze-check Apr 8 – Dec 31 (post-tournament edit window), full-tests, audit.
+  #               prospective-integration — same window as freeze-check, same reason:
+  #                                 Checkpoint 3 is decided on this run, so during
+  #                                 the live-forecast window a broken prospective
+  #                                 pipeline must stop a merge.
+  # Non-blocking: freeze-check and prospective-integration Apr 8 – Dec 31
+  #               (post-tournament edit window), full-tests, audit.
   all-gates:
     name: "CI"
     if: always()
@@ -273,6 +317,7 @@ jobs:
       - fast-gate
       - browser-model
       - freeze-check
+      - prospective-integration
       - full-tests
       - audit
     runs-on: ubuntu-latest
@@ -299,6 +344,15 @@ jobs:
               echo "::warning::Freeze artifact check failed — non-blocking (post-tournament edit window, ${FREEZE_BLOCK_END} < today). Re-freeze the pipeline before the ${FREEZE_BLOCK_START} enforcement window re-opens."
             else
               echo "::error::Freeze artifact check failed — blocking merge (tournament-season enforcement active, ${FREEZE_BLOCK_START} – ${FREEZE_BLOCK_END})"
+              exit 1
+            fi
+          fi
+          if [[ "${{ needs.prospective-integration.result }}" == "failure" ]]; then
+            TODAY_MMDD=$(date -u +%m-%d)
+            if [[ "$TODAY_MMDD" > "$FREEZE_BLOCK_END" ]]; then
+              echo "::warning::2026 integration pass failed — non-blocking (post-tournament edit window). Checkpoint 3 in PROSPECTIVE_2027_CHECKPOINTS.md is decided on this run; fix it before the ${FREEZE_BLOCK_START} window re-opens."
+            else
+              echo "::error::2026 integration pass failed — blocking merge (tournament-season enforcement active, ${FREEZE_BLOCK_START} – ${FREEZE_BLOCK_END}). If the fix needs a frozen PARAMETER VALUE changed, that is a v3 event, not a patch."
               exit 1
             fi
           fi

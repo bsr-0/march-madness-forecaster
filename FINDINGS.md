@@ -1059,10 +1059,12 @@ to re-derive them from. The error is then exactly 0.0. All artifacts were rebuil
 
 **A verification artifact outside CI decays to nothing.** The failure here is not
 that the check was wrong -- it was right when written -- but that two ordinary,
-correct changes silently invalidated it and the gap went unmeasured for weeks. Either
-wire it into CI or accept that its last recorded result describes a system that no
-longer exists. The recorded numbers make the drift visible in hindsight: 45 distinct
-champions where the current run has 64, mean Hamming 21.7 against 25.1.
+correct changes silently invalidated it and the gap went unmeasured for weeks. The
+recorded numbers make the drift visible in hindsight: 45 distinct champions where the
+current run has 64, mean Hamming 21.7 against 25.1. It is now a CI job
+(`prospective-integration` in `ci.yml`), blocking inside the same Jan 1 - Apr 7
+window as the freeze check, since everything it needs is committed and it runs in
+about two minutes.
 
 The check failed continuously while the system was correct, which is its own hazard:
 a check that cries wolf gets read as a known quirk rather than a defect, and there is
