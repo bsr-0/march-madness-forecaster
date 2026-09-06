@@ -66,10 +66,20 @@ class TestTheTwoLoadersCannotDisagree:
 
 class TestBracketOrderHasNoPlaceholders:
     def test_2011_bracket_order_is_all_real_teams(self):
-        """The symptom, pinned at the place it actually surfaced."""
+        """The symptom, pinned at the place it actually surfaced.
+
+        The play-in games are resolved first because that is what every real
+        caller does now -- an unresolved (region, seed) slot is a fatal
+        ambiguity rather than something to settle by file order. Before that
+        change this test passed unresolved seeds, which quietly exercised the
+        wrong path.
+        """
+        from scripts.experiments.build_candidate_artifact import resolve_field
         from scripts.mc_pool_backtest import build_bracket_order
 
         seeds, regions = load_seeds_and_regions(ALIASED_SEASON)
+        resolve_field(ALIASED_SEASON, seeds, regions)
         order = build_bracket_order(seeds, regions)
         placeholders = [t for t in order if t.startswith("unknown_")]
         assert not placeholders, f"2011 bracket has placeholder slots: {sorted(set(placeholders))}"
+        assert len(order) == 64

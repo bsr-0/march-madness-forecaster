@@ -100,6 +100,7 @@ exercise.
 | input | cutoff | enforced by |
 |---|---|---|
 | seeds | bracket release, Selection Sunday 2027-03-14 | `load_seeds_and_regions` |
+| play-in results | the 12 play-in games, played 2027-03-16/17 | `resolve_field` |
 | Torvik ratings | last `trank.php` snapshot with `data_type == "pre_tournament"` | `assert_pretournament_inputs` |
 | public pick shares | **2027-03-18 12:00 ET**, one capture, no re-capture | `_public_picks_provenance` |
 
@@ -127,6 +128,20 @@ artifact and refuses to overwrite an existing one for a declared season, with or
 without `--force`. Deleting the file by hand still works, which is the point —
 the destructive act should be separate and deliberate, not a side effect of
 re-running a build command.
+
+**A new operational dependency, added 2026-09-06.** The artifact can no longer
+be built until the play-in games are resolved. That is not a new constraint on
+*information* -- those games finish before brackets lock, so their winners were
+always ordinary pre-tournament knowledge -- but it is a new constraint on
+*sequencing*: 2027 has 12 of them, they are played 2027-03-16/17, and their
+results must be scraped before `build_candidate_artifact` will run. It refuses
+rather than guessing, which is the point; the previous behaviour filled those
+slots by the order of lines in the seeds file and got at least one wrong in
+every season it ever produced.
+
+So the March order is: Selection Sunday (seeds) -> play-in games resolved
+(2027-03-17) -> public picks captured (2027-03-18 12:00 ET) -> artifact built ->
+payload rebuilt -> deployed, all before the R64 tips at ~12:15.
 
 **Status:** CLOSED for the decision and its enforcement. The capture itself
 remains to be performed in March 2027.

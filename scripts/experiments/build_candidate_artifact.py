@@ -845,9 +845,66 @@ def _round_probs_from_ratings(ratings, seeds, regions, first_round, n_sims=20000
     return marginals_from_pairwise(pw, first_round, teams, n_sims=n_sims)
 
 
+def resolve_field(year: int, seeds: Dict, regions: Dict) -> Dict:
+    """Reduce the entered field to the teams that actually play the Round of 64.
+
+    The seeds file lists everyone who made the tournament -- 68 teams through
+    2026, and 76 from 2027 under the expansion, where 12 play-in games decide 12
+    of the 64 main-draw slots. Both teams in a play-in game share a
+    (region, seed) slot, so a bracket cannot be laid out until those games are
+    played.
+
+    ``build_bracket_order`` used to settle them by dict insertion order, which
+    is the order of lines in the seeds file. That is not a rule, and it was not
+    right: the shipped 2026 artifact put lehigh in the South 16 slot when
+    prairie_view won that game. Three of the four matched the real winner by
+    luck. Twelve slots in 2027 makes luck a poor plan.
+
+    NOT LOOK-AHEAD. Play-in games finish before brackets lock -- the whole field
+    fills them in afterwards, because it has to -- so their results are ordinary
+    pre-tournament information for an R64 bracket, on the same footing as the
+    seeds themselves. See season_calendar.get_round_of_64_tip for the boundary
+    that does matter.
+
+    Returns provenance describing what was resolved, for the artifact to record.
+    """
+    from scripts.mc_pool_backtest import resolve_first_four
+    from src.prediction.noseed_model import _load_tournament_results
+
+    entered = len(seeds)
+    games = _load_tournament_results(year)
+    play_in = [g for g in games if g.get("round_name") == "FF"]
+    replaced = resolve_first_four(games, seeds, regions) if play_in else 0
+
+    if len(seeds) != 64:
+        raise RuntimeError(
+            f"{year}: {entered} teams entered and {len(seeds)} remain after resolving "
+            f"{replaced} play-in game(s); a Round of 64 needs exactly 64. "
+            + (
+                "No play-in results are on disk yet -- if the play-in games have not "
+                "been played, the draw is genuinely undetermined and the artifact "
+                "cannot be built. Wait for them."
+                if not play_in
+                else "Check the results file for this season."
+            )
+        )
+
+    return {
+        "teams_entered": entered,
+        "play_in_games": len(play_in),
+        "slots_resolved": replaced,
+        "main_draw": len(seeds),
+        "note": (
+            "Play-in winners are taken from results. Those games finish before "
+            "brackets lock, so this is pre-tournament information, not look-ahead."
+        ),
+    }
+
+
 def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
+    prov["field"] = resolve_field(year, seeds, regions)
     first_round = build_bracket_order(seeds, regions)
     sources = _rating_sources(year, seeds)
     barthag = sources[0][1]

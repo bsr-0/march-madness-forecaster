@@ -652,10 +652,33 @@ def build_bracket_order(seeds, regions):
     builders and the marginalizer provably walk the same bracket.
     """
     region_teams = {r: {} for r in REGION_ORDER}
+    contested = {}
     for tid, seed in seeds.items():
         r = regions.get(tid, "")
-        if r in region_teams:
-            region_teams[r][seed] = tid
+        if r not in region_teams:
+            continue
+        if seed in region_teams[r]:
+            contested.setdefault((r, seed), [region_teams[r][seed]]).append(tid)
+        region_teams[r][seed] = tid
+
+    # A (region, seed) slot holding two teams is an UNRESOLVED PLAY-IN GAME, and
+    # this used to resolve it by dict insertion order -- i.e. by the order of
+    # lines in the seeds file. It was silent, and it was wrong: the 2026
+    # artifact shipped with lehigh in the South 16 slot when prairie_view won
+    # that game and played the Round of 64.
+    #
+    # Call resolve_first_four() with the play-in results before building an
+    # order. Play-in games finish before brackets lock, so their winners are
+    # legitimately known to anyone filling in a bracket -- this is not
+    # look-ahead. The 2027 expansion to 76 teams makes 12 such slots instead of
+    # 4, which is why guessing them by file order stops being survivable.
+    if contested:
+        detail = "; ".join(f"{r} {seed}: {sorted(t)}" for (r, seed), t in sorted(contested.items()))
+        raise ValueError(
+            f"{len(contested)} bracket slot(s) still hold more than one team, so the "
+            f"draw is not determined: {detail}. Resolve the play-in games first "
+            f"(resolve_first_four), or wait until they have been played."
+        )
 
     bracket_order = []
     for region in REGION_ORDER:
