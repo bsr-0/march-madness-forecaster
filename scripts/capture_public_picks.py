@@ -24,6 +24,19 @@ directory with a timestamp. That is all this script is.
 REHEARSE IT. The ESPN endpoints are undocumented and have changed domains more
 than once. ``--dry-run`` performs the whole fetch and every validation, and
 writes nothing -- run it well before March, not fifteen minutes before tip.
+
+IF THE FETCH FAILS ON THE DAY. The capture happens once, at a stated instant,
+and there is no second attempt -- so "the endpoint moved again" must not be an
+unrecoverable failure. Save the pick percentages by hand (browser devtools, the
+Gambit response, a copy of the WPW page's embedded JSON) into a file in the
+format ``ESPNPicksScraper.load_from_json`` accepts, and pass it:
+
+    python scripts/capture_public_picks.py --year 2027 --from-json picks.json
+
+This is a fallback for the *transport*, not for the deadline. Everything else
+still applies: the cutoff still binds, the payload is still validated, and
+``captured_at`` is still the moment this runs. Setting ESPN_PUBLIC_PICKS_URL to
+a working endpoint is the tidier version of the same escape hatch.
 """
 
 from __future__ import annotations
@@ -146,7 +159,7 @@ def _assert_usable(teams: Dict[str, Dict[str, float]], year: int) -> None:
         )
 
 
-def capture(year: int, picks_dir: Path, *, dry_run: bool) -> Dict:
+def capture(year: int, picks_dir: Path, *, dry_run: bool, from_json: Path | None = None) -> Dict:
     from src.data.scrapers.espn_picks import ESPNPicksScraper
 
     now = _now_eastern()
@@ -154,13 +167,28 @@ def capture(year: int, picks_dir: Path, *, dry_run: bool) -> Dict:
     if not dry_run:
         _assert_not_already_captured(year, picks_dir)
 
-    consensus = ESPNPicksScraper().fetch_picks(year)
+    scraper = ESPNPicksScraper()
+    if from_json is not None:
+        if not from_json.exists():
+            raise CaptureError(f"--from-json {from_json} does not exist.")
+        consensus = scraper.load_from_json(str(from_json))
+        source = f"ESPN Tournament Challenge (manual capture via {from_json.name})"
+    else:
+        consensus = scraper.fetch_picks(year)
+        source = "ESPN Tournament Challenge (live capture)"
+
     if not consensus.teams:
         raise CaptureError(
-            f"no pick data returned for {year}. The scraper tries "
-            f"ESPN_PUBLIC_PICKS_URL, then the Gambit API, then its cache; all "
-            f"failed. Set ESPN_PUBLIC_PICKS_URL to a JSON endpoint and retry -- "
-            f"and note the clock, because the cutoff does not move for this."
+            f"no pick data returned for {year}. "
+            + (
+                f"{from_json} parsed to zero teams -- check it matches the format in "
+                f"ESPNPicksScraper.load_from_json (percentages 0-100, keyed by team id)."
+                if from_json is not None
+                else "The scraper tries ESPN_PUBLIC_PICKS_URL, then the Gambit API, then "
+                "its cache; all failed. Save the percentages by hand and pass "
+                "--from-json, or set ESPN_PUBLIC_PICKS_URL -- and note the clock, "
+                "because the cutoff does not move for this."
+            )
         )
 
     teams = to_archive_teams(consensus)
@@ -168,7 +196,7 @@ def capture(year: int, picks_dir: Path, *, dry_run: bool) -> Dict:
 
     payload = {
         "year": year,
-        "source": "ESPN Tournament Challenge (live capture)",
+        "source": source,
         "source_chain": consensus.sources,
         # ISO-8601 with an offset. The gate rejects naive timestamps: the cutoff
         # is stated in Eastern time and a naive reading is worth four hours.
@@ -186,10 +214,16 @@ def main() -> int:
     ap.add_argument("--year", type=int, required=True)
     ap.add_argument("--out-dir", type=Path, default=_DEFAULT_PICKS_DIR)
     ap.add_argument("--dry-run", action="store_true", help="fetch and validate, write nothing")
+    ap.add_argument(
+        "--from-json",
+        type=Path,
+        default=None,
+        help="ingest a hand-saved payload instead of fetching (transport fallback; the cutoff still binds)",
+    )
     args = ap.parse_args()
 
     try:
-        payload = capture(args.year, args.out_dir, dry_run=args.dry_run)
+        payload = capture(args.year, args.out_dir, dry_run=args.dry_run, from_json=args.from_json)
     except CaptureError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 1

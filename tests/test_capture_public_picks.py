@@ -131,3 +131,91 @@ class TestAPayloadMustBeWorthKeeping:
 
     def test_a_full_field_passes(self):
         _assert_usable(to_archive_teams(_consensus()), DECLARED_SEASON)
+
+
+class TestManualFallback:
+    """The capture happens once, so a moved endpoint must not be terminal.
+
+    ESPN's pick endpoints are undocumented and have changed domains more than
+    once. If the live fetch fails at 11:58 on the day, there is no second
+    attempt at 12:05 -- the cutoff does not move. ``--from-json`` lets the
+    operator paste in what they can see in a browser and still record a capture
+    that satisfies every other rule.
+
+    It is a fallback for the transport, not for the deadline: the cutoff still
+    binds, the payload is still validated, and ``captured_at`` is still the
+    moment the script runs rather than anything the file claims.
+    """
+
+    @pytest.fixture
+    def before_the_cutoff(self, monkeypatch):
+        """Freeze the clock, or these tests start failing in March 2027."""
+        import scripts.capture_public_picks as cap
+
+        instant = get_public_picks_cutoff(DECLARED_SEASON) - timedelta(hours=1)
+        monkeypatch.setattr(cap, "_now_eastern", lambda: instant)
+        return instant
+
+    @staticmethod
+    def _valid_payload(path):
+        import json
+
+        # Round sums must be plausible or the scraper's own bracket-structure
+        # check rejects the payload: 64 teams -> R64 ~3200%, halving each round.
+        teams = {}
+        for i in range(64):
+            advances = i % 2 == 0
+            teams[f"team-{i}"] = {
+                "team_name": f"T{i}",
+                "seed": (i % 16) + 1,
+                "region": "East",
+                "round_of_64_pct": 100.0 if advances else 0.0,
+                "round_of_32_pct": 50.0 if advances else 0.0,
+                "sweet_16_pct": 25.0 if advances else 0.0,
+                "elite_8_pct": 12.5 if advances else 0.0,
+                "final_four_pct": 6.25 if advances else 0.0,
+                "champion_pct": 3.125 if advances else 0.0,
+            }
+        path.write_text(json.dumps({"teams": teams, "sources": ["manual"]}))
+        return path
+
+    def test_a_hand_saved_payload_can_be_captured(self, tmp_path, before_the_cutoff):
+        from scripts.capture_public_picks import capture
+
+        src = self._valid_payload(tmp_path / "manual.json")
+        payload = capture(DECLARED_SEASON, tmp_path, dry_run=True, from_json=src)
+
+        assert len(payload["teams"]) == 64
+        assert "manual" in payload["source"]
+        assert payload["teams"]["team-0"]["CHAMP"] == pytest.approx(0.03125)
+
+    def test_captured_at_is_the_run_time_not_the_file(self, tmp_path, before_the_cutoff):
+        """The capture instant is when the operator captured, not what a file says."""
+        import json
+
+        src = self._valid_payload(tmp_path / "manual.json")
+        stale = json.loads(src.read_text())
+        stale["timestamp"] = "2020-01-01T00:00:00-05:00"
+        src.write_text(json.dumps(stale))
+
+        from scripts.capture_public_picks import capture
+
+        payload = capture(DECLARED_SEASON, tmp_path, dry_run=True, from_json=src)
+        assert payload["captured_at"] == before_the_cutoff.isoformat()
+
+    def test_the_deadline_still_binds(self, tmp_path, monkeypatch):
+        """The escape hatch is for the transport, not the cutoff."""
+        import scripts.capture_public_picks as cap
+
+        late = get_public_picks_cutoff(DECLARED_SEASON) + timedelta(minutes=1)
+        monkeypatch.setattr(cap, "_now_eastern", lambda: late)
+        src = self._valid_payload(tmp_path / "manual.json")
+
+        with pytest.raises(CaptureError, match="past the declared cutoff"):
+            cap.capture(DECLARED_SEASON, tmp_path, dry_run=True, from_json=src)
+
+    def test_a_missing_file_is_named(self, tmp_path, before_the_cutoff):
+        from scripts.capture_public_picks import capture
+
+        with pytest.raises(CaptureError, match="does not exist"):
+            capture(DECLARED_SEASON, tmp_path, dry_run=True, from_json=tmp_path / "nope.json")

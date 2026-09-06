@@ -181,10 +181,12 @@ UI payload changed.
 `aa4f104` shows 32/32 with `max err 0.00e+00`, from a time when there was one
 rating source and v1 was operative. Two ordinary changes -- `ae617ce`
 broadening the pool to three sources, and the v2 freeze -- invalidated them,
-and the test is referenced by no workflow and no test file, so nothing re-ran
-it. **This is the thing to fix if the pass is to mean anything in 2027:**
-either wire `integration_test_2026.py` into CI or treat its recorded result as
-describing whatever system existed when someone last typed its name.
+and the test was referenced by no workflow and no test file, so nothing re-ran
+it. **That is fixed:** `integration_test_2026.py` now runs as the
+`prospective-integration` job in `ci.yml`, blocking inside the same Jan 1 -
+Apr 7 window as the freeze check. All of its inputs are committed, so it is
+deterministic and takes about two minutes. A green Checkpoint 3 now describes
+the system as it is rather than as it was when someone last typed the command.
 
 **Status:** CLOSED. v2 survives the integration pass. The two defects were in
 the verification layer, which is its own small lesson: the checks are code too,
