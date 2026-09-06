@@ -36,7 +36,9 @@ function check(name, fn) {
   }
 }
 
-function loadApp() {
+const ctxHash = { value: '' };
+
+function loadApp(hash) {
   const src = fs.readFileSync(path.join(__dirname, '..', 'docs', 'app.js'), 'utf8');
   const noop = () => {};
   const ctx = {
@@ -53,12 +55,17 @@ function loadApp() {
     },
     window: { isSecureContext: false },
     navigator: {},
+    URLSearchParams,  // global in browsers, needs passing into the vm
+    location: { hash: '' },
+    history: { replaceState: (a, b, url) => { ctxHash.value = url; } },
   };
+  if (hash) ctx.location.hash = hash;
   vm.createContext(ctx);
   vm.runInContext(src, ctx);
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
-  vm.runInContext('globalThis.__api = { state, picksAsText, ROUNDS };', ctx);
+  vm.runInContext(
+    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL };', ctx);
   return ctx.__api;
 }
 
@@ -122,13 +129,75 @@ check('the header states the strategy and both scores', () => {
   const head = app.picksAsText().split('\n')[0];
   assert.ok(head.includes('2027'), 'season missing from header');
   assert.ok(head.includes('Maximise chance of winning'), 'strategy missing from header');
-  assert.ok(/9\.9% to finish first/.test(app.picksAsText()), 'P(1st) missing');
+  // Whole points, not 9.9: the standard error on P(1st) is about 0.7pp, so a
+  // decimal place implies a resolution fourteen times finer than the number
+  // actually has. The fixture's 0.099 must print as 10%.
+  assert.ok(/10% to finish first/.test(app.picksAsText()), 'P(1st) missing or over-precise');
+  assert.ok(!/9\.9%/.test(app.picksAsText()), 'P(1st) printed finer than its own error');
 });
 
 check('no board means no export rather than a broken one', () => {
   const app = fixture(loadApp());
   app.state.rounds = null;
   assert.strictEqual(app.picksAsText(), '');
+});
+
+
+/* ---------- addressable state ----------
+ *
+ * A static site's only sharing surface is its URL, and both bugs below shipped
+ * in the first version of this: they restored something, so they looked like
+ * they worked.
+ */
+console.log('\nurl state');
+
+check('champ restores as a number, not a string', () => {
+  // champ is a TEAM INDEX. Restoring "9" as a string fails every === against
+  // the payload's 9, so the filter is dropped in silence -- the failure a
+  // shared link is least likely to survive and least likely to report.
+  const app = loadApp('#y=2026&o=p1&champ=9&pred=3');
+  app.readHash();
+  assert.strictEqual(app.state.pick.champ, 9, 'champ must be a number');
+  assert.strictEqual(app.state.pick.pred, 3, 'pred must be a number');
+});
+
+check('src stays a string', () => {
+  // The one filter whose values really are ids ("torvik", "elo").
+  const app = loadApp('#y=2026&src=torvik');
+  app.readHash();
+  assert.strictEqual(app.state.pick.src, 'torvik');
+});
+
+check('a link with filters restores the FILTERED bracket', () => {
+  // The second bug: filters restored, strategy left on 'ev', so the chips said
+  // Florida while the board showed Michigan. A link that shows a different
+  // bracket than it promised is worse than one that shows nothing.
+  const app = loadApp('#y=2026&o=ev&champ=9');
+  app.readHash();
+  assert.strictEqual(app.state.objective, 'ev', 'objective must come from the link');
+  assert.strictEqual(app.state.strategy, app.CUSTOM, 'filters present must mean CUSTOM');
+});
+
+check('a link with no filters keeps the plain objective', () => {
+  const app = loadApp('#y=2026&o=ev');
+  app.readHash();
+  assert.strictEqual(app.state.strategy, 'ev');
+});
+
+check('the fitted model wins over filter restoration', () => {
+  const app = loadApp('#y=2026&s=model&champ=9');
+  app.readHash();
+  assert.strictEqual(app.state.strategy, app.MODEL);
+});
+
+check('no hash is not an error', () => {
+  const app = loadApp('');
+  assert.strictEqual(app.readHash(), null);
+});
+
+check('the season comes back from the link', () => {
+  const app = loadApp('#y=2013&o=p1');
+  assert.strictEqual(app.readHash(), 2013);
 });
 
 console.log(`\n${passed} checks passed`);

@@ -608,6 +608,11 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         # first pass showed a fixed top-3 and called them near-tied; for 2026 the
         # 1st and 3rd were 1.7 SE apart, which is a ranking, not a tie.
         "p1_se": art.get("meta", {}).get("p1_se_estimate"),
+        # The trial count, so the browser can compute the standard error at each
+        # candidate's OWN p rather than at the 0.05 reference the scalar above
+        # is evaluated at. At p=0.099 those differ by 37% (0.49pp vs 0.67pp),
+        # and the difference decides which brackets are offered as near-tied.
+        "p1_trials": art.get("meta", {}).get("p1_trials"),
     }
 
     # Retained under its original key so an older cached app.js keeps rendering

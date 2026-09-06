@@ -115,3 +115,50 @@ class TestThePageWouldOpenOnIt:
         """max(year) would open on 2027's empty state for most of the year."""
         src = (REPO / "docs" / "app.js").read_text()
         assert "Math.max(...idx.seasons" not in src
+
+
+class TestTheUserFacingTextIsForUsers:
+    """Strings a stranger reads on a phone on Selection Sunday.
+
+    The council's Outsider read the page cold and reported a dozen terms they
+    would have had to search for, plus a source-file path rendered to people who
+    do not have the source. These are cheap to reintroduce and invisible in any
+    behavioural test, so they are asserted directly.
+    """
+
+    @staticmethod
+    def _user_text() -> str:
+        """Rendered strings only -- comments are allowed to be technical."""
+        import re
+
+        src = (REPO / "docs" / "app.js").read_text()
+        src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)          # block comments
+        src = re.sub(r"^\s*//.*$", "", src, flags=re.M)           # line comments
+        return src + (REPO / "docs" / "index.html").read_text()
+
+    def test_no_repo_paths_are_rendered(self):
+        """`app.js` shipped "Bracket shapes ... from src/product/selection.py"."""
+        assert "src/product/selection.py" not in self._user_text()
+
+    @pytest.mark.parametrize(
+        "term",
+        ["LOYO", "Brier", "RMSE", "Student-t", "kNN", "LightGBM", "walk-forward"],
+    )
+    def test_no_unexplained_jargon(self, term):
+        assert term not in self._user_text(), (
+            f"{term!r} is shown to users and defined nowhere on the page"
+        )
+
+    def test_the_two_final_four_panels_ask_different_questions(self):
+        """One label needed a correction printed underneath it, which is a label
+        admitting it failed: "Depth says how far DOWN you reach; this says how
+        much of the top you keep"."""
+        html = (REPO / "docs" / "index.html").read_text()
+        assert "How deep does your Final Four reach" not in html
+        assert "The biggest upset in your Final Four" in html
+
+    def test_the_filters_do_not_sit_on_top_of_the_answer(self):
+        """The board was the seventh thing on the page, under ~3,800px of controls."""
+        html = (REPO / "docs" / "index.html").read_text()
+        assert '<details class="tune"' in html, "filter panels must be collapsed by default"
+        assert "<details" in html.split('id="champions"')[0], "the panels must be INSIDE the details"
