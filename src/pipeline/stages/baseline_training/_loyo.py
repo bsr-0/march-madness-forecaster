@@ -244,6 +244,15 @@ def _run_loyo_validation(
                 selection_sunday = SELECTION_SUNDAY_DATES.get(year)
                 latest_game = latest_game_date_by_year.get(year)
                 if selection_sunday is None:
+                    # Leave the year out of the metadata map and let
+                    # validate_loyo_folds raise on it below — it owns the
+                    # authoritative message. Logged here so the cause is
+                    # visible even when the validator is run non-strict.
+                    logger.warning(
+                        "LOYO PIT metadata: no Selection Sunday on record for year %d; "
+                        "PIT bounds cannot be built for this fold.",
+                        year,
+                    )
                     continue
                 if latest_game is None:
                     latest_game = selection_sunday - timedelta(days=1)

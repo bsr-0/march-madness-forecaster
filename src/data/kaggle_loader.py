@@ -28,45 +28,51 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import date
 
 from .normalize import normalize_team_id
+from .season_calendar import UnknownSeasonError, get_selection_sunday
 
 logger = logging.getLogger(__name__)
 
 
-# Selection Sunday dates — duplicated from pit_validation.py to avoid
-# cross-layer import (data module should not import from pipeline).
-# These are fixed historical dates that change only when new seasons are added.
-_SELECTION_SUNDAY_DATES: Dict[int, date] = {
-    2016: date(2016, 3, 13),
-    2017: date(2017, 3, 12),
-    2018: date(2018, 3, 11),
-    2019: date(2019, 3, 17),
-    2021: date(2021, 3, 14),
-    2022: date(2022, 3, 13),
-    2023: date(2023, 3, 12),
-    2024: date(2024, 3, 17),
-    2025: date(2025, 3, 16),
-    2026: date(2026, 3, 15),
-}
+# Conservative ranking-day bound (~Feb 24 from an Oct 14 DayZero) used when the
+# exact Selection Sunday cannot be resolved.  Safe by construction: it lands
+# ~3 weeks *before* any Selection Sunday, so it under-includes late-season
+# rankings rather than risking post-tournament ones.
+_FALLBACK_MAX_RANKING_DAY = 133
 
 
 def _compute_max_ranking_day(season: int, day_zero_str: Optional[str] = None) -> int:
     """Compute the maximum safe ranking day number for a season.
 
     Returns the day number corresponding to Selection Sunday (the last day
-    before the NCAA tournament bracket is finalized), or 133 as a conservative
+    before the NCAA tournament bracket is finalized), or a conservative
     fallback when dates are unavailable.
 
     This prevents accidentally loading Massey Ordinal rankings from post-
     tournament dates, which would leak tournament outcomes into features.
+
+    Unlike the PIT validator, this does not raise on an unknown season: the
+    Kaggle archives reach back well before the calendar's coverage, and the
+    fallback is strictly earlier than any real Selection Sunday, so it degrades
+    feature freshness rather than temporal safety.  It logs, so the degradation
+    is at least visible.
     """
-    sel_sun = _SELECTION_SUNDAY_DATES.get(season)
-    if sel_sun is None or not day_zero_str:
-        return 133  # Conservative fallback (~Feb 24 from Oct 14 DayZero)
+    if not day_zero_str:
+        return _FALLBACK_MAX_RANKING_DAY
+    try:
+        sel_sun = get_selection_sunday(season)
+    except UnknownSeasonError:
+        logger.info(
+            "Kaggle ordinals: no Selection Sunday on record for season %d; "
+            "capping rankings at conservative day %d instead.",
+            season,
+            _FALLBACK_MAX_RANKING_DAY,
+        )
+        return _FALLBACK_MAX_RANKING_DAY
     try:
         day_zero = date.fromisoformat(str(day_zero_str))
         return (sel_sun - day_zero).days
     except (ValueError, TypeError):
-        return 133
+        return _FALLBACK_MAX_RANKING_DAY
 
 
 class KaggleDataLoader:

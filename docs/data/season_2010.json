@@ -1,0 +1,1 @@
+{"year":2010,"status":"unavailable","message":"No bracket is available for 2010.","detail":"The model is trained only on seasons before the one it predicts, and 2010 has just 2 of them. Three is the minimum, so the earliest seasons cannot be forecast without looking ahead."}

@@ -520,11 +520,10 @@ def load_hparam_fitter(spec: str) -> HparamFitter:
 
 
 # 2011 used "Southeast"/"Southwest" instead of "South"/"Midwest".
-# Normalize so REGION_ORDER works uniformly.
-_REGION_ALIASES = {
-    "Southeast": "South",
-    "Southwest": "Midwest",
-}
+# Normalize so REGION_ORDER works uniformly. The map is defined once in
+# scripts/_common.py; it used to be duplicated here, and the copy that
+# lacked it (the one build_candidate_artifact uses) broke 2011.
+from scripts._common import REGION_ALIASES as _REGION_ALIASES  # noqa: E402
 
 
 def load_seeds_and_regions(year):
@@ -593,6 +592,12 @@ def _load_team_stats(year):
     The two functions shared a name and differed only in payload, which is how
     this survived. ``validate_stats_payload`` now fails loudly on any repeat.
     See FINDINGS.md 6c.
+
+    EXTENDED 2026-09-05 — that guard was wired into ``train_noseed_model``
+    only, not into the inference path where the skew actually happened. It now
+    lives inside ``noseed_model._load_team_stats`` itself, which also refuses a
+    missing snapshot, so every caller inherits both checks and this wrapper is
+    a plain delegation again. See FINDINGS.md 6c-ii.
     """
     from src.prediction.noseed_model import _load_team_stats as _load_full_team_stats
 
@@ -3009,32 +3014,6 @@ def _run_one_year(
         ),
         "lev_tilt_200": (
             "lev_tilt_200",
-    "fixed_blendA0_r35",
-    "fixed_blendA25_r35",
-    "fixed_blendA50_r35",
-    "fixed_blendA75_r35",
-    "fixed_blendA100_r35",
-    "fixed_blend_r10",
-    "fixed_blend_r20",
-    "fixed_blend_r30",
-    "fixed_blend_r40",
-    "fixed_blend_r50",
-    "fixed_blend_r70",
-    "fixed_blend_r90",
-    "fixed_massavg_r10",
-    "fixed_massavg_r20",
-    "fixed_massavg_r30",
-    "fixed_massavg_r40",
-    "fixed_massavg_r50",
-    "fixed_massavg_r70",
-    "fixed_massavg_r90",
-    "fixed_tv_r10",
-    "fixed_tv_r20",
-    "fixed_tv_r30",
-    "fixed_tv_r40",
-    "fixed_tv_r50",
-    "fixed_tv_r70",
-    "fixed_tv_r90",
             torvik_base,
             lambda fr, rp, n, r, _pd=pick_dist: sample_leverage_tilted_brackets(fr, rp, n, r, _pd, 2.0),
         ),
@@ -3143,31 +3122,32 @@ def _run_one_year(
     for _a100 in (0, 25, 50, 75, 100):
         _rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=_a100 / 100.0)
         _pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=_a100 / 100.0)
-        _alpha_bases.append((
-            f"blendA{_a100}",
-            ProbabilityBase(f"blendA{_a100}", _rp, PairwiseProbabilities.from_dict(_pw, f"blend(a={_a100 / 100})")),
-        ))
+        _alpha_bases.append(
+            (
+                f"blendA{_a100}",
+                ProbabilityBase(f"blendA{_a100}", _rp, PairwiseProbabilities.from_dict(_pw, f"blend(a={_a100 / 100})")),
+            )
+        )
     for _bname, _bobj in _alpha_bases:
         legacy_specs[f"fixed_{_bname}_r35"] = (
             f"fixed_{_bname}_r35",
             _bobj,
-            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents:
-            sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, 0.35, _n),
+            lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents: sample_fixed_region_risk(
+                fr, rp, n, r, _s, _rg, _pd, 0.35, _n
+            ),
         )
 
-    for _bname, _bobj in (("blend", blend_base), ("massavg", base_round_probs.get("massey_avg")),
-                          ("tv", torvik_base)):
+    for _bname, _bobj in (("blend", blend_base), ("massavg", base_round_probs.get("massey_avg")), ("tv", torvik_base)):
         if _bobj is None:
             continue
         for _r10 in (10, 20, 30, 40, 50, 70, 90):
             legacy_specs[f"fixed_{_bname}_r{_r10}"] = (
                 f"fixed_{_bname}_r{_r10}",
                 _bobj,
-                lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist,
-                _n=n_opponents, _rl=_r10 / 100.0:
-                sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, _rl, _n),
+                lambda fr, rp, n, r, _s=seeds, _rg=regions, _pd=pick_dist, _n=n_opponents, _rl=_r10 / 100.0: (
+                    sample_fixed_region_risk(fr, rp, n, r, _s, _rg, _pd, _rl, _n)
+                ),
             )
-
 
     from src.prediction.strategy_pipeline import (
         parse_pipeline,

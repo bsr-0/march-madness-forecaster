@@ -1,6 +1,58 @@
 {
   "seasons": [
     {
+      "year": 2010,
+      "status": "unavailable"
+    },
+    {
+      "year": 2011,
+      "status": "ready"
+    },
+    {
+      "year": 2012,
+      "status": "unavailable"
+    },
+    {
+      "year": 2013,
+      "status": "ready"
+    },
+    {
+      "year": 2014,
+      "status": "ready"
+    },
+    {
+      "year": 2015,
+      "status": "ready"
+    },
+    {
+      "year": 2016,
+      "status": "ready"
+    },
+    {
+      "year": 2017,
+      "status": "ready"
+    },
+    {
+      "year": 2018,
+      "status": "ready"
+    },
+    {
+      "year": 2019,
+      "status": "ready"
+    },
+    {
+      "year": 2021,
+      "status": "ready"
+    },
+    {
+      "year": 2022,
+      "status": "ready"
+    },
+    {
+      "year": 2023,
+      "status": "ready"
+    },
+    {
       "year": 2024,
       "status": "ready"
     },

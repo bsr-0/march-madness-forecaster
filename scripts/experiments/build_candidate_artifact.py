@@ -51,6 +51,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections import Counter, defaultdict
@@ -86,6 +87,123 @@ DEFAULT_POOL_SIZE = 30  # opponent field assumed by every P(1st) in the artifact
 # ---------------------------------------------------------------------------
 # Leakage gate
 # ---------------------------------------------------------------------------
+
+
+def _parse_capture_time(raw: str, path: Path) -> datetime:
+    """Parse an archive's capture timestamp, requiring it to be unambiguous.
+
+    A naive timestamp is rejected rather than assumed to be UTC: the cutoff is
+    stated in Eastern time and the difference between the two readings is four
+    hours on either side of a deadline, which is exactly the margin this check
+    exists to adjudicate.
+    """
+    try:
+        ts = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"{path}: capture timestamp {raw!r} is not an ISO-8601 datetime.") from exc
+    if ts.tzinfo is None:
+        raise RuntimeError(
+            f"{path}: capture timestamp {raw!r} has no timezone. The cutoff is a "
+            f"stated instant in Eastern time; a naive timestamp cannot be compared "
+            f"against it without a guess worth four hours."
+        )
+    return ts
+
+
+def _public_picks_provenance(year: int) -> Dict:
+    """Provenance for the public pick percentages, per PROSPECTIVE_2027 CHECKPOINT 2.
+
+    This input is the reason the checkpoint exists. Pick shares move until tip,
+    so they are the one input where "we regenerated it" and "we predicted it"
+    are hardest to tell apart after the fact -- and until 2026-09-05 they were
+    the one input this gate did not look at. It verified Torvik's provenance and
+    described the seed head-to-head table, while the picks archive entered later
+    through ``build_espn_pick_distribution`` with no timestamp recorded anywhere.
+
+    That gap was not academic: ``espn_picks_2026.json`` carries no capture time
+    at all, so nothing about it could be checked or stated.
+
+    The boundary is the R64 tip, not ``TOURNAMENT_START_DATES``. See
+    ``season_calendar.get_round_of_64_tip`` for why the obvious choice is the
+    wrong one -- it is the Tuesday First Four date, and every bracket in every
+    pool is legitimately filled in after those games.
+
+    Two tiers, because the seasons differ in kind:
+
+    * A season with a declared cutoff in ``PUBLIC_PICKS_CUTOFFS`` is an official
+      artifact season. A verifiable capture time is **required** and must fall
+      at or before the declared instant.
+    * Any other season is historical validation, reading archives whose capture
+      time nobody recorded. A missing timestamp is tolerated and recorded as
+      ``capture_time_verified: false`` so the artifact admits it.
+
+    A timestamp that *is* present is checked against tournament start either
+    way. Tolerating an unrecorded capture time is not the same as tolerating a
+    demonstrably post-tip one.
+    """
+    from src.data.historical_picks import _DEFAULT_PICKS_DIR
+    from src.data.season_calendar import get_public_picks_cutoff, get_round_of_64_tip
+
+    path = _DEFAULT_PICKS_DIR / f"espn_picks_{year}.json"
+    declared = get_public_picks_cutoff(year)
+
+    if not path.exists():
+        raise RuntimeError(
+            f"no archived public picks at {path}; cannot verify provenance. "
+            f"The build needs them regardless -- _constructed_candidates calls "
+            f"build_espn_pick_distribution -- so this fails here, before the "
+            f"simulation, rather than an hour into it."
+        )
+    with open(path) as f:
+        payload = json.load(f)
+
+    raw_ts = payload.get("captured_at") or payload.get("timestamp")
+    prov: Dict = {
+        "file": str(path),
+        "source": payload.get("source"),
+        "declared_cutoff": declared.isoformat() if declared else None,
+    }
+
+    if raw_ts is None:
+        if declared is not None:
+            raise RuntimeError(
+                f"{path}: no 'captured_at' or 'timestamp' field. Season {year} has a "
+                f"declared public-picks cutoff of {declared.isoformat()} "
+                f"(PROSPECTIVE_2027 CHECKPOINT 2), so the capture time must be "
+                f"recorded in the archive to be checkable. Re-capture with the "
+                f"timestamp written in, or the artifact cannot state when the "
+                f"pick shares were observed."
+            )
+        prov["capture_time_verified"] = False
+        prov["caveat"] = (
+            "This archive records no capture time, and season "
+            f"{year} has no declared cutoff, so the pick shares cannot be placed "
+            "on a clock. Acceptable for historical validation, and NOT acceptable "
+            "for an official prospective artifact -- see PUBLIC_PICKS_CUTOFFS."
+        )
+        return prov
+
+    captured = _parse_capture_time(raw_ts, path)
+    prov["captured_at"] = captured.isoformat()
+    prov["capture_time_verified"] = True
+
+    tip = get_round_of_64_tip(year)
+    prov["round_of_64_tip"] = tip.isoformat()
+    if captured > tip:
+        raise RuntimeError(
+            f"{path}: public picks captured {captured.isoformat()}, after the {year} "
+            f"R64 tip ({tip.isoformat()}). Brackets are locked by then, so these shares "
+            f"reflect games already played; refusing to build."
+        )
+
+    if declared is not None and captured > declared:
+        raise RuntimeError(
+            f"{path}: public picks captured {captured.isoformat()}, after the declared "
+            f"cutoff {declared.isoformat()} for {year}. The cutoff was fixed before the "
+            f"season precisely so a late capture is a failure rather than a judgement "
+            f"call; refusing to build."
+        )
+    return prov
 
 
 def assert_pretournament_inputs(year: int) -> Dict:
@@ -133,6 +251,7 @@ def assert_pretournament_inputs(year: int) -> Dict:
             "between the two, so moving both together would cancel it exactly."
         ),
     }
+    prov["public_picks"] = _public_picks_provenance(year)
     return prov
 
 
@@ -903,6 +1022,44 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     }
 
 
+def _refuse_to_overwrite(path: Path, year: int, *, force: bool) -> None:
+    """Enforce the immutability rule in PROSPECTIVE_2027 CHECKPOINT 2.
+
+    The checkpoint names one failure mode as fatal to the whole exercise:
+    regenerating the official artifact after later information and presenting
+    the result as the original prediction. Until 2026-09-05 that rule rested
+    entirely on operator discipline in March, which is when discipline is worst
+    -- ``main`` opened the path in ``"w"`` and wrote over whatever was there.
+
+    For a season with a declared public-picks cutoff, overwriting is refused and
+    ``--force`` does not lift it. The point is not to make deletion impossible;
+    an operator with a shell can always remove the file. It is to make the
+    destructive act separate, deliberate and visible, rather than a side effect
+    of re-running a build command.
+
+    Every other season is development work and ``--force`` is enough.
+    """
+    from src.data.season_calendar import get_public_picks_cutoff
+
+    if not path.exists():
+        return
+
+    if get_public_picks_cutoff(year) is not None:
+        raise SystemExit(
+            f"{path} already exists and {year} is an official prospective season.\n"
+            f"Refusing to overwrite, with or without --force: the artifact is the "
+            f"record of what was predicted before the tournament, and regenerating "
+            f"it after the fact is the one failure mode PROSPECTIVE_2027 CHECKPOINT 2 "
+            f"calls fatal.\n"
+            f"If you genuinely mean to discard the prediction, delete the file by "
+            f"hand -- and understand that doing so voids the prospective claim for "
+            f"{year} rather than refreshing it."
+        )
+
+    if not force:
+        raise SystemExit(f"{path} already exists. Pass --force to overwrite (development seasons only).")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--year", type=int, default=2024)
@@ -911,21 +1068,32 @@ def main() -> None:
     ap.add_argument("--trials", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=20260820)
     ap.add_argument("--out", type=str, default="artifacts/candidates")
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing artifact (refused outright for official seasons)",
+    )
     args = ap.parse_args()
+
+    out_dir = Path(args.out)
+    path = out_dir / f"candidates_{args.year}.json"
+    _refuse_to_overwrite(path, args.year, force=args.force)
 
     art = build(args.year, args.n_sims, args.target, args.trials, args.seed)
 
-    out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"candidates_{args.year}.json"
-    with open(path, "w") as f:
-        json.dump(art, f, separators=(",", ":"))
+    payload = json.dumps(art, separators=(",", ":")).encode()
+    path.write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    hash_path = path.with_suffix(".sha256")
+    hash_path.write_text(f"{digest}  {path.name}\n")
     size_mb = path.stat().st_size / 2**20
 
     v = art["validation"]
     print(f"\n{'=' * 78}\nCANDIDATE ARTIFACT — {args.year}\n{'=' * 78}")
     print(f"  candidates            {art['meta']['n_candidates']:,}")
     print(f"  file size             {size_mb:.2f} MB")
+    print(f"  sha256                {digest}")
     print(f"  path-consistent       {v['path_consistent']}  ({v['path_checked']} checked)")
     print(f"  EV max abs error      {v['ev_max_abs_error']:.6f}")
     print(f"  champions   full {v['distinct_champions_full']:3d} -> artifact {v['distinct_champions_artifact']:3d}")
