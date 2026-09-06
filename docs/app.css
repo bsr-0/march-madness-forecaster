@@ -470,3 +470,34 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   body { background: #fff; color: #000; }
   .game, .side { border-color: #bbb !important; }
 }
+
+
+/* ---------- adjust (the collapsed filter stack) ----------
+   Closed by default. The bracket is the product; the filters are an
+   affordance most users will never open, and they used to sit on top of it. */
+.tune {
+  margin: 0 0 18px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel);
+}
+.tune > summary {
+  cursor: pointer; padding: 14px 16px; list-style: none;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.tune > summary::-webkit-details-marker { display: none; }
+.tune-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.tune-title::after { content: ' ▸'; color: var(--ink-3); }
+.tune[open] .tune-title::after { content: ' ▾'; }
+.tune-sub { font-size: 12px; color: var(--ink-3); }
+.tune > .panel { border: 0; background: none; margin: 0; }
+.tune > .panel:first-of-type { padding-top: 0; }
+
+/* ---------- reasons, said out loud ----------
+   These used to live in title= tooltips, which do not exist on a phone -- and
+   the phone is where this gets used. */
+.why { font-size: 12px; color: var(--ink-3); margin: 8px 2px 0; }
+.why:empty { display: none; }
+.dropped {
+  margin: 8px 2px 0; font-size: 12px; color: var(--ink);
+  background: var(--panel-2); border-radius: 7px; padding: 8px 10px;
+}
+.dropped:empty { display: none; padding: 0; }

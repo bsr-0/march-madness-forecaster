@@ -136,7 +136,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 15;
+const DATA_V = 16;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -417,8 +417,16 @@ function filteredEntry() {
   // offered, capped at 5, so a genuine gap collapses the list to one entry
   // rather than dressing a ranking up as a choice.
   const sorted = rows.slice().sort((a, b) => b[obj] - a[obj]);
-  const se = obj === 'p1' ? ((state.season.filters || {}).p1_se || 0) : 0;
-  const cut = sorted[0][obj] - se;
+  const se = obj === 'p1' ? p1StandardError(sorted[0].p1) : 0;
+  // Two estimates, not one: "is B distinguishable from the best?" needs the
+  // error on the DIFFERENCE. sqrt(2) is that factor for independent samples and
+  // is therefore conservative here, because candidates are scored on common
+  // random numbers (FINDINGS 6e) which cancels part of the noise -- the one
+  // place it was measured, the difference SE was ~1.2x rather than 1.41x the
+  // single-estimate SE. Conservative is the right direction for this feature:
+  // it exists so the argmax is not presented as a verdict when it is a coin
+  // flip. On 2026 all three multipliers select the same four brackets.
+  const cut = sorted[0][obj] - Math.SQRT2 * se;
   const alts = se > 0
     ? sorted.filter(r => r[obj] >= cut).slice(0, 5)
     : sorted.slice(0, 3);
@@ -466,7 +474,7 @@ function currentStrategy() {
       // the maximum of a short noisy sample than to an optimum.
       note: `The highest-${objName} bracket with ${scope}, out of ${entry.n} qualifying candidates.`
           + (alts.length > 1
-              ? ` Showing ${Math.min(state.alt, alts.length - 1) + 1} of ${alts.length} within the referee's margin.`
+              ? ` Showing ${Math.min(state.alt, alts.length - 1) + 1} of ${alts.length} that score too close together to separate.`
               : ''),
       picks: decodeBracket(src.b), ev: src.ev, p1: src.p1,
       alts: alts.length, altIndex: Math.min(state.alt, alts.length - 1),
@@ -475,6 +483,107 @@ function currentStrategy() {
   }
   const list = (state.season && state.season.strategies) || [];
   return list.find(s => s.id === state.strategy) || null;
+}
+
+/* The standard error on a P(1st) estimate AT THAT ESTIMATE'S OWN p.
+ *
+ * The payload also carries `p1_se`, a scalar the artifact computes once at a
+ * fixed reference of p=0.05. Applied to a candidate at p=0.099 that understates
+ * the error by 37% (0.49pp against 0.67pp), and it is the number that decides
+ * which brackets are offered as near-tied. Binomial SE from the trial count is
+ * presentation arithmetic on a value already in the payload; no model math
+ * moves into the browser.
+ */
+function p1StandardError(p) {
+  const f = (state.season && state.season.filters) || {};
+  const n = f.p1_trials;
+  if (!n || !(p > 0) || !(p < 1)) return f.p1_se || 0;
+  return Math.sqrt((p * (1 - p)) / n);
+}
+
+/* P(1st), printed no finer than it is known.
+ *
+ * toFixed(1) implies a resolution of 0.05pp against a standard error of about
+ * 0.7pp -- roughly fourteen times finer than the number's own error, on every
+ * chip and card. Whole points are still enough to separate the strategies
+ * (10% against 4%) without inviting a user to read 9.9 as beating 9.8.
+ */
+function p1Pct(p) {
+  return `${(p * 100).toFixed(0)}%`;
+}
+
+/* ---------- addressable state ----------
+ *
+ * A static site's only sharing surface is its URL. Until now the entire
+ * selection lived in an in-memory object: reloading the page, or sending it to
+ * the person running the pool, lost the bracket. The most common thing a user
+ * wants to do with a bracket they like is show it to someone.
+ *
+ * Only presentation state is encoded -- which season, which question, which
+ * filters, which alternate. Nothing here can change what the pool CONTAINS, so
+ * a hand-edited hash cannot manufacture a bracket the model did not produce; at
+ * worst it selects nothing and falls back.
+ */
+/* How many options in each row have nothing left behind them, so the panel can
+ * say so in words. */
+const _unavailable = {};
+
+const HASH_KEYS = ['champ', 'ones', 'depth', 'pred', 'src'];
+
+function writeHash() {
+  if (!state.season) return;
+  const p = new URLSearchParams();
+  p.set('y', String(state.year));
+  p.set('o', state.objective);
+  if (state.strategy === MODEL) p.set('s', 'model');
+  for (const k of HASH_KEYS) {
+    if (state.pick[k] !== null && state.pick[k] !== undefined) p.set(k, String(state.pick[k]));
+  }
+  if (state.alt) p.set('alt', String(state.alt));
+  // replaceState, not a hash assignment: every chip click would otherwise add a
+  // history entry, and Back would walk the user through their own filtering
+  // one click at a time instead of leaving the page.
+  history.replaceState(null, '', `#${p.toString()}`);
+}
+
+/* Returns the season to open, or null to fall back to the newest ready one. */
+function readHash() {
+  const raw = (location.hash || '').replace(/^#/, '');
+  if (!raw) return null;
+  const p = new URLSearchParams(raw);
+  const year = parseInt(p.get('y'), 10);
+  if (p.get('o') === 'ev' || p.get('o') === 'p1') {
+    state.objective = p.get('o');
+    state.strategy = state.objective;
+  }
+  if (p.get('s') === 'model') state.strategy = MODEL;
+  for (const k of HASH_KEYS) {
+    const v = p.get(k);
+    if (v === null) continue;
+    // Only `src` is a string ("torvik", "elo", ...). champ is a TEAM INDEX,
+    // and ones/depth/pred are integers. Restoring champ as the string "9" would
+    // fail every `===` against the payload's 9 and drop the filter in silence,
+    // which is the failure a shared link is least likely to survive and least
+    // likely to report.
+    state.pick[k] = k === 'src' ? v : Number(v);
+  }
+  const alt = parseInt(p.get('alt'), 10);
+  if (Number.isFinite(alt)) state.alt = alt;
+
+  // Restoring the filters is not enough: setFilter also switches the page into
+  // CUSTOM, and without that the link came back with the chips lit and the
+  // board still showing the UNFILTERED bracket -- Florida selected, Michigan on
+  // screen. A shared link that shows a different bracket than it promised is
+  // worse than one that shows nothing.
+  if (state.strategy !== MODEL) state.strategy = anyFilter() ? CUSTOM : state.objective;
+
+  // And show the controls that are evidently active, or the filtering looks
+  // like the site's own opinion.
+  if (anyFilter()) {
+    const tune = document.getElementById('tune');
+    if (tune) tune.open = true;
+  }
+  return Number.isFinite(year) ? year : null;
 }
 
 function usingOptimized() {
@@ -524,12 +633,12 @@ function render() {
     // points bracket is an exact solution; a champion pick is the best-scoring
     // member of the candidate pool for a belief the USER supplied, which is not
     // a validated recommendation at all.
-    const kind = !st ? 'LOYO validated'
+    const kind = !st ? 'Tested on past seasons'
       : st.id === CUSTOM ? 'Your pick'
       : st.id === 'ev' ? 'Exact optimum'
       : 'Backtested rule';
     note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
-      (st ? ` <strong>${(st.p1 * 100).toFixed(1)}%</strong> chance of finishing first, ` +
+      (st ? ` <strong>${p1Pct(st.p1)}</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Unavailable</span><span>The fitted model needs training data for seasons before ${state.year}.</span>`;
@@ -540,19 +649,22 @@ function render() {
     note.innerHTML = `<span class="tag alt">Fitted</span><span>` +
       `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} games from seasons before ${state.year}. ` +
       (o ? `Across ${o.seasons} held-out seasons it is off by <strong>${o.mae.toFixed(1)} points</strong> in a typical game ` +
-           `(RMSE ${o.rmse.toFixed(1)}) and calls <strong>${(o.accuracy * 100).toFixed(1)}%</strong> of them correctly ` +
+           `and calls <strong>${(o.accuracy * 100).toFixed(0)}%</strong> of them correctly ` +
            `— against ${(f.quality.accuracy * 100).toFixed(1)}% on the games it was fitted to.` +
            // Accuracy grades the pick; the board also shows a percentage, and
            // that is a separate claim needing a separate number.
-           (o.probScore ? ` The percentages themselves score <strong>Brier ${o.probScore.brier.toFixed(3)}</strong> ` +
-             `(log loss ${o.probScore.logLoss.toFixed(3)}), after calibrating the margin-to-probability link on those ` +
-             `held-out games${o.calibration ? ` — Student-t, ν=${o.calibration.nu === Infinity ? '∞' : o.calibration.nu}, scale ${o.calibration.a.toFixed(2)}` : ''}.` : '')
+           (o.probScore ? ` Its percentages are honest too, not just its winners: ` +
+             `when it says 70% it is right about 70% of the time, measured on those same ` +
+             `unseen games.` : '')
          : `Not enough history to test out-of-sample.`) +
       `</span>`;
   }
 
   // The disclosure rides with the numbers. Shown whenever a P(1st) figure is on
   // screen, which is every "% to win" on the strategy cards and every chip.
+  const drop = document.getElementById('dropped-note');
+  if (drop) drop.textContent = state.notice || '';
+
   const p1note = document.getElementById('p1-note');
   if (p1note) p1note.textContent = s.p1_assumption || '';
 
@@ -711,19 +823,20 @@ function renderStrategies() {
     active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     stat: (() => {
       const v = (filt && filt.by && filt.by[st.id]) || st;
-      return `${(v.p1 * 100).toFixed(1)}% to win · ${v.ev.toFixed(0)} pts`
+      return `${p1Pct(v.p1)} to win · ${v.ev.toFixed(0)} pts`
            + (filt ? ' · filtered' : '');
     })(),
   }));
   opts.push({
     id: MODEL,
     label: 'Fitted model',
-    sub: 'Ridge regression fitted here on tournament games from seasons before this one. '
-       + 'Chosen by measurement, not configurable: it beat kNN, LightGBM and local linear on the '
-       + 'same walk-forward split. The only strategy the history slider applies to.',
+    sub: 'A model fitted in your browser, right now, on tournament games from seasons '
+       + 'before this one — never on the season you are looking at. It was picked by '
+       + 'testing it against the alternatives, not by preference. This is the only '
+       + 'strategy the variable weights apply to.',
     tag: 'live',
     stat: state.fit && state.fit.oos
-      ? `${(state.fit.oos.accuracy * 100).toFixed(1)}% out-of-sample`
+      ? `${(state.fit.oos.accuracy * 100).toFixed(0)}% of games called right`
       : '',
   });
 
@@ -755,14 +868,28 @@ function renderFilterNotes() {
     : ev
       ? 'Numbers are expected ESPN points. Backing a longer shot costs points — the number says how many.'
       : 'Numbers are the chance of finishing first in a 30-person pool. Backing a longer shot costs win probability — the number says how much.';
+  // Plain words, and no repo paths. This list used to include "Bracket shapes
+  // the pipeline already scores, from src/product/selection.py" -- a source
+  // file path, shown to people who do not have the source.
+  //
+  // The 1-seed and depth rows also needed a correction underneath them
+  // ("Depth says how far DOWN you reach; this says how much of the top you
+  // keep"), which is a label admitting it failed. Retitled instead.
   const lead = [
-    'Each is the best bracket available with that team winning.',
-    'How many 1 seeds reach the Final Four. Depth says how far DOWN you reach; this says how much of the top you keep.',
-    'The deepest seed your Final Four reaches.',
-    'Bracket shapes the pipeline already scores, from src/product/selection.py.',
-    'Which model imagined the bracket. These disagree about real teams, which is the point.',
+    'Each is the best bracket available with that team winning it all.',
+    'How many of the four 1 seeds you have reaching the Final Four.',
+    'The lowest seed you have reaching the Final Four — how big an upset you are backing.',
+    'Well-known bracket patterns, scored the same way as everything else here.',
+    'Which rating system imagined this bracket. They disagree about real teams, which is the point.',
   ];
-  notes.forEach((el, i) => { if (el) el.textContent = `${lead[i]} ${suffix}`; });
+  const kinds = ['champ', 'ones', 'depth', 'pred', 'src'];
+  notes.forEach((el, i) => {
+    if (!el) return;
+    const greyed = !inert && _unavailable[kinds[i]] > 0
+      ? ' Greyed-out options have no bracket left that also matches your other filters.'
+      : '';
+    el.textContent = `${lead[i]} ${suffix}${greyed}`;
+  });
 }
 
 /* Champion picker.
@@ -817,15 +944,17 @@ function renderFilters() {
     panel.hidden = !values || values.length === 0;
     if (panel.hidden) continue;
 
+    let unavailable = 0;
     host.innerHTML = values.map(v => {
       const on = state.pick[row.kind] === v;
       // Availability is a query, not a table: does anything survive with this
       // value plus whatever else is selected.
       const rows = inert ? [] : matching({ ...state.pick, [row.kind]: v });
       const ok = rows.length > 0;
+      if (!ok) unavailable++;
       const best = ok ? rows.reduce((a, b) => (b[obj] > a[obj] ? b : a)) : null;
       const stat = !best ? '—'
-        : obj === 'ev' ? `${best.ev.toFixed(0)} pts` : `${(best.p1 * 100).toFixed(1)}%`;
+        : obj === 'ev' ? `${best.ev.toFixed(0)} pts` : p1Pct(best.p1);
 
       let lead = '', name = '';
       if (row.kind === 'champ') {
@@ -867,6 +996,9 @@ function renderFilters() {
           <span class="chip-stat">${stat}</span>
         </button>`;
     }).join('');
+    // Why some options are greyed out, in text rather than in a title= tooltip
+    // that a phone will never show. Only said when it is actually true.
+    _unavailable[row.kind] = unavailable;
   }
 
   renderAlts();
@@ -896,7 +1028,7 @@ function renderAlts() {
   const common = f4Of(alts[0]).filter(x => alts.every(r => f4Of(r).includes(x)));
   host.innerHTML = alts.map((r, i) => {
     const on = Math.min(state.alt, alts.length - 1) === i;
-    const stat = obj === 'ev' ? `${r.ev.toFixed(0)} pts` : `${(r.p1 * 100).toFixed(1)}%`;
+    const stat = obj === 'ev' ? `${r.ev.toFixed(0)} pts` : p1Pct(r.p1);
     const t = state.season.teams;
     const distinct = f4Of(r).filter(x => !common.includes(x));
     const name = distinct.length
@@ -914,6 +1046,7 @@ function renderAlts() {
 
 function setAlt(i) {
   state.alt = i;
+  writeHash();
   renderStrategies();
   render();
 }
@@ -938,7 +1071,7 @@ function picksAsText() {
   const head = [
     `${state.year} bracket — ${st ? st.label : 'Fitted model'}`,
     st && st.p1 !== undefined
-      ? `${(st.p1 * 100).toFixed(1)}% to finish first, ${st.ev.toFixed(0)} expected points`
+      ? `${p1Pct(st.p1)} to finish first, ${st.ev.toFixed(0)} expected points`
       : '',
     // The disclosure travels with the picks. A bracket pasted into a group chat
     // outlives the page it came from, and the number goes with it.
@@ -996,20 +1129,36 @@ function setFilter(kind, value) {
   // meaningful -- the user's newest intent is the one to honour.
   // A combination nothing satisfies would blank the board. Drop other axes
   // rather than refuse the click -- the newest intent is the one to honour.
+  const dropped = [];
   if (!matching().length) {
     for (const other of ['pred', 'src', 'depth', 'ones', 'champ']) {
       if (other === kind || state.pick[other] === null) continue;
       state.pick[other] = null;
+      dropped.push(other);
       if (matching().length) break;
     }
   }
+  let clearedAll = false;
   if (!matching().length) {
     state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.pick[kind] = value;
+    clearedAll = true;
   }
-  if (!matching().length) state.pick = prev;
+  if (!matching().length) { state.pick = prev; clearedAll = false; dropped.length = 0; }
+
+  // Dropping the other filters is deliberate -- the newest click is the intent
+  // to honour -- but it used to happen in silence, with chips simply going
+  // dark. A control that undoes your previous choices without saying so reads
+  // as broken rather than as helpful.
+  const label = { champ: 'champion', ones: 'one-seeds', depth: 'Final Four depth', pred: 'bracket shape', src: 'model' };
+  state.notice = clearedAll
+    ? 'No bracket matched all of those, so the other filters were cleared to honour this one.'
+    : dropped.length
+      ? `No bracket matched that with your ${dropped.map(k => label[k]).join(' and ')} filter, so it was dropped.`
+      : '';
 
   state.strategy = anyFilter() ? CUSTOM : state.objective;
+  writeHash();
   refit();
   renderStrategies();
   render();
@@ -1027,6 +1176,7 @@ function setStrategy(id) {
     state.strategy = id;
   }
   refit();
+  writeHash();
   renderStrategies();
   render();
 }
@@ -1082,12 +1232,14 @@ function closeDrawer() {
 
 async function setYear(year) {
   state.year = year;
+  state.notice = '';
   document.querySelectorAll('.yr').forEach(b => b.classList.toggle('on', Number(b.dataset.year) === year));
   try {
     state.season = await loadSeason(year);
   } catch {
     state.season = null;
   }
+  writeHash();
   // Refit: the excluded season changed, so the coefficients must change too.
   refit();
   renderStrategies();
@@ -1103,8 +1255,14 @@ async function init() {
   // 2027 is listed from the moment the calendar knows about it and stays
   // "not_started" until Selection Sunday, so the newest LISTED season is an
   // empty state for most of the year.
+  // A shared link names its own season; otherwise open on the newest ready one.
+  const fromHash = readHash();
   const ready = idx.seasons.filter(s => s.status === 'ready').map(s => s.year);
-  if (ready.length) state.year = Math.max(...ready);
+  if (fromHash !== null && idx.seasons.some(s => s.year === fromHash)) {
+    state.year = fromHash;
+  } else if (ready.length) {
+    state.year = Math.max(...ready);
+  }
 
   document.getElementById('years').innerHTML = idx.seasons.map(s => `
     <button class="yr${s.year === state.year ? ' on' : ''}${s.status === 'ready' ? '' : ' na'}"

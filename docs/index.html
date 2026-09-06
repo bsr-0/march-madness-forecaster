@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=19">
+<link rel="stylesheet" href="app.css?v=20">
 </head>
 <body>
 
@@ -55,6 +55,17 @@
        "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and "Michigan
        State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly a 3 seed,
        and they are completely different brackets. -->
+  <!-- The answer, then the questions.
+       All five filter panels used to be expanded on load, putting ~3,800px of
+       controls above the bracket -- so the product was the seventh thing on the
+       page. They are opt-in now. <details> rather than JS: no state to keep in
+       sync, and it works before any script runs. -->
+  <details class="tune" id="tune">
+    <summary class="tune-head">
+      <span class="tune-title">Adjust this bracket</span>
+      <span class="tune-sub">Back a team, or force a shape. The recommendation above already assumes none of it.</span>
+    </summary>
+
   <section class="panel" id="champions" hidden>
     <div class="panel-head"><p class="panel-title">Back a champion</p></div>
     <div class="chips" id="champ-list"></div>
@@ -62,19 +73,19 @@
   </section>
 
   <section class="panel" id="ones" hidden>
-    <div class="panel-head"><p class="panel-title">How many 1 seeds in the Final Four</p></div>
+    <div class="panel-head"><p class="panel-title">How many 1 seeds reach the Final Four</p></div>
     <div class="chips" id="ones-list"></div>
     <p class="prior-note" id="ones-note"></p>
   </section>
 
   <section class="panel" id="shapes" hidden>
-    <div class="panel-head"><p class="panel-title">How deep does your Final Four reach</p></div>
+    <div class="panel-head"><p class="panel-title">The biggest upset in your Final Four</p></div>
     <div class="chips" id="shape-list"></div>
     <p class="prior-note" id="shape-note"></p>
   </section>
 
   <section class="panel" id="dd16" hidden>
-    <div class="panel-head"><p class="panel-title">Bracket shape</p></div>
+    <div class="panel-head"><p class="panel-title">Well-known bracket patterns</p></div>
     <div class="chips" id="dd-list"></div>
     <p class="prior-note" id="dd-note"></p>
   </section>
@@ -84,7 +95,7 @@
        constructions. Those disagree about real teams, and that disagreement is
        the point -- a bracket Torvik would never sample is now reachable. -->
   <section class="panel" id="sources" hidden>
-    <div class="panel-head"><p class="panel-title">Whose view of the tournament</p></div>
+    <div class="panel-head"><p class="panel-title">Which rating system</p></div>
     <div class="chips" id="src-list"></div>
     <p class="prior-note" id="src-note"></p>
   </section>
@@ -96,10 +107,16 @@
     <div class="panel-head"><p class="panel-title">Near-tied alternatives</p></div>
     <div class="chips" id="alt-list"></div>
     <p class="prior-note">
-      These are within the referee's noise of each other. Pick on something it
-      cannot see — a team you believe in, or one you refuse to pick.
+      These score too close together for us to tell apart — the difference
+      between them is smaller than our own margin of error. Pick on something
+      the numbers cannot see: a team you believe in, or one you refuse to pick.
     </p>
   </section>
+
+  </details>
+
+  <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
+  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
 
   <section class="note" id="mode-note"></section>
 
@@ -140,6 +157,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=10"></script>
-<script src="app.js?v=45"></script>
+<script src="app.js?v=46"></script>
 </body>
 </html>
