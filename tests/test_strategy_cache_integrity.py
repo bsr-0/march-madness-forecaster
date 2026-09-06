@@ -270,6 +270,13 @@ def test_torvik_round_probabilities_are_bit_exact() -> None:
         pytest.skip("project deps not available")
     try:
         seeds, regions = load_seeds_and_regions(2026)
+        # The entered field shares (region, seed) slots between play-in
+        # opponents, so the draw is undetermined until those games resolve.
+        # Bit-exactness is a claim about the sampler, and it can only be made
+        # over the field that actually plays.
+        from scripts.experiments.build_candidate_artifact import resolve_field
+
+        resolve_field(2026, seeds, regions)
         barthag = _load_torvik_barthag(2026, seeds)
     except Exception:
         pytest.skip("2026 data unavailable")

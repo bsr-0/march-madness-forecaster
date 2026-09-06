@@ -1114,11 +1114,19 @@ test of anything.
   1500, `win_pct` default 0.5) — tree models could use native missing-value
   handling instead. `wab` and `wab_poisson` may be redundant (r>0.85
   unconfirmed).
-- **2027 format expansion**: NCAA tournament expands 68→76 teams (12 play-in
-  games producing duplicate seeds in the seeds file) — pipeline currently
-  assumes 64+4 (First Four) and needs structural changes. `RUNBOOK_2027.md`'s
-  troubleshooting content (`len(first_round) != 64` → 76-12=64) is now only in
-  git history if needed.
+- ~~**2027 format expansion**~~ **CLOSED 2026-09-06.** The main draw is still 64
+  (76 − 12), so the bracket maths and the (1, 63) encoding never needed to
+  change; ingestion did. Both teams in a play-in game share a (region, seed)
+  slot, and `build_bracket_order` settled that collision by **dict insertion
+  order** — the order of lines in the seeds file. It now raises instead, and
+  `build_candidate_artifact.resolve_field` resolves the field from the play-in
+  results first (legitimate: those games finish before brackets lock, so their
+  winners are ordinary pre-tournament information for an R64 bracket).
+  `resolve_first_four` was already count-agnostic and needed no change.
+  **The silent rule was not merely arbitrary, it was wrong**: the shipped 2026
+  artifact carried lehigh in the South 16 slot when prairie_view won that game
+  and played the Round of 64. Three of four matched the real winner by luck; at
+  twelve slots luck stops being a plan. See `tests/test_field_expansion_2027.py`.
 - **Market-odds Phase 1 (vendor feasibility check) is written but not
   executed** — see §5's acceptance rubric; no vendor review or coverage
   artifacts exist yet.

@@ -1,12 +1,12 @@
 {
   "year": 2026,
-  "passed": 31,
+  "passed": 32,
   "total": 32,
   "checks": [
     {
-      "check": "system matches the 2027.v1 freeze",
-      "pass": false,
-      "detail": "9 drifted: ['candidate_selection.diversity_algorithm', 'candidate_selection.k_returned', 'holdout.contaminated_for_evaluation_only', 'model.train_years', 'model.training_cutoff_season', 'product.strategies', 'scope_correction', 'spec_version', 'supersedes']"
+      "check": "system matches the 2027.v2 freeze",
+      "pass": true,
+      "detail": "2027.v2"
     },
     {
       "check": "pre-tournament gate accepts 2026 inputs",
@@ -26,7 +26,7 @@
     {
       "check": "artifact produced candidates",
       "pass": true,
-      "detail": "1,503"
+      "detail": "1,501"
     },
     {
       "check": "every candidate path-consistent",
@@ -46,12 +46,12 @@
     {
       "check": "bracket diversity preserved",
       "pass": true,
-      "detail": "Hamming 25.1 -> 26.31"
+      "detail": "Hamming 25.04 -> 26.43"
     },
     {
       "check": "objective-disagreement region retained",
       "pass": true,
-      "detail": "35 low-EV/high-P1 candidates"
+      "detail": "46 low-EV/high-P1 candidates"
     },
     {
       "check": "P(1st) computed for every candidate",
@@ -61,7 +61,7 @@
     {
       "check": "preference coverage non-thin",
       "pass": true,
-      "detail": "min 227"
+      "detail": "min 222"
     },
     {
       "check": "predicates reproduce on the decoded artifact",
@@ -71,7 +71,7 @@
     {
       "check": "frequencies sourced from full bank, not artifact",
       "pass": true,
-      "detail": "bias recorded: -0.041..+0.068"
+      "detail": "bias recorded: -0.055..+0.056"
     },
     {
       "check": "top-level key 'schema'",
@@ -151,17 +151,17 @@
     {
       "check": "Python/browser agree on 'ev' selection",
       "pass": true,
-      "detail": "py=[1501, 820, 569] js=[1501, 820, 569]"
+      "detail": "py=[1499, 483, 419] js=[1499, 483, 419]"
     },
     {
       "check": "Python/browser agree on 'p1' selection",
       "pass": true,
-      "detail": "py=[1500, 762, 741] js=[1500, 762, 741]"
+      "detail": "py=[1498, 633, 611] js=[1498, 633, 611]"
     },
     {
       "check": "artifact size acceptable for the browser",
       "pass": true,
-      "detail": "0.39 MB"
+      "detail": "0.38 MB"
     }
   ]
 }

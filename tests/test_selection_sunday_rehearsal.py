@@ -7,10 +7,17 @@ a brand new season appearing for the first time, flipping from "not_started" to
 after 2027-03-14, and the people running it will be in a hurry.
 
 So the rehearsal runs the REAL builder against a synthetic 2027, assembled by
-relabelling the most recent real season. It asserts the two things that would
-be discovered too late: that a new season's payload comes out "ready" with
-every key the page reads, and that the page would OPEN on it rather than on
-last year's bracket.
+relabelling the most recent real season AND padding its field to the 76 teams
+2027 will actually have. It asserts the things that would be discovered too
+late: that a new season's payload comes out "ready" with every key the page
+reads, that a 76-team field still yields a 64-team draw, and that the page
+would OPEN on it rather than on last year's bracket.
+
+The first version of this test used the donor season's field unchanged -- 68
+teams -- so it rehearsed 2027 in 2026's format and would have passed whatever
+the expansion did. Ingestion of the expanded field is covered directly in
+tests/test_field_expansion_2027.py; this file covers the payload layer above
+it.
 
 Everything is redirected to tmp_path. Nothing here writes into docs/data or
 artifacts/, and no synthetic 2027 file is ever left behind.
@@ -42,6 +49,16 @@ def rehearsal(tmp_path, monkeypatch):
     candidates.mkdir()
     art = json.loads(donor_art.read_text())
     art.setdefault("meta", {})["year"] = REHEARSAL
+
+    # Pad the entered field to 76 without touching the 64-team draw, which is
+    # exactly what the expansion does: 12 more teams enter, 12 play-in games
+    # decide 12 of the same 64 slots. The extra entries must not appear in
+    # first_round.
+    donor_teams = len(art["teams"])
+    for i in range(76 - donor_teams):
+        art["teams"].append(
+            {"id": f"expansion_team_{i}", "name": f"Expansion {i}", "seed": 16, "region": "East"}
+        )
     (candidates / f"candidates_{REHEARSAL}.json").write_text(json.dumps(art))
 
     stats = json.loads((REPO / "docs" / "data" / "team_stats_by_year.json").read_text())
@@ -72,6 +89,19 @@ class TestANewSeasonBuildsReady:
             assert key in payload, f"season payload is missing {key!r}"
         assert len(payload["teams"]) >= 64
         assert payload["strategies"], "no strategies to show"
+
+    def test_the_expanded_field_still_yields_a_64_team_draw(self, rehearsal):
+        """76 enter, 64 play: the bracket maths is unchanged by the expansion."""
+        payload = json.loads((rehearsal / f"season_{REHEARSAL}.json").read_text())
+        assert len(payload["teams"]) == 76, "the rehearsal must use the 2027 field size"
+        assert len(payload["first_round"]) == 64
+        assert len(set(payload["first_round"])) == 64, "a team appears twice in the draw"
+
+    def test_the_per_team_arrays_cover_the_whole_entered_field(self, rehearsal):
+        """z/raw are indexed by team, so a padded field must not truncate them."""
+        payload = json.loads((rehearsal / f"season_{REHEARSAL}.json").read_text())
+        for key, values in payload["z"].items():
+            assert len(values) == len(payload["teams"]), f"z[{key}] is not aligned to teams"
 
     def test_the_disclosure_travels_with_the_numbers(self, rehearsal):
         """Mandatory under product.v3, and it reached the browser not at all."""

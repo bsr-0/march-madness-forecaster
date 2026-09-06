@@ -127,16 +127,28 @@ def test_select_best_system_returns_none_for_unsupported_year():
 
 
 def test_build_massey_best_round_probabilities_2026_covers_field():
-    """End-to-end: the selected system's ratings → round_probs for all 68 teams."""
+    """End-to-end: the selected system's ratings → round_probs for the real draw.
+
+    The seeds file lists the whole entered field (68 in 2026, 76 from 2027), so
+    play-in opponents share a (region, seed) slot and the draw is undetermined
+    until those games resolve. This test used to assert coverage of all 68,
+    which meant it was asserting over a field that included four teams who never
+    played the Round of 64.
+    """
     import json
 
     seeds_raw = json.load(open(DATA_ROOT / "raw" / "tournament_seeds_2026.json"))
     seeds = {s["team_id"]: s["seed"] for s in seeds_raw}
     regions = {s["team_id"]: s["region"] for s in seeds_raw}
 
+    from scripts.experiments.build_candidate_artifact import resolve_field
+
+    resolve_field(2026, seeds, regions)
+    assert len(seeds) == 64
+
     rp = build_massey_best_round_probabilities(seeds, regions, test_year=2026, data_root=DATA_ROOT, n_sims=2000)
     assert rp is not None, "Should produce round_probs for 2026"
-    # All 68 teams present.
+    # Every team in the resolved draw is present.
     assert set(rp.keys()) == set(seeds.keys())
     # Each team has 6 rounds.
     for tid, rounds in rp.items():

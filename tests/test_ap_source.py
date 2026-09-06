@@ -191,6 +191,17 @@ def test_load_ap_strength_barthag_smoke_e2e_with_round_probs_builder():
     seeds = {s["team_id"]: s["seed"] for s in seeds_raw}
     regions = {s["team_id"]: s["region"] for s in seeds_raw}
 
+    # The seeds file lists the whole entered field (68 here, 76 from 2027), so
+    # both teams in a play-in game share a (region, seed) slot and the draw is
+    # not determined until those games are resolved. This test used to hand the
+    # unresolved field straight to the bracket builder, which silently kept
+    # whichever team came later in the file -- so it was asserting round
+    # probabilities over a field that was not the real Round of 64.
+    from scripts.experiments.build_candidate_artifact import resolve_field
+
+    resolve_field(2026, seeds, regions)
+    assert len(seeds) == 64
+
     barthag = load_ap_strength_barthag(2026, seeds, seeds.keys(), DATA_ROOT)
     assert barthag is not None
 
