@@ -39,7 +39,7 @@ from scripts.experiments.build_candidate_artifact import (  # noqa: E402
     build,
 )
 from scripts.experiments.conditional_bracket_engine import _REACHES  # noqa: E402
-from src.governance.frozen_spec import diff_against_frozen  # noqa: E402
+from src.governance.frozen_spec import FROZEN_SPEC_PATH, diff_against_frozen  # noqa: E402
 from src.prediction.noseed_model import (  # noqa: E402
     REQUIRED_FEATURE_KEYS,
     validate_stats_payload,
@@ -61,11 +61,20 @@ def main() -> int:
 
     # --- frozen-spec integrity -------------------------------------------
     print("\nfrozen specification")
-    drift = diff_against_frozen(Path("configs/frozen/prospective_2027.json"))
+    # FROZEN_SPEC_PATH is the operative spec (2027.v2, methodology-scoped) and is
+    # what tests/test_frozen_2027_spec.py gates on. This used to name
+    # prospective_2027.json explicitly, overriding that default with the
+    # SUPERSEDED v1 file -- so it reported 9 drifted fields which were, every one
+    # of them, the documented v2 changes: train_years extended to 2026, the three
+    # fields reclassified to product.v3, and v2's own bookkeeping. The system was
+    # exactly as frozen the whole time; the test was pinned to the wrong freeze.
+    drift = diff_against_frozen(FROZEN_SPEC_PATH)
     check(
-        "system matches the 2027.v1 freeze",
+        f"system matches the {drift['spec_version']} freeze",
         not drift["drifted"],
-        f"{len(drift['drifted'])} drifted" if drift["drifted"] else drift["spec_version"],
+        f"{len(drift['drifted'])} drifted: {[d['path'] for d in drift['drifted']]}"
+        if drift["drifted"]
+        else drift["spec_version"],
     )
 
     # --- data provenance --------------------------------------------------

@@ -47,7 +47,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from src.data.normalize import normalize_team_id
 
@@ -199,6 +199,23 @@ def _resolve_picks_team_id(
     return None
 
 
+def archive_candidates(year: int, picks_dir: Path) -> List[Path]:
+    """The archive filenames accepted for ``year``, in priority order.
+
+    Public because the provenance gate in ``build_candidate_artifact`` must
+    check the same file the loader will actually read. It previously hardcoded
+    only ``espn_picks_{year}.json`` -- the name every historical archive
+    happens to use -- so a season captured under ``public_picks_{year}.json``
+    (what the live collector writes) would have been refused as missing while
+    the build itself found it fine.
+    """
+    return [
+        picks_dir / f"espn_picks_{year}.json",
+        picks_dir / f"public_picks_{year}.json",
+        picks_dir / f"{year}.json",
+    ]
+
+
 def _load_archived_picks(
     year: int,
     bracket_teams: Dict[str, int],
@@ -229,13 +246,7 @@ def _load_archived_picks(
         Dict mapping team_id -> {round: pick_pct}, or None if file
         not found or invalid.
     """
-    candidates = [
-        picks_dir / f"espn_picks_{year}.json",
-        picks_dir / f"public_picks_{year}.json",
-        picks_dir / f"{year}.json",
-    ]
-
-    for filepath in candidates:
+    for filepath in archive_candidates(year, picks_dir):
         if not filepath.exists():
             continue
 

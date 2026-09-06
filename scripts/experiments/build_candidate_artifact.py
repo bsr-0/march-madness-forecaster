@@ -141,15 +141,22 @@ def _public_picks_provenance(year: int) -> Dict:
     way. Tolerating an unrecorded capture time is not the same as tolerating a
     demonstrably post-tip one.
     """
-    from src.data.historical_picks import _DEFAULT_PICKS_DIR
+    from src.data.historical_picks import _DEFAULT_PICKS_DIR, archive_candidates
     from src.data.season_calendar import get_public_picks_cutoff, get_round_of_64_tip
 
-    path = _DEFAULT_PICKS_DIR / f"espn_picks_{year}.json"
+    # Resolved through the loader's own candidate list, in its own order, so
+    # the file described here is the file the build reads. Checking a single
+    # hardcoded name meant a season captured under any of the other two
+    # accepted names was reported missing while the build loaded it happily.
+    candidates = archive_candidates(year, _DEFAULT_PICKS_DIR)
+    path = next((p for p in candidates if p.exists()), None)
     declared = get_public_picks_cutoff(year)
 
-    if not path.exists():
+    if path is None:
         raise RuntimeError(
-            f"no archived public picks at {path}; cannot verify provenance. "
+            f"no archived public picks for {year}; looked for "
+            f"{', '.join(p.name for p in candidates)} in {_DEFAULT_PICKS_DIR}. "
+            f"Cannot verify provenance. "
             f"The build needs them regardless -- _constructed_candidates calls "
             f"build_espn_pick_distribution -- so this fails here, before the "
             f"simulation, rather than an hour into it."
@@ -408,7 +415,7 @@ def true_team_round_probabilities(rounds: List, team_ids: List[str]) -> List[Lis
 # ---------------------------------------------------------------------------
 
 
-def validate(bank, rounds, sel, ev, p1, first_round, seeds, full_rounds) -> Dict:
+def validate(bank, rounds, sel, ev, p1, first_round, seeds, ev_marginals) -> Dict:
     """Checks that must pass before the artifact is fit to ship."""
     out: Dict[str, object] = {}
 
@@ -424,7 +431,17 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, full_rounds) -> Dict
     out["path_checked"] = min(500, len(sel))
 
     # 2. EV recomputed independently on a sample.
-    marg = round_marginals(full_rounds)
+    #
+    # ``ev_marginals`` must be the SAME distribution ``expected_scores`` used.
+    # This used to take the rounds list and re-derive marginals from it, and the
+    # call site passed every candidate from every rating source -- while EV is
+    # defined against Torvik's marginals alone, deliberately, so that scores are
+    # comparable across candidates. The check therefore compared a Torvik EV to
+    # a three-source EV and reported the gap between two rating systems as an
+    # arithmetic error: ~100 points on a ~950-point bracket, in every artifact
+    # built since the pool was broadened to three sources. Passing the
+    # marginals rather than re-deriving them is what stops that recurring.
+    marg = ev_marginals
     pts = {r: ESPN_SCORING[r] for r in ROUND_NAMES}
     errs = []
     for i in sel[: min(200, len(sel))]:
@@ -914,7 +931,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     named = _champion_equity_strategy(first_round, marg, p1_trials, year, seeds, regions)
 
     print("[5/5] validating ...")
-    checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, rounds)
+    checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg)
     true_probs = true_constraint_probabilities(rounds, seeds)
     team_f4 = true_team_f4_probabilities(rounds, seeds)
 
