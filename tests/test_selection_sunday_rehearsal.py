@@ -98,18 +98,17 @@ class TestANewSeasonBuildsReady:
 class TestThePageWouldOpenOnIt:
     """The launch-day failure: the site opening on last season's bracket.
 
-    ``state.year`` was a hardcoded 2026 with nothing to advance it, so on
-    Selection Sunday 2027 a visitor would have landed on the 2026 bracket with
-    2027 greyed out beside it. Asserted against the source because there is no
-    JS test harness in this repo and this is one line whose absence is fatal.
+    The RULE is tested behaviourally in tests/test_picks_export.js
+    (``pickDefaultSeason``), which is worth more than the source grep that used
+    to live here: a regex proves a line exists and nothing about what it does.
+    What remains here is the wiring -- that init() actually calls the rule.
     """
 
-    def test_init_selects_the_newest_ready_season(self):
+    def test_init_uses_the_season_picker(self):
         src = (REPO / "docs" / "app.js").read_text()
-        assert re.search(r"filter\(\s*s\s*=>\s*s\.status\s*===\s*'ready'\s*\)", src), (
-            "init() must choose the newest season whose status is 'ready'"
+        assert "pickDefaultSeason(idx.seasons)" in src, (
+            "init() must choose its season through pickDefaultSeason()"
         )
-        assert "Math.max(...ready)" in src
 
     def test_the_newest_listed_season_is_not_used_directly(self):
         """max(year) would open on 2027's empty state for most of the year."""
@@ -162,3 +161,134 @@ class TestTheUserFacingTextIsForUsers:
         html = (REPO / "docs" / "index.html").read_text()
         assert '<details class="tune"' in html, "filter panels must be collapsed by default"
         assert "<details" in html.split('id="champions"')[0], "the panels must be INSIDE the details"
+
+
+class TestTheDisclosureCannotVanishQuietly:
+    """A mandatory disclosure whose absence is survivable is not mandatory.
+
+    The browser reads ``p1_assumption || ''`` and renders nothing when it is
+    missing, and a missing ``p1_trials`` silently reverts the standard error to
+    the scalar computed at a fixed p=0.05. Both revert a fix without failing
+    anything, which is how the original defect survived in the first place.
+    """
+
+    def _artifact_without(self, tmp_path, *dropped):
+        import scripts.build_ui_payload as builder
+
+        donor = REPO / "artifacts" / "candidates" / f"candidates_{DONOR}.json"
+        if not donor.exists():
+            pytest.skip("no donor artifact on disk")
+        art = json.loads(donor.read_text())
+        for key in dropped:
+            art["meta"].pop(key, None)
+
+        cand = tmp_path / "candidates"
+        cand.mkdir()
+        (cand / f"candidates_{DONOR}.json").write_text(json.dumps(art))
+        stats = tmp_path / "stats.json"
+        stats.write_text((REPO / "docs" / "data" / "team_stats_by_year.json").read_text())
+        out = tmp_path / "out"
+        out.mkdir()
+        return builder, cand, stats, out
+
+    @pytest.mark.parametrize("missing", ["p1_assumption", "p1_trials"])
+    def test_a_season_without_it_refuses_to_build(self, tmp_path, monkeypatch, missing):
+        builder, cand, stats, out = self._artifact_without(tmp_path, missing)
+        monkeypatch.setattr(builder, "CANDIDATES_DIR", cand)
+        monkeypatch.setattr(builder, "STATS_PATH", stats)
+        monkeypatch.setattr(builder, "OUT_DIR", out)
+        with pytest.raises(ValueError, match=missing):
+            builder.main()
+
+    def test_every_shipped_season_actually_carries_them(self):
+        """The check above is worthless if what is on disk predates it."""
+        for path in sorted((REPO / "docs" / "data").glob("season_*.json")):
+            payload = json.loads(path.read_text())
+            if payload.get("status") != "ready":
+                continue
+            assert payload.get("p1_assumption"), f"{path.name} ships without the disclosure"
+            assert payload["filters"].get("p1_trials"), f"{path.name} ships without p1_trials"
+
+    def test_every_predicate_has_a_calibrated_probability(self):
+        """The chips fall back to showing nothing, silently, if one is absent."""
+        for path in sorted((REPO / "docs" / "data").glob("season_*.json")):
+            payload = json.loads(path.read_text())
+            if payload.get("status") != "ready":
+                continue
+            probs = payload["filters"].get("predicate_probabilities") or {}
+            missing = [p["key"] for p in payload["filters"].get("predicates", []) if p["key"] not in probs]
+            assert not missing, f"{path.name} has predicates with no probability: {missing}"
+
+
+class TestNothingFromABracketSurvivesOntoAnEmptySeason:
+    """2027 before Selection Sunday is the most-visited state of the year.
+
+    The empty-season path cleared the board and the mode note but not the P(1st)
+    disclosure or the "your filter was dropped" message, so both sat under "the
+    2027 season hasn't started yet".
+    """
+
+    def test_the_empty_path_clears_the_disclosure_and_the_notice(self):
+        src = (REPO / "docs" / "app.js").read_text()
+        empty_branch = src.split("if (!s || s.status !== 'ready') {")[1].split("empty.hidden = false;")[0]
+        assert "p1-note" in empty_branch, "the disclosure is left on screen for an unplayed season"
+        assert "dropped-note" in empty_branch, "a stale filter notice is left on screen"
+
+
+class TestThePrintedPageIsTheBracket:
+    def test_print_hides_the_collapsed_filter_stack(self):
+        """Tier 3 wrapped the panels in .tune; the print rules still named only
+        .panel, so "Adjust this bracket" and its box printed with the bracket."""
+        css = (REPO / "docs" / "app.css").read_text()
+        block = css.split("@media print")[1]
+        for selector in (".tune", ".board-tools", "#dropped-note"):
+            assert selector in block, f"{selector} would print alongside the bracket"
+
+
+class TestCacheBustCannotGoStale:
+    """A ``?v=`` a human types can disagree with the file it names.
+
+    index.html already carried a comment recording that stale JS shipped once.
+    It happened again during this very session: app.js was edited after its bump
+    to v46, so v46 named two different files and a browser holding the first had
+    no way to learn about the second. It cost a verification pass -- a fix that
+    was correct on disk read as broken in the browser.
+
+    The tokens are content hashes now, so editing an asset changes its token by
+    construction. This test is what makes a forgotten stamp fail here rather
+    than ship.
+    """
+
+    def test_every_asset_token_matches_its_file(self):
+        from scripts.stamp_asset_versions import ASSETS, asset_token
+        import re as _re
+
+        html = (REPO / "docs" / "index.html").read_text()
+        for name in ASSETS:
+            found = _re.search(rf"{_re.escape(name)}\?v=([A-Za-z0-9]+)", html)
+            assert found, f"{name} has no ?v= token"
+            assert found.group(1) == asset_token(name), (
+                f"{name}?v={found.group(1)} does not match the file on disk. "
+                f"Run: python scripts/stamp_asset_versions.py"
+            )
+
+    def test_the_checker_agrees(self):
+        from scripts.stamp_asset_versions import stamp
+
+        assert stamp(check=True) == 0
+
+    def test_editing_an_asset_makes_the_stamp_stale(self, tmp_path, monkeypatch):
+        """Mutation check: a guard that cannot fail is worse than none."""
+        import scripts.stamp_asset_versions as st
+
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        for name in st.ASSETS:
+            (docs / name).write_text((REPO / "docs" / name).read_text())
+        (docs / "index.html").write_text((REPO / "docs" / "index.html").read_text())
+        monkeypatch.setattr(st, "REPO", tmp_path)
+        monkeypatch.setattr(st, "INDEX", docs / "index.html")
+        assert st.stamp(check=True) == 0, "copy should start clean"
+
+        (docs / "app.js").write_text((docs / "app.js").read_text() + "\n// edited\n")
+        assert st.stamp(check=True) == 1, "an edited asset must fail the check"

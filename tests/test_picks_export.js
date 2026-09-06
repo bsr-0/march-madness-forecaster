@@ -65,7 +65,8 @@ function loadApp(hash) {
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
-    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL };', ctx);
+    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, '
+    + 'pickDefaultSeason };', ctx);
   return ctx.__api;
 }
 
@@ -198,6 +199,54 @@ check('no hash is not an error', () => {
 check('the season comes back from the link', () => {
   const app = loadApp('#y=2013&o=p1');
   assert.strictEqual(app.readHash(), 2013);
+});
+
+
+/* ---------- which season opens ----------
+ *
+ * Previously asserted by grepping app.js for a regex, which proves the line
+ * exists and nothing about what it does. This is the launch-day failure: the
+ * site opening on last season's bracket on Selection Sunday 2027.
+ */
+console.log('\ndefault season');
+
+const app0 = loadApp('');
+
+check('opens on the newest READY season, not the newest listed', () => {
+  // The 2027 shape exactly: listed, but not yet played.
+  const seasons = [
+    { year: 2025, status: 'ready' },
+    { year: 2026, status: 'ready' },
+    { year: 2027, status: 'not_started' },
+  ];
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2026);
+});
+
+check('opens on 2027 the moment it is built', () => {
+  const seasons = [
+    { year: 2026, status: 'ready' },
+    { year: 2027, status: 'ready' },
+  ];
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2027);
+});
+
+check('a played-but-unavailable season is not chosen', () => {
+  // 2012 has no picks archive; it must not be the landing page.
+  const seasons = [
+    { year: 2011, status: 'ready' },
+    { year: 2012, status: 'unavailable' },
+  ];
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2011);
+});
+
+check('no ready season falls back to the newest listed, not to nothing', () => {
+  const seasons = [{ year: 2027, status: 'not_started' }];
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2027);
+});
+
+check('an empty index does not throw', () => {
+  assert.strictEqual(app0.pickDefaultSeason([]), null);
+  assert.strictEqual(app0.pickDefaultSeason(undefined), null);
 });
 
 console.log(`\n${passed} checks passed`);

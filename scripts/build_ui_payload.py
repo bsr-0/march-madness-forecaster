@@ -629,6 +629,21 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # "9.9% to win" with no qualifier anywhere near it.
     meta = art.get("meta", {})
 
+    # A season that ships without these degrades in silence: the browser reads
+    # `p1_assumption || ''` and renders nothing, and `p1_trials` missing makes
+    # the standard error fall back to the scalar computed at p=0.05 -- both
+    # reverting a fix without failing anything. A mandatory disclosure whose
+    # absence is survivable is not mandatory.
+    for key in ("p1_assumption", "p1_trials"):
+        if not meta.get(key):
+            raise ValueError(
+                f"{art_path} has no meta.{key}, so season {year} cannot ship: "
+                f"p1_assumption is the disclosure product.v3 requires alongside every "
+                f"P(1st), and p1_trials is what the browser needs to compute that "
+                f"number's standard error at the candidate's own p. Rebuild the "
+                f"artifact with scripts/experiments/build_candidate_artifact.py."
+            )
+
     return {
         "year": year,
         "status": "ready",

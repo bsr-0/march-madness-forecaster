@@ -512,6 +512,25 @@ function p1Pct(p) {
   return `${(p * 100).toFixed(0)}%`;
 }
 
+/* Which season to open on.
+ *
+ * Deliberately not max(year): 2027 is listed as soon as the calendar knows
+ * about it and stays "not_started" until Selection Sunday, so the newest LISTED
+ * season is an empty state for most of the year. And deliberately not a
+ * literal: a hardcoded 2026 would have opened the 2027 tournament on last
+ * year's bracket.
+ *
+ * Split out of init() so it can be tested without a network.
+ */
+function pickDefaultSeason(seasons) {
+  const ready = (seasons || []).filter(s => s.status === 'ready').map(s => s.year);
+  if (ready.length) return Math.max(...ready);
+  // No bracket anywhere: show the newest thing we know about and let its own
+  // empty state explain itself, rather than a year that may not be listed.
+  const all = (seasons || []).map(s => s.year);
+  return all.length ? Math.max(...all) : null;
+}
+
 /* ---------- addressable state ----------
  *
  * A static site's only sharing surface is its URL. Until now the entire
@@ -610,6 +629,13 @@ function render() {
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
+    // Both of these belong to a bracket. Leaving them up under "the 2027 season
+    // hasn't started yet" put a P(1st) disclosure and a stale "your filter was
+    // dropped" message on the exact screen a visitor sees for the five months
+    // before Selection Sunday.
+    { const el = document.getElementById('p1-note'); if (el) el.textContent = ''; }
+    { const el = document.getElementById('dropped-note'); if (el) el.textContent = ''; }
+    state.notice = '';
     empty.hidden = false;
     empty.innerHTML = `
       <p class="e-title">${s ? s.message : 'Season unavailable.'}</p>
@@ -1257,11 +1283,11 @@ async function init() {
   // empty state for most of the year.
   // A shared link names its own season; otherwise open on the newest ready one.
   const fromHash = readHash();
-  const ready = idx.seasons.filter(s => s.status === 'ready').map(s => s.year);
+  const fallback = pickDefaultSeason(idx.seasons);
   if (fromHash !== null && idx.seasons.some(s => s.year === fromHash)) {
     state.year = fromHash;
-  } else if (ready.length) {
-    state.year = Math.max(...ready);
+  } else if (fallback !== null) {
+    state.year = fallback;
   }
 
   document.getElementById('years').innerHTML = idx.seasons.map(s => `

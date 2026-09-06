@@ -463,7 +463,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    job, and it is the fallback when the clipboard is unavailable. Drop every
    control and let the board wrap instead of scrolling off the page. */
 @media print {
-  .bar, .board-tools, .drawer, .scrim, .panel, #equation, .note { display: none !important; }
+  /* .tune wraps the filter panels; hiding only .panel left its "Adjust this
+     bracket" header and its box on the printed page. */
+  .bar, .board-tools, .drawer, .scrim, .panel, .tune, #dropped-note,
+  #equation, .note { display: none !important; }
   #main { padding: 0; }
   .board { display: block !important; }
   .round { break-inside: avoid; page-break-inside: avoid; margin: 0 0 12px; }
