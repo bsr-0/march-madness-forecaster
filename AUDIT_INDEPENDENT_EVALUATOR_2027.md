@@ -1,0 +1,374 @@
+# Independent Evaluator Audit — Bracket Strategy Backend and 2027 User Value
+
+    Date:        2026-09-09
+    Scope:       read-only review of src/optimization, src/simulation, src/evaluation,
+                 scripts/mc_pool_backtest.py, the prediction/calibration/data layers,
+                 governance artifacts, README/FINDINGS/PROSPECTIVE docs, docs/ web UI, CI
+    Stance:      the criticisms a credible, skeptical outside reviewer (quant referee /
+                 sports-analytics practitioner) would raise, applied as the judgement
+                 criteria for the backend methodology and for the value delivered to a
+                 user in March 2027
+    Method:      seven independent review passes, each citing file:line; every finding
+                 is marked CONFIRMED (code read / command run) or SUSPECTED
+
+No code was changed.
+
+---
+
+## 1. Verdict in one paragraph
+
+The project's central thesis — that prediction accuracy is commoditised and the edge is in
+bracket *construction* and *pool-aware selection* — is well argued and the engineering
+discipline behind it (walk-forward training, leakage guards, pre-registered freeze,
+a candid dead-end ledger) is far above hobby-project norm. But the headline number that
+carries the thesis, **"11.2% P(1st) in a 30-person pool over a 15-year backtest"**, would
+not survive independent review as stated. It is a simulator-vs-simulator quantity (both the
+model bracket and its opponents are scored against a *synthetic* tournament drawn from a
+seed model fit on the same years), it is the maximum of a large in-sample sweep, its honest
+year-level uncertainty is about ±2.7pp, and the deployed code paths cannot reproduce the
+candidate set that was backtested. Separately, the only user-facing deliverable that
+currently works is the static web page; the documented CLI fails in every mode. A 2027 user
+gets a well-presented, backtested-in-simulation bracket recommendation — that is real value
+— but the README's framing overstates what has been demonstrated, and 2027 readiness rests
+on a manual, single-person process.
+
+### Scorecard
+
+| Dimension | Grade | One-line reason |
+|---|---|---|
+| Construction / selection methodology | B | Sound mechanics; objective is optimised and evaluated inside the same synthetic referee |
+| Evidence for the headline P(1st) | D | Simulated outcomes, in-sample sweep, no year-level CI, contaminated 2026 included |
+| Prediction model integrity | C+ | Game-level PIT is genuinely careful; one confirmed feature leak (roster WARP/RAPM); MC noise never fit |
+| Data provenance for 2027 | C | "Pre-tournament" Torvik files are April-2026 date-window reconstructions; no live picks endpoint |
+| Governance / pre-registration | B− | Real hash-pinned freeze, but pre-registers no number, no bracket, no failure criterion |
+| Documentation honesty | D | README describes a pipeline that does not produce the shipped bracket; 9 of 19 commands and 3 doc links are dead |
+| 2027 user value (web page) | B | Usable, shareable, SE-aware display; fixed 30-person ESPN-behaviour WTA pool only |
+| 2027 user value (CLI / clone-and-run) | F | `optimize-pool` fails in every mode today |
+| Maintainability / bus factor | D | 1 maintainer, 112 scripts, CI red, nightly cron disabled |
+
+---
+
+## 2. What the backend strategies actually are
+
+All under `scripts/mc_pool_backtest.py` unless noted. Scoring is ESPN 10-20-40-80-160-320,
+winner-take-all, 30 opponents (`ESPN_SCORING` :129).
+
+| Mode | Mechanism | Status |
+|---|---|---|
+| `champ_first` / `f4_first` / `e8_first` | pick the top of the bracket from round-probability marginals, then fill down | backtested; dominated by poolaware |
+| `region_top_n` | per-region stochastic construction at a "risk" level 0.1–0.9 | the workhorse; a *fixed, unselected* `region_top_n` at risk 0.35 scores 8.4% on its own (`artifacts/backtest_runs/…0830_093733.txt:159`) |
+| `exhaustive_champion` | enumerate champions, construct beneath each | candidate family |
+| `det_*` | deterministic argmax | 0.00% P(1st); correctly retired |
+| `opt_*` / Pareto-leverage (`src/optimization/leverage.py`) | greedy per-game EV × leverage | catastrophic in upset years; correctly retired |
+| `meta_sa*` | simulated annealing | 0.7–1.7%; correctly retired |
+| **`meta_region_poolaware`** | build ~20–33 candidates per year from ≤5 probability bases × 5 risk levels × 2 constructions (+ forced champions) (:3912-3965), then pick the one with the highest simulated P(1st) against 30 simulated opponents (:4054-4068) | **production claim: 11.2%** |
+
+The probability base that matters is **raw Torvik barthag through log5**
+(`src/prediction/pairwise.py:101-112`, backtest :607-645), not the README's 7-feature
+logistic regression. The ML pipeline (`src/pipeline/…`, `MonteCarloEngine`) is a separate
+stack that never feeds the shipped brackets (`ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md`;
+`scripts/experiments/build_candidate_artifact.py:769,933`).
+
+Modules an evaluator would expect to be load-bearing but are not exercised by any
+backtest: `bracket_portfolio.py`, `dual_submission.py`, `path_protection.py`,
+`e8_matchup_scorer.py` (CLI-only); `matchup_vulnerability.py`, `portfolio_diversification.py`
+(no callers); the `leverage.py` path-protection gate runs on fabricated 0.6 probabilities
+with empty `loser_id` (`leverage.py:960-1148`) and is effectively a no-op.
+
+---
+
+## 3. Findings, ranked by how much they undermine trust
+
+### CRITICAL
+
+**C1. P(1st) is measured against simulated tournaments, not history.** CONFIRMED.
+Under the canonical `--team-identity` contract, each repeat draws one tournament from
+`seed_pw` with `noise_std=0.16` and scores *both* the model bracket and the opponents
+against it (:4328-4360). The realised `actual` result is used only on the legacy shape path
+(:4340) and for the `MeanScr` column (:4432). `p_first = (all_ranks == 1.0).mean()` (:4425)
+never sees a real outcome. "15-year backtest" therefore means 15 seed layouts × 15 pick
+distributions × synthetic tournaments. 2016 Michigan State losing in R64, 2018 UMBC, 2023
+FDU never occur. The frozen spec's `p1_definition` does say "seed pairwise referee"; the
+README (:45) does not, and a reader will assume "won ~1 in 9 real pools".
+
+**C2. Selector and evaluator are the same distribution, and it is fit on the test years.**
+CONFIRMED. `seed_pw = build_seed_probabilities(seeds)` (:2749) uses
+`OUTCOME_WINDOW = "recent"` = 2010–2025 (`src/prediction/seed_probabilities.py:33`,
+`src/data/seed_pick_model.py:120,131`). The candidate is *chosen* by P(1st) under `seed_pw`
+(:4054-4068) and then *scored* by P(1st) under `seed_pw` (:4331), with only the RNG stream
+differing. This is in-sample by construction: the metric partly measures "how well did the
+selector pick the candidate that wins most often under the referee", and the referee learned
+its seed-advancement rates from the years being judged.
+
+**C3. The shipped bracket is not the backtested strategy.** CONFIRMED.
+`scripts/generate_poolaware_bracket.py:91-95` builds candidates from `tv` and `mass_avg`
+only. The backtest recipe also sweeps `mass_best`, `blend`, `tv_mass80` — and the log shows
+`blend_*` selected in 9 of 15 years, `tv_mass80` in 2025. Production cannot produce the
+candidate the backtest picked most often. The 2026 submission
+(`bracket_2026_submission.json`) was produced by the pool CLI's Torvik/blend path (matches
+the report dict at `src/cli/pool_cmds.py:275-288`), not the governance-frozen
+`TournamentPipeline`; it records no `prob_mode`, so its probability source cannot be
+recovered from the file.
+
+### HIGH
+
+**H1. No honest uncertainty is reported; the one CI computed understates by ~3×.**
+CONFIRMED. `n_trials = all_ranks.size` (:4430) = brackets × 100 repeats feeds the Wilson CI
+(`src/evaluation/testing_budget.py:97`); repeats within a year are not independent
+observations of anything real. From the per-year values in the surviving log
+(`…20260829_095910.txt`: .01 .11 .14 .05 .15 .21 .07 .08 .06 .09 .11 .15 .14 .15 .04), the
+year-level estimate is **10.4% ± 2.7pp (95%, n=15)**. FINDINGS §6e's "SE ≈ 0.79pp" is the
+repeat-level figure. "Beats the 4.05% seed baseline" survives; the digit after the decimal
+in "11.2%" does not, and the "10.47 vs 11.2 is −0.92 SE" comparison is really ≈ −0.27 SE.
+
+**H2. Garden of forking paths with no untouched holdout.** CONFIRMED. `ALL_MODES` lists 79
+strategies (:294-374). Two candidate families were *removed because they lowered aggregate
+P(1st)* on the evaluation years (:3967-3983 — 10.93% vs 11.20%; 7.1% vs 11.9%);
+`pa_trials` was raised 200→500 because it helped. `PoolHyperparameters` (:423-441)
+walk-forwards only `blend_alpha` and `enabled_modes`; the risk grid, 0.8/0.2 blend, trial
+budgets, `noise_std=0.16`, pool size are fixed globals with no provenance. The aggregate
+includes 2026, which the frozen spec itself classifies as contaminated. The RDoF audit
+module (`src/ml/evaluation/rdof_audit.py`) covers only ML-pipeline constants and LOYO Brier;
+it has zero references to the pool-strategy search. The FINDINGS permutation test
+(p=0.0076) corrected over modes in one run, not over the history of removed candidates.
+
+**H3. Opponent model is synthetic for 11 of 15 years and leaks future behaviour into
+early years.** CONFIRMED. Opponents are independent draws (`chalk_noise_std=0.0`,
+:2618; `pool_competition.py:239,290`) with per-game pick probability = ratio of two
+*marginal* ESPN advancement rates (:365-370). No opponent–outcome coupling, no chalk
+clustering, no local-team bias. For 2012 (no ESPN archive) the fallback builds opponents
+from `pool_hist_results.json` years **2023–2026** (:2619-2639) — behaviour eleven years in
+the future. Real 30-person-pool opponents exist for only 2023–2026, and on those four years
+the project's own check is ρ=+0.42, p=0.34, with **2026 = −0.60** (FINDINGS §5b): higher
+estimated P(1st) placed *worse*. ESPN pick archives carry no capture timestamp; 2024–2025
+are flagged `real_unverified_source` and nothing reads the flag (SUSPECTED contamination).
+
+**H4. The documented CLI does not work in any mode.** CONFIRMED (run).
+`optimize-pool --mode meta_region_poolaware` (README:46-47) is rejected by argparse —
+choices are `auto/torvik/blend/noseed/seed` (`src/cli/pool_cmds.py:1163`).
+`--mode torvik` raises `ModuleNotFoundError: src.prediction.torvik_probabilities`
+(`pool_cmds.py:858`; module deleted in commit `44b048f`, 2026-04-21). `--mode seed` crashes
+on the play-in seed collision ("West 11 holds both nc_state and texas",
+`bracket_construction.py:145`) — the 2026-09-06 play-in fix reached the artifact path but
+not the CLI. `--mode auto` exits with "No brackets generated". No test exercises
+`run_optimize_pool`. The installed `march-madness` console script fails (`No module named
+'src'`); `python -m src.main` is the only entry.
+
+**H5. A confirmed point-in-time leak in two production features.** CONFIRMED.
+`total_warp` and `top5_rapm` (members of `SIMPLE_FEATURE_SET`, `src/pipeline/config.py:174-184`)
+come from one static per-season roster file that is season-final: `cbbpy_rosters_2024.json`
+Purdue `games_played=39`, 2025 Florida `=40` — both include the tournament run. The overlay
+is stamped onto every training row, including November games
+(`sample_loading.py:541-545`, `_orchestrator.py:519-523`). The post-tournament timestamp
+guard (`data_loader.py:359-377`) is warning-only and skipped when `file_year == year`, i.e.
+for every historical file. Effect: target leakage in training years and an optimistic 2025
+holdout Brier; 2026 inference used a 2026-03-16 snapshot, so there is also train/serve
+shift. FINDINGS §4 records excluding roster minutes from the *Bracket Lab* matrix; the same
+contamination survives in the pipeline model. (The regular-season features — Elo, win%,
+momentum, SOS, tempo, ORB, opp-TO — are PIT-correct: `proprietary_metrics.py:226-244,1485-1486,1681`.)
+
+### MEDIUM
+
+**M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
+All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
+title game. They are `trank.php?begin=…&end=cutoff` date-window recomputes
+(`torvik.py:566-587`), not archived Selection-Sunday pages. `rescrape_pretournament_torvik.py:694-696`
+itself warns Torvik "revises ratings for past windows … the drift is silent", and :410-440
+falls back to the full-season `{year}_team_results.json` URL when the filtered request
+returns empty, still labelled `pre_tournament`. The `_validate_pretournament` guard
+(:560-568; `noseed_model.py:33-46`) checks the label string, not content. FINDINGS §4:427-430
+still says barthag is "locally computed" by `scripts/compute_pretournament_barthag.py`,
+which was deleted in the same April commit.
+
+**M2. Monte Carlo noise parameters were never fit.** CONFIRMED.
+`artifacts/mc_calibration_2026.json`: "Placeholder calibration using production config
+defaults" (`noise_std 0.16`, `regional_correlation 0.05`). `calibrate_mc_parameters`
+(`mc_calibration.py:333`) has zero callers. `pipeline_runner.py:613-628` loads `best_params`
+without checking the note; the 2027 file named in `production_2027.json` does not exist and
+silently yields None. The backtest's `noise_std=0.16` (:4333) is the same unfit constant.
+Pipeline MC otherwise draws independent Bernoulli with i.i.d. per-game logit noise
+(`monte_carlo.py:294-301`) — a calibration knob, not an uncertainty model; injury shock and
+regional correlation are disabled in production (`simulation.py:135`, `config.py:636`).
+Joint per-sim outcomes are discarded (`monte_carlo.py:459-495`), so the pipeline stack
+cannot do pool scoring at all — which is why a second, non-shared simulator exists.
+
+**M3. Calibration regime changes silently between 2026 and 2027.** CONFIRMED.
+2026's config never sets `calibration_years`, so the default 2008–2025 fires (~1,000
+tournament games) while logs claim "holdout-year OOS by default"
+(`stages/calibration.py:293-296`). 2027 sets `calibration_years: [2026]` — one tournament,
+~63 games, padded to the 80-sample floor with current-year *regular-season* games. Flags
+`enable_round_weighted_calibration`, `enable_goto_conversion`, `seed_prior_weight`,
+`enable_vegas_calibration_anchor` are set `true` but live only on
+`predict_probability_experimental` (`tournament_pipeline.py:858-907`); production is raw →
+temperature → shrink-to-0.5 → clip. When the bootstrap CI for T contains 1.0 the calibrator
+silently becomes identity (`stages/calibration.py:437-468`). No Python test exercises
+`_fit_calibration`'s split.
+
+**M4. The pre-registration pre-registers nothing falsifiable.** CONFIRMED.
+`prospective_2027_v2_scoped.json` + `tests/test_frozen_2027_spec.py` freeze *methodology*
+(hash, features, scoring, pool size 30, 2000 trials) and that is genuinely valuable. But no
+number, no bracket, no pool, and no failure criterion is stated. A single 30-person pool is
+one Bernoulli draw at p≈0.1; 2027 cannot confirm or refute 11.2% and the document should
+say so. PROSPECTIVE_2027_v2.md:53-58 cites `configs/frozen/product_v3.json`, `docs/build.js`,
+`tests/test_spec_boundary.py` — none exist (`frozen_spec.py:71` still points at the missing
+path). Both freeze artifacts were produced from dirty trees (`git_dirty: true`);
+`artifacts/pipeline_freeze_2026.json` is labelled `pre-registration` but dated 2026-04-28,
+after the tournament; `production_2027.json` sets `require_freeze_file: false`.
+
+**M5. CI is red and the nightly gate is off.** CONFIRMED.
+Latest `CI Pipeline` run (2026-09-09, 19h17m) failed: `Full Test Suite` on
+`FileNotFoundError` for gitignored `artifacts/candidates/candidates_2024.json`
+(`tests/test_ui_filter_payload.py`) plus `test_baseline_evaluation.py` and
+`test_schemas.py`; `Browser Model` on "shipped season payload matches the training path
+exactly — differs by 0.8252 at 2018 texas_southern.massey_avg_rank" (a train/serve parity
+failure in a *shipped* payload). `nightly-validation.yml` has its cron commented out; its
+last scheduled runs (Aug 6–8) failed. README:91 says the backtest "runs in CI nightly".
+Local `pytest --co` fails at import (`pytest_asyncio` incompatibility). No test pins any
+headline number; backtest tests check plumbing equivalence, not scoring correctness against
+a hand-computed bracket.
+
+**M6. Structural gaps versus what a sophisticated pool player expects.** CONFIRMED.
+Winner-take-all only on the backtest path; `payout_structure` exists in `pool_optimizer.py:40`
+but only feeds a manifest. No upset bonus, seed-weighted or round-multiplier scoring
+variants; no multi-entry hedging or Kelly-style sizing anywhere backtested; `pool_factor`
+activates only above 50 entries (`bracket_construction.py:204`); no pool-size, payout or
+scoring input in the UI; no live update after R64; no ingestion of the user's own pool
+beyond one hand-scraped ESPN group in a bespoke JSON schema. Tie handling differs between
+selection (`>=` counts a tie as a win, :2372) and evaluation (half credit, :4360).
+
+### LOW
+
+**L1. Silent-default surfaces of the same class as the FINDINGS §6c skew bug.**
+`barthag.get(t, 0.5)` (:799), seed fallback `1 - seed*0.04` (:631-634),
+`model_round_probs…get(round, 0.5)` (:2433), `pub_pct = 0.5` (:3491), `except Exception:
+pass` around candidate families (:3738, 3748, 3840, 3909 — a vanished family changes the
+sweep with no log line; the varying "best of 20–33" per year is consistent with this),
+`feature_engineering.py:1025-1056` defaults (win_pct 0.5, Elo 1500, barthag 0.5), whole
+training years skipped on any exception (`_data.py:220-222`).
+
+**L2. Team-name resolution collisions (live probe).** `"North Carolina St."` →
+`north_carolina`; `"Saint Mary's (MD)"` → `saint_mary_s__ca`; `loyola_md` vs `loyola__md`
+coexist. Torvik join tolerates up to 20% of bracket teams missing before failing
+(`data_loader.py:1292,1297`). `configs/team_aliases.json` (v2026.3) has no 2027 entries.
+
+**L3. 2027 hardcoding and dead dependencies.** Kaggle slug list stops at 2026
+(`kaggle_downloader.py:25-32`); year defaults of 2025/2026 in `game_utils.py:212`,
+`_loyo.py:161`, `scrape_cmds.py:74`, `_helpers.py:174`; ESPN picks scraper tries five
+undocumented URLs whose payload shape it cannot parse (`espn_picks.py:121-125,210`) — the
+realistic 2027 path is a hand-made `public_picks_2027.json`. Orphan root files
+(`barttorvik_2026.csv` is 32 conference-aggregate rows; the 2020 CSV is full-season) and 15
+April `pool_report_*.json` files are read by nothing.
+
+**L4. Documentation rot.** README references `CLAUDE.md` three times (:45, :58, :142);
+it does not exist. Nine of nineteen documented commands (`sota`, `pre-tournament-check`,
+`validate-vs-market`, `freeze-pipeline`, `verify-freeze`, `monitor`, `snapshot`,
+`list-snapshots`, `restore-snapshot`) do not exist. README's "7 features" is a 9-item
+`SIMPLE_FEATURE_SET` with `enable_feature_selection: true`, so the production set is
+learned, not the listed seven. `ARCHITECTURE_AUDIT…` line citations are stale.
+
+---
+
+## 4. Value to a user in March 2027
+
+**Non-technical pool participant via the GitHub Pages site.** This is the real product and
+it is good: a year strip 2010–2027, two precomputed strategy cards ("maximise chance of
+winning" — P(1st) 10%, 874 pts for 2026 — and "maximise expected points"), an in-browser
+fitted ridge model, a filter panel over ~1,200 candidates (champion, 1-seed count, F4 depth,
+six shape predicates, rating source), near-tie alternates within one SE, URL-hash sharing,
+copy/print export, past seasons graded against actuals, whole-percent P(1st) with a
+mandatory 30-entry-ESPN-pool disclosure. Time to a bracket ≈ 2 minutes — *if* the
+maintainer rebuilds on Selection Sunday. Today `season_2027.json` is a `not_started` stub
+and nothing automated will change that: `build_ui_payload.py:282-286` flips it only when a
+gitignored `candidates_2027.json` exists; `generate-web-data.yml` references files that no
+longer exist in `docs/`; only `deploy-docs-on-push.yml` works. The March sequence
+(seeds → 12 play-ins resolved → picks captured by 2027-03-18 12:00 ET → artifact → payload →
+deploy, all before ~12:15 tip) exists only in commit messages and script docstrings. What
+the user cannot do: set pool size, payout, scoring rules, number of entries, or feed in
+their own pool.
+
+**Technical friend cloning the repo.** Cannot get a bracket from the CLI (H4). Reconstructing
+the `scripts/experiments/` artifact path is days of work with no runbook.
+
+**Maintainer.** Feasible. Bus factor is one: 1,608 commits (913 in March 2026, 18 in
+September), authors Claude 824 / bsr-0 441 / Ben Rosen 282; 112 scripts; three overlapping
+PROSPECTIVE docs; a 73 KB FINDINGS.md.
+
+**Against the 2027 landscape** (KenPom/Torvik bracket odds, ESPN "who picked whom",
+PoolGenius-style contrarian optimisers): the genuine differentiators are (a) a walk-forward
+15-season evaluation of a *P(1st)* objective with SE-aware display and a hash-pinned
+methodology freeze — rare among free tools — and (b) filter-by-belief over a diverse
+candidate bank. What commercial tools offer that this does not: pool size / payout / scoring
+configuration, multi-entry portfolios, ingestion of the user's actual pool, and live
+re-optimisation after R64. An evaluator would conclude the project is a strong research
+artifact and a decent single-pool recommender, not yet a general pool tool.
+
+---
+
+## 5. What survives scrutiny (be fair)
+
+- The construction/selection-over-prediction thesis is supported *within the simulator*:
+  seed 4.05% vs poolaware ≈10% is many SE apart even at year-level uncertainty, and a fixed
+  unselected `region_top_n` already gets 8.4%, so the mechanism is "submit a deterministic,
+  chalk-leaning, diverse-enough bracket" rather than luck.
+- Game-level point-in-time discipline in the regular-season features is genuinely careful
+  (`LeakageError` on cutoff after tournament start, Elo snapshot before as-of date,
+  Massey day-bounded, tournament games excluded from training).
+- The pairwise-probability contract (`src/prediction/pairwise.py`, AST-scanned by test) fixed
+  a real marginal→pairwise error and the project re-baselined honestly afterwards.
+- The dead-end ledger, the "if a change is smaller than its bootstrap CI it is not a
+  finding" stopping rule, and the play-in resolution fix are exactly the habits reviewers
+  ask for and rarely see.
+- The methodology freeze with CI drift gate is real, and the CHECKPOINT documents record
+  deferred decisions before outcomes exist.
+
+---
+
+## 6. Recommendations, in priority order
+
+**Before making any external claim**
+1. Restate the headline as: *"≈10% (95% CI ≈ 7–13%) chance of finishing first in a
+   simulated 30-entry pool with ESPN-national pick behaviour, under a seed-model tournament
+   referee, 2011–2025"* — and drop 2026 from the aggregate as the spec already requires.
+2. Report P(1st) with a year-level CI in `run_backtest` output, not a Wilson CI over repeats.
+3. Add the one number that would actually support the thesis: model-bracket placement
+   against *realised* outcomes and *real* opponents for the four real-pool years, stated
+   with n=4 honesty.
+
+**Before March 2027**
+4. Fix or delete the CLI: `pool_cmds.py:858` import, play-in resolution on the CLI path,
+   valid `--mode` choices in README; add one end-to-end test of `run_optimize_pool`.
+5. Make `generate_poolaware_bracket.py` sweep the same bases as the backtest recipe, or
+   re-run the backtest with the production recipe and report *that* number.
+6. Remove `total_warp`/`top5_rapm` from training or rebuild them from pre-cutoff box
+   scores; make the roster timestamp guard a hard error.
+7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
+   comment saying it is unfit; create the 2027 file or make its absence loud.
+8. Turn the March runbook into a script or a checked-in document; wire
+   `candidates_2027.json` → payload → deploy into one workflow.
+9. Get CI green: commit or fixture the candidate artifacts the tests need, fix the
+   `pytest_asyncio` pin, re-enable the nightly cron or delete the README claim.
+10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
+    n=1, and fix the three dangling references.
+
+**Structural (2028)**
+11. Evaluate against an *independent* referee (e.g. market-implied or Torvik pairwise, not
+    the seed model used for selection) and add real-outcome placement as a co-primary metric.
+12. Bring the pool-strategy search under the RDoF audit; keep one never-touched holdout year.
+13. Opponent model with chalk clustering / correlated picks, pool-size and payout inputs,
+    multi-entry support — the features that separate a recommender from a pool tool.
+
+---
+
+## Appendix — documentation vs code
+
+| Claim | Where | Reality |
+|---|---|---|
+| "7 domain features, single logistic regression … temperature scaling … 50k MC → optimization" | README:7-16 | Shipped brackets use Torvik barthag log5 + a 10k-sim bracket MC; `n_sims=50000` appears nowhere (default 10,000) |
+| "current baseline 11.2% P(1st), 15-year backtest — see CLAUDE.md" | README:45 | Simulated-tournament metric; ≈10.4 ± 2.7pp; CLAUDE.md absent |
+| `optimize-pool --mode meta_region_poolaware` | README:46-47 | Not a CLI mode; CLI fails in all modes |
+| "LOYO backtest … runs in CI nightly" | README:91 | Cron commented out; last scheduled runs failed |
+| "barthag is locally computed … guarded by `_validate_pretournament()`" | FINDINGS §4 | Script deleted 2026-04-21; barthag is scraped; guard checks a label string |
+| "holdout-year OOS by default" | `stages/calibration.py:293-296` | 2026 fit on 2008–2025 by default |
+| `product_v3.json`, `docs/build.js`, `test_spec_boundary.py` | PROSPECTIVE_2027_v2.md:53-58 | None exist |
+| `freeze_type: pre-registration` | `artifacts/pipeline_freeze_2026.json` | Dated 2026-04-28, `git_dirty: true` |
+| "SE ≈ 0.79pp" on poolaware P(1st) | FINDINGS §6e | Repeat-level; year-level SE ≈ 1.4pp |
