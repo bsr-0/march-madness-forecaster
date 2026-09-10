@@ -9,11 +9,11 @@ outcomes is not a distribution.
 
   Year  Mode                      Score   Rank  /Pool   %ile  Champion picked
   ---------------------------------------------------------------------------
-  2023  meta_region_poolaware       470     18     18     6%  purdue
+  2023  meta_region_poolaware       460     18     18     6%  purdue
   2023  seed                        442     18     18     6%  17 different (mean of 50)
-  2024  meta_region_poolaware       870      7     25    80%  purdue
+  2024  meta_region_poolaware      1120      4     25    92%  purdue
   2024  seed                        754     11     25    60%  16 different (mean of 50)
-  2025  meta_region_poolaware      1370      8     32    81%  houston
+  2025  meta_region_poolaware      1330     10     32    78%  houston
   2025  seed                        871     20     32    41%  13 different (mean of 50)
   2026  meta_region_poolaware       840     12     30    63%  florida
   2026  seed                        721     20     30    37%  18 different (mean of 50)
@@ -25,5 +25,5 @@ outcomes is not a distribution.
 meta_region_poolaware, real outcomes, real opponents, n=4: 0/4 finished 1st, 0/4 finished top 3.
 This is a small-sample descriptive fact, not an estimate of a rate: with n=4, one
 additional or one fewer win changes the observed fraction by 25 points. It does not
-confirm or refute the simulated ~11% P(1st) figure; it is the only number in this
+confirm or refute the simulated P(1st) figure; it is the only number in this
 project measured against reality rather than a model of reality.

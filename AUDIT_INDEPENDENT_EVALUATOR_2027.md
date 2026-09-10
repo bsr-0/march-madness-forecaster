@@ -213,7 +213,8 @@ contamination survives in the pipeline model. (The regular-season features — E
 momentum, SOS, tempo, ORB, opp-TO — are PIT-correct: `proprietary_metrics.py:226-244,1485-1486,1681`.)
 
 **H6. Brackets are constructed for one pool size and scored against another.** CONFIRMED
-(found 2026-09-10 while re-measuring the headline). `_run_one_year` resolves the real field
+(found 2026-09-10 while re-measuring the headline). **FIXED 2026-09-10** — see the closing
+paragraph of this entry. `_run_one_year` resolves the real field
 size per season and stores it — `pool_size = year_n_opponents + 1`
 (`mc_pool_backtest.py:2813`) — but that variable is used only for the P(top5%)/P(top25%)
 thresholds (`:4426-4427`). Every bracket-construction call site instead passes the raw CLI
@@ -236,6 +237,25 @@ season yields 28 candidates. A run at the default therefore constructs heavily c
 brackets for a 1000-person field and scores them against a 19-person one. This is the
 second defect found in this file that is invisible at the pool sizes anyone uses and
 catastrophic at the default — see also the pool-size provenance gap in the run header.
+
+**The selection half is worse than the construction half, and is not latent.** Candidate
+*selection* has the same defect: the three `draw_selection_trials` calls in `_run_one_year`
+also took the raw CLI value, so the selector estimated each candidate's P(1st) against a
+29-opponent field and the result was then scored in the real one. Unlike construction, this
+has no `pool_factor` threshold protecting it — simulating a 29-opponent field when the pool
+holds 18 changes the P(1st) estimates directly, and therefore changes which candidate is
+selected, at the canonical settings.
+
+**Fix.** All ten `construct_bracket` calls now take `pool_size=pool_size` (total entries)
+and all three `draw_selection_trials` calls take `n_opponents=year_n_opponents` (opponents
+only); both derive from the season's resolved field rather than the CLI fallback.
+`tests/test_field_size_threading.py` walks the AST of `_run_one_year` and fails on any call
+that reverts to the raw parameter — mutation-tested by reverting one site, which the guard
+catches by line number. A static guard is the right shape here precisely because a
+behavioural test at a realistic pool size cannot see the construction half of the bug.
+Note `generate_poolaware_bracket.py` had this right all along (`pool_size=n_opponents + 1`
+against a `n_opponents` already resolved to the real group size); the backtest was the
+outlier.
 
 ### MEDIUM
 

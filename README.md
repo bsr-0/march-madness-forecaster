@@ -43,8 +43,10 @@ march-madness optimize-pool --year 2026 --pool-size 100 --payout top_3
 
 # Production strategy (meta_region_poolaware): pool-aware selection over ~25 diverse
 # candidate brackets. It runs through the backtest script, not the CLI:
-python scripts/mc_pool_backtest.py --team-identity --opponent pool --n-repeats 100 \
-  --modes seed meta_region_poolaware
+# --n-opponents 29 is required: it is the fallback for seasons with no recorded
+# pool, and omitting it silently measures a 1000-person field instead of a 30-person one.
+python scripts/mc_pool_backtest.py --team-identity --opponent pool \
+  --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware
 
 # If you have your pool's prior-year brackets, use them instead of ESPN aggregate
 # (calibrates opponent model to your actual pool's tendencies)
@@ -71,12 +73,12 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   real size — 18, 25 and 32 entries), and ESPN national pick rates at an assumed 30-entry
   pool for every earlier season. It assumes winner-take-all with ESPN scoring; it is not a
   universal probability of winning any pool. **P(1st) is mechanically pool-size dependent**
-  — the same strategy scores ~10% at 30 entries and ~4% at 1000 — so the pool size is part
-  of the claim, not a detail. Reproduce with
+  — the same strategy scores roughly 2.5x worse in a 1000-entry field than a 30-entry one —
+  so the pool size is part of the claim, not a detail. Reproduce with
   `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`; omitting
   `--n-opponents` silently measures a 1000-person field.
 - **The CI is over seasons.** The season-level standard error is 1.5pp. Do not quote a
-  digit after the decimal — the difference between "11.2%" and "11.9%" is a fifth of one
+  digit after the decimal — the difference between "11.2%" and "12.0%" is half of one
   standard error.
 - **2026 is excluded** from the aggregate: it is an in-sample integration season under
   `PROSPECTIVE_2027_v2.md` and cannot be evidence of out-of-sample performance.
@@ -95,9 +97,9 @@ pool's real scores:
 
 | Year | Real score | Rank | Pool size | Champion picked |
 |---|---:|---:|---:|---|
-| 2023 | 470 | 18th | 18 | Purdue (lost in the R64 as a 1-seed) |
-| 2024 | 870 | 7th | 25 | Purdue |
-| 2025 | 1370 | 8th | 32 | Houston |
+| 2023 | 460 | 18th | 18 | Purdue (lost in the R64 as a 1-seed) |
+| 2024 | 1120 | 4th | 25 | Purdue |
+| 2025 | 1330 | 10th | 32 | Houston |
 | 2026 | 840 | 12th | 30 | Florida |
 
 **0 of 4 finished 1st; 0 of 4 finished top 3.** n=4 is not a rate — one different outcome
@@ -108,7 +110,7 @@ every year (reproduce with `python -m scripts.real_pool_placement`; full table i
 real pool.
 
 **Why this number moved, and why it is not a cherry-pick.** It was published as "11.2%",
-then "about 11%", and is measured here at 11.9%. The figure did not improve because
+then "about 11%", and is measured here at 12.0%. The figure did not improve because
 anything was tuned: `b73d351` (2026-09-06, *"every season shipped a wrong R64"*) fixed the
 play-in resolution, which changed the field in **every** season. Every P(1st) published
 before that date — 11.2%, 11.33%, 10.47%, 11.87% — was computed on brackets containing

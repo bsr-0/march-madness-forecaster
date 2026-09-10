@@ -2810,6 +2810,23 @@ def _run_one_year(
     except _OpponentResolutionFailed as exc:
         print(f"  {year:<6} SKIP — {exc}")
         return _empty_year_outcome(year, str(exc))
+    # THE FIELD SIZE FOR THIS SEASON. Use these two, never the raw `n_opponents`
+    # parameter, anywhere below.
+    #
+    # `n_opponents` is the CLI value, which under `--opponent pool` is only a
+    # FALLBACK for seasons absent from pool_hist_results.json; a season with real
+    # pool history overrides it with that pool's actual group size. Scoring
+    # honoured that, but construction and candidate selection both used the raw
+    # parameter, so a bracket was built and chosen for one field size and then
+    # ranked in another (2023-2026 real fields are 19/26/33/30 entries). At the
+    # default `--n-opponents 999` that meant constructing for a 1000-person pool
+    # and scoring in a 19-person one.
+    #
+    #   pool_size        -> total entries; what construct_bracket() wants
+    #   year_n_opponents -> opponents only; what draw_selection_trials() wants
+    #
+    # The distinction is not cosmetic: construct_bracket's pool_size drives
+    # `pool_factor`, which engages above 50 entries.
     pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
 
     # Load the empirical chalk-bias table once per year. Falls back to the
@@ -3556,7 +3573,7 @@ def _run_one_year(
                 # against the same fields and tournaments.
                 _cf_trials = draw_selection_trials(
                     n_trials,
-                    n_opponents=n_opponents,
+                    n_opponents=year_n_opponents,
                     first_round=first_round,
                     pick_dist=pick_dist,
                     matchup_probs=seed_pw,
@@ -3776,7 +3793,7 @@ def _run_one_year(
                     round_probs=torvik_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=_risk,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
@@ -3841,7 +3858,7 @@ def _run_one_year(
                             round_probs=torvik_rp,
                             public_picks=pick_dist if pick_dist else {},
                             risk_level=0.5,
-                            pool_size=n_opponents,
+                            pool_size=pool_size,
                             scoring_system=dict(ESPN_SCORING),
                             forced_champion=forced,
                         )
@@ -3859,7 +3876,7 @@ def _run_one_year(
                         round_probs=torvik_rp,
                         public_picks=pick_dist if pick_dist else {},
                         risk_level=0.5,
-                        pool_size=n_opponents,
+                        pool_size=pool_size,
                         scoring_system=dict(ESPN_SCORING),
                     )
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
@@ -3872,7 +3889,7 @@ def _run_one_year(
                     # COMMON RANDOM NUMBERS -- see draw_selection_trials.
                     _4c_trials = draw_selection_trials(
                         n_trials,
-                        n_opponents=n_opponents,
+                        n_opponents=year_n_opponents,
                         first_round=first_round,
                         pick_dist=pick_dist,
                         matchup_probs=seed_pw,
@@ -3911,7 +3928,7 @@ def _run_one_year(
                             seeds=seeds,
                             regions=regions,
                             public_picks=_pa_pub,
-                            pool_size=n_opponents,
+                            pool_size=pool_size,
                             scoring_system=_pa_scoring,
                             **kwargs,
                         )
@@ -4001,7 +4018,7 @@ def _run_one_year(
                         round_probs=torvik_rp,
                         public_picks=_pa_pub,
                         risk_level=0.5,
-                        pool_size=n_opponents,
+                        pool_size=pool_size,
                         scoring_system=_pa_scoring,
                     )
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
@@ -4053,7 +4070,7 @@ def _run_one_year(
                     # candidates, so it is where independent draws cost most.
                     _pa_trials_set = draw_selection_trials(
                         n_pa_trials,
-                        n_opponents=n_opponents,
+                        n_opponents=year_n_opponents,
                         first_round=first_round,
                         pick_dist=_pa_pub,
                         matchup_probs=seed_pw,
@@ -4111,7 +4128,7 @@ def _run_one_year(
                     round_probs=blended_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
@@ -4132,7 +4149,7 @@ def _run_one_year(
                     round_probs=_alt_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
@@ -4173,7 +4190,7 @@ def _run_one_year(
                     round_probs=_alt_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
@@ -4227,7 +4244,7 @@ def _run_one_year(
                     round_probs=gbm_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
@@ -4250,7 +4267,7 @@ def _run_one_year(
                     round_probs=torvik_rp,
                     public_picks=pick_dist if pick_dist else {},
                     risk_level=0.5,
-                    pool_size=n_opponents,
+                    pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
