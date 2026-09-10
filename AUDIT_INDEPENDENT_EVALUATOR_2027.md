@@ -417,9 +417,10 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
 ## 6. Recommendations, in priority order
 
 **Before making any external claim**
-1. ~~Restate the headline~~ **DONE 2026-09-09.** README now states ~11% (95% CI 8–14%,
-   n=14, 2011–2025) with the simulated-tournament / simulated-opponent / season-level-CI
-   qualifiers spelled out; `CONTAMINATED_EVAL_YEARS` strips 2026 from every aggregate,
+1. ~~Restate the headline~~ **DONE 2026-09-09, re-measured 2026-09-10.** README now states
+   **12.0% (95% CI 8.6–15.4%), n=14, 2011–2025, vs seed 4.0%** — measured on current code,
+   not quoted from a stale log — with the simulated-tournament / simulated-opponent /
+   season-level-CI / pool-size qualifiers spelled out; `CONTAMINATED_EVAL_YEARS` strips 2026 from every aggregate,
    paired test, and returned result in `mc_pool_backtest.py` (2026 still *runs*, for
    integration purposes, but never scores).
 2. ~~Report P(1st) with a year-level CI~~ **DONE 2026-09-09.** `print_aggregate_block` now
@@ -431,8 +432,9 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    `scripts/real_pool_placement.py` scores the production `meta_region_poolaware` pick
    against the real tournament result and ranks it against the real pool for 2023–2026 (the
    only years real pool data exists), reusing `--save-brackets`'s existing
-   `score_brackets_team_identity` output rather than reimplementing scoring. Result: **0 of
-   4 finished 1st, 0 of 4 finished top 3** (18th/18, 4th/25, 10th/32, 10th/30) — it beats a
+   `score_brackets_team_identity` output rather than reimplementing scoring. Result (as
+   re-measured after the H6 fix): **0 of 4 finished 1st, 0 of 4 finished top 3**
+   (18th/18, 4th/25, 10th/32, 12th/30) — it beats a
    fairly-computed mean-of-50 `seed` baseline in every year, but has not won a real pool.
    n=4, not a rate; full table in `artifacts/real_pool_placement/placement_2023_2026.txt`
    and README's "What the backtest number means". Building this also found and fixed a real
@@ -464,6 +466,17 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    `pytest_asyncio` pin, re-enable the nightly cron or delete the README claim.
 10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
     n=1, and fix the three dangling references.
+
+14. **Reconcile or retire the third recipe.** See the C3 update: the live artifact path
+    (`build_candidate_artifact.py`) still builds its bank from a different base set, risk
+    grid and construction mode than the measured strategy, so the headline figure describes
+    no bracket the site shows. Also `deploy-pages.yml:31-40` still lists three files deleted
+    with the old UI (`bracket_2026.json`, `style.css`, `team_profiles.json`) among its
+    REQUIRED_FILES, so that workflow cannot pass, and `generate_poolaware_bracket.py` writes
+    a file nothing reads.
+15. **Unify the opponent-count default.** `run_experiment.py` defaults to 30 opponents (a
+    31-person pool) while the canonical contract is 29 (30-person), so its numbers are not
+    directly comparable to the headline.
 
 **Structural (2028)**
 11. Evaluate against an *independent* referee (e.g. market-implied or Torvik pairwise, not
