@@ -4468,7 +4468,10 @@ def _run_one_year(
                 ESPN_SCORING,
             )
             mode_bracket_records = []
-            for m in range(n_model):
+            # model_brackets.shape[0] is 1 for meta modes (a single deterministic
+            # bracket) and n_model for stochastic modes (see :4359) — the outer
+            # n_model is wrong for meta modes and crashes --save-brackets on them.
+            for m in range(model_brackets.shape[0]):
                 picks = picks_by_round(model_brackets[m], first_round)
                 champion = list(picks["CHAMP"])[0] if picks["CHAMP"] else None
                 final_four = sorted(picks["F4"]) if picks["F4"] else []

@@ -326,13 +326,30 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
 ## 6. Recommendations, in priority order
 
 **Before making any external claim**
-1. Restate the headline as: *"≈10% (95% CI ≈ 7–13%) chance of finishing first in a
-   simulated 30-entry pool with ESPN-national pick behaviour, under a seed-model tournament
-   referee, 2011–2025"* — and drop 2026 from the aggregate as the spec already requires.
-2. Report P(1st) with a year-level CI in `run_backtest` output, not a Wilson CI over repeats.
-3. Add the one number that would actually support the thesis: model-bracket placement
-   against *realised* outcomes and *real* opponents for the four real-pool years, stated
-   with n=4 honesty.
+1. ~~Restate the headline~~ **DONE 2026-09-09.** README now states ~11% (95% CI 8–14%,
+   n=14, 2011–2025) with the simulated-tournament / simulated-opponent / season-level-CI
+   qualifiers spelled out; `CONTAMINATED_EVAL_YEARS` strips 2026 from every aggregate,
+   paired test, and returned result in `mc_pool_backtest.py` (2026 still *runs*, for
+   integration purposes, but never scores).
+2. ~~Report P(1st) with a year-level CI~~ **DONE 2026-09-09.** `print_aggregate_block` now
+   prints a t-interval over seasons (2.16σ at n=14, not the previous 1.96 normal
+   approximation, which understated it by ~10%) next to every P(1st); `_mean_and_ci95`
+   fixed the same way for `run_experiment.py`'s CI. Both the reporting closure and the
+   season-CI math are covered by `tests/test_aggregate_season_ci.py`.
+3. ~~Add the one number that would actually support the thesis~~ **DONE 2026-09-09.**
+   `scripts/real_pool_placement.py` scores the production `meta_region_poolaware` pick
+   against the real tournament result and ranks it against the real pool for 2023–2026 (the
+   only years real pool data exists), reusing `--save-brackets`'s existing
+   `score_brackets_team_identity` output rather than reimplementing scoring. Result: **0 of
+   4 finished 1st, 0 of 4 finished top 3** (18th/18, 4th/25, 10th/32, 10th/30) — it beats a
+   fairly-computed mean-of-50 `seed` baseline in every year, but has not won a real pool.
+   n=4, not a rate; full table in `artifacts/real_pool_placement/placement_2023_2026.txt`
+   and README's "What the backtest number means". Building this also found and fixed a real
+   crash: `--save-brackets` indexed `model_brackets[m]` with `range(n_model)` (the
+   50-bracket stochastic default) instead of `range(model_brackets.shape[0])`, so it raised
+   `IndexError` on every meta mode (1 bracket) — this is very likely why the checked-in
+   `artifacts/backtest_brackets/*.json` files were stale from April and never covered
+   `meta_region_poolaware`. Fixed and pinned by `tests/test_save_brackets_meta_mode.py`.
 
 **Before March 2027**
 4. Fix or delete the CLI: `pool_cmds.py:858` import, play-in resolution on the CLI path,
