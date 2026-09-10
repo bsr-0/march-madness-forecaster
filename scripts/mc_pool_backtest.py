@@ -105,6 +105,11 @@ HIST_DIR = Path("data/raw/historical")
 # year. 2020 excluded (COVID). 2012 lacks archived ESPN picks and will be skipped
 # at runtime by the per-year try/except. Matches unified_mode_evaluation.py.
 BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 15 years (2020 = COVID)
+# Seasons that may be run for integration/regression checks but must never enter the
+# headline aggregate: the production strategy was selected on a window containing them
+# (see configs/frozen/prospective_2027_v2_scoped.json holdout.contaminated_seasons).
+CONTAMINATED_EVAL_YEARS = frozenset({2026})
+EVALUATION_YEARS = [y for y in BACKTEST_YEARS if y not in CONTAMINATED_EVAL_YEARS]
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
 POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
 
@@ -4639,6 +4644,14 @@ def run_backtest(
                 json.dump({"year": yr, "modes": modes_data}, f, indent=2)
             print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
+    # Contaminated seasons run (per-year rows, saved brackets, manifest) but never
+    # enter any aggregate or paired test, and are not returned as evaluation results.
+    contaminated_run = sorted({r["year"] for r in results if r["year"] in CONTAMINATED_EVAL_YEARS})
+    results = [r for r in results if r["year"] not in CONTAMINATED_EVAL_YEARS]
+    if not results:
+        print("\nNo evaluation-year results (only contaminated seasons were run).")
+        return []
+
     # --- Aggregates ---
     def _print_aggregate_block(subset, label):
         """Print the aggregate table + paired statistical tests for a result subset."""
@@ -4749,9 +4762,12 @@ def run_backtest(
                 f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
             )
 
-    # Full-window aggregate (always shown)
+    # Headline aggregate: evaluation seasons only (always shown)
     all_years = sorted({r["year"] for r in results})
-    _print_aggregate_block(results, f"AGGREGATE ALL YEARS ({min(all_years)}–{max(all_years)}, n={len(all_years)})")
+    _print_aggregate_block(
+        results,
+        f"AGGREGATE EVALUATION YEARS ({min(all_years)}–{max(all_years)}, n={len(all_years)})",
+    )
 
     # 2021+ secondary lens (always shown alongside full window)
     recent_cutoff = 2021
@@ -4770,6 +4786,13 @@ def run_backtest(
         _print_aggregate_block(
             custom_results,
             f"AGGREGATE years >= {eval_start_year} (n={len(custom_years)})",
+        )
+
+    if contaminated_run:
+        print(
+            f"\n  NOTE: {', '.join(map(str, contaminated_run))} ran as integration season(s) only. "
+            "Excluded from every aggregate and paired test above and from the returned results "
+            "(contaminated for evaluation — see PROSPECTIVE_2027_v2.md)."
         )
 
     print(f"\n{'=' * 100}")

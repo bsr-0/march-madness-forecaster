@@ -41,10 +41,10 @@ march-madness optimize-pool --year 2026 --pool-size 30
 march-madness optimize-pool --year 2026 --pool-size 30 --payout winner_take_all
 march-madness optimize-pool --year 2026 --pool-size 100 --payout top_3
 
-# Production strategy: pool-aware selection over ~25 diverse candidate brackets
-# (current baseline 11.2% P(1st), 15-year backtest — see CLAUDE.md for the full table)
-march-madness optimize-pool --year 2026 --pool-size 30 \
-  --mode meta_region_poolaware
+# Production strategy (meta_region_poolaware): pool-aware selection over ~25 diverse
+# candidate brackets. It runs through the backtest script, not the CLI:
+python scripts/mc_pool_backtest.py --team-identity --opponent pool --n-repeats 100 \
+  --modes seed meta_region_poolaware
 
 # If you have your pool's prior-year brackets, use them instead of ESPN aggregate
 # (calibrates opponent model to your actual pool's tendencies)
@@ -55,7 +55,29 @@ march-madness optimize-pool --year 2026 --pool-size 30 \
 python scripts/mc_pool_backtest.py
 ```
 
-See `CLAUDE.md`'s "Architectural Direction" section for the current strategy comparison table and why `meta_region_poolaware` (pool-aware selection over diverse candidates) beats simpler construction modes like `champ_first`/`e8_first`/`f4_first`.
+### What the backtest number means
+
+`meta_region_poolaware` finishes first in **about 11% of simulated pools (95% CI 8–14%,
+n=14 seasons, 2011–2025 excluding 2020)**, against 4% for a seed-only bracket in the same
+harness. Read the qualifiers before quoting it:
+
+- **Simulated tournaments, not history.** Under the canonical `--team-identity` contract
+  each trial draws a tournament from the seed-model referee and scores the model bracket
+  and its opponents against *that*, not the realised result. Real outcomes enter only the
+  MeanScore column. The number says how often the bracket would win a pool in a plausible
+  tournament, not how often it won past pools.
+- **Simulated opponents.** 30 independent entries drawn from ESPN national pick rates
+  (real pool brackets exist for 2023–2026 only). It assumes a winner-take-all, ESPN-scored,
+  30-entry pool; it is not a universal probability of winning any pool.
+- **The CI is over seasons.** Per-year P(1st) ranges 0.01–0.21, so the season-level
+  standard error is ~1.4pp. Do not quote a digit after the decimal.
+- **2026 is excluded** from the aggregate: it is an in-sample integration season under
+  `PROSPECTIVE_2027_v2.md` and cannot be evidence of out-of-sample performance.
+- The strategy was selected on this same window, so the figure is in-sample for strategy
+  choice. 2027 is the first prospective season.
+
+Source: `artifacts/backtest_runs/mc_pool_backtest_20260829_095910.txt`. Full critique in
+`AUDIT_INDEPENDENT_EVALUATOR_2027.md`; history and dead ends in `FINDINGS.md`.
 
 ## Maintenance
 
@@ -139,4 +161,4 @@ pytest           # run tests
 ruff check src/  # lint
 ```
 
-See `CLAUDE.md` for the current pool strategy baseline and `FINDINGS.md` for the project's dead-end ledger and architectural history.
+See "What the backtest number means" above for the current pool strategy baseline, `AUDIT_INDEPENDENT_EVALUATOR_2027.md` for the independent review, and `FINDINGS.md` for the project's dead-end ledger and architectural history.

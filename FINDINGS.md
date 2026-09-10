@@ -4,9 +4,18 @@ This file consolidates ~85 historical documentation files (council reports,
 audits, session summaries, dead-end logs) into one summary of findings still
 relevant to future work. The source files were deleted after this
 consolidation — everything is recoverable from git history if you need the
-full original text. **Current production state, the north star metric, and
-active priorities live in `CLAUDE.md` and the auto-memory system — this file
-does not repeat that, it captures the *reasoning and dead ends* behind it.**
+full original text. **The current production claim lives in `README.md`
+("What the backtest number means"); the independent review is
+`AUDIT_INDEPENDENT_EVALUATOR_2027.md`. This file captures the *reasoning and
+dead ends* behind them.**
+
+**On the "11.2%" figures below (2026-09-09).** Every P(1st) quoted in this file
+is the number as measured at the time, over 2011–2026 (n=15) with 2026 included.
+They are kept verbatim as the historical record. The current stated claim is
+~11% (95% CI 8–14%) over the 14 evaluation seasons 2011–2025, computed with a
+season-level CI and with 2026 excluded as an in-sample integration season; the
+backtest's headline aggregate now excludes 2026 automatically. Do not quote
+figures from this file as the current baseline.
 
 ---
 
