@@ -110,6 +110,38 @@ the report dict at `src/cli/pool_cmds.py:275-288`), not the governance-frozen
 `TournamentPipeline`; it records no `prob_mode`, so its probability source cannot be
 recovered from the file.
 
+**C3 update, 2026-09-10 — the finding was right but aimed one file behind the product,
+and the corrected version is worse.** Fixing it surfaced that there are *three* candidate
+recipes, not two, and the one that actually reaches users was never the one named above:
+
+| recipe | bases | risk grid | construction modes | ships to |
+|---|---|---|---|---|
+| `mc_pool_backtest.py` (measures the ~11%) | tv, mass_avg, mass_best, blend, tv_mass80 | .1/.3/.5/.7/.9 + .3/.5/.7 | region_top_n, exhaustive_champion, forced 1-seed champs | nothing — it is the measurement |
+| `generate_poolaware_bracket.py` | was tv, mass_avg → **now all five** | same as backtest | same as backtest | `docs/data/bracket_2026.json`, **which no longer exists** |
+| `build_candidate_artifact.py` | torvik, massey_avg, **elo** | .1/.2/.35/.5/.7 | region_top_n only | `candidates_*.json` → `season_*.json` → **the live site** |
+
+`docs/app.js` fetches `seasons.json`, `season_${year}.json` and `training.json` — never
+`bracket_2026.json`, which was deleted in `32f860e` ("Remove the UI layer and its contracts
+ahead of a rebuild"). So the script the original finding named writes a file nothing reads,
+and `deploy-pages.yml:31-40` still lists that dead file (plus `style.css` and
+`team_profiles.json`, also gone) among its REQUIRED_FILES — that workflow cannot pass.
+
+The shipping recipe differs from the measured one on every axis: a different rating source
+(`elo`, which the backtest's poolaware sweep does not use, in place of `mass_best`/`blend`/
+`tv_mass80`), a different risk grid, and no exhaustive-champion or forced-champion
+candidates. Some of that is deliberate and defensible — `build_candidate_artifact` builds a
+*filterable bank* spanning several worldviews, a different product than "one recommended
+bracket," and its docstring argues the case. But the consequence is unchanged and is the
+sharper form of C3: **the ~11% P(1st) figure does not describe any bracket the site
+displays**, because no bracket on the site is produced by the recipe that number measures.
+
+Fixed here: the backtest and `generate_poolaware_bracket.py` now share one recipe
+(`src/optimization/poolaware_recipe.py`, pinned by `tests/test_poolaware_recipe.py`), so
+those two cannot drift again. NOT fixed: the live artifact path still uses its own recipe.
+Reconciling it is a product decision, not a bug fix — either the bank adopts the backtested
+recipe, or the site stops attaching a backtested P(1st) to brackets that recipe never
+produced.
+
 ### HIGH
 
 **H1. No honest uncertainty is reported; the one CI computed understates by ~3×.**
@@ -366,8 +398,16 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
 
 **Before March 2027**
 4. ~~Fix or delete the CLI~~ **DONE 2026-09-09.** See H4 above.
-5. Make `generate_poolaware_bracket.py` sweep the same bases as the backtest recipe, or
-   re-run the backtest with the production recipe and report *that* number.
+5. ~~Make `generate_poolaware_bracket.py` sweep the same bases as the backtest recipe~~
+   **PARTLY DONE 2026-09-10.** The recipe now has one definition
+   (`src/optimization/poolaware_recipe.py`) that both the backtest and
+   `generate_poolaware_bracket.py` import, so those two cannot drift again; the shipped
+   script gained the three bases it was missing (`mass_best`, `blend`, `tv_mass80`) and now
+   displays the winning base's own probabilities instead of always torvik's. But see the
+   C3 update: the script this recommendation named is not the live path, and the live path
+   (`build_candidate_artifact.py`) still uses a third, different recipe. **Still open:**
+   decide whether the shipped candidate bank adopts the backtested recipe or the site stops
+   quoting a backtested P(1st) for brackets that recipe never produced.
 6. Remove `total_warp`/`top5_rapm` from training or rebuild them from pre-cutoff box
    scores; make the roster timestamp guard a hard error.
 7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
