@@ -143,16 +143,29 @@ the project's own check is ρ=+0.42, p=0.34, with **2026 = −0.60** (FINDINGS �
 estimated P(1st) placed *worse*. ESPN pick archives carry no capture timestamp; 2024–2025
 are flagged `real_unverified_source` and nothing reads the flag (SUSPECTED contamination).
 
-**H4. The documented CLI does not work in any mode.** CONFIRMED (run).
-`optimize-pool --mode meta_region_poolaware` (README:46-47) is rejected by argparse —
-choices are `auto/torvik/blend/noseed/seed` (`src/cli/pool_cmds.py:1163`).
-`--mode torvik` raises `ModuleNotFoundError: src.prediction.torvik_probabilities`
-(`pool_cmds.py:858`; module deleted in commit `44b048f`, 2026-04-21). `--mode seed` crashes
-on the play-in seed collision ("West 11 holds both nc_state and texas",
-`bracket_construction.py:145`) — the 2026-09-06 play-in fix reached the artifact path but
-not the CLI. `--mode auto` exits with "No brackets generated". No test exercises
-`run_optimize_pool`. The installed `march-madness` console script fails (`No module named
-'src'`); `python -m src.main` is the only entry.
+**H4. The documented CLI does not work in any mode.** CONFIRMED (run). **FIXED 2026-09-09.**
+`optimize-pool --mode meta_region_poolaware` (README:46-47) was rejected by argparse —
+choices are `auto/torvik/blend/noseed/seed` (`src/cli/pool_cmds.py:1163`); the README example
+was already corrected in the earlier headline-claim fix. `--mode torvik` raised
+`ModuleNotFoundError: src.prediction.torvik_probabilities` (`pool_cmds.py:858`; module deleted
+in commit `44b048f`, 2026-04-21) — restored as a thin wrapper delegating to
+`PairwiseProbabilities.from_ratings` (the sanctioned log5 path) and
+`scripts.mc_pool_backtest.build_torvik_round_probabilities` (the same function the production
+backtest uses), rather than a third independent implementation. `--mode seed` (and every other
+mode, transitively, since all of them call `_load_seeds`) crashed on the play-in seed
+collision — the 2026-09-06 play-in fix reached the artifact path
+(`build_candidate_artifact.resolve_field`) but not the CLI; `pool_cmds._load_seeds` /
+`_load_regions` now call the same `resolve_first_four` the backtest and the artifact path use,
+via a shared `_resolve_play_ins` helper. Verified against real 2026 data: `--mode torvik`,
+`--mode seed`, and `--mode blend` (which also exercises `noseed_model`) each ran to completion
+and produced a real bracket with real P(1st)/EV numbers; `--mode auto` (which sweeps all of the
+above) also completed. Regression coverage: `tests/test_pool_cmds_play_in.py` (fixture +
+one real-2026-data test) and `tests/test_optimize_pool_e2e.py` (runs the actual
+`run_optimize_pool` entry point against real 2026 data for `torvik` and `seed`, `~40s` total)
+— both marked `integration`/`slow` so the fast suite stays fast. The installed `march-madness`
+console script still fails (`No module named 'src'`); `python -m src.main` remains the only
+working entry point and is not fixed here — a packaging issue (missing `src` on `sys.path`
+outside a repo-root invocation), not a bracket-logic one.
 
 **H5. A confirmed point-in-time leak in two production features.** CONFIRMED.
 `total_warp` and `top5_rapm` (members of `SIMPLE_FEATURE_SET`, `src/pipeline/config.py:174-184`)
@@ -352,8 +365,7 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    `meta_region_poolaware`. Fixed and pinned by `tests/test_save_brackets_meta_mode.py`.
 
 **Before March 2027**
-4. Fix or delete the CLI: `pool_cmds.py:858` import, play-in resolution on the CLI path,
-   valid `--mode` choices in README; add one end-to-end test of `run_optimize_pool`.
+4. ~~Fix or delete the CLI~~ **DONE 2026-09-09.** See H4 above.
 5. Make `generate_poolaware_bracket.py` sweep the same bases as the backtest recipe, or
    re-run the backtest with the production recipe and report *that* number.
 6. Remove `total_warp`/`top5_rapm` from training or rebuild them from pre-cutoff box

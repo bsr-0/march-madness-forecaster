@@ -1071,20 +1071,62 @@ def _find_and_read_seeds_file(year: int):
     return None
 
 
+def _resolve_play_ins(year: int, seeds: dict, regions: dict) -> None:
+    """Drop First Four losers from `seeds`/`regions` in place.
+
+    The seeds file lists all teams entering the tournament, including First
+    Four (play-in) participants — both teams in a play-in game share the
+    same (region, seed) slot until one of them loses. Without this,
+    `bracket_construction._build_seed_map` correctly refuses to guess which
+    team occupies the slot and raises a `ValueError` deep inside bracket
+    construction, with no context about *why* ("X holds both A and B").
+
+    Resolving here, right after loading, means: if play-in results are
+    already scraped, both call sites (`_load_seeds`, `_load_regions`) return
+    a clean 64-team field transparently. If they are not yet scraped, the
+    same `ValueError` still fires (the draw is genuinely undetermined), but
+    from a much shorter, clearer path — no separate error message is
+    duplicated here.
+
+    Play-in games finish before brackets lock, so using their result is
+    ordinary pre-tournament information for a Round-of-64 bracket, not
+    look-ahead — see `scripts/experiments/build_candidate_artifact.py:resolve_field`,
+    which resolves the same way for the frozen 2027 artifact path.
+    """
+    if not seeds:
+        return
+    from ..prediction.noseed_model import _load_tournament_results
+
+    games = _load_tournament_results(year)
+    if not any(g.get("round_name") == "FF" for g in games):
+        return
+
+    from scripts.mc_pool_backtest import resolve_first_four
+
+    resolve_first_four(games, seeds, regions)
+
+
 def _load_seeds(year: int) -> dict:
-    """Load tournament seeds for a given year from data files."""
+    """Load tournament seeds for a given year, resolved to the Round of 64."""
     data = _find_and_read_seeds_file(year)
-    return _parse_seeds(data) if data is not None else {}
+    seeds = _parse_seeds(data) if data is not None else {}
+    regions = _parse_regions(data) if data is not None else {}
+    _resolve_play_ins(year, seeds, regions)
+    return seeds
 
 
 def _load_regions(year: int) -> dict:
-    """Load team_id -> region mapping for a given year.
+    """Load team_id -> region mapping for a given year, resolved to the
+    Round of 64 field.
 
     Used by torvik mode to drive the bracket Monte Carlo. Returns an empty
     dict if no seeds file is found or the file has no region metadata.
     """
     data = _find_and_read_seeds_file(year)
-    return _parse_regions(data) if data is not None else {}
+    seeds = _parse_seeds(data) if data is not None else {}
+    regions = _parse_regions(data) if data is not None else {}
+    _resolve_play_ins(year, seeds, regions)
+    return regions
 
 
 def _parse_seeds(data) -> dict:
