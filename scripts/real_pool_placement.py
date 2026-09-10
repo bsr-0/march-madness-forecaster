@@ -161,7 +161,7 @@ def main() -> None:
     print(
         "This is a small-sample descriptive fact, not an estimate of a rate: with n=4, one\n"
         "additional or one fewer win changes the observed fraction by 25 points. It does not\n"
-        "confirm or refute the simulated ~11% P(1st) figure; it is the only number in this\n"
+        "confirm or refute the simulated P(1st) figure; it is the only number in this\n"
         "project measured against reality rather than a model of reality."
     )
 

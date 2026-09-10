@@ -212,6 +212,31 @@ shift. FINDINGS §4 records excluding roster minutes from the *Bracket Lab* matr
 contamination survives in the pipeline model. (The regular-season features — Elo, win%,
 momentum, SOS, tempo, ORB, opp-TO — are PIT-correct: `proprietary_metrics.py:226-244,1485-1486,1681`.)
 
+**H6. Brackets are constructed for one pool size and scored against another.** CONFIRMED
+(found 2026-09-10 while re-measuring the headline). `_run_one_year` resolves the real field
+size per season and stores it — `pool_size = year_n_opponents + 1`
+(`mc_pool_backtest.py:2813`) — but that variable is used only for the P(top5%)/P(top25%)
+thresholds (`:4426-4427`). Every bracket-construction call site instead passes the raw CLI
+value: `pool_size=n_opponents` (`:3779, 3844, 3862, 3914, 4004, 4114, 4135, 4176, 4230,
+4253`). So for any season with real pool history the bracket is *built* for the CLI's
+assumed pool and then *scored* against a field of a different size (2023–2026 real sizes are
+19, 26, 33 and 31 entries). The same line is also off by one against its own callee's
+semantics: `construct_bracket`'s `pool_size` means total entries, and
+`generate_poolaware_bracket.py` correctly passes `n_opponents + 1`, while the backtest
+passes `n_opponents`.
+
+**Currently latent, and the reason matters.** `_make_ev_scorer` applies `pool_factor` only
+when `pool_size > 50` (`bracket_construction.py:204`); below that it is exactly 1.0. Every
+real pool in the data (19–33) and the canonical `--n-opponents 29` all sit under that
+threshold, so construction is bit-identical whether the right or wrong size is passed, and
+**the 11.9% headline is unaffected**. The bug bites only when `--n-opponents` is large —
+which is the default (999). Measured directly: at the default the 2023 sweep dedups to 12
+unique candidates and selects `mass_avg_region_risk=0.1`; at `--n-opponents 29` the same
+season yields 28 candidates. A run at the default therefore constructs heavily contrarian
+brackets for a 1000-person field and scores them against a 19-person one. This is the
+second defect found in this file that is invisible at the pool sizes anyone uses and
+catastrophic at the default — see also the pool-size provenance gap in the run header.
+
 ### MEDIUM
 
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
@@ -433,7 +458,7 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
 | Claim | Where | Reality |
 |---|---|---|
 | "7 domain features, single logistic regression … temperature scaling … 50k MC → optimization" | README:7-16 | Shipped brackets use Torvik barthag log5 + a 10k-sim bracket MC; `n_sims=50000` appears nowhere (default 10,000) |
-| "current baseline 11.2% P(1st), 15-year backtest — see CLAUDE.md" | README:45 | Simulated-tournament metric; ≈10.4 ± 2.7pp; CLAUDE.md absent |
+| "current baseline 11.2% P(1st), 15-year backtest — see CLAUDE.md" | README:45 | Simulated-tournament metric; CLAUDE.md absent. **Re-measured 2026-09-10 on current code: 11.9%, 95% CI 8.6–15.2%, n=14 (2011–2025), vs seed 4.0%.** The 11.2% and every other pre-`b73d351` figure was computed on brackets with unresolved play-in slots — void, not superseded |
 | `optimize-pool --mode meta_region_poolaware` | README:46-47 | Not a CLI mode; CLI fails in all modes |
 | "LOYO backtest … runs in CI nightly" | README:91 | Cron commented out; last scheduled runs failed |
 | "barthag is locally computed … guarded by `_validate_pretournament()`" | FINDINGS §4 | Script deleted 2026-04-21; barthag is scraped; guard checks a label string |

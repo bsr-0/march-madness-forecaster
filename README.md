@@ -57,46 +57,68 @@ python scripts/mc_pool_backtest.py
 
 ### What the backtest number means
 
-`meta_region_poolaware` finishes first in **about 11% of simulated pools (95% CI 8–14%,
-n=14 seasons, 2011–2025 excluding 2020)**, against 4% for a seed-only bracket in the same
-harness. Read the qualifiers before quoting it:
+`meta_region_poolaware` finishes first in **about 12% of simulated pools (95% CI 9–15%,
+n=14 seasons, 2011–2025 excluding 2020)**, against 4.0% for a seed-only bracket in the same
+harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quoting it:
 
 - **Simulated tournaments, not history.** Under the canonical `--team-identity` contract
   each trial draws a tournament from the seed-model referee and scores the model bracket
   and its opponents against *that*, not the realised result. Real outcomes enter only the
   MeanScore column. The number says how often the bracket would win a pool in a plausible
   tournament, not how often it won past pools.
-- **Simulated opponents.** 30 independent entries drawn from ESPN national pick rates
-  (real pool brackets exist for 2023–2026 only). It assumes a winner-take-all, ESPN-scored,
-  30-entry pool; it is not a universal probability of winning any pool.
-- **The CI is over seasons.** Per-year P(1st) ranges 0.01–0.21, so the season-level
-  standard error is ~1.4pp. Do not quote a digit after the decimal.
+- **Simulated opponents, and the pool size is an assumption.** Opponents are independent
+  draws from a pick distribution: the real pool's own picks for 2023–2025 (at that pool's
+  real size — 18, 25 and 32 entries), and ESPN national pick rates at an assumed 30-entry
+  pool for every earlier season. It assumes winner-take-all with ESPN scoring; it is not a
+  universal probability of winning any pool. **P(1st) is mechanically pool-size dependent**
+  — the same strategy scores ~10% at 30 entries and ~4% at 1000 — so the pool size is part
+  of the claim, not a detail. Reproduce with
+  `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`; omitting
+  `--n-opponents` silently measures a 1000-person field.
+- **The CI is over seasons.** The season-level standard error is 1.5pp. Do not quote a
+  digit after the decimal — the difference between "11.2%" and "11.9%" is a fifth of one
+  standard error.
 - **2026 is excluded** from the aggregate: it is an in-sample integration season under
   `PROSPECTIVE_2027_v2.md` and cannot be evidence of out-of-sample performance.
 - The strategy was selected on this same window, so the figure is in-sample for strategy
   choice. 2027 is the first prospective season.
+- **It does not describe any bracket this site currently displays.** The number measures
+  `meta_region_poolaware` as the backtest builds it. The candidate bank the site serves is
+  built by `scripts/experiments/build_candidate_artifact.py`, which uses different rating
+  sources, a different risk grid, and no exhaustive- or forced-champion candidates. Quote
+  this figure for the strategy, not for a bracket on the page.
 
 **The one number measured against reality, not a model of reality.** For 2023–2026 — the
-only seasons a real 30-person pool exists — the production bracket that
-`meta_region_poolaware` actually selected can be scored against the real tournament result
-and ranked against the real pool's real scores:
+only seasons with a recorded real pool — the bracket `meta_region_poolaware` actually
+selected can be scored against the real tournament result and ranked against the real
+pool's real scores:
 
 | Year | Real score | Rank | Pool size | Champion picked |
 |---|---:|---:|---:|---|
-| 2023 | 470 | 18th | 18 | Purdue (lost R64 as a 1-seed) |
-| 2024 | 1090 | 4th | 25 | Purdue |
-| 2025 | 1310 | 10th | 32 | Houston |
-| 2026 | 990 | 10th | 30 | Illinois |
+| 2023 | 470 | 18th | 18 | Purdue (lost in the R64 as a 1-seed) |
+| 2024 | 870 | 7th | 25 | Purdue |
+| 2025 | 1370 | 8th | 32 | Houston |
+| 2026 | 840 | 12th | 30 | Florida |
 
 **0 of 4 finished 1st; 0 of 4 finished top 3.** n=4 is not a rate — one different outcome
-moves this by 25 points — and it neither confirms nor refutes the simulated ~11% figure
-above. It beats the same strategy's own mean-of-50 `seed` baseline scored the same honest
-way in every year (reproduce with `python -m scripts.real_pool_placement`; full table in
+moves this by 25 points — and it neither confirms nor refutes the simulated figure above.
+It beats the same strategy's own mean-of-50 `seed` baseline scored the same honest way in
+every year (reproduce with `python -m scripts.real_pool_placement`; full table in
 `artifacts/real_pool_placement/placement_2023_2026.txt`), but it has not yet actually won a
 real pool.
 
-Source: `artifacts/backtest_runs/mc_pool_backtest_20260829_095910.txt`. Full critique in
-`AUDIT_INDEPENDENT_EVALUATOR_2027.md`; history and dead ends in `FINDINGS.md`.
+**Why this number moved, and why it is not a cherry-pick.** It was published as "11.2%",
+then "about 11%", and is measured here at 11.9%. The figure did not improve because
+anything was tuned: `b73d351` (2026-09-06, *"every season shipped a wrong R64"*) fixed the
+play-in resolution, which changed the field in **every** season. Every P(1st) published
+before that date — 11.2%, 11.33%, 10.47%, 11.87% — was computed on brackets containing
+teams that never played the Round of 64. Those figures are void rather than superseded, and
+the spread among them is itself the argument for quoting a CI instead of a digit: they all
+sit inside a single standard error of each other.
+
+Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced by the
+command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
+history and dead ends in `FINDINGS.md`.
 
 ## Maintenance
 
