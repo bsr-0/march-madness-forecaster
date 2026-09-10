@@ -4503,6 +4503,181 @@ def _run_one_year(
     }
 
 
+def print_aggregate_block(subset, label):
+    """Print the aggregate table + paired statistical tests for a result subset."""
+    print(f"\n{'=' * 100}")
+    print(label)
+    print(f"{'=' * 100}")
+    if not subset:
+        print("  (no results in this window)")
+        return
+
+    # The season is the unit of independence. Repeats within a season share
+    # one seed layout and one pick distribution, so a CI over repeats
+    # (n_trials) understates uncertainty several-fold; the P(1st) CI here
+    # is a t-interval over seasons.
+    def _season_ci95(values):
+        n = len(values)
+        if n < 2:
+            return 0.0
+        return float(sp_stats.t.ppf(0.975, n - 1) * np.std(values, ddof=1) / np.sqrt(n))
+
+    print(
+        f"\n  {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} {'P(1st)':>8} {'±95%':>7} {'n':>3} "
+        f"{'P(top5%)':>10} {'P(top25%)':>10} {'MeanScr':>8}"
+    )
+    print(f"  {'-' * 77}")
+
+    unique_modes = list(dict.fromkeys(r["mode"] for r in subset))
+    for mode in unique_modes:
+        mode_results = [r for r in subset if r["mode"] == mode]
+        if not mode_results:
+            continue
+        p_first_by_season = [r["p_first"] for r in mode_results]
+        print(
+            f"  {mode:<8} "
+            f"{np.mean([r['best_rank'] for r in mode_results]):8.1f} "
+            f"{np.mean([r['mean_rank'] for r in mode_results]):8.1f} "
+            f"{np.mean(p_first_by_season):8.4f} "
+            f"{_season_ci95(p_first_by_season):7.4f} "
+            f"{len(p_first_by_season):3d} "
+            f"{np.mean([r['p_top5'] for r in mode_results]):10.4f} "
+            f"{np.mean([r['p_top25'] for r in mode_results]):10.4f} "
+            f"{np.mean([r['mean_score'] for r in mode_results]):8.0f}"
+        )
+    print("  (±95% = half-width of the t-interval over seasons, the honest unit of independence)")
+
+    # Collect per-year ranks by mode
+    mode_ranks = {}
+    mode_best = {}
+    for r in subset:
+        m = r["mode"]
+        if m not in mode_ranks:
+            mode_ranks[m] = {}
+            mode_best[m] = {}
+        mode_ranks[m][r["year"]] = r["mean_rank"]
+        mode_best[m][r["year"]] = r["best_rank"]
+
+    baseline_key = "seed_forward" if "seed_forward" in mode_ranks else ("seed" if "seed" in mode_ranks else None)
+    if baseline_key is None:
+        print("    No seed baseline found, skipping statistical tests.")
+        return
+
+    comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in mode_ranks if m != baseline_key]
+    n_comparisons = len(comparison_modes)
+    if n_comparisons == 0:
+        return
+    bonferroni_alpha = 0.05 / n_comparisons
+
+    print(f"\n  Statistical Tests — Mean Rank (paired across years):")
+    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
+    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+        shared_years = sorted(set(mode_ranks[baseline_key].keys()) & set(cmp_ranks.keys()))
+        if len(shared_years) < 5:
+            wins = (
+                np.sum(
+                    np.array([cmp_ranks[y] for y in shared_years])
+                    < np.array([mode_ranks[baseline_key][y] for y in shared_years])
+                )
+                if shared_years
+                else 0
+            )
+            print(
+                f"    MeanRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
+            )
+            continue
+        seed_arr = np.array([mode_ranks[baseline_key][y] for y in shared_years])
+        cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
+        t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
+        p_adj = min(p * n_comparisons, 1.0)
+        sig = "*" if p < bonferroni_alpha else ""
+        improvement = np.mean(seed_arr - cmp_arr)
+        wins = np.sum(cmp_arr < seed_arr)
+        print(
+            f"    MeanRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
+        )
+
+    print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
+    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
+    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+        shared_years = sorted(set(mode_best[baseline_key].keys()) & set(cmp_best.keys()))
+        if len(shared_years) < 5:
+            wins = (
+                np.sum(
+                    np.array([cmp_best[y] for y in shared_years])
+                    < np.array([mode_best[baseline_key][y] for y in shared_years])
+                )
+                if shared_years
+                else 0
+            )
+            print(
+                f"    BestRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
+            )
+            continue
+        sb = np.array([mode_best[baseline_key][y] for y in shared_years])
+        cb = np.array([cmp_best[y] for y in shared_years])
+        t, p = sp_stats.ttest_rel(sb, cb)
+        p_adj = min(p * n_comparisons, 1.0)
+        sig = "*" if p < bonferroni_alpha else ""
+        improvement = np.mean(sb - cb)
+        wins = np.sum(cb < sb)
+        print(
+            f"    BestRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
+        )
+
+
+def report_backtest_results(results, eval_start_year=None):
+    """Print every aggregate block and return the evaluation-year results.
+
+    Contaminated seasons (see CONTAMINATED_EVAL_YEARS) may be run for integration
+    checks, but they never enter an aggregate, a paired test, or the returned list.
+    """
+    contaminated_run = sorted({r["year"] for r in results if r["year"] in CONTAMINATED_EVAL_YEARS})
+    results = [r for r in results if r["year"] not in CONTAMINATED_EVAL_YEARS]
+    if not results:
+        print("\nNo evaluation-year results (only contaminated seasons were run).")
+        return []
+
+    # --- Aggregates ---
+    # Headline aggregate: evaluation seasons only (always shown)
+    all_years = sorted({r["year"] for r in results})
+    print_aggregate_block(
+        results,
+        f"AGGREGATE EVALUATION YEARS ({min(all_years)}–{max(all_years)}, n={len(all_years)})",
+    )
+
+    # 2021+ secondary lens (always shown alongside full window)
+    recent_cutoff = 2021
+    recent_results = [r for r in results if r["year"] >= recent_cutoff]
+    recent_years = sorted({r["year"] for r in recent_results})
+    if recent_results and recent_years != all_years:
+        print_aggregate_block(
+            recent_results,
+            f"AGGREGATE {recent_cutoff}+ (recent window, n={len(recent_years)} — diagnostic only, low power)",
+        )
+
+    # Optional custom eval_start_year window (only if different from both above)
+    if eval_start_year and eval_start_year != recent_cutoff:
+        custom_results = [r for r in results if r["year"] >= eval_start_year]
+        custom_years = sorted({r["year"] for r in custom_results})
+        print_aggregate_block(
+            custom_results,
+            f"AGGREGATE years >= {eval_start_year} (n={len(custom_years)})",
+        )
+
+    if contaminated_run:
+        print(
+            f"\n  NOTE: {', '.join(map(str, contaminated_run))} ran as integration season(s) only. "
+            "Excluded from every aggregate and paired test above and from the returned results "
+            "(contaminated for evaluation — see PROSPECTIVE_2027_v2.md)."
+        )
+
+    print(f"\n{'=' * 100}")
+    return results
+
+
 def run_backtest(
     years=None,
     n_opponents=N_OPPONENTS,
@@ -4644,159 +4819,7 @@ def run_backtest(
                 json.dump({"year": yr, "modes": modes_data}, f, indent=2)
             print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
-    # Contaminated seasons run (per-year rows, saved brackets, manifest) but never
-    # enter any aggregate or paired test, and are not returned as evaluation results.
-    contaminated_run = sorted({r["year"] for r in results if r["year"] in CONTAMINATED_EVAL_YEARS})
-    results = [r for r in results if r["year"] not in CONTAMINATED_EVAL_YEARS]
-    if not results:
-        print("\nNo evaluation-year results (only contaminated seasons were run).")
-        return []
-
-    # --- Aggregates ---
-    def _print_aggregate_block(subset, label):
-        """Print the aggregate table + paired statistical tests for a result subset."""
-        print(f"\n{'=' * 100}")
-        print(label)
-        print(f"{'=' * 100}")
-        if not subset:
-            print("  (no results in this window)")
-            return
-
-        print(
-            f"\n  {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} {'P(1st)':>8} {'P(top5%)':>10} {'P(top25%)':>10} {'MeanScr':>8}"
-        )
-        print(f"  {'-' * 65}")
-
-        unique_modes = list(dict.fromkeys(r["mode"] for r in subset))
-        for mode in unique_modes:
-            mode_results = [r for r in subset if r["mode"] == mode]
-            if not mode_results:
-                continue
-            print(
-                f"  {mode:<8} "
-                f"{np.mean([r['best_rank'] for r in mode_results]):8.1f} "
-                f"{np.mean([r['mean_rank'] for r in mode_results]):8.1f} "
-                f"{np.mean([r['p_first'] for r in mode_results]):8.4f} "
-                f"{np.mean([r['p_top5'] for r in mode_results]):10.4f} "
-                f"{np.mean([r['p_top25'] for r in mode_results]):10.4f} "
-                f"{np.mean([r['mean_score'] for r in mode_results]):8.0f}"
-            )
-
-        # Collect per-year ranks by mode
-        mode_ranks = {}
-        mode_best = {}
-        for r in subset:
-            m = r["mode"]
-            if m not in mode_ranks:
-                mode_ranks[m] = {}
-                mode_best[m] = {}
-            mode_ranks[m][r["year"]] = r["mean_rank"]
-            mode_best[m][r["year"]] = r["best_rank"]
-
-        baseline_key = "seed_forward" if "seed_forward" in mode_ranks else ("seed" if "seed" in mode_ranks else None)
-        if baseline_key is None:
-            print("    No seed baseline found, skipping statistical tests.")
-            return
-
-        comparison_modes = [(m, mode_ranks[m], mode_best[m]) for m in mode_ranks if m != baseline_key]
-        n_comparisons = len(comparison_modes)
-        if n_comparisons == 0:
-            return
-        bonferroni_alpha = 0.05 / n_comparisons
-
-        print(f"\n  Statistical Tests — Mean Rank (paired across years):")
-        print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
-        for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-            shared_years = sorted(set(mode_ranks[baseline_key].keys()) & set(cmp_ranks.keys()))
-            if len(shared_years) < 5:
-                wins = (
-                    np.sum(
-                        np.array([cmp_ranks[y] for y in shared_years])
-                        < np.array([mode_ranks[baseline_key][y] for y in shared_years])
-                    )
-                    if shared_years
-                    else 0
-                )
-                print(
-                    f"    MeanRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
-                )
-                continue
-            seed_arr = np.array([mode_ranks[baseline_key][y] for y in shared_years])
-            cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
-            t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
-            p_adj = min(p * n_comparisons, 1.0)
-            sig = "*" if p < bonferroni_alpha else ""
-            improvement = np.mean(seed_arr - cmp_arr)
-            wins = np.sum(cmp_arr < seed_arr)
-            print(
-                f"    MeanRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
-                f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
-            )
-
-        print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
-        print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
-        for cmp_name, cmp_ranks, cmp_best in comparison_modes:
-            shared_years = sorted(set(mode_best[baseline_key].keys()) & set(cmp_best.keys()))
-            if len(shared_years) < 5:
-                wins = (
-                    np.sum(
-                        np.array([cmp_best[y] for y in shared_years])
-                        < np.array([mode_best[baseline_key][y] for y in shared_years])
-                    )
-                    if shared_years
-                    else 0
-                )
-                print(
-                    f"    BestRank {baseline_key} vs {cmp_name:<12}: n={len(shared_years)} (skip t-test), wins {wins}/{len(shared_years)}"
-                )
-                continue
-            sb = np.array([mode_best[baseline_key][y] for y in shared_years])
-            cb = np.array([cmp_best[y] for y in shared_years])
-            t, p = sp_stats.ttest_rel(sb, cb)
-            p_adj = min(p * n_comparisons, 1.0)
-            sig = "*" if p < bonferroni_alpha else ""
-            improvement = np.mean(sb - cb)
-            wins = np.sum(cb < sb)
-            print(
-                f"    BestRank {baseline_key} vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
-                f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
-            )
-
-    # Headline aggregate: evaluation seasons only (always shown)
-    all_years = sorted({r["year"] for r in results})
-    _print_aggregate_block(
-        results,
-        f"AGGREGATE EVALUATION YEARS ({min(all_years)}–{max(all_years)}, n={len(all_years)})",
-    )
-
-    # 2021+ secondary lens (always shown alongside full window)
-    recent_cutoff = 2021
-    recent_results = [r for r in results if r["year"] >= recent_cutoff]
-    recent_years = sorted({r["year"] for r in recent_results})
-    if recent_results and recent_years != all_years:
-        _print_aggregate_block(
-            recent_results,
-            f"AGGREGATE {recent_cutoff}+ (recent window, n={len(recent_years)} — diagnostic only, low power)",
-        )
-
-    # Optional custom eval_start_year window (only if different from both above)
-    if eval_start_year and eval_start_year != recent_cutoff:
-        custom_results = [r for r in results if r["year"] >= eval_start_year]
-        custom_years = sorted({r["year"] for r in custom_results})
-        _print_aggregate_block(
-            custom_results,
-            f"AGGREGATE years >= {eval_start_year} (n={len(custom_years)})",
-        )
-
-    if contaminated_run:
-        print(
-            f"\n  NOTE: {', '.join(map(str, contaminated_run))} ran as integration season(s) only. "
-            "Excluded from every aggregate and paired test above and from the returned results "
-            "(contaminated for evaluation — see PROSPECTIVE_2027_v2.md)."
-        )
-
-    print(f"\n{'=' * 100}")
-    return results
+    return report_backtest_results(results, eval_start_year)
 
 
 class _Tee:

@@ -124,16 +124,17 @@ def wilson_ci95(p: float, n: int) -> Tuple[float, float]:
 
 
 def _mean_and_ci95(values: Sequence[float]) -> Tuple[float, float]:
-    """Return (mean, half-width of 95% CI) across a sample.
+    """Return (mean, half-width of 95% t-interval) across a sample.
 
-    Uses the normal-approx half-width ``1.96 × SEM``. With N=14 backtest
-    years, SEM tracks 95% CI to within ~2% of the exact t-distribution
-    value and avoids a scipy dependency in the hot path. For a strategy's
-    P(1st) the CI represents cross-year variability — complements the
-    per-year binomial CI exposed via ``wilson_ci95`` (cross-year = "how
-    stable across years", per-year = "how sure we are this year's
-    estimate is solid given N trials").
+    The season is the unit of independence, so this is the honest CI for a
+    strategy's P(1st). At N=14 the t quantile is 2.16, not 1.96 — the
+    normal approximation understates the half-width by ~10%. Complements
+    the per-year binomial CI from ``wilson_ci95`` (cross-year = "how stable
+    across years", per-year = "how sure we are this year's estimate is
+    solid given N trials").
     """
+    from scipy import stats as sp_stats
+
     n = len(values)
     if n == 0:
         return 0.0, 0.0
@@ -141,7 +142,7 @@ def _mean_and_ci95(values: Sequence[float]) -> Tuple[float, float]:
     if n < 2:
         return mean, 0.0
     sem = float(np.std(values, ddof=1) / np.sqrt(n))
-    return mean, 1.96 * sem
+    return mean, float(sp_stats.t.ppf(0.975, n - 1)) * sem
 
 
 def aggregate_strategy_stats(
