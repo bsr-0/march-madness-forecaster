@@ -43,8 +43,8 @@ march-madness optimize-pool --year 2026 --pool-size 100 --payout top_3
 
 # Production strategy (meta_region_poolaware): pool-aware selection over ~25 diverse
 # candidate brackets. It runs through the backtest script, not the CLI:
-# --n-opponents 29 is required: it is the fallback for seasons with no recorded
-# pool, and omitting it silently measures a 1000-person field instead of a 30-person one.
+# --n-opponents 29 (a 30-person pool) is the default as of 2026-09-10; it is stated
+# explicitly here because it is part of the claim, and because it was 999 before then.
 python scripts/mc_pool_backtest.py --team-identity --opponent pool \
   --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware
 
@@ -75,8 +75,9 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   universal probability of winning any pool. **P(1st) is mechanically pool-size dependent**
   — the same strategy scores roughly 2.5x worse in a 1000-entry field than a 30-entry one —
   so the pool size is part of the claim, not a detail. Reproduce with
-  `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`; omitting
-  `--n-opponents` silently measures a 1000-person field.
+  `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`. That is now the
+  default, but state it anyway: before 2026-09-10 the default was 999, so any older run
+  or figure measured a 1000-person field for every pre-2023 season.
 - **The CI is over seasons.** The season-level standard error is 1.5pp. Do not quote a
   digit after the decimal — the difference between "11.2%" and "12.0%" is half of one
   standard error.
