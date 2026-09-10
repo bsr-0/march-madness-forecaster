@@ -35,10 +35,28 @@ from scripts.mc_pool_backtest import (
     build_first_round_matchups,
     build_torvik_round_probabilities,
     load_seeds_and_regions,
+    load_tournament_results,
+    resolve_first_four,
 )
 from src.optimization.bracket_construction import construct_bracket
+from src.optimization.poolaware_recipe import (
+    POOLAWARE_EXHAUSTIVE_RISKS,
+    POOLAWARE_RISK_LEVELS,
+    build_poolaware_prob_bases,
+    poolaware_base_names,
+)
+from src.prediction.massey_best_probabilities import build_massey_best_round_probabilities
 from src.prediction.massey_probabilities import load_massey_avg_barthag
-from src.prediction.seed_probabilities import build_seed_probabilities
+from src.prediction.noseed_model import (
+    _load_team_stats,
+    build_blend_round_probabilities,
+    build_noseed_round_probabilities,
+    train_noseed_model,
+)
+from src.prediction.seed_probabilities import (
+    build_seed_probabilities,
+    build_seed_round_probabilities,
+)
 from src.simulation.pool_competition import (
     ROUND_NAMES,
     generate_opponent_brackets,
@@ -53,7 +71,32 @@ from src.simulation.pool_history_opponent_model import (
 YEAR = 2026
 OUT_DIR = PROJECT_ROOT / "docs" / "data"
 PA_TRIALS = 500
-RISK_LEVELS = (0.1, 0.3, 0.5, 0.7, 0.9)
+# Risk sweeps come from the shared recipe, not a local copy — see
+# src/optimization/poolaware_recipe.py for why.
+RISK_LEVELS = POOLAWARE_RISK_LEVELS
+
+
+def _build_blend_round_probs(seeds):
+    """The `blend` base: alpha*seed + (1-alpha)*noseed round probabilities.
+
+    Mirrors the backtest's construction, including walk-forward training
+    (`max_year=YEAR`, so the model never sees the year it is picking for) and
+    the canonical `blend_alpha=0.5`. Returns None if the no-seed model or its
+    stats payload is unavailable, which drops `blend` from the sweep the same
+    way a missing Massey file drops `mass_avg`.
+    """
+    try:
+        model = train_noseed_model(max_year=YEAR)
+        assert all(y < YEAR for y in model.train_years), (
+            f"walk-forward violation: noseed model for {YEAR} trained on {model.train_years}"
+        )
+        stats = _load_team_stats(YEAR)
+        noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+        seed_rp = build_seed_round_probabilities(seeds)
+        return build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
+    except Exception as exc:
+        print(f"  blend base unavailable ({type(exc).__name__}: {exc}) — dropped from sweep")
+        return None
 
 
 def resolve_opponents(seeds):
@@ -81,19 +124,55 @@ def main():
         print(f"ERROR: no seeds found for {YEAR}")
         sys.exit(1)
 
+    # Resolve the play-in games, exactly as the backtest does before building
+    # any bracket (mc_pool_backtest._run_one_year). Without this the seeds file
+    # still holds both teams for each play-in slot and build_bracket_order
+    # refuses to guess the draw — this script has been unable to run at all
+    # since that guard landed. Play-in games finish before brackets lock, so
+    # their winners are ordinary pre-tournament information.
+    games = load_tournament_results(YEAR)
+    n_resolved = resolve_first_four(games, seeds, regions) if games else 0
+    if n_resolved:
+        print(f"  Resolved {n_resolved} play-in slot(s) -> {len(seeds)}-team field")
+
     barthag = _load_torvik_barthag(YEAR, seeds)
     torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
 
-    # (name, round_probs, rating_dict) — rating_dict is carried alongside each
-    # prob base so the winning candidate's *own* ratings drive its displayed
-    # win_prob (via Log5), instead of every candidate showing generic Torvik
-    # barthag regardless of which base actually picked it.
-    prob_bases = [("tv", torvik_rp, barthag)]
+    # Sweep the SAME probability bases the backtest sweeps. This script used
+    # to build its own two-base list (tv, mass_avg) while the backtest swept
+    # five, so the strategy measured at ~11% P(1st) and the strategy that
+    # shipped were different strategies: over the 15-season reference run the
+    # backtest picked a base this script could not build in 11 of 15 seasons,
+    # including tv_mass80 for 2026. The recipe now lives in one place.
     massey_barthag = load_massey_avg_barthag(YEAR, seeds, PROJECT_ROOT / "data")
-    if massey_barthag is not None:
-        prob_bases.append(
-            ("mass_avg", build_torvik_round_probabilities(seeds, regions, massey_barthag), massey_barthag)
-        )
+    massey_avg_rp = (
+        build_torvik_round_probabilities(seeds, regions, massey_barthag)
+        if massey_barthag is not None
+        else None
+    )
+    massey_best_rp = build_massey_best_round_probabilities(
+        seeds, regions, test_year=YEAR, data_root=PROJECT_ROOT / "data"
+    )
+    blend_rp = _build_blend_round_probs(seeds)
+
+    prob_bases = build_poolaware_prob_bases(
+        torvik_rp,
+        massey_avg=massey_avg_rp,
+        massey_best=massey_best_rp,
+        blend=blend_rp,
+    )
+    # Ratings for display, keyed by base name. Bases built in marginal space
+    # (blend, tv_mass80) have no rating vector of their own; they fall back to
+    # torvik barthag, which build_bracket_json only uses where round_probs
+    # coverage is degenerate.
+    ratings_by_base = {
+        "tv": barthag,
+        "mass_avg": massey_barthag if massey_barthag is not None else barthag,
+        "mass_best": barthag,
+        "blend": barthag,
+        "tv_mass80": barthag,
+    }
+    print(f"  Probability bases: {', '.join(poolaware_base_names(prob_bases))}")
 
     pick_dist, n_opponents, opponent_source = resolve_opponents(seeds)
     seed_pw = build_seed_probabilities(seeds)
@@ -102,9 +181,13 @@ def main():
     rng = np.random.default_rng(77777 + YEAR)
 
     one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
-    candidates: list[tuple[dict, np.ndarray, str, dict]] = []  # (picks, bool_vector, label, rating_dict)
+    # (picks, bool_vector, label, rating_dict, display_round_probs)
+    candidates: list[tuple[dict, np.ndarray, str, dict, dict]] = []
 
-    def try_add(label: str, rating: dict, **kwargs) -> None:
+    def try_add(label: str, rating: dict, _display_rp=None, **kwargs) -> None:
+        """Build one candidate. `_display_rp` is the base's own round probs,
+        carried so the shipped JSON shows the probabilities of the base that
+        actually picked the bracket rather than always showing torvik's."""
         try:
             picks, _champ, _f4, _ev, _var = construct_bracket(
                 seeds=seeds,
@@ -115,7 +198,7 @@ def main():
                 **kwargs,
             )
             bvec = _picks_dict_to_bool_array(picks, first_round)
-            candidates.append((picks, bvec, label, rating))
+            candidates.append((picks, bvec, label, rating, _display_rp or torvik_rp))
         except Exception as exc:
             print(f"  candidate '{label}' skipped: {exc}")
 
@@ -132,34 +215,36 @@ def main():
 
     # (b) Risk sweeps x prob bases x region_top_n (no forced champ)
     for risk in RISK_LEVELS:
-        for pb_name, pb_rp, pb_rating in prob_bases:
+        for pb_name, pb_rp in prob_bases:
             try_add(
                 f"{pb_name}_region_risk={risk}",
-                pb_rating,
+                ratings_by_base.get(pb_name, barthag),
                 mode="region_top_n",
                 round_probs=pb_rp,
                 risk_level=risk,
+                _display_rp=pb_rp,
             )
 
     # (c) Exhaustive champion search x prob bases x select risks
-    for risk in (0.3, 0.5, 0.7):
-        for pb_name, pb_rp, pb_rating in prob_bases:
+    for risk in POOLAWARE_EXHAUSTIVE_RISKS:
+        for pb_name, pb_rp in prob_bases:
             try_add(
                 f"{pb_name}_exhaust_risk={risk}",
-                pb_rating,
+                ratings_by_base.get(pb_name, barthag),
                 mode="exhaustive_champion",
                 round_probs=pb_rp,
                 risk_level=risk,
+                _display_rp=pb_rp,
             )
 
     # De-duplicate identical brackets (keeps first label)
     seen: set[bytes] = set()
     unique = []
-    for picks, bvec, label, rating in candidates:
+    for picks, bvec, label, rating, display_rp in candidates:
         key = bvec.tobytes()
         if key not in seen:
             seen.add(key)
-            unique.append((picks, bvec, label, rating))
+            unique.append((picks, bvec, label, rating, display_rp))
     candidates = unique
 
     if not candidates:
@@ -176,12 +261,13 @@ def main():
         )
         best_label = "fallback"
         best_rating = barthag
+        best_display_rp = torvik_rp
     else:
         # Score each candidate via pool simulation (binary P(1st) estimator) —
         # mirrors mc_pool_backtest.py's meta_region_poolaware selection exactly.
         best_p1 = -1.0
         best_idx = 0
-        for ci, (_picks, bvec, _label, _rating) in enumerate(candidates):
+        for ci, (_picks, bvec, _label, _rating, _display_rp) in enumerate(candidates):
             wins = 0
             for _ in range(PA_TRIALS):
                 opp = generate_opponent_brackets(
@@ -212,19 +298,25 @@ def main():
             if p1 > best_p1:
                 best_p1 = p1
                 best_idx = ci
-        best_picks, _bvec, best_label, best_rating = candidates[best_idx]
+        best_picks, _bvec, best_label, best_rating, best_display_rp = candidates[best_idx]
         print(
             f"  Selected {best_label} (best of {len(candidates)} candidates, "
             f"simulated P(1st)={best_p1:.3f})"
         )
 
     team_names = load_team_names()
-    # Use the winning candidate's own ratings for displayed win_prob, not
-    # always generic Torvik barthag — so the percentage actually reflects
-    # whichever prob base drove this specific bracket's picks. pick_dist here
-    # is already the real opponent field (pool history preferred over ESPN),
-    # so it doubles as the pool-consensus annotation for display.
-    rounds = build_bracket_json(seeds, regions, best_rating, torvik_rp, best_picks, team_names, pick_dist)
+    # Display the winning candidate's OWN probabilities. build_bracket_json
+    # derives each game's win_prob from round_probs (barthag is only a
+    # degenerate-coverage fallback), so passing torvik_rp unconditionally --
+    # as this script used to -- annotated a bracket picked by, say, blend or
+    # tv_mass80 with torvik's numbers. That was harmless while only torvik and
+    # mass_avg were swept and torvik usually won; it is not harmless now that
+    # the full backtest sweep is available and tv_mass80 wins 2026. pick_dist
+    # is the real opponent field (pool history preferred over ESPN), so it
+    # doubles as the pool-consensus annotation for display.
+    rounds = build_bracket_json(
+        seeds, regions, best_rating, best_display_rp, best_picks, team_names, pick_dist
+    )
 
     out_path = OUT_DIR / "bracket_2026.json"
 

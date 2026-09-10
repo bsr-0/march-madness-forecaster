@@ -77,6 +77,11 @@ from src.prediction.pairwise import (
     marginals_from_pairwise,
 )
 from src.prediction.pairwise import log5 as _canonical_log5
+from src.optimization.poolaware_recipe import (
+    POOLAWARE_EXHAUSTIVE_RISKS,
+    POOLAWARE_RISK_LEVELS,
+    build_poolaware_prob_bases,
+)
 from src.simulation.pool_competition import (
     generate_opponent_brackets,
     score_brackets_against_outcome,
@@ -3915,29 +3920,19 @@ def _run_one_year(
                         pass
 
                 # --- Probability bases to sweep ---
-                _pa_prob_bases: list[tuple[str, dict]] = [("tv", torvik_rp)]
-                _alt_massey_avg = base_round_probs.get("massey_avg")
-                if _alt_massey_avg is not None:
-                    _pa_prob_bases.append(("mass_avg", _alt_massey_avg))
-                _alt_massey_best = base_round_probs.get("massey_best")
-                if _alt_massey_best is not None:
-                    _pa_prob_bases.append(("mass_best", _alt_massey_best))
-                _alt_blend = base_round_probs.get("blend")
-                if _alt_blend is not None:
-                    _pa_prob_bases.append(("blend", _alt_blend))
+                # Shared with scripts/generate_poolaware_bracket.py, which
+                # ships the bracket this strategy is measured on. They used to
+                # be separate copies and drifted: the shipped script swept only
+                # tv/mass_avg, so it could not build the base this backtest
+                # selected in 11 of 15 seasons. See src/optimization/poolaware_recipe.py.
+                _pa_prob_bases = build_poolaware_prob_bases(
+                    torvik_rp,
+                    massey_avg=base_round_probs.get("massey_avg"),
+                    massey_best=base_round_probs.get("massey_best"),
+                    blend=base_round_probs.get("blend"),
+                )
 
-                # 80/20 torvik/massey_avg blend (if massey_avg available)
-                if _alt_massey_avg is not None:
-                    _tv_mass_80_20: Dict[str, Dict[str, float]] = {}
-                    for tid in torvik_rp:
-                        _tv_mass_80_20[tid] = {}
-                        for rn in torvik_rp[tid]:
-                            tv_val = torvik_rp[tid][rn]
-                            ma_val = _alt_massey_avg.get(tid, {}).get(rn, tv_val)
-                            _tv_mass_80_20[tid][rn] = 0.8 * tv_val + 0.2 * ma_val
-                    _pa_prob_bases.append(("tv_mass80", _tv_mass_80_20))
-
-                _pa_risk_levels = (0.1, 0.3, 0.5, 0.7, 0.9)
+                _pa_risk_levels = POOLAWARE_RISK_LEVELS
 
                 # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
                 for forced in one_seed_teams:
@@ -3960,7 +3955,7 @@ def _run_one_year(
                         )
 
                 # (c) Exhaustive champion search × prob bases × select risks
-                for _risk in (0.3, 0.5, 0.7):
+                for _risk in POOLAWARE_EXHAUSTIVE_RISKS:
                     for _pb_name, _pb_rp in _pa_prob_bases:
                         _pa_try_add(
                             f"{_pb_name}_exhaust_risk={_risk}",

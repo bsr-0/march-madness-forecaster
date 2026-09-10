@@ -41,6 +41,17 @@ CHAMP_LABEL = "Championship"
 
 
 def load_team_names():
+    """team_id -> display name, or {} if the profiles file is absent.
+
+    Display names are cosmetic: every consumer falls back to the team_id,
+    which is readable. `docs/data/team_profiles.json` was removed with the old
+    UI layer (32f860e) and its generator went with it, so requiring it turned
+    a missing cosmetic lookup into a hard crash at the very end of scripts that
+    had already done all their real work.
+    """
+    if not TEAM_PROFILES_PATH.exists():
+        print(f"  [warn] {TEAM_PROFILES_PATH.name} not found — falling back to team ids for display")
+        return {}
     with open(TEAM_PROFILES_PATH) as f:
         data = json.load(f)
     return {t["team_id"]: t["team_name"] for t in data["teams"]}
