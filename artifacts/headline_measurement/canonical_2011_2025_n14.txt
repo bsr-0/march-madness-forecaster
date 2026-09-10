@@ -1,8 +1,8 @@
-[auto-log] writing run output to /Users/benrosen/Documents/march-madness-forecaster/artifacts/backtest_runs/mc_pool_backtest_20260910_135841.txt
+[auto-log] writing run output to /Users/benrosen/Documents/march-madness-forecaster/artifacts/backtest_runs/mc_pool_backtest_20260910_144719.txt
 ====================================================================================================
 MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]
 ====================================================================================================
-  Pool size: actual (from pool_hist_results.json)
+  Pool size: actual per season (pool_hist_results.json) where available, else 30
   Opponent model: pool pick rates (independent draws)
   Model brackets per mode: 50 (stochastic, NOT argmax)
   Repeats per year: 100 (reduces opponent sampling variance)
@@ -156,26 +156,26 @@ No unified odds for 2005, returning None
 No unified odds for 2006, returning None
 No unified odds for 2007, returning None
 Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
-  2023   meta_region_poolaware    selected=mass_avg_region_risk=0.1 (best of 28, P1=0.138)
+  2023   meta_region_poolaware    selected=mass_avg_region_risk=0.5 (best of 28, P1=0.190)
   2023   meta_region_poolaware META bracket built (1 deterministic)
   2023   seed            6.8     12.2    0.061    0.061     0.175      560      442
-  2023   meta_region_poolaware      8.3      8.3    0.170    0.170     0.290      470      470
+  2023   meta_region_poolaware      8.3      8.3    0.170    0.170     0.290      460      460
 Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
 No unified odds for 2005, returning None
 No unified odds for 2006, returning None
 No unified odds for 2007, returning None
 Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
-  2024   meta_region_poolaware    selected=blend_region_risk=0.7 (best of 27, P1=0.118)
+  2024   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 27, P1=0.148)
   2024   meta_region_poolaware META bracket built (1 deterministic)
   2024   seed           10.2     15.8    0.033    0.033     0.169     1410      754
-  2024   meta_region_poolaware     10.1     10.1    0.130    0.130     0.410      870      870
+  2024   meta_region_poolaware      8.4      8.4    0.130    0.130     0.430     1120     1120
 No unified odds for 2005, returning None
 No unified odds for 2006, returning None
 No unified odds for 2007, returning None
-  2025   meta_region_poolaware    selected=tv_mass80_region_risk=0.1 (best of 26, P1=0.170)
+  2025   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 26, P1=0.164)
   2025   meta_region_poolaware META bracket built (1 deterministic)
   2025   seed           14.4     21.0    0.051    0.054     0.175     1550      871
-  2025   meta_region_poolaware     10.2     10.2    0.200    0.230     0.470     1370     1370
+  2025   meta_region_poolaware     10.0     10.0    0.210    0.220     0.480     1330     1330
 
 ====================================================================================================
 AGGREGATE EVALUATION YEARS (2011–2025, n=14)
@@ -184,16 +184,16 @@ AGGREGATE EVALUATION YEARS (2011–2025, n=14)
   Mode      BestRnk  MeanRnk   P(1st)    ±95%   n   P(top5%)  P(top25%)  MeanScr
   -----------------------------------------------------------------------------
   seed         12.3     19.1   0.0399  0.0079  14     0.0421     0.1712      636
-  meta_region_poolaware     10.6     10.6   0.1193  0.0329  14     0.1264     0.4264      890
+  meta_region_poolaware     10.5     10.5   0.1200  0.0336  14     0.1257     0.4286      904
   (±95% = half-width of the t-interval over seasons, the honest unit of independence)
 
   Statistical Tests — Mean Rank (paired across years):
     Bonferroni correction: 1 comparisons, α=0.0500
-    MeanRank seed vs meta_region_poolaware:   +8.4 pos, wins 14/14, t=12.567, p=0.0000, p_adj=0.0000 *
+    MeanRank seed vs meta_region_poolaware:   +8.6 pos, wins 14/14, t=13.167, p=0.0000, p_adj=0.0000 *
 
   Statistical Tests — Best Bracket Rank (pool optimizer view):
     Bonferroni correction: 1 comparisons, α=0.0500
-    BestRank seed vs meta_region_poolaware:   +1.7 pos, wins 11/14, t=2.631, p=0.0208, p_adj=0.0208 *
+    BestRank seed vs meta_region_poolaware:   +1.8 pos, wins 11/14, t=2.859, p=0.0134, p_adj=0.0134 *
 
 ====================================================================================================
 AGGREGATE 2021+ (recent window, n=5 — diagnostic only, low power)
@@ -202,16 +202,16 @@ AGGREGATE 2021+ (recent window, n=5 — diagnostic only, low power)
   Mode      BestRnk  MeanRnk   P(1st)    ±95%   n   P(top5%)  P(top25%)  MeanScr
   -----------------------------------------------------------------------------
   seed         11.6     17.6   0.0436  0.0152   5     0.0450     0.1711      661
-  meta_region_poolaware     10.0     10.0   0.1360  0.0631   5     0.1440     0.4120      950
+  meta_region_poolaware      9.6      9.6   0.1380  0.0671   5     0.1420     0.4180      990
   (±95% = half-width of the t-interval over seasons, the honest unit of independence)
 
   Statistical Tests — Mean Rank (paired across years):
     Bonferroni correction: 1 comparisons, α=0.0500
-    MeanRank seed vs meta_region_poolaware:   +7.7 pos, wins 5/5, t=6.137, p=0.0036, p_adj=0.0036 *
+    MeanRank seed vs meta_region_poolaware:   +8.0 pos, wins 5/5, t=6.722, p=0.0026, p_adj=0.0026 *
 
   Statistical Tests — Best Bracket Rank (pool optimizer view):
     Bonferroni correction: 1 comparisons, α=0.0500
-    BestRank seed vs meta_region_poolaware:   +1.7 pos, wins 4/5, t=1.601, p=0.1847, p_adj=0.1847 
+    BestRank seed vs meta_region_poolaware:   +2.0 pos, wins 4/5, t=2.031, p=0.1121, p_adj=0.1121 
 
 ====================================================================================================
-[auto-log] run output saved to /Users/benrosen/Documents/march-madness-forecaster/artifacts/backtest_runs/mc_pool_backtest_20260910_135841.txt
+[auto-log] run output saved to /Users/benrosen/Documents/march-madness-forecaster/artifacts/backtest_runs/mc_pool_backtest_20260910_144719.txt

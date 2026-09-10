@@ -16,12 +16,26 @@ They are kept verbatim as the historical record, but **every one of them predate
 every season** — they were computed on brackets containing teams that never played
 the Round of 64. Treat them as void, not merely superseded.
 
-The current stated claim is **11.9%, 95% CI 8.6–15.2%**, over the 14 evaluation
+The current stated claim is **12.0%, 95% CI 8.6–15.4%**, over the 14 evaluation
 seasons 2011–2025 (2026 excluded as an in-sample integration season; the backtest's
 headline aggregate now drops it automatically), against a 4.0% seed baseline, at the
 canonical contract `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`.
 Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`. Do not quote
 figures from this file as the current baseline.
+
+**`--n-opponents 29` is part of the contract, not a detail.** It is the fallback field
+size for seasons with no recorded pool, and the default is 999. A run that omits it
+measures a 1000-person pool for every pre-2023 season and is not comparable to anything
+here.
+
+**Second correction, same day.** The field size was resolved per season for *scoring*
+but not for *construction* or *candidate selection*, which both used the raw CLI
+fallback (audit H6). Fixed 2026-09-10. The headline moved 11.93% → 12.00%, well inside
+one standard error, and the `seed` control reproduced to the digit — but the selected
+candidate changed in all three seasons that have real pool history (2023: risk 0.1 →
+0.5; 2024: blend risk 0.7 → 0.5; 2025: tv_mass80 risk 0.1 → blend risk 0.5), because
+the selector had been estimating P(1st) against a 29-opponent field and then being
+scored in an 18-, 24- or 31-opponent one.
 
 ---
 
