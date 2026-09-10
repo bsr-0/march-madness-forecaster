@@ -231,7 +231,8 @@ when `pool_size > 50` (`bracket_construction.py:204`); below that it is exactly 
 real pool in the data (19–33) and the canonical `--n-opponents 29` all sit under that
 threshold, so construction is bit-identical whether the right or wrong size is passed, and
 **the 11.9% headline is unaffected**. The bug bites only when `--n-opponents` is large —
-which is the default (999). Measured directly: at the default the 2023 sweep dedups to 12
+which was the default (999) until 2026-09-10, when it was changed to 29 (a 30-person pool)
+for this reason. Measured directly: at the old default the 2023 sweep dedups to 12
 unique candidates and selects `mass_avg_region_risk=0.1`; at `--n-opponents 29` the same
 season yields 28 candidates. A run at the default therefore constructs heavily contrarian
 brackets for a 1000-person field and scores them against a 19-person one. This is the

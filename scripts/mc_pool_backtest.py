@@ -137,14 +137,28 @@ POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
 # brackets rather than documentation. The pool is winner-take-all, so P(1st) is
 # the objective and expected points is not.
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
-# THIS DEFAULT IS NOT THE POOL YOU PLAY IN. pool_hist_results.json only covers
-# 2023 onward (groupSize 19-33), so every earlier year falls back to this value
-# and silently measures a 1000-person field -- roughly 33x too large. Absolute
-# P(1st) is mechanically pool-size dependent, so a default run is not comparable
-# to a real one: at pool 30 meta_region_poolaware scores P(1st) 0.1040, at pool
-# 1000 the same strategy scores 0.0407. Pass --n-opponents 29 for anything you
-# intend to act on.
-N_OPPONENTS = 999  # 1000-person pool
+# The fallback field size for seasons with no entry in pool_hist_results.json
+# (which covers 2023 onward, groupSize 19-33). 29 opponents + 1 model bracket =
+# a 30-person pool, matching the real pools on record and the canonical contract.
+#
+# THIS WAS 999 UNTIL 2026-09-10, and the change is a bug fix rather than a
+# preference. Absolute P(1st) is mechanically pool-size dependent -- the same
+# strategy scores ~2.5x worse in a 1000-person field than a 30-person one -- so
+# the old default silently measured a pool 33x larger than any that exists here
+# for every pre-2023 season, and a default run was not comparable to a real one
+# or to the published figures. It cost three mismeasurements in a single session:
+# the headline number, the real-outcome placement table, and a diagnostic run,
+# each traced back to an omitted --n-opponents. A default that is wrong for every
+# real use and silently produces a plausible-looking number is a trap, not a
+# setting. Pass --n-opponents explicitly to model a larger field.
+N_OPPONENTS = 29  # 30-person pool (29 opponents + the model's own bracket)
+
+# Entry count above which bracket_construction._make_ev_scorer applies
+# `pool_factor` and construction genuinely changes. At or below it, pool size
+# does not affect the brackets built — which is why the H6 field-size defect
+# was invisible at every real pool size. Kept in sync with _make_ev_scorer by
+# tests/test_aggregate_season_ci.py::test_pool_factor_threshold_matches_bracket_construction.
+_POOL_FACTOR_THRESHOLD = 50
 
 # POOL-SIZE SWEEP, so this does not get re-run. Measured over 2011-2026 with
 # --team-identity --n-repeats 100, seed vs meta_region_poolaware:
@@ -744,13 +758,15 @@ def build_pit_base(year, seeds, regions, n_sims=10000):
     0.1040, 15/15 years, p_adj=0.0000) on construction and opponent modelling.
 
     RUN THIS AT THE POOL SIZE YOU ACTUALLY PLAY IN. Years before 2023 have no
-    entry in pool_hist_results.json and fall back to ``N_OPPONENTS`` (999),
-    which silently measures a 1000-person pool -- roughly 33x the real one
-    (groupSize 19-33). Absolute P(1st) is mechanically pool-size dependent, so a
-    run at the default is not comparable to one at ~30, and leverage strategy
-    itself depends on pool size: a 1000-person field rewards contrarian risk
-    that a 30-person field does not. An earlier version of this note reported
-    the 999-opponent statistics; the conclusion held, but the numbers did not.
+    entry in pool_hist_results.json and fall back to ``N_OPPONENTS``, which is
+    29 (a 30-person pool) as of 2026-09-10 and matches the real pools on record
+    (groupSize 19-33). It was 999 before that, so any run or figure predating
+    the change measured a 1000-person field for every pre-2023 season -- roughly
+    33x the real one. Absolute P(1st) is mechanically pool-size dependent, and
+    leverage strategy itself depends on pool size: a 1000-person field rewards
+    contrarian risk that a 30-person field does not. An earlier version of this
+    note reported the 999-opponent statistics; the conclusion held, but the
+    numbers did not.
 
     LEAKAGE. ``pairwise_for_year`` fits beta, sigma and the link's (a, nu) on
     seasons strictly before ``year``. Nothing from the tournament being
@@ -4528,16 +4544,26 @@ def describe_pool_size(opponent_source: str, n_opponents: int) -> str:
     `--opponent pool` knows the real size only for seasons present in
     pool_hist_results.json; every other season falls back to `n_opponents`.
     The header used to print "actual (from pool_hist_results.json)" and
-    nothing else, which made a run at the 1000-person default look identical
-    on paper to a run at a real pool size. The headline figure's own source
-    log is ambiguous for exactly this reason, so the fallback is now named
-    and the default is called out as not a real pool.
+    nothing else, which made a run at the old 1000-person default look
+    identical on paper to a run at a real pool size — the source log behind
+    the published figure is ambiguous for exactly that reason. So the
+    fallback is always named.
+
+    The flag now fires on any field large enough for `_make_ev_scorer`'s
+    `pool_factor` to engage (above 50 entries), not on the default. That is
+    the threshold where construction actually changes behaviour and the
+    result stops being comparable to the canonical 30-person figure — and
+    since the default became 29, "is this the default" no longer tracks
+    "is this a number you can compare".
     """
     if opponent_source != "pool":
         return str(n_opponents + 1)
     desc = f"actual per season (pool_hist_results.json) where available, else {n_opponents + 1}"
-    if n_opponents == N_OPPONENTS:
-        desc += "  <-- DEFAULT, not a real pool size; pass --n-opponents 29"
+    if n_opponents + 1 > _POOL_FACTOR_THRESHOLD:
+        desc += (
+            f"  <-- above {_POOL_FACTOR_THRESHOLD} entries, pool_factor engages;"
+            " not comparable to the canonical 30-person figure"
+        )
     return desc
 
 

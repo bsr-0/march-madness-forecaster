@@ -147,12 +147,31 @@ def test_pool_size_header_names_the_fallback(backtest):
     assert "pool_hist_results.json" in desc
 
 
-def test_pool_size_header_flags_the_1000_person_default(backtest):
+def test_default_fallback_is_a_real_pool_size(backtest):
+    """The default was 999 -- a 1000-person field, ~33x any real pool here --
+    so every run that omitted --n-opponents silently measured something
+    incomparable to the published figure. It is now the canonical 30."""
+    assert backtest.N_OPPONENTS == 29
     desc = backtest.describe_pool_size("pool", backtest.N_OPPONENTS)
-    assert "DEFAULT" in desc
-    assert "--n-opponents 29" in desc
+    assert "else 30" in desc
+    assert "pool_factor" not in desc, "the default must not trip the incomparability flag"
+
+
+def test_header_flags_a_field_large_enough_to_change_construction(backtest):
+    """Above 50 entries `pool_factor` engages and brackets are built
+    differently, so the result stops being comparable to the canonical 30."""
+    desc = backtest.describe_pool_size("pool", 999)
+    assert "1000" in desc
+    assert "pool_factor" in desc
+
+
+def test_pool_factor_threshold_matches_bracket_construction(backtest):
+    """The threshold is duplicated from _make_ev_scorer; if that moves and
+    this does not, the header starts lying about comparability."""
+    src = (ROOT / "src" / "optimization" / "bracket_construction.py").read_text()
+    assert f"if pool_size > {backtest._POOL_FACTOR_THRESHOLD}:" in src
 
 
 def test_non_pool_sources_report_a_plain_size(backtest):
     assert backtest.describe_pool_size("espn", 29) == "30"
-    assert "DEFAULT" not in backtest.describe_pool_size("espn", backtest.N_OPPONENTS)
+    assert "pool_factor" not in backtest.describe_pool_size("espn", backtest.N_OPPONENTS)

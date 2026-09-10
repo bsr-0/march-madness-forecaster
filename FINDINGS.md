@@ -24,9 +24,9 @@ Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`. Do not quo
 figures from this file as the current baseline.
 
 **`--n-opponents 29` is part of the contract, not a detail.** It is the fallback field
-size for seasons with no recorded pool, and the default is 999. A run that omits it
-measures a 1000-person pool for every pre-2023 season and is not comparable to anything
-here.
+size for seasons with no recorded pool. It became the default on 2026-09-10; before
+that the default was 999, so any run or figure predating the change measured a
+1000-person pool for every pre-2023 season and is not comparable to anything here.
 
 **Second correction, same day.** The field size was resolved per season for *scoring*
 but not for *construction* or *candidate selection*, which both used the raw CLI
