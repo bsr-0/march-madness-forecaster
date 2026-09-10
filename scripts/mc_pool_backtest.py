@@ -4501,6 +4501,29 @@ def _run_one_year(
     }
 
 
+def describe_pool_size(opponent_source: str, n_opponents: int) -> str:
+    """The pool size a run ACTUALLY used, for the log header.
+
+    P(1st) is mechanically pool-size dependent — the same strategy scores
+    0.104 at pool 30 and 0.041 at pool 1000 (see the sweep table above
+    N_OPPONENTS) — so a number is uninterpretable without this.
+
+    `--opponent pool` knows the real size only for seasons present in
+    pool_hist_results.json; every other season falls back to `n_opponents`.
+    The header used to print "actual (from pool_hist_results.json)" and
+    nothing else, which made a run at the 1000-person default look identical
+    on paper to a run at a real pool size. The headline figure's own source
+    log is ambiguous for exactly this reason, so the fallback is now named
+    and the default is called out as not a real pool.
+    """
+    if opponent_source != "pool":
+        return str(n_opponents + 1)
+    desc = f"actual per season (pool_hist_results.json) where available, else {n_opponents + 1}"
+    if n_opponents == N_OPPONENTS:
+        desc += "  <-- DEFAULT, not a real pool size; pass --n-opponents 29"
+    return desc
+
+
 def print_aggregate_block(subset, label):
     """Print the aggregate table + paired statistical tests for a result subset."""
     print(f"\n{'=' * 100}")
@@ -4731,7 +4754,7 @@ def run_backtest(
     print("=" * 100)
     print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]")
     print("=" * 100)
-    print(f"  Pool size: {'actual (from pool_hist_results.json)' if opponent_source == 'pool' else n_opponents + 1}")
+    print(f"  Pool size: {describe_pool_size(opponent_source, n_opponents)}")
     print(f"  Opponent model: {opponent_source} pick rates (independent draws)")
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")

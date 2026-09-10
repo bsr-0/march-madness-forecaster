@@ -9,12 +9,18 @@ full original text. **The current production claim lives in `README.md`
 `AUDIT_INDEPENDENT_EVALUATOR_2027.md`. This file captures the *reasoning and
 dead ends* behind them.**
 
-**On the "11.2%" figures below (2026-09-09).** Every P(1st) quoted in this file
+**On the "11.2%" figures below (2026-09-10).** Every P(1st) quoted in this file
 is the number as measured at the time, over 2011–2026 (n=15) with 2026 included.
-They are kept verbatim as the historical record. The current stated claim is
-~11% (95% CI 8–14%) over the 14 evaluation seasons 2011–2025, computed with a
-season-level CI and with 2026 excluded as an in-sample integration season; the
-backtest's headline aggregate now excludes 2026 automatically. Do not quote
+They are kept verbatim as the historical record, but **every one of them predates
+`b73d351` (2026-09-06), which fixed play-in resolution and so changed the field in
+every season** — they were computed on brackets containing teams that never played
+the Round of 64. Treat them as void, not merely superseded.
+
+The current stated claim is **11.9%, 95% CI 8.6–15.2%**, over the 14 evaluation
+seasons 2011–2025 (2026 excluded as an in-sample integration season; the backtest's
+headline aggregate now drops it automatically), against a 4.0% seed baseline, at the
+canonical contract `--team-identity --opponent pool --n-opponents 29 --n-repeats 100`.
+Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`. Do not quote
 figures from this file as the current baseline.
 
 ---

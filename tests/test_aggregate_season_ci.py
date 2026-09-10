@@ -132,3 +132,27 @@ def test_only_contaminated_seasons_returns_nothing(backtest):
     out, text = _report(backtest, rows)
     assert out == []
     assert "AGGREGATE" not in text
+
+
+# --- Pool size must be recorded in the run header ------------------------
+
+
+def test_pool_size_header_names_the_fallback(backtest):
+    """`--opponent pool` only knows the real size for seasons in
+    pool_hist_results.json; the rest use this fallback. The header used to
+    hide that, so a 1000-person default run and a real 30-person run
+    produced identical-looking logs."""
+    desc = backtest.describe_pool_size("pool", 29)
+    assert "30" in desc
+    assert "pool_hist_results.json" in desc
+
+
+def test_pool_size_header_flags_the_1000_person_default(backtest):
+    desc = backtest.describe_pool_size("pool", backtest.N_OPPONENTS)
+    assert "DEFAULT" in desc
+    assert "--n-opponents 29" in desc
+
+
+def test_non_pool_sources_report_a_plain_size(backtest):
+    assert backtest.describe_pool_size("espn", 29) == "30"
+    assert "DEFAULT" not in backtest.describe_pool_size("espn", backtest.N_OPPONENTS)
