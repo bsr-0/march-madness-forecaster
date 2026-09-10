@@ -1,0 +1,29 @@
+====================================================================================================
+REAL-OUTCOME, REAL-OPPONENT PLACEMENT — meta_region_poolaware vs seed, 2023-2026
+====================================================================================================
+Every row below scores the production bracket against the REAL tournament result
+and ranks it against the REAL pool's REAL scores (pool_hist_results.json). This is
+the complement to every simulated-tournament P(1st) figure reported elsewhere.
+n=4 seasons. No mean, CI, or significance test is computed or implied below — four
+outcomes is not a distribution.
+
+  Year  Mode                      Score   Rank  /Pool   %ile  Champion picked
+  ---------------------------------------------------------------------------
+  2023  meta_region_poolaware       470     18     18     6%  purdue
+  2023  seed                        442     18     18     6%  17 different (mean of 50)
+  2024  meta_region_poolaware      1090      4     25    88%  purdue
+  2024  seed                        754     11     25    60%  16 different (mean of 50)
+  2025  meta_region_poolaware      1310     10     32    72%  houston
+  2025  seed                        871     20     32    41%  13 different (mean of 50)
+  2026  meta_region_poolaware       990     10     30    70%  illinois
+  2026  seed                        721     20     30    37%  18 different (mean of 50)
+
+  seed's score/rank above is the MEAN across its saved brackets (no single seed-mode
+  pick exists), not the best — a best-of-N read would be hindsight-biased. Only
+  meta_region_poolaware has a single production pick to report as-is.
+
+meta_region_poolaware, real outcomes, real opponents, n=4: 0/4 finished 1st, 0/4 finished top 3.
+This is a small-sample descriptive fact, not an estimate of a rate: with n=4, one
+additional or one fewer win changes the observed fraction by 25 points. It does not
+confirm or refute the simulated ~11% P(1st) figure; it is the only number in this
+project measured against reality rather than a model of reality.

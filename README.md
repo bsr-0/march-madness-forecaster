@@ -76,6 +76,25 @@ harness. Read the qualifiers before quoting it:
 - The strategy was selected on this same window, so the figure is in-sample for strategy
   choice. 2027 is the first prospective season.
 
+**The one number measured against reality, not a model of reality.** For 2023–2026 — the
+only seasons a real 30-person pool exists — the production bracket that
+`meta_region_poolaware` actually selected can be scored against the real tournament result
+and ranked against the real pool's real scores:
+
+| Year | Real score | Rank | Pool size | Champion picked |
+|---|---:|---:|---:|---|
+| 2023 | 470 | 18th | 18 | Purdue (lost R64 as a 1-seed) |
+| 2024 | 1090 | 4th | 25 | Purdue |
+| 2025 | 1310 | 10th | 32 | Houston |
+| 2026 | 990 | 10th | 30 | Illinois |
+
+**0 of 4 finished 1st; 0 of 4 finished top 3.** n=4 is not a rate — one different outcome
+moves this by 25 points — and it neither confirms nor refutes the simulated ~11% figure
+above. It beats the same strategy's own mean-of-50 `seed` baseline scored the same honest
+way in every year (reproduce with `python -m scripts.real_pool_placement`; full table in
+`artifacts/real_pool_placement/placement_2023_2026.txt`), but it has not yet actually won a
+real pool.
+
 Source: `artifacts/backtest_runs/mc_pool_backtest_20260829_095910.txt`. Full critique in
 `AUDIT_INDEPENDENT_EVALUATOR_2027.md`; history and dead ends in `FINDINGS.md`.
 
