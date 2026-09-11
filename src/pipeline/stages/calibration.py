@@ -235,13 +235,16 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                         yr_X = pipeline.feature_selector.transform(yr_X)
                     except (IndexError, ValueError) as e:
                         return 0, f"feature selector error: {e}"
-                # Apply scaler if available
-                if pipeline.baseline_model.scaler is not None:
-                    try:
-                        yr_X = pipeline.baseline_model.scaler.transform(yr_X)
-                    except (ValueError, Exception) as e:
-                        return 0, f"scaler error: {e}"
-                # Predict using baseline model in batch
+                # Do NOT scale here. predict_proba_batch -> _scale_batch applies the
+                # model's fixed feature indices (when a fixed set was trained) and
+                # then its scaler. Scaling first meant: on the fixed-set path the
+                # scaler saw the full pruned width and raised ("X has 60 features,
+                # but StandardScaler is expecting 9"), so every historical
+                # calibration year was skipped and the fit fell to ~47 current-year
+                # rows; on the learned-selector path the rows were scaled TWICE,
+                # so the temperature was fit on distorted probabilities. The
+                # learned selector (pipeline.feature_selector, above) is not part
+                # of the model and is still applied here.
                 try:
                     yr_preds = pipeline.baseline_model.predict_proba_batch(yr_X)
                     yr_preds = np.clip(
