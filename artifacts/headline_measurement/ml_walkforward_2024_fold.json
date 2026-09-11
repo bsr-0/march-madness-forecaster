@@ -1,0 +1,1129 @@
+{
+  "timestamp": "2026-09-11T06:22:00.431128+00:00",
+  "elapsed_seconds": 1049.4,
+  "aggregate_report": {
+    "n_years": 1,
+    "years": [
+      2024
+    ],
+    "aggregate_metrics": {
+      "brier_score": {
+        "estimate": 0.20791454442629445,
+        "ci_lower": 0.20791454442629445,
+        "ci_upper": 0.20791454442629445,
+        "ci_level": 0.95,
+        "n_bootstrap": 0,
+        "n_samples": 1
+      },
+      "log_loss": {
+        "estimate": 0.6042774231126652,
+        "ci_lower": 0.6042774231126652,
+        "ci_upper": 0.6042774231126652,
+        "ci_level": 0.95,
+        "n_bootstrap": 0,
+        "n_samples": 1
+      }
+    },
+    "year_reports": [
+      {
+        "year": 2024,
+        "model_name": "pipeline",
+        "training_years": [],
+        "feature_hash": "",
+        "global_metrics": {
+          "brier_score": {
+            "estimate": 0.20791454442629445,
+            "ci_lower": 0.17876406936521144,
+            "ci_upper": 0.23999744849114651,
+            "ci_level": 0.95,
+            "n_bootstrap": 5000,
+            "n_samples": 67
+          },
+          "log_loss": {
+            "estimate": 0.6042774231126652,
+            "ci_lower": 0.5411937962604874,
+            "ci_upper": 0.6737603880222209,
+            "ci_level": 0.95,
+            "n_bootstrap": 5000,
+            "n_samples": 67
+          }
+        },
+        "round_analysis": {
+          "n_total_games": 67,
+          "years_evaluated": [
+            2024
+          ],
+          "global_metrics": {
+            "brier_score": {
+              "estimate": 0.20791454442629445,
+              "ci_lower": 0.17876406936521144,
+              "ci_upper": 0.23999744849114651,
+              "ci_level": 0.95,
+              "n_bootstrap": 5000,
+              "n_samples": 67
+            },
+            "log_loss": {
+              "estimate": 0.6042774231126652,
+              "ci_lower": 0.542527443814625,
+              "ci_upper": 0.6720646346906709,
+              "ci_level": 0.95,
+              "n_bootstrap": 5000,
+              "n_samples": 67
+            },
+            "accuracy": {
+              "estimate": 0.7164179104477612,
+              "ci_lower": 0.5970149253731343,
+              "ci_upper": 0.8208955223880597,
+              "ci_level": 0.95,
+              "n_bootstrap": 5000,
+              "n_samples": 67
+            },
+            "ece": {
+              "estimate": 0.1964340729241783,
+              "ci_lower": 0.12925225784655797,
+              "ci_upper": 0.30207881894425404,
+              "ci_level": 0.95,
+              "n_bootstrap": 5000,
+              "n_samples": 67
+            }
+          },
+          "seed_matchup_segments": {
+            "heavy_favorites": {
+              "segment_name": "heavy_favorites",
+              "n_games": 12,
+              "n_upsets": 1,
+              "n_upsets_predicted": 0,
+              "brier": {
+                "estimate": 0.12743721326976373,
+                "ci_lower": 0.0654726860780337,
+                "ci_upper": 0.21808448149573748,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "log_loss": {
+                "estimate": 0.42661705739082123,
+                "ci_lower": 0.28361342402487305,
+                "ci_upper": 0.6372300657791957,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "ece": {
+                "estimate": 0.19668210649571674,
+                "ci_lower": 0.08497814038749602,
+                "ci_upper": 0.3232131915206668,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "accuracy": {
+                "estimate": 0.9166666666666666,
+                "ci_lower": 0.75,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "upset_recall": 0.0
+            },
+            "mid_tier": {
+              "segment_name": "mid_tier",
+              "n_games": 8,
+              "n_upsets": 2,
+              "n_upsets_predicted": 4,
+              "brier": {
+                "estimate": 0.16851134298902293,
+                "ci_lower": 0.11124926609863073,
+                "ci_upper": 0.22304883314256366,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "log_loss": {
+                "estimate": 0.520172463648933,
+                "ci_lower": 0.39815094757701947,
+                "ci_upper": 0.6375939287757093,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "ece": {
+                "estimate": 0.21439159839297323,
+                "ci_lower": 0.1165324095550024,
+                "ci_upper": 0.43602526855721296,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "accuracy": {
+                "estimate": 0.75,
+                "ci_lower": 0.375,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "upset_recall": 1.0
+            },
+            "toss_ups": {
+              "segment_name": "toss_ups",
+              "n_games": 12,
+              "n_upsets": 8,
+              "n_upsets_predicted": 3,
+              "brier": {
+                "estimate": 0.3374677910865307,
+                "ci_lower": 0.29016045105464683,
+                "ci_upper": 0.38690999494903305,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "log_loss": {
+                "estimate": 0.8744455541897777,
+                "ci_lower": 0.7729569094792166,
+                "ci_upper": 0.9808952902962912,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "ece": {
+                "estimate": 0.5073506846851595,
+                "ci_lower": 0.3286321787968197,
+                "ci_upper": 0.6161082668579483,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "accuracy": {
+                "estimate": 0.08333333333333333,
+                "ci_lower": 0.0,
+                "ci_upper": 0.25,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 12
+              },
+              "upset_recall": 0.0
+            }
+          },
+          "round_segments": {
+            "round_of_64": {
+              "segment_name": "round_of_64",
+              "n_games": 32,
+              "n_upsets": 11,
+              "n_upsets_predicted": 7,
+              "brier": {
+                "estimate": 0.21646721238086616,
+                "ci_lower": 0.16751872447958852,
+                "ci_upper": 0.2669359162588914,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 32
+              },
+              "log_loss": {
+                "estimate": 0.6179415952549577,
+                "ci_lower": 0.5136837065429748,
+                "ci_upper": 0.7261517784518785,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 32
+              },
+              "ece": {
+                "estimate": 0.15336676961018655,
+                "ci_lower": 0.09901808945507871,
+                "ci_upper": 0.3220986528705333,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 32
+              },
+              "accuracy": {
+                "estimate": 0.5625,
+                "ci_lower": 0.40625,
+                "ci_upper": 0.71875,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 32
+              },
+              "upset_recall": 0.18181818181818182
+            },
+            "round_of_32": {
+              "segment_name": "round_of_32",
+              "n_games": 16,
+              "n_upsets": 2,
+              "n_upsets_predicted": 1,
+              "brier": {
+                "estimate": 0.16826384554300255,
+                "ci_lower": 0.13976779976557108,
+                "ci_upper": 0.19778502147626398,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 16
+              },
+              "log_loss": {
+                "estimate": 0.524568012318674,
+                "ci_lower": 0.4660005993509828,
+                "ci_upper": 0.5865853388282427,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 16
+              },
+              "ece": {
+                "estimate": 0.34348202872412326,
+                "ci_lower": 0.22139697669490352,
+                "ci_upper": 0.42612563448120894,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 16
+              },
+              "accuracy": {
+                "estimate": 0.9375,
+                "ci_lower": 0.8125,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 16
+              },
+              "upset_recall": 0.5
+            },
+            "sweet_16": {
+              "segment_name": "sweet_16",
+              "n_games": 8,
+              "n_upsets": 4,
+              "n_upsets_predicted": 1,
+              "brier": {
+                "estimate": 0.22286523437453115,
+                "ci_lower": 0.15197419599331585,
+                "ci_upper": 0.3145681531577446,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "log_loss": {
+                "estimate": 0.6368382894252275,
+                "ci_lower": 0.4809910733436862,
+                "ci_upper": 0.8190332052774965,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "ece": {
+                "estimate": 0.30734744874400843,
+                "ci_lower": 0.11807894539887656,
+                "ci_upper": 0.49944041401531264,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "accuracy": {
+                "estimate": 0.625,
+                "ci_lower": 0.25,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 8
+              },
+              "upset_recall": 0.25
+            },
+            "elite_8": {
+              "segment_name": "elite_8",
+              "n_games": 4,
+              "n_upsets": 1,
+              "n_upsets_predicted": 0,
+              "brier": {
+                "estimate": 0.28615913317136954,
+                "ci_lower": 0.14142760261610207,
+                "ci_upper": 0.5041788283890338,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 4
+              },
+              "log_loss": {
+                "estimate": 0.7880951878498572,
+                "ci_lower": 0.4693386811644655,
+                "ci_upper": 1.2762168060246852,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 4
+              },
+              "ece": {
+                "estimate": 0.12142345189862991,
+                "ci_lower": 0.08932061094462007,
+                "ci_upper": 0.46899246657925453,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 4
+              },
+              "accuracy": {
+                "estimate": 0.75,
+                "ci_lower": 0.25,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 5000,
+                "n_samples": 4
+              },
+              "upset_recall": 0.0
+            },
+            "final_four": {
+              "segment_name": "final_four",
+              "n_games": 2,
+              "n_upsets": 0,
+              "n_upsets_predicted": 0,
+              "brier": {
+                "estimate": 0.07824735497240935,
+                "ci_lower": 0.07824735497240935,
+                "ci_upper": 0.07824735497240935,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 2
+              },
+              "log_loss": {
+                "estimate": 0.3262402558506229,
+                "ci_lower": 0.3262402558506229,
+                "ci_upper": 0.3262402558506229,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 2
+              },
+              "ece": {
+                "estimate": 0.2775142748329844,
+                "ci_lower": 0.2775142748329844,
+                "ci_upper": 0.2775142748329844,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 2
+              },
+              "accuracy": {
+                "estimate": 1.0,
+                "ci_lower": 1.0,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 2
+              }
+            },
+            "championship": {
+              "segment_name": "championship",
+              "n_games": 1,
+              "n_upsets": 0,
+              "n_upsets_predicted": 0,
+              "brier": {
+                "estimate": 0.22704903405942478,
+                "ci_lower": 0.22704903405942478,
+                "ci_upper": 0.22704903405942478,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 1
+              },
+              "log_loss": {
+                "estimate": 0.6472118025488652,
+                "ci_lower": 0.6472118025488652,
+                "ci_upper": 0.6472118025488652,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 1
+              },
+              "ece": {
+                "estimate": 0.4764966254439005,
+                "ci_lower": 0.4764966254439005,
+                "ci_upper": 0.4764966254439005,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 1
+              },
+              "accuracy": {
+                "estimate": 1.0,
+                "ci_lower": 1.0,
+                "ci_upper": 1.0,
+                "ci_level": 0.95,
+                "n_bootstrap": 0,
+                "n_samples": 1
+              }
+            }
+          }
+        },
+        "calibration_diagnostics": {
+          "ece": 0.19643407292417825,
+          "n_samples": 67,
+          "reliability": {
+            "bin_edges": [
+              0.0,
+              0.1,
+              0.2,
+              0.30000000000000004,
+              0.4,
+              0.5,
+              0.6000000000000001,
+              0.7000000000000001,
+              0.8,
+              0.9,
+              1.0
+            ],
+            "bin_counts": [
+              0,
+              0,
+              2,
+              2,
+              7,
+              25,
+              19,
+              9,
+              3,
+              0
+            ],
+            "bin_accuracy": [
+              0.0,
+              0.0,
+              0.5,
+              1.0,
+              0.7142857142857143,
+              0.72,
+              0.8947368421052632,
+              0.7777777777777778,
+              1.0,
+              0.0
+            ],
+            "bin_confidence": [
+              0.0,
+              0.0,
+              0.2695551073047061,
+              0.37067536094049275,
+              0.46264555051990347,
+              0.5485816970138679,
+              0.6516770910138012,
+              0.7510798695509495,
+              0.8212704477942886,
+              0.0
+            ],
+            "ece": 0.19643407292417825,
+            "mce": 0.6293246390595073
+          }
+        },
+        "reproducibility": {
+          "python_version": "3.11.15 (main, Mar 29 2026, 15:50:35) [Clang 15.0.0 (clang-1500.3.9.4)]",
+          "platform": "macOS-26.3.1-arm64-arm-64bit",
+          "random_seed": 42,
+          "feature_hash": ""
+        }
+      }
+    ]
+  },
+  "risk_report": null,
+  "regression_gate": null,
+  "per_year_brier": {
+    "2024": 0.20791454442629445
+  },
+  "per_year_calibration_ece": {
+    "2024": 0.19643407292417825
+  },
+  "per_year_source": {
+    "2024": "pipeline"
+  },
+  "walk_forward": true,
+  "per_year_games": {
+    "2024": [
+      {
+        "team1": "wagner",
+        "team2": "howard",
+        "seed1": 16,
+        "seed2": 16,
+        "round": "FF",
+        "outcome": 1,
+        "pipeline": 0.5
+      },
+      {
+        "team1": "colorado_state",
+        "team2": "virginia",
+        "seed1": 10,
+        "seed2": 10,
+        "round": "FF",
+        "outcome": 1,
+        "pipeline": 0.5
+      },
+      {
+        "team1": "colorado",
+        "team2": "boise_state",
+        "seed1": 10,
+        "seed2": 10,
+        "round": "FF",
+        "outcome": 1,
+        "pipeline": 0.5
+      },
+      {
+        "team1": "grambling",
+        "team2": "montana_state",
+        "seed1": 16,
+        "seed2": 16,
+        "round": "FF",
+        "outcome": 1,
+        "pipeline": 0.5
+      },
+      {
+        "team1": "connecticut",
+        "team2": "stetson",
+        "seed1": 1,
+        "seed2": 16,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.806806
+      },
+      {
+        "team1": "florida_atlantic",
+        "team2": "northwestern",
+        "seed1": 8,
+        "seed2": 9,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.57963
+      },
+      {
+        "team1": "san_diego_state",
+        "team2": "uab",
+        "seed1": 5,
+        "seed2": 12,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.589395
+      },
+      {
+        "team1": "auburn",
+        "team2": "yale",
+        "seed1": 4,
+        "seed2": 13,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.770022
+      },
+      {
+        "team1": "brigham_young",
+        "team2": "duquesne",
+        "seed1": 6,
+        "seed2": 11,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.541645
+      },
+      {
+        "team1": "illinois",
+        "team2": "morehead_state",
+        "seed1": 3,
+        "seed2": 14,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.63958
+      },
+      {
+        "team1": "washington_state",
+        "team2": "drake",
+        "seed1": 7,
+        "seed2": 10,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.274292
+      },
+      {
+        "team1": "iowa_state",
+        "team2": "south_dakota_state",
+        "seed1": 2,
+        "seed2": 15,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.545919
+      },
+      {
+        "team1": "connecticut",
+        "team2": "northwestern",
+        "seed1": 1,
+        "seed2": 9,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.6967
+      },
+      {
+        "team1": "san_diego_state",
+        "team2": "auburn",
+        "seed1": 5,
+        "seed2": 4,
+        "round": "R32",
+        "outcome": 0,
+        "pipeline": 0.48072
+      },
+      {
+        "team1": "illinois",
+        "team2": "duquesne",
+        "seed1": 3,
+        "seed2": 11,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.581691
+      },
+      {
+        "team1": "iowa_state",
+        "team2": "washington_state",
+        "seed1": 2,
+        "seed2": 7,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.622171
+      },
+      {
+        "team1": "connecticut",
+        "team2": "auburn",
+        "seed1": 1,
+        "seed2": 4,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.642689
+      },
+      {
+        "team1": "illinois",
+        "team2": "iowa_state",
+        "seed1": 3,
+        "seed2": 2,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.674646
+      },
+      {
+        "team1": "connecticut",
+        "team2": "illinois",
+        "seed1": 1,
+        "seed2": 3,
+        "round": "E8",
+        "outcome": 1,
+        "pipeline": 0.660168
+      },
+      {
+        "team1": "north_carolina",
+        "team2": "wagner",
+        "seed1": 1,
+        "seed2": 16,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.788597
+      },
+      {
+        "team1": "mississippi_state",
+        "team2": "michigan_state",
+        "seed1": 8,
+        "seed2": 9,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.57343
+      },
+      {
+        "team1": "saint_mary_s__ca",
+        "team2": "grand_canyon",
+        "seed1": 5,
+        "seed2": 12,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.463693
+      },
+      {
+        "team1": "alabama",
+        "team2": "college_of_charleston",
+        "seed1": 4,
+        "seed2": 13,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.53243
+      },
+      {
+        "team1": "clemson",
+        "team2": "new_mexico",
+        "seed1": 6,
+        "seed2": 11,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.406125
+      },
+      {
+        "team1": "baylor",
+        "team2": "colgate",
+        "seed1": 3,
+        "seed2": 14,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.687841
+      },
+      {
+        "team1": "dayton",
+        "team2": "nevada",
+        "seed1": 7,
+        "seed2": 10,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.468452
+      },
+      {
+        "team1": "arizona",
+        "team2": "long_beach_state",
+        "seed1": 2,
+        "seed2": 15,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.715913
+      },
+      {
+        "team1": "north_carolina",
+        "team2": "michigan_state",
+        "seed1": 1,
+        "seed2": 9,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.662513
+      },
+      {
+        "team1": "alabama",
+        "team2": "grand_canyon",
+        "seed1": 4,
+        "seed2": 6,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.504136
+      },
+      {
+        "team1": "clemson",
+        "team2": "baylor",
+        "seed1": 12,
+        "seed2": 5,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.447225
+      },
+      {
+        "team1": "arizona",
+        "team2": "dayton",
+        "seed1": 2,
+        "seed2": 7,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.626112
+      },
+      {
+        "team1": "north_carolina",
+        "team2": "alabama",
+        "seed1": 1,
+        "seed2": 4,
+        "round": "S16",
+        "outcome": 0,
+        "pipeline": 0.589838
+      },
+      {
+        "team1": "clemson",
+        "team2": "arizona",
+        "seed1": 6,
+        "seed2": 2,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.378549
+      },
+      {
+        "team1": "alabama",
+        "team2": "clemson",
+        "seed1": 4,
+        "seed2": 6,
+        "round": "E8",
+        "outcome": 1,
+        "pipeline": 0.531756
+      },
+      {
+        "team1": "houston",
+        "team2": "longwood",
+        "seed1": 1,
+        "seed2": 16,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.810932
+      },
+      {
+        "team1": "nebraska",
+        "team2": "texas_a_m",
+        "seed1": 8,
+        "seed2": 9,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.503829
+      },
+      {
+        "team1": "wisconsin",
+        "team2": "james_madison",
+        "seed1": 5,
+        "seed2": 12,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.264818
+      },
+      {
+        "team1": "duke",
+        "team2": "vermont",
+        "seed1": 4,
+        "seed2": 13,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.692205
+      },
+      {
+        "team1": "texas_tech",
+        "team2": "nc_state",
+        "seed1": 6,
+        "seed2": 11,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.644641
+      },
+      {
+        "team1": "kentucky",
+        "team2": "oakland",
+        "seed1": 3,
+        "seed2": 14,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.746614
+      },
+      {
+        "team1": "florida",
+        "team2": "colorado",
+        "seed1": 7,
+        "seed2": 10,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.650998
+      },
+      {
+        "team1": "marquette",
+        "team2": "western_kentucky",
+        "seed1": 2,
+        "seed2": 15,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.607329
+      },
+      {
+        "team1": "houston",
+        "team2": "texas_a_m",
+        "seed1": 1,
+        "seed2": 9,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.712971
+      },
+      {
+        "team1": "duke",
+        "team2": "james_madison",
+        "seed1": 4,
+        "seed2": 12,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.573113
+      },
+      {
+        "team1": "nc_state",
+        "team2": "oakland",
+        "seed1": 11,
+        "seed2": 14,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.543153
+      },
+      {
+        "team1": "marquette",
+        "team2": "colorado",
+        "seed1": 2,
+        "seed2": 10,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.633242
+      },
+      {
+        "team1": "houston",
+        "team2": "duke",
+        "seed1": 1,
+        "seed2": 4,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.635389
+      },
+      {
+        "team1": "nc_state",
+        "team2": "marquette",
+        "seed1": 11,
+        "seed2": 2,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.362802
+      },
+      {
+        "team1": "houston",
+        "team2": "nc_state",
+        "seed1": 1,
+        "seed2": 11,
+        "round": "E8",
+        "outcome": 0,
+        "pipeline": 0.776794
+      },
+      {
+        "team1": "purdue",
+        "team2": "grambling",
+        "seed1": 1,
+        "seed2": 16,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.846073
+      },
+      {
+        "team1": "utah_state",
+        "team2": "tcu",
+        "seed1": 8,
+        "seed2": 9,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.566149
+      },
+      {
+        "team1": "gonzaga",
+        "team2": "mcneese_state",
+        "seed1": 5,
+        "seed2": 12,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.482581
+      },
+      {
+        "team1": "kansas",
+        "team2": "samford",
+        "seed1": 4,
+        "seed2": 13,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.489723
+      },
+      {
+        "team1": "south_carolina",
+        "team2": "oregon",
+        "seed1": 6,
+        "seed2": 11,
+        "round": "R64",
+        "outcome": 0,
+        "pipeline": 0.588481
+      },
+      {
+        "team1": "creighton",
+        "team2": "akron",
+        "seed1": 3,
+        "seed2": 14,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.660964
+      },
+      {
+        "team1": "texas",
+        "team2": "colorado_state",
+        "seed1": 7,
+        "seed2": 10,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.588273
+      },
+      {
+        "team1": "tennessee",
+        "team2": "saint_peter_s",
+        "seed1": 2,
+        "seed2": 15,
+        "round": "R64",
+        "outcome": 1,
+        "pipeline": 0.783246
+      },
+      {
+        "team1": "purdue",
+        "team2": "tcu",
+        "seed1": 1,
+        "seed2": 9,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.70796
+      },
+      {
+        "team1": "gonzaga",
+        "team2": "kansas",
+        "seed1": 5,
+        "seed2": 4,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.574501
+      },
+      {
+        "team1": "creighton",
+        "team2": "oregon",
+        "seed1": 3,
+        "seed2": 11,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.551112
+      },
+      {
+        "team1": "tennessee",
+        "team2": "texas",
+        "seed1": 2,
+        "seed2": 7,
+        "round": "R32",
+        "outcome": 1,
+        "pipeline": 0.586967
+      },
+      {
+        "team1": "purdue",
+        "team2": "gonzaga",
+        "seed1": 1,
+        "seed2": 5,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.644881
+      },
+      {
+        "team1": "tennessee",
+        "team2": "creighton",
+        "seed1": 2,
+        "seed2": 3,
+        "round": "S16",
+        "outcome": 1,
+        "pipeline": 0.612427
+      },
+      {
+        "team1": "purdue",
+        "team2": "tennessee",
+        "seed1": 1,
+        "seed2": 2,
+        "round": "E8",
+        "outcome": 1,
+        "pipeline": 0.545589
+      },
+      {
+        "team1": "connecticut",
+        "team2": "alabama",
+        "seed1": 1,
+        "seed2": 4,
+        "round": "F4",
+        "outcome": 1,
+        "pipeline": 0.687369
+      },
+      {
+        "team1": "purdue",
+        "team2": "nc_state",
+        "seed1": 1,
+        "seed2": 11,
+        "round": "F4",
+        "outcome": 1,
+        "pipeline": 0.757602
+      },
+      {
+        "team1": "connecticut",
+        "team2": "purdue",
+        "seed1": 1,
+        "seed2": 1,
+        "round": "NCG",
+        "outcome": 1,
+        "pipeline": 0.523503
+      }
+    ]
+  }
+}
