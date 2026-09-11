@@ -423,6 +423,23 @@ most five seasons (2018, 2021–2024) — and each of those ran after the 2026-0
 Elo amputated. No artifact in the repository contains a Brier produced by this model with its
 features intact; the first such number is the one measured below.
 
+**H9. Rosters were never attached on the shared pipeline path, so every roster feature was
+served as 0.0.** CONFIRMED (found 2026-09-11 by dumping the served vectors after the Elo fix).
+`_PipelineRunner._engineer_features` reads `roster=getattr(p, "_rosters", {}).get(team_id)`;
+`_load_data` built the rosters and returned them but never assigned `p._rosters`. On the shared
+path — production and the calibration harness alike — every team was built with `roster=None`,
+and `total_warp`, `top5_rapm`, `total_rapm`, `roster_continuity` and `bench_depth` were
+identically 0.0 across all 64 teams (cross-team SD 0.000; the six non-roster, non-Elo fixed
+features were on training scale, ratios 0.58–1.15). Training rows carried real values from
+the rebuilt roster files, so two of the nine production features were dead at inference
+(`top5_rapm` is the second-largest coefficient) — a second §6c-shaped skew underneath the Elo
+one, and, like it, present in the March 2026 production run. `train_for_predictions` passed
+the dict directly and never had the bug, which is why nothing caught it. Fixed by one
+assignment; `tests/test_shared_pipeline_rosters.py` pins the read/write pair, checks every
+`getattr(p, "_x")` read in the runner has a writer, and drives the feature loop with a stub to
+confirm the roster arrives. The item-6 rebuild was therefore reaching training but not
+inference until this fix; with it, the rebuilt roster features are served end to end.
+
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
 title game. They are `trank.php?begin=…&end=cutoff` date-window recomputes
