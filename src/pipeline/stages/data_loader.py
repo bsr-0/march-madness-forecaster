@@ -629,7 +629,77 @@ def load_teams(
     """Load tournament teams from configured data source.
 
     Priority: teams_json > bracket_json > auto bracket fetch.
+
+    Whatever the source, First Four losers are dropped afterwards when the
+    season's results are on disk (``resolve_first_four_teams``), so the field
+    handed downstream is the 64 teams that play the Round of 64.
     """
+    teams = _load_teams_raw(config, bracket_pipeline)
+    teams, n_dropped = resolve_first_four_teams(teams, getattr(config, "year", None))
+    if n_dropped:
+        logger.info("First Four resolved from results: dropped %d play-in loser(s); %d teams remain.", n_dropped, len(teams))
+    else:
+        dup = _duplicate_slots(teams)
+        if dup:
+            logger.warning(
+                "%d (region, seed) slot(s) still hold two teams and no play-in results are on disk for %s; "
+                "pairwise predictions will work but bracket construction will refuse until the First Four is played: %s",
+                len(dup), getattr(config, "year", None), dup[:4],
+            )
+    return teams
+
+
+def _duplicate_slots(teams: List[Team]) -> List[Tuple[str, int]]:
+    seen: Dict[Tuple[str, int], int] = {}
+    for t in teams:
+        key = (getattr(t, "region", ""), int(getattr(t, "seed", 0) or 0))
+        seen[key] = seen.get(key, 0) + 1
+    return sorted(k for k, n in seen.items() if n > 1)
+
+
+def resolve_first_four_teams(teams: List[Team], year: Optional[int]) -> Tuple[List[Team], int]:
+    """Drop First Four losers using the season's tournament results, if present.
+
+    The seeds/teams files list everyone who entered (68; 76 from 2027). Both
+    teams in a play-in game share a (region, seed) slot, so a bracket cannot
+    be laid out until those games are played. ``bracket_construction`` now
+    refuses to guess (it used to settle the slot by dict order and shipped a
+    wrong R64 in every season), and ``simulation._resolve_play_in_teams``
+    still guesses by AdjEM. Play-in games finish before brackets lock, so
+    their results are ordinary pre-tournament information -- the same rule
+    ``scripts/mc_pool_backtest.resolve_first_four`` and
+    ``build_candidate_artifact.resolve_field`` apply. With no results on disk
+    the list is returned unchanged and the caller warns.
+
+    Returns ``(teams, n_dropped)``.
+    """
+    if year is None or not teams:
+        return teams, 0
+    try:
+        from ...prediction.noseed_model import _load_tournament_results
+
+        games = _load_tournament_results(int(year))
+    except Exception as exc:  # noqa: BLE001 - a missing results file is the normal live-season case
+        logger.debug("First Four resolution: no results for %s (%s)", year, exc)
+        return teams, 0
+    losers = {
+        (g["team2_id"] if g.get("team1_won") else g["team1_id"])
+        for g in games
+        if g.get("round_name") == "FF" and g.get("team1_id") and g.get("team2_id")
+    }
+    if not losers:
+        return teams, 0
+    # Team has no team_id field; the pipeline keys team_struct by the
+    # normalised name (pipeline_runner), which is also how results files are keyed.
+    kept = [t for t in teams if _team_id(getattr(t, "name", "")) not in losers]
+    return kept, len(teams) - len(kept)
+
+
+def _load_teams_raw(
+    config: ForecastConfig,
+    bracket_pipeline: Any,
+) -> List[Team]:
+    """The entered field, from the first source that yields teams."""
     if config.teams_json:
         teams = DataLoader.load_teams_from_json(config.teams_json)
         if teams:
