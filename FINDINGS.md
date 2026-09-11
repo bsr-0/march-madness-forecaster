@@ -16,6 +16,13 @@ They are kept verbatim as the historical record, but **every one of them predate
 every season** — they were computed on brackets containing teams that never played
 the Round of 64. Treat them as void, not merely superseded.
 
+**On every ML-pipeline number below (2026-09-11).** No Brier in this file was produced by
+the ML pipeline with its features intact (audit H8/H9: Elo clipped to 1000, rosters served
+as zero, and most "model" folds were the seed fallback). The first honest measurement, nine
+seasons walk-forward on 567 identical games, is audit **H10**: ML pipeline Brier 0.209, seed
+table 0.189, site fitted model (`docs/fit.js`) 0.146; the fitted model wins 9 of 9 seasons.
+Read any sentence here that treats the ML pipeline as the engine against that table.
+
 The current stated claim is **12.0%, 95% CI 8.6–15.4%**, over the 14 evaluation
 seasons 2011–2025 (2026 excluded as an in-sample integration season; the backtest's
 headline aggregate now drops it automatically), against a 4.0% seed baseline, at the

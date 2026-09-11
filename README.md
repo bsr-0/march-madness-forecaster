@@ -166,7 +166,29 @@ march-madness loyo-validate
 
 # RDoF audit (researcher degrees of freedom)
 march-madness audit-rdof --holdout-years 2025
+
+# Walk-forward (train only on earlier seasons); folds checkpoint to <output>.partial
+march-madness backtest-harness --years 2016,2017,2018,2019,2021,2022,2023,2024,2025 --walk-forward --output artifacts/bh_wf9.json
+python -m scripts.compare_pipeline_vs_pit --harness artifacts/bh_wf9.json
 ```
+
+### How good is the ML pipeline? (measured 2026-09-11)
+
+Not good enough to ship. On 567 identical main-draw games across nine walk-forward seasons
+(2016–2019, 2021–2025), with every known serving defect fixed:
+
+| model | log loss | Brier | vs seed table | seasons won (of 9) |
+|---|---|---|---|---|
+| ML pipeline (`backtest-harness`) | 0.606 | 0.209 | worse, −10.5% skill | 0 |
+| Site fitted model (`docs/fit.js`, the one the bracket page uses) | 0.451 | 0.146 | better, +22.7% skill | 9 |
+| Seed table | 0.562 | 0.189 | — | — |
+
+Paired 95% CI on per-game log loss (ML − fitted): [+0.116, +0.191]. By the rule fixed before
+the comparison (CI excludes zero and a season majority), the fitted model wins outright. The
+brackets on the site never came from the ML pipeline, so this changes no shipped bracket — but
+treat the ML pipeline as a research branch, not the product. Full tables:
+`artifacts/headline_measurement/ml_vs_fitted_2016_2025.txt`; finding H10 in
+`AUDIT_INDEPENDENT_EVALUATOR_2027.md`.
 
 ### Monitoring & snapshots
 
