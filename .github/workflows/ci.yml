@@ -34,113 +34,6 @@ jobs:
   # drift stays visible as red/green, but it does not block merges — this is
   # the experimentation / backtesting / pool-optimization edit window.
   # Auto-rearms on Jan 1 every year; no manual flip needed.
-  freeze-check:
-    name: "Freeze Artifact Check"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if in enforcement window
-        id: window
-        run: |
-          MMDD=$(date -u +%m-%d)
-          # Blocking: Jan 1 – Apr 7 (pre-tournament + tournament).
-          # Outside that window: skip entirely to avoid noisy red checks.
-          if [[ "$MMDD" < "04-08" ]]; then
-            echo "in_window=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "in_window=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Freeze check skipped — outside tournament window (Apr 8 – Dec 31)"
-          fi
-
-      - name: Checkout
-        if: steps.window.outputs.in_window == 'true'
-        uses: actions/checkout@v4
-
-      - name: Check freeze artifact is up-to-date
-        if: steps.window.outputs.in_window == 'true'
-        run: |
-          python3 - <<'PYEOF'
-          import ast, hashlib, json, sys
-
-          FREEZE_PATH = "artifacts/pipeline_freeze_2026.json"
-
-          REQUIRED_SOURCE_FILES = [
-              "src/pipeline/config.py",
-              "src/pipeline/sota.py",
-              "src/pipeline/tournament_pipeline.py",
-              "src/pipeline/pipeline_runner.py",
-              "src/pipeline/stages/calibration.py",
-              "src/pipeline/stages/data_loader.py",
-              "src/pipeline/stages/inference.py",
-              "src/pipeline/probability_pipeline.py",
-              "src/governance/production_validator.py",
-              "src/governance/production_runner.py",
-          ]
-
-          def sha256_file(path):
-              h = hashlib.sha256()
-              with open(path, "rb") as f:
-                  for chunk in iter(lambda: f.read(8192), b""):
-                      h.update(chunk)
-              return h.hexdigest()
-
-          def extract_dataclass_fields(filepath, class_name):
-              """Extract field names from a @dataclass using AST (no imports needed)."""
-              with open(filepath) as f:
-                  tree = ast.parse(f.read())
-              for node in ast.walk(tree):
-                  if isinstance(node, ast.ClassDef) and node.name == class_name:
-                      fields = set()
-                      for item in node.body:
-                          if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                              fields.add(item.target.id)
-                      return fields
-              return None
-
-          try:
-              with open(FREEZE_PATH) as f:
-                  freeze = json.load(f)
-          except FileNotFoundError:
-              print(f"::error::Freeze artifact not found at {FREEZE_PATH}.")
-              print("Run: march-madness freeze-pipeline")
-              sys.exit(1)
-
-          errors = []
-
-          frozen_hashes = freeze.get("source_file_hashes", {})
-          for src_file in REQUIRED_SOURCE_FILES:
-              frozen_hash = frozen_hashes.get(src_file)
-              if frozen_hash is None:
-                  errors.append(f"{src_file}: missing from freeze artifact")
-                  continue
-              current_hash = sha256_file(src_file)
-              if current_hash != frozen_hash:
-                  errors.append(f"{src_file}: hash mismatch (source changed since freeze)")
-
-          frozen_fields = freeze.get("config_fields", {})
-          current_field_names = extract_dataclass_fields(
-              "src/pipeline/config.py", "SOTAPipelineConfig"
-          )
-          if current_field_names is None:
-              errors.append("Could not find SOTAPipelineConfig in src/pipeline/config.py")
-          else:
-              frozen_field_names = set(frozen_fields.keys())
-              missing_in_freeze = current_field_names - frozen_field_names
-              if missing_in_freeze:
-                  errors.append(
-                      f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"
-                  )
-
-          if errors:
-              print("::error::Freeze artifact is STALE. Update it before merging.")
-              for e in errors:
-                  print(f"  - {e}")
-              print()
-              print("To fix: python -c \"from src.governance.production_runner import regenerate_freeze; regenerate_freeze()\"")
-              sys.exit(1)
-          else:
-              print(f"Freeze OK ({len(frozen_hashes)} files, {len(frozen_fields)} config fields)")
-          PYEOF
-
   # ─── Full Tests (runs in parallel, non-blocking for auto-merge) ──
   full-tests:
     name: "Full Test Suite"
@@ -156,23 +49,6 @@ jobs:
 
       - name: Unit tests
         run: pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
-
-      - name: Contract governance checks
-        run: |
-          python -c "
-          import yaml
-          from src.data.contract_validator import ContractValidator
-
-          validator = ContractValidator()
-          result = validator.validate()
-          print(result.summary())
-          assert result.passed, 'Contract validation FAILED'
-
-          contracts = yaml.safe_load(open('contracts/feature_contracts.yaml'))
-          untested = [f['feature_name'] for f in contracts['features'] if not f.get('test_ids')]
-          assert not untested, f'Untested features: {untested}'
-          print(f'All {len(contracts[\"features\"])} features have test_ids.')
-          "
 
       - name: Data-contract tests
         run: pytest tests/ -m "data_contract" -v --tb=short -q
@@ -322,7 +198,6 @@ jobs:
     needs:
       - fast-gate
       - browser-model
-      - freeze-check
       - prospective-integration
       - full-tests
       - audit
@@ -343,15 +218,6 @@ jobs:
           if [[ "${{ needs.browser-model.result }}" != "success" ]]; then
             echo "::error::Browser model checks failed — blocking merge (antisymmetry / point-in-time invariants)"
             exit 1
-          fi
-          if [[ "${{ needs.freeze-check.result }}" == "failure" ]]; then
-            TODAY_MMDD=$(date -u +%m-%d)
-            if [[ "$TODAY_MMDD" > "$FREEZE_BLOCK_END" ]]; then
-              echo "::warning::Freeze artifact check failed — non-blocking (post-tournament edit window, ${FREEZE_BLOCK_END} < today). Re-freeze the pipeline before the ${FREEZE_BLOCK_START} enforcement window re-opens."
-            else
-              echo "::error::Freeze artifact check failed — blocking merge (tournament-season enforcement active, ${FREEZE_BLOCK_START} – ${FREEZE_BLOCK_END})"
-              exit 1
-            fi
           fi
           if [[ "${{ needs.prospective-integration.result }}" == "failure" ]]; then
             TODAY_MMDD=$(date -u +%m-%d)

@@ -10,6 +10,8 @@ Extends patterns from ``src/ml/evaluation/statistical_tests.py``.
 
 from __future__ import annotations
 
+import logging
+
 import math
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
@@ -342,3 +344,61 @@ def compute_all_metrics_with_ci(
             random_seed + 3 if random_seed is not None else None,
         ),
     }
+
+# Moved from src/ml/evaluation/loyo_protocol.py when the ML pipeline was removed
+# (2026-09-11); still used by scripts/admit_kaggle_candidate.py.
+MINIMUM_BRIER_IMPROVEMENT = 0.001
+logger = logging.getLogger(__name__)
+
+def compute_ablation_threshold(
+    fold_briers: "list[float]",
+    significance_level: float = 0.05,
+) -> float:
+    """Compute a statistically-powered ablation threshold from fold-level Brier scores.
+
+    The threshold is set at the one-sided critical value of a paired t-test:
+    threshold = t_{alpha, n-1} * SE(mean Brier), where SE = std / sqrt(n).
+
+    This ensures that only improvements detectable above noise (at the given
+    significance level) are treated as meaningful.
+
+    Args:
+        fold_briers: Per-fold Brier scores from LOYO validation.
+        significance_level: Alpha for the one-sided test (default 0.05).
+
+    Returns:
+        Minimum Brier improvement that would be statistically significant.
+        Returns MINIMUM_BRIER_IMPROVEMENT as a floor if computation fails.
+    """
+    n = len(fold_briers)
+    if n < 3:
+        logger.warning(
+            "Too few folds (%d) for powered threshold; falling back to legacy %.4f",
+            n,
+            MINIMUM_BRIER_IMPROVEMENT,
+        )
+        return MINIMUM_BRIER_IMPROVEMENT
+
+    arr = np.array(fold_briers, dtype=float)
+    se = float(np.std(arr, ddof=1) / np.sqrt(n))
+
+    # One-sided t critical value
+    try:
+        from scipy.stats import t as t_dist
+
+        t_crit = float(t_dist.ppf(1.0 - significance_level, df=n - 1))
+    except ImportError:
+        # Approximate: for df=6 (7 folds), t_0.05 ≈ 1.943
+        t_crit = 1.943 if n == 7 else 2.0
+
+    threshold = t_crit * se
+    logger.info(
+        "Powered ablation threshold: %.4f (SE=%.4f, t_crit=%.3f, n_folds=%d, alpha=%.3f)",
+        threshold,
+        se,
+        t_crit,
+        n,
+        significance_level,
+    )
+    return max(threshold, MINIMUM_BRIER_IMPROVEMENT)
+

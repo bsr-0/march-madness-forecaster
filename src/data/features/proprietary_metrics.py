@@ -225,7 +225,7 @@ class ProprietaryMetricsEngine:
 
         if cutoff_date and self._require_cutoff_date:
             try:
-                from ...pipeline.config import TOURNAMENT_START_DATES
+                from ..season_calendar import TOURNAMENT_START_DATES
 
                 cutoff_year = int(cutoff_date[:4])
                 tournament_start = TOURNAMENT_START_DATES.get(cutoff_year)
@@ -1704,7 +1704,7 @@ class IncrementalMetricsEngine:
         from datetime import timedelta
 
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             return
 
@@ -1795,163 +1795,6 @@ class IncrementalMetricsEngine:
 
         raw = float(np.mean(diffs))
         return float(np.clip(raw / 20.0, -1.5, 1.5))
-
-    @staticmethod
-    def metrics_to_team_vector(
-        m: ProprietaryTeamMetrics,
-        seed: int = 0,
-        external_rating_composite: float = float("nan"),
-        external_rating_spread: float = float("nan"),
-        massey_features=None,
-    ) -> np.ndarray:
-        """Convert ProprietaryTeamMetrics to the canonical team feature vector."""
-        from .feature_engineering import TEAM_FEATURE_DIM
-
-        v = np.zeros(TEAM_FEATURE_DIM, dtype=np.float64)
-        v[0] = m.adj_offensive_efficiency
-        v[1] = m.adj_defensive_efficiency
-        v[2] = m.adj_tempo
-        v[3] = m.effective_fg_pct
-        v[4] = m.turnover_rate
-        v[5] = m.offensive_reb_rate
-        v[6] = m.free_throw_rate
-        v[7] = m.opp_effective_fg_pct
-        v[8] = m.opp_turnover_rate
-        v[9] = m.defensive_reb_rate
-        v[10] = m.opp_free_throw_rate
-        v[18] = m.offensive_xp_per_possession
-        v[19] = m.shot_distribution_score
-        v[20] = m.sos_adj_em
-        v[21] = m.sos_opp_o
-        v[22] = m.sos_opp_d
-        v[23] = m.ncsos_adj_em
-        v[24] = m.luck
-        v[25] = m.wab_poisson
-        v[26] = m.momentum
-        v[27] = m.three_pt_variance
-        v[28] = m.pace_adjusted_variance
-        v[29] = m.elo_rating
-        v[30] = m.opp_two_pt_pct_allowed
-        v[31] = m.opp_three_pt_attempt_rate
-        v[32] = m.conference_adj_em
-        v[33] = m.three_pt_pct
-        v[34] = m.three_pt_rate
-        v[35] = m.defensive_xp_per_possession
-        v[36] = m.win_pct
-        v[37] = m.three_pt_regression_signal
-        v[38] = min(m.rest_days, 14.0)
-        v[39] = 0.0
-        v[40] = m.pace_variance
-        v[41] = m.neutral_site_win_pct
-        from .tournament_features import compute_tournament_resume_composite
-
-        v[42] = compute_tournament_resume_composite(
-            q1_win_pct=m.q1_win_pct,
-            q1_games=m.q1_wins + m.q1_losses,
-            road_neutral_win_pct=m.road_neutral_win_pct,
-            road_neutral_games=m.road_neutral_games,
-            elite_sos=m.elite_sos,
-            sor=m.sor,
-        )
-        v[43] = 0.0
-        v[44] = 0.0
-        if seed > 0:
-            v[45] = float(np.log1p(17 - seed) / np.log1p(16))
-        else:
-            v[45] = 0.0
-        v[46] = float(m.conf_tourney_champion)
-        v[47] = float(m.conf_tourney_games)
-        v[48] = m.conf_tourney_margin
-        v[49] = float(m.late_season_games)
-        v[50] = m.late_season_margin
-        v[51] = m.late_season_win_pct
-        v[52] = 0.0
-        v[53] = 0.0
-        v[54] = 0.0
-        v[55] = float(np.log1p(m.coach_tournament_appearances))
-
-        inf_mask = np.isinf(v)
-        if inf_mask.any():
-            v[inf_mask] = np.nan
-        return v
-
-    @staticmethod
-    def build_matchup_vector(
-        v1: np.ndarray,
-        v2: np.ndarray,
-        seed1: int = 0,
-        seed2: int = 0,
-        engine: Optional["IncrementalMetricsEngine"] = None,
-        team1_id: str = "",
-        team2_id: str = "",
-    ) -> np.ndarray:
-        """Build matchup vector from two team feature vectors."""
-        diff = v1 - v2
-
-        from .feature_engineering import ABSOLUTE_LEVEL_INDICES
-
-        _ABS_IDX = ABSOLUTE_LEVEL_INDICES if ABSOLUTE_LEVEL_INDICES else [0, 1, 26, 37, 49]
-        absolute = np.array([(v1[i] + v2[i]) / 2.0 for i in _ABS_IDX])
-
-        tempo_interaction = (v1[2] * v2[2]) / 4624.0
-        tempo_diff = v1[2] - v2[2]
-        eff_diff = (v1[0] - v1[1]) - (v2[0] - v2[1])
-        style_mismatch = (tempo_diff * eff_diff) / 600.0
-
-        _SEED_EXPECTED_EM = {
-            1: 28,
-            2: 21,
-            3: 16,
-            4: 12,
-            5: 9,
-            6: 6,
-            7: 4,
-            8: 2,
-            9: 0,
-            10: -2,
-            11: -4,
-            12: -6,
-            13: -9,
-            14: -12,
-            15: -16,
-            16: -21,
-        }
-        residual1 = (v1[0] - v1[1]) - _SEED_EXPECTED_EM.get(seed1, 0)
-        residual2 = (v2[0] - v2[1]) - _SEED_EXPECTED_EM.get(seed2, 0)
-        seed_em_residual_diff = (residual1 - residual2) / 20.0
-
-        sos_seed_interaction = ((v1[26] - v2[26]) * (seed1 - seed2)) / 200.0
-
-        var_diff = v1[35] - v2[35]
-        three_pt_var_seed_interaction = var_diff * (seed1 - seed2) / 15.0
-
-        if seed1 > 0 and seed2 > 0:
-            seed_interaction = (seed1 * seed2) / 128.0 - 1.0
-            seed_diff = (seed1 - seed2) / 15.0
-        else:
-            seed_interaction = 0.0
-            seed_diff = 0.0
-
-        interactions = np.array(
-            [
-                tempo_interaction,
-                style_mismatch,
-                seed_em_residual_diff,
-                sos_seed_interaction,
-                three_pt_var_seed_interaction,
-                seed_interaction,
-                seed_diff,
-            ]
-        )
-
-        result = np.concatenate([diff, absolute, interactions])
-        from .feature_engineering import MATCHUP_DIM
-
-        assert result.shape[0] == MATCHUP_DIM, (
-            f"build_matchup_vector produced {result.shape[0]}-dim vector, expected MATCHUP_DIM={MATCHUP_DIM}."
-        )
-        return result
-
 
 # CBBpy team-map CSV loader
 

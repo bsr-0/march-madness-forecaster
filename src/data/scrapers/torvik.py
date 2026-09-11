@@ -393,7 +393,7 @@ class BartTorvikScraper:
         years, to prevent silent fallback to unfiltered (contaminated) data.
         """
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             logger.warning("[torvik] Cannot import TOURNAMENT_START_DATES — date filtering unavailable")
             return None, None
@@ -405,7 +405,7 @@ class BartTorvikScraper:
                 # COUNCIL_LESSONS.md §2 O16 closes on this guarantee.
                 raise ValueError(
                     f"TOURNAMENT_START_DATES missing entry for {year}; "
-                    f"add it to src/pipeline/config.py. Returning unfiltered "
+                    f"add it to src/data/season_calendar.py. Returning unfiltered "
                     f"trank.php data would produce post-tournament (contaminated) "
                     f"ratings — a leakage bug."
                 )
@@ -427,7 +427,7 @@ class BartTorvikScraper:
         Always raises — zero tolerance for post-tournament data ingestion.
         """
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             return  # Scraper used standalone, can't guard
         cutoff = TOURNAMENT_START_DATES.get(year)
@@ -460,7 +460,7 @@ class BartTorvikScraper:
         data_coverage = data.get("data_as_of") or data.get("cutoff_date")
         if data_coverage:
             try:
-                from ...pipeline.config import TOURNAMENT_START_DATES
+                from ..season_calendar import TOURNAMENT_START_DATES
 
                 coverage_date = date.fromisoformat(data_coverage[:10])
                 cutoff = TOURNAMENT_START_DATES.get(year)
@@ -473,7 +473,7 @@ class BartTorvikScraper:
         if not ts_str:
             return
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             return  # Scraper used standalone, can't guard
         cutoff = TOURNAMENT_START_DATES.get(year)

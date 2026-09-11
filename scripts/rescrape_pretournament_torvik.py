@@ -42,7 +42,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from data.normalize import normalize_team_id
-from src.pipeline.config import TOURNAMENT_START_DATES
+from src.data.season_calendar import TOURNAMENT_START_DATES
 
 logging.basicConfig(
     level=logging.INFO,

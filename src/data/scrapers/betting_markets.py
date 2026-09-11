@@ -284,7 +284,7 @@ class BettingMarketScraper(ABC):
         from datetime import date
 
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             return  # Scraper used standalone
         from ...exceptions import LeakageError

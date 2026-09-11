@@ -156,7 +156,7 @@ class TestBuildSeasonClutchFeatures:
     def test_rejects_post_cutoff_games(self, monkeypatch, tmp_path):
         # Fake a 2024 cutoff and a game on/after it — must raise, not silently drop.
         fake_cutoff = date(2024, 3, 19)
-        monkeypatch.setattr("src.pipeline.config.TOURNAMENT_START_DATES", {2024: fake_cutoff}, raising=False)
+        monkeypatch.setattr("src.data.season_calendar.TOURNAMENT_START_DATES", {2024: fake_cutoff}, raising=False)
         payload = {
             "season": 2024,
             "games": [

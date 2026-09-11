@@ -369,10 +369,10 @@ class EspnBoxscoreScraper:
         if include_tournament:
             return date(year, 4, 30)
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError as exc:  # pragma: no cover - configuration error
             raise RuntimeError(
-                "Cannot import TOURNAMENT_START_DATES from src.pipeline.config — "
+                "Cannot import TOURNAMENT_START_DATES from src.data.season_calendar — "
                 "refusing to scrape without a pre-tournament bound."
             ) from exc
         cutoff = TOURNAMENT_START_DATES.get(year)

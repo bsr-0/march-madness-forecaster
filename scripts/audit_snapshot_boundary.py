@@ -84,7 +84,7 @@ from src.data.features.venue import (  # noqa: E402
     tournament_venue,
     venue_for,
 )
-from src.pipeline.config import TOURNAMENT_START_DATES  # noqa: E402
+from src.data.season_calendar import TOURNAMENT_START_DATES  # noqa: E402
 
 HIST = REPO / "data" / "raw" / "historical"
 STATS_PATH = REPO / "docs" / "data" / "team_stats_by_year.json"

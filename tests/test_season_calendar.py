@@ -63,7 +63,7 @@ class TestAgreementWithTournamentStartDates:
     NORMAL_GAP_DAYS = 2
 
     def test_selection_sunday_precedes_tournament_start(self):
-        from src.pipeline.config import TOURNAMENT_START_DATES
+        from src.data.season_calendar import TOURNAMENT_START_DATES
 
         overlap = sorted(set(SELECTION_SUNDAY_DATES) & set(TOURNAMENT_START_DATES))
         assert overlap, "Expected the two tables to share seasons"
@@ -170,7 +170,7 @@ class TestRoundOf64Tip:
         season is added with an unusual schedule and no override, the leakage
         boundary would quietly move by a day rather than fail.
         """
-        from src.pipeline.config import TOURNAMENT_START_DATES
+        from src.data.season_calendar import TOURNAMENT_START_DATES
 
         irregular = {
             year
@@ -189,7 +189,7 @@ class TestRoundOf64Tip:
         behaviour of every bracket in every pool, all of which are filled in
         after the First Four decides four of the 64 slots.
         """
-        from src.pipeline.config import TOURNAMENT_START_DATES
+        from src.data.season_calendar import TOURNAMENT_START_DATES
 
         for year in season_calendar.SELECTION_SUNDAY_DATES:
             start = TOURNAMENT_START_DATES.get(year)

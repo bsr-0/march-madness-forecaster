@@ -40,10 +40,6 @@ setup(
             "pytest>=7.4.0",
             "pytest-cov>=4.1.0",
         ],
-        "gpu": [
-            "torch>=2.0.0,<3.0.0",
-            "torch-geometric>=2.4.0,<3.0.0",
-        ],
     },
     python_requires=">=3.8",
     entry_points={

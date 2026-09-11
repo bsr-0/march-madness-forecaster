@@ -4789,6 +4789,11 @@ def run_backtest(
             baseline). Custom fitters MUST NOT read data from any year
             outside the provided window.
     """
+    # An explicit `years` request is honoured in the returned list, contaminated
+    # seasons included (integration / equivalence checks run 2026 on purpose).
+    # The default sweep returns evaluation seasons only; aggregates never include
+    # a contaminated season either way (report_backtest_results strips them).
+    explicit_years = years is not None
     if years is None:
         years = BACKTEST_YEARS
 
@@ -4883,7 +4888,8 @@ def run_backtest(
                 json.dump({"year": yr, "modes": modes_data}, f, indent=2)
             print(f"  [save-brackets] {out_path} ({len(modes_data)} modes)")
 
-    return report_backtest_results(results, eval_start_year)
+    evaluation_results = report_backtest_results(results, eval_start_year)
+    return results if explicit_years else evaluation_results
 
 
 class _Tee:

@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Senior code reviewer for this Python ML pipeline. Dispatch after completing any major implementation step for structured review against the original plan and project standards.
+description: Senior code reviewer for this Python pool-aware bracket optimiser. Dispatch after completing any major implementation step for structured review against the original plan and project standards.
 ---
 
 # Code Reviewer Agent

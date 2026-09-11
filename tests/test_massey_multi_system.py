@@ -230,69 +230,6 @@ class TestFeaturesToVector:
 
 
 # ---------------------------------------------------------------------------
-# Integration: TeamFeatures dimension
-# ---------------------------------------------------------------------------
-
-
-class TestTeamFeaturesDimension:
-    """Verify TEAM_FEATURE_DIM reflects the pruned production vector."""
-
-    def test_dimension_matches_pruned_vector(self):
-        """TEAM_FEATURE_DIM should match the post-pruning vector width."""
-        from src.data.features.feature_engineering import TEAM_FEATURE_DIM
-
-        assert TEAM_FEATURE_DIM == 56
-
-    def test_feature_names_exclude_massey(self):
-        """Massey feature names were pruned from the model-facing vector."""
-        from src.data.features.feature_engineering import TeamFeatures
-
-        names = TeamFeatures.get_feature_names(include_embeddings=False)
-        for massey_name in ALL_MASSEY_FEATURE_NAMES:
-            assert massey_name not in names, f"Unexpected retained feature name: {massey_name}"
-
-    def test_to_vector_matches_dim(self):
-        """Default TeamFeatures.to_vector() matches TEAM_FEATURE_DIM."""
-        from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
-
-        tf = TeamFeatures(team_id="test", team_name="Test", seed=1, region="W")
-        vec = tf.to_vector(include_embeddings=False)
-        assert len(vec) == TEAM_FEATURE_DIM
-
-    def test_feature_names_length_matches_dim(self):
-        """get_feature_names() length matches TEAM_FEATURE_DIM."""
-        from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
-
-        names = TeamFeatures.get_feature_names(include_embeddings=False)
-        assert len(names) == TEAM_FEATURE_DIM
-
-
-# ---------------------------------------------------------------------------
-# Era availability
-# ---------------------------------------------------------------------------
-
-
-class TestEraAvailability:
-    """Verify pruned massey features no longer participate in availability checks."""
-
-    def test_massey_not_in_available_features_2003_onwards(self):
-        """Pruned massey features should not appear even in supported eras."""
-        from src.data.features.feature_engineering import era_available_features
-
-        features_2005 = era_available_features(2005)
-        assert "massey_pom" not in features_2005
-        assert "massey_rank_std" not in features_2005
-
-    def test_massey_unavailable_before_2003(self):
-        """Pruned massey features remain absent before 2003 as well."""
-        from src.data.features.feature_engineering import era_available_features
-
-        features_2002 = era_available_features(2002)
-        assert "massey_pom" not in features_2002
-        assert "massey_rank_std" not in features_2002
-
-
-# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 

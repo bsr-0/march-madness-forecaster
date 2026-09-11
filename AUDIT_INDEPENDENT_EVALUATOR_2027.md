@@ -482,6 +482,19 @@ killed the first nine-season run four folds in). Repaired from the `seeds` block
 Artifacts: `artifacts/headline_measurement/ml_walkforward_2016_2025_9fold.json`,
 `ml_vs_fitted_2016_2025.txt`.
 
+**REMOVED 2026-09-11.** On the strength of this table the ML pipeline was deleted: `src/pipeline/`,
+`src/ml/`, the LOYO/walk-forward harness, the `forecast` / `run-production*` /
+`backtest-harness` / `audit-rdof` / `loyo-validate` CLI family, the freeze governance that
+guarded its production run, the women's Kaggle export built on it, its ForecastConfig files,
+freeze artifacts and 22 test files (138 files, ~52k lines, of which ~4k were tests). The 56-dim team vector went with it, so
+`proprietary_metrics` lost its two vector builders and the feature-contract validator CI step
+is gone. Kept: `src/governance/frozen_spec.py` (the pool product's 2027 pre-registration, not
+ML governance), `TOURNAMENT_START_DATES` (moved to `src/data/season_calendar.py`), every
+scraper, the roster rebuild, `chaos_index` / `testing_budget` / `tournament_oracle`. H7, H8,
+H9, M3 and recommendation 6b are therefore closed by deletion rather than by fix; the
+measurement artifacts stay as the record of why. The README "7 domain features … 50k MC"
+row in the appendix below is moot: the README now describes the pool product only.
+
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
 title game. They are `trank.php?begin=…&end=cutoff` date-window recomputes
@@ -697,8 +710,8 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    it now drops the overlay and raises under `strict_leakage_mode`. **Still open:** rebuild
    roster features from game-level box scores, or drop them from inference too — today a
    clean 2026/2027 snapshot would be served to a model trained without them.
-6b. **Resolve H7 before anything above matters for the ML path.** `data_loader` imports a
-   package deleted in April, so the pipeline cannot load data at runtime.
+6b. ~~Resolve H7 before anything above matters for the ML path.~~ **MOOT 2026-09-11:** the
+   ML path was measured (H10) and removed. Nothing in the product depends on it.
 7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
    comment saying it is unfit; create the 2027 file or make its absence loud.
 8. Turn the March runbook into a script or a checked-in document; wire
