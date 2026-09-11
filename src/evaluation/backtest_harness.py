@@ -71,6 +71,10 @@ class BacktestResult:
     per_year_brier: Dict[int, float] = field(default_factory=dict)
     per_year_calibration_ece: Dict[int, float] = field(default_factory=dict)
     per_year_games: Dict[int, List[Dict[str, Any]]] = field(default_factory=dict)
+    # "pipeline" or "seed_fallback" per year. A fallback year's Brier is the
+    # seed baseline's, not the model's, and must never be read as a model score.
+    per_year_source: Dict[int, str] = field(default_factory=dict)
+    walk_forward: bool = False
     timestamp: str = ""
     elapsed_seconds: float = 0.0
 
@@ -83,6 +87,8 @@ class BacktestResult:
             "regression_gate": (self.regression_gate.to_dict() if self.regression_gate else None),
             "per_year_brier": {str(k): v for k, v in self.per_year_brier.items()},
             "per_year_calibration_ece": {str(k): v for k, v in self.per_year_calibration_ece.items()},
+            "per_year_source": {str(k): v for k, v in self.per_year_source.items()},
+            "walk_forward": self.walk_forward,
         }
         if self.per_year_games:
             result["per_year_games"] = {str(k): v for k, v in self.per_year_games.items()}
@@ -98,13 +104,22 @@ class BacktestResult:
         lines.append("")
 
         if self.per_year_brier:
-            lines.append("Per-year Brier scores:")
+            protocol = "walk-forward (train < year)" if self.walk_forward else "LOYO (train on all other years, incl. future)"
+            lines.append(f"Per-year Brier scores  [{protocol}]:")
             for year in sorted(self.per_year_brier):
                 brier = self.per_year_brier[year]
                 ece = self.per_year_calibration_ece.get(year, float("nan"))
-                lines.append(f"  {year}: Brier={brier:.4f}  ECE={ece:.4f}")
-            briers = list(self.per_year_brier.values())
-            lines.append(f"  Mean={np.mean(briers):.4f}  Std={np.std(briers, ddof=1):.4f}")
+                src = self.per_year_source.get(year, "pipeline")
+                tag = "" if src == "pipeline" else f"  <-- {src.upper()}: not a model score"
+                lines.append(f"  {year}: Brier={brier:.4f}  ECE={ece:.4f}{tag}")
+            model_years = [y for y in self.per_year_brier if self.per_year_source.get(y, "pipeline") == "pipeline"]
+            briers = [self.per_year_brier[y] for y in model_years]
+            if briers:
+                sd = np.std(briers, ddof=1) if len(briers) > 1 else float("nan")
+                lines.append(f"  Model years n={len(briers)}: Mean={np.mean(briers):.4f}  Std={sd:.4f}")
+            n_fb = len(self.per_year_brier) - len(model_years)
+            if n_fb:
+                lines.append(f"  {n_fb} year(s) fell back to the seed baseline and are excluded from the mean above.")
             lines.append("")
 
         if self.regression_gate:
@@ -145,7 +160,18 @@ class BacktestHarness:
         config_overrides: Optional[Dict[str, Any]] = None,
         n_bootstrap: int = 5000,
         kaggle_dir: Optional[str] = None,
+        allow_seed_fallback: bool = False,
+        walk_forward: bool = False,
     ):
+        # allow_seed_fallback: substitute the seed baseline when the pipeline
+        # fails for a year. Off by default -- it used to be unconditional, and
+        # the substituted Brier was reported in the same column as the model's
+        # with only a log warning to tell them apart. configs/backtest_baseline.json's
+        # 2025 entry (0.141963) is such a substitution.
+        # walk_forward: train only on seasons strictly before the held-out year.
+        # The default LOYO trains on every other season, including later ones.
+        self.allow_seed_fallback = allow_seed_fallback
+        self.walk_forward = walk_forward
         self.historical_dir = Path(historical_dir)
         self.baseline_path = Path(baseline_path) if baseline_path else None
         self.config_overrides = config_overrides or {}
@@ -193,6 +219,7 @@ class BacktestHarness:
         backtester = KaggleBacktester(historical_results_dir=results_dir)
         year_reports: List[EvaluationReport] = []
         year_briers: Dict[int, float] = {}
+        year_sources: Dict[int, str] = {}
         year_ece: Dict[int, float] = {}
         year_games: Dict[int, List[Dict[str, Any]]] = {}
 
@@ -200,7 +227,7 @@ class BacktestHarness:
             logger.info("=" * 60)
             logger.info("LOYO fold: held-out year = %d", held_out_year)
 
-            predictions, actual_games = self._run_year(
+            predictions, actual_games, source = self._run_year(
                 held_out_year,
                 results_dir,
                 get_tournament_games_for_eval,
@@ -208,6 +235,7 @@ class BacktestHarness:
                 ForecastConfig,
                 DataRequirementError,
             )
+            year_sources[held_out_year] = source
 
             if not actual_games:
                 logger.warning("%d: No tournament games found, skipping", held_out_year)
@@ -239,11 +267,12 @@ class BacktestHarness:
             year_ece[held_out_year] = ece
 
             logger.info(
-                "  %d: Brier=%.4f  ECE=%.4f  Accuracy=%.1f%%",
+                "  %d: Brier=%.4f  ECE=%.4f  Accuracy=%.1f%%  source=%s",
                 held_out_year,
                 bt_result.brier_score,
                 ece,
                 bt_result.accuracy * 100,
+                source,
             )
 
         if not year_reports:
@@ -264,7 +293,8 @@ class BacktestHarness:
         # Regression gate
         gate = None
         if self.baseline_path and self.baseline_path.exists():
-            gate = self._run_regression_gate(year_briers)
+            model_briers = {y: b for y, b in year_briers.items() if year_sources.get(y, "pipeline") == "pipeline"}
+            gate = self._run_regression_gate(model_briers) if model_briers else None
 
         elapsed = time.monotonic() - t0
         return BacktestResult(
@@ -274,6 +304,8 @@ class BacktestHarness:
             per_year_brier=year_briers,
             per_year_calibration_ece=year_ece,
             per_year_games=year_games,
+            per_year_source=year_sources,
+            walk_forward=self.walk_forward,
             timestamp=datetime.now(timezone.utc).isoformat(),
             elapsed_seconds=round(elapsed, 1),
         )
@@ -291,8 +323,16 @@ class BacktestHarness:
         PipelineConfig,
         DataReqError,
     ) -> Tuple[Dict, List]:
-        """Run pipeline for one held-out year. Falls back to seed baseline on failure."""
+        """Run pipeline for one held-out year.
+
+        Returns ``(predictions, actual_games, source)`` where ``source`` is
+        ``"pipeline"`` or ``"seed_fallback"``. The fallback is taken only when
+        ``allow_seed_fallback`` is set; otherwise a pipeline failure raises,
+        because a seed-baseline Brier silently reported as the model's is the
+        single most misleading number this harness can produce.
+        """
         predictions: Dict = {}
+        failure: Optional[str] = None
         try:
             # Resolve per-year data files from historical dir
             def _resolve(pattern):
@@ -312,14 +352,21 @@ class BacktestHarness:
 
             teams_json = _resolve_teams_json()
             torvik_json = _resolve("torvik_{year}.json")
-            roster_json = _resolve("cbbpy_rosters_{year}.json")
+            roster_json = _resolve("rosters_boxscore_{year}.json") or _resolve("cbbpy_rosters_{year}.json")
             games_json = _resolve("historical_games_{year}.json")
 
             # Dev years = full LOYO set minus held-out year and COVID 2020
             from ..ml.evaluation.loyo_protocol import LOYO_YEARS as _ALL_LOYO
 
             all_candidate_years = sorted(set(list(_ALL_LOYO) + self.years))
-            dev_years = [y for y in all_candidate_years if y != year and y != 2020]
+            if self.walk_forward:
+                dev_years = [y for y in all_candidate_years if y < year and y != 2020]
+                if len(dev_years) < 3:
+                    raise DataReqError(
+                        f"walk-forward fold {year}: only {len(dev_years)} prior season(s) available"
+                    )
+            else:
+                dev_years = [y for y in all_candidate_years if y != year and y != 2020]
 
             config = PipelineConfig(
                 year=year,
@@ -373,15 +420,24 @@ class BacktestHarness:
                             predictions[(parts[0], parts[1])] = prob
 
         except (DataReqError, Exception) as e:
-            logger.warning("%d: Pipeline failed (%s), using seed baseline", year, e)
+            failure = f"{type(e).__name__}: {e}"
 
         actual_games = get_games_fn(year, results_dir)
+        source = "pipeline"
 
-        # Fall back to seed baseline if pipeline produced nothing
         if not predictions and actual_games:
+            reason = failure or "pipeline produced no predictions"
+            if not self.allow_seed_fallback:
+                raise RuntimeError(
+                    f"{year}: pipeline failed ({reason}). Not substituting the seed baseline -- "
+                    "pass allow_seed_fallback=True (CLI: --allow-seed-fallback) to record a "
+                    "seed_fallback year explicitly."
+                )
+            logger.error("%d: Pipeline failed (%s); recording SEED FALLBACK, not a model score", year, reason)
             predictions = self._seed_baseline(actual_games)
+            source = "seed_fallback"
 
-        return predictions, actual_games or []
+        return predictions, actual_games or [], source
 
     @staticmethod
     def _seed_baseline(actual_games: List) -> Dict:

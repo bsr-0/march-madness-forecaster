@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -245,10 +246,9 @@ def enrich_roster_rapm(
 def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -> Dict[int, float]:
     """Compute player-level feature values from a roster JSON player list.
 
-    Returns a dict keyed by feature index (int) → float value, suitable for
-    overlaying onto a team vector produced by ``metrics_to_team_vector()``.
-
-    Covers indices: 11-14, 15, 17-18, 54, 69-70.
+    Returns a dict keyed by FEATURE NAME → float value. ``load_roster_overlay``
+    resolves names to team-vector indices via ``roster_overlay_index_map`` so
+    the overlay can never be stamped into the wrong slot when the layout moves.
     """
     from ...data.models.player import Position
 
@@ -314,22 +314,150 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
             backcourt_rapm += 0.5 * rapm
             frontcourt_rapm += 0.5 * rapm
 
+    # Keyed by FEATURE NAME, resolved to vector indices by the caller against
+    # TeamFeatures.get_feature_names(). This used to be keyed by hardcoded
+    # index from a 71-wide layout that no longer exists (TEAM_FEATURE_DIM is
+    # 56): indices 69/70 raised IndexError, and the in-range ones were wrong
+    # too -- avg_experience and bench_depth were off by one (overwriting
+    # xp_per_poss), and top5_minutes_share landed on injury_risk. A March 2026
+    # commit had already renumbered 74/75 -> 69/70 to stop an earlier
+    # IndexError, which is the tell that indices are the wrong contract here.
     return {
-        11: total_rapm,
-        12: top5_rapm,
-        13: bench_rapm,
-        14: total_warp,
-        15: roster_continuity,
-        17: avg_experience,
-        18: bench_depth,
-        54: top5_minutes_share,
-        69: backcourt_rapm,
-        70: frontcourt_rapm,
+        "total_rapm": total_rapm,
+        "top5_rapm": top5_rapm,
+        "bench_rapm": bench_rapm,
+        "total_warp": total_warp,
+        "roster_continuity": roster_continuity,
+        "avg_experience": avg_experience,
+        "bench_depth": bench_depth,
+        "top5_minutes_share": top5_minutes_share,
+        "backcourt_rapm": backcourt_rapm,
+        "frontcourt_rapm": frontcourt_rapm,
     }
+
+
+def roster_overlay_index_map() -> Dict[str, int]:
+    """feature name -> index into the team vector, for every overlay feature.
+
+    Raises ``KeyError`` naming the feature if the vector layout no longer has
+    it, so a rename or removal in ``TeamFeatures`` fails at load time rather
+    than silently stamping a value into the wrong slot.
+    """
+    from ...data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
+
+    names = TeamFeatures.get_feature_names()
+    if len(names) != TEAM_FEATURE_DIM:
+        raise RuntimeError(
+            f"TeamFeatures.get_feature_names() has {len(names)} entries but TEAM_FEATURE_DIM is {TEAM_FEATURE_DIM}"
+        )
+    index = {n: i for i, n in enumerate(names)}
+    wanted = (
+        "total_rapm",
+        "top5_rapm",
+        "bench_rapm",
+        "total_warp",
+        "roster_continuity",
+        "avg_experience",
+        "bench_depth",
+        "top5_minutes_share",
+        "backcourt_rapm",
+        "frontcourt_rapm",
+    )
+    missing = [n for n in wanted if n not in index]
+    if missing:
+        raise KeyError(f"roster overlay features absent from the team vector layout: {missing}")
+    return {n: index[n] for n in wanted}
+
+
+def resolve_roster_path(directory: str | os.PathLike, year: int) -> Optional[str]:
+    """The roster file to use for ``year``: rebuilt-from-box-scores first.
+
+    ``rosters_boxscore_{year}.json`` (src/data/features/boxscore_rosters.py) is
+    aggregated over games dated before the tournament and attests that window;
+    ``cbbpy_rosters_{year}.json`` is a post-season scrape that the contamination
+    guard drops (or refuses, under strict_leakage_mode) for every played season.
+    Returns None if neither exists.
+    """
+    directory = Path(directory)
+    for name in (f"rosters_boxscore_{year}.json", f"cbbpy_rosters_{year}.json"):
+        candidate = directory / name
+        if candidate.is_file():
+            return str(candidate)
+    return None
 
 
 class RosterContaminationError(RuntimeError):
     """A roster file's stats include games played after its season's cutoff."""
+
+
+def assert_roster_payload_clean(data: dict, roster_path: str, year: Optional[int], strict: bool = False) -> bool:
+    """True if ``data`` may be used for ``year``; False if it must be dropped.
+
+    Under ``strict`` a contaminated payload raises ``RosterContaminationError``
+    instead. Shared by every reader of a roster file -- the contamination guard
+    was originally attached to one caller (the overlay loader) while the
+    current-year ingestion in ``build_rosters`` read the same files with no
+    check at all. Guard the loader, enumerate the callers (FINDINGS 6c-ii).
+
+    TOURNAMENT DATE GUARD. A file scraped after its season's tournament has
+    per-player ``games_played`` counts that include that team's tournament run,
+    and ``warp = bpm * minute_share * games_played / 300`` (cbbpy_rosters.py),
+    so every roster feature derived from it encodes how far the team advanced.
+    Measured on the shipped files: r(games_played, rounds won) is +0.49 to
+    +0.83 in every season 2011-2025, and the team with the most games in each
+    file is that season's champion or runner-up. 2026, whose snapshot is
+    genuinely mid-February, is the control at -0.05.
+
+    The original guard bailed out when ``file_year == year`` -- the contaminated
+    case, and true of every per-season file on disk -- and was warning-only.
+
+    A rebuilt payload (src/data/features/boxscore_rosters.py) attests its own
+    game window via ``data_type == "pre_tournament_rosters"`` and
+    ``max_game_date``; that attestation is what is checked, not the scrape
+    timestamp, exactly as ``data_as_of`` is for Torvik.
+    """
+    if year is None or not isinstance(data, dict):
+        return True
+    cutoff = TOURNAMENT_START_DATES.get(year)
+    if cutoff is None:
+        return True
+
+    from datetime import date as _date
+
+    def _fail(msg: str) -> bool:
+        if strict:
+            raise RosterContaminationError(
+                msg + " Re-scrape before the tournament, or rebuild from game-level box scores "
+                "(python -m scripts.build_boxscore_rosters)."
+            )
+        logger.error(msg + " Dropping the roster overlay for this season.")
+        return False
+
+    if data.get("data_type") == "pre_tournament_rosters":
+        try:
+            max_gd = _date.fromisoformat(str(data.get("max_game_date"))[:10])
+        except (ValueError, TypeError):
+            max_gd = None
+        if max_gd is not None and max_gd < cutoff:
+            return True
+        return _fail(
+            f"Roster file {roster_path} claims data_type=pre_tournament_rosters but its "
+            f"max_game_date={data.get('max_game_date')!r} is not before tournament start {cutoff} for year {year}."
+        )
+
+    ts_str = data.get("timestamp")
+    if not ts_str:
+        return True
+    try:
+        ts_date = _date.fromisoformat(str(ts_str)[:10])
+    except (ValueError, TypeError):
+        return True
+    if ts_date >= cutoff:
+        return _fail(
+            f"Roster file {roster_path} has timestamp {ts_str} on/after tournament start {cutoff} for year {year}: "
+            "games_played includes tournament games, so every derived roster feature leaks how far each team advanced."
+        )
+    return True
 
 
 def load_roster_overlay(
@@ -362,45 +490,8 @@ def load_roster_overlay(
     except Exception:
         return {}
 
-    # TOURNAMENT DATE GUARD. A file scraped after its season's tournament has
-    # per-player `games_played` counts that include that team's tournament run,
-    # and `warp` is computed as `bpm * minute_share * games_played / 300`
-    # (cbbpy_rosters.py), so every roster feature derived from it encodes how
-    # far the team advanced. Measured on the shipped files: the correlation
-    # between a team's roster `games_played` and the tournament rounds it won
-    # is +0.49 to +0.83 in every season 2011-2025, and the team with the most
-    # games in each file is that season's champion or runner-up. 2026, whose
-    # snapshot is genuinely mid-February, is the control at -0.05.
-    #
-    # THIS GUARD USED TO SKIP EXACTLY THE CONTAMINATED CASE. It bailed out when
-    # `file_year == year`, on the reasoning that a season-specific file was
-    # "historical data scraped retroactively" — which is the contaminated case,
-    # not an exemption from it. Every per-season file on disk matches that
-    # condition, so the check never fired for any of them. It was also only a
-    # warning, so nothing stopped the values being stamped onto training rows.
-    if year is not None and isinstance(data, dict):
-        ts_str = data.get("timestamp")
-        cutoff = TOURNAMENT_START_DATES.get(year)
-        if ts_str and cutoff:
-            try:
-                from datetime import date as _date
-
-                ts_date = _date.fromisoformat(ts_str[:10])
-            except (ValueError, TypeError):
-                ts_date = None
-            if ts_date is not None and ts_date >= cutoff:
-                msg = (
-                    "Roster file %s has timestamp %s on/after tournament start %s for year %d: "
-                    "games_played includes tournament games, so every derived roster feature "
-                    "leaks how far each team advanced."
-                ) % (roster_path, ts_str, cutoff, year)
-                if strict:
-                    raise RosterContaminationError(
-                        msg + " Re-scrape before the tournament, or rebuild from game-level "
-                        "box scores (src/data/scrapers/espn_boxscore.py)."
-                    )
-                logger.error(msg + " Dropping the roster overlay for this season.")
-                return {}
+    if not assert_roster_payload_clean(data, roster_path, year, strict):
+        return {}
 
     teams_list: list = []
     if isinstance(data, dict):
@@ -410,7 +501,8 @@ def load_roster_overlay(
     elif isinstance(data, list):
         teams_list = data
 
-    result: Dict[str, Dict[str, float]] = {}
+    index_of = roster_overlay_index_map()
+    result: Dict[str, Dict[int, float]] = {}
     for team in teams_list:
         if not isinstance(team, dict):
             continue
@@ -423,7 +515,7 @@ def load_roster_overlay(
             continue
         overlay = compute_roster_feature_overlay(players_raw, tid)
         if overlay:
-            result[tid] = overlay
+            result[tid] = {index_of[name]: value for name, value in overlay.items()}
 
     return result
 
@@ -1433,6 +1525,18 @@ def build_rosters(
     with open(config.roster_json, "r") as f:
         payload = json.load(f)
     validate_feed_freshness(config, "Rosters", payload)
+    # Same contamination guard as the training overlay. Under strict mode this
+    # raises; otherwise the payload is still used, with an error logged --
+    # this path cannot degrade to "no rosters" without failing downstream
+    # RAPM coverage checks, so the honest non-strict behaviour is loud, not silent.
+    if not assert_roster_payload_clean(
+        payload, config.roster_json, getattr(config, "year", None), strict=getattr(config, "strict_leakage_mode", False)
+    ):
+        logger.error(
+            "build_rosters: using a roster file the contamination guard flagged for %s; "
+            "current-year roster features may encode tournament games.",
+            getattr(config, "year", None),
+        )
 
     teams_payload = payload.get("teams", [])
     if not isinstance(teams_payload, list):

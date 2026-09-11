@@ -119,7 +119,7 @@ def _run_fold(
         kaggle_dir=KAGGLE_DIR,
         teams_json=_resolve("teams_{year}.json"),
         torvik_json=_resolve("torvik_{year}.json"),
-        roster_json=_resolve("cbbpy_rosters_{year}.json"),
+        roster_json=_resolve("rosters_boxscore_{year}.json") or _resolve("cbbpy_rosters_{year}.json"),
         historical_games_json=_resolve("historical_games_{year}.json"),
     )
 

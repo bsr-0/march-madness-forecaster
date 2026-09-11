@@ -95,7 +95,10 @@ def load_team_talent(
         ``canonical_ids`` if rosters are missing or sparse.
     """
     canonical_set = frozenset(canonical_ids)
-    rosters_path = Path(data_root) / "raw" / "historical" / f"cbbpy_rosters_{year}.json"
+    _hist = Path(data_root) / "raw" / "historical"
+    rosters_path = _hist / f"rosters_boxscore_{year}.json"
+    if not rosters_path.exists():
+        rosters_path = _hist / f"cbbpy_rosters_{year}.json"
     if not rosters_path.exists():
         return {}
 

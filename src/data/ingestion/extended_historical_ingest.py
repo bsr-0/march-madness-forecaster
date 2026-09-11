@@ -292,7 +292,12 @@ class ExtendedHistoricalIngestor:
 
     def _collect_team_stats(self, manifest: Dict) -> None:
         """Fetch team-level advanced stats from Sports Reference."""
-        from ..scrapers.sports_reference import SportsReferenceScraper
+        try:
+            from ..scrapers.sports_reference import SportsReferenceScraper
+        except ModuleNotFoundError as _exc:
+            raise RuntimeError(
+                "sports_reference scraper was deleted in commit 44b048f (2026-04-21) and has not been restored"
+            ) from _exc
         from .validators import validate_ratings_payload
 
         scraper = SportsReferenceScraper(cache_dir=str(self.cache_dir))

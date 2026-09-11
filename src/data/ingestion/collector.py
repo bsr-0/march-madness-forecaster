@@ -18,15 +18,41 @@ from ..scrapers import (
     CBSPicksScraper,
     CBBpyRosterScraper,
     ESPNPicksScraper,
-    NCAAStatsScraper,
-    OpenDataFeedScraper,
-    PlayerMetricsScraper,
-    SportsReferenceScraper,
     TournamentContextScraper,
-    TransferPortalScraper,
     YahooPicksScraper,
     aggregate_consensus,
 )
+
+# These five providers were deleted in commit 44b048f (2026-04-21) and never
+# restored. Importing them by name here made this module -- and the `ingest`
+# CLI, the first step of the March runbook -- unimportable for five months.
+# Every use below is gated on an optional config URL, so the default ingest
+# never needs them; when a URL does ask for one, fail with a message that says
+# what is missing rather than an ImportError at module load.
+_DELETED_IN = "44b048f (2026-04-21)"
+
+
+def _optional(module: str, name: str):
+    try:
+        return getattr(__import__(f"src.data.scrapers.{module}", fromlist=[name]), name)
+    except (ImportError, AttributeError):
+        return None
+
+
+NCAAStatsScraper = _optional("ncaa_stats", "NCAAStatsScraper")
+OpenDataFeedScraper = _optional("open_data_feed", "OpenDataFeedScraper")
+PlayerMetricsScraper = _optional("player_metrics", "PlayerMetricsScraper")
+SportsReferenceScraper = _optional("sports_reference", "SportsReferenceScraper")
+TransferPortalScraper = _optional("transfer_portal", "TransferPortalScraper")
+
+
+def _require(scraper_cls, name: str, wanted_by: str):
+    if scraper_cls is None:
+        raise RuntimeError(
+            f"{wanted_by} needs the {name} provider, which was deleted in {_DELETED_IN} and has not been "
+            "restored. Unset that option, or restore src/data/scrapers/ from before that commit."
+        )
+    return scraper_cls
 from ..features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from .game_fetchers import IncrementalGameFetcher
 from .providers import LibraryProviderHub
@@ -234,7 +260,7 @@ class RealDataCollector:
         torvik_teams: List[Dict] = []
 
         if self.config.ncaa_teams_url:
-            teams = NCAAStatsScraper(str(self.cache_dir)).fetch_tournament_teams(year, self.config.ncaa_teams_url)
+            teams = _require(NCAAStatsScraper, "NCAAStatsScraper", "ncaa_teams_url")(str(self.cache_dir)).fetch_tournament_teams(year, self.config.ncaa_teams_url)
             payload = {"teams": teams}
             validation_errors["teams_json"] = validate_teams_payload(payload)
             self._assert_valid("teams_json", validation_errors["teams_json"])
@@ -392,7 +418,7 @@ class RealDataCollector:
         if not self.config.scrape_historical_games:
             logger.info("Skipping historical games scrape (--skip-historical-games)")
         elif self.config.ncaa_games_url:
-            games = NCAAStatsScraper(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
+            games = _require(NCAAStatsScraper, "NCAAStatsScraper", "ncaa_games_url")(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
             self._ensure_game_dates(games, year)
             payload = {"games": games}
             validation_errors["historical_games_json"] = validate_games_payload(payload)
@@ -464,7 +490,7 @@ class RealDataCollector:
             roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
             external_roster_payload = {}
             if self.config.roster_url or os.getenv("PLAYER_METRICS_URL"):
-                external_roster_payload = PlayerMetricsScraper(str(self.cache_dir)).fetch_rosters(
+                external_roster_payload = _require(PlayerMetricsScraper, "PlayerMetricsScraper", "roster_url / PLAYER_METRICS_URL")(str(self.cache_dir)).fetch_rosters(
                     year,
                     source_url=self.config.roster_url,
                     fmt=self.config.roster_format,
@@ -504,7 +530,7 @@ class RealDataCollector:
                 sr = []
             else:
                 try:
-                    sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(
+                    sr = _require(SportsReferenceScraper, "SportsReferenceScraper", "the sports-reference fallback")(str(self.cache_dir)).fetch_team_season_stats(
                         year,
                         game_records=historical_team_rows,
                     )
@@ -524,7 +550,7 @@ class RealDataCollector:
                 provider_lineage["sports_reference_json"] = "sports_reference_scraper"
 
         if self.config.transfer_portal_url:
-            transfers = TransferPortalScraper(str(self.cache_dir)).fetch_entries(
+            transfers = _require(TransferPortalScraper, "TransferPortalScraper", "transfer_portal_url")(str(self.cache_dir)).fetch_entries(
                 year,
                 self.config.transfer_portal_url,
                 fmt=self.config.transfer_portal_format,
@@ -535,7 +561,7 @@ class RealDataCollector:
             out["transfer_portal_json"] = self._write(f"transfer_portal_{year}.json", payload)
 
         if self.config.odds_url:
-            odds_rows = OpenDataFeedScraper(str(self.cache_dir)).fetch_records(
+            odds_rows = _require(OpenDataFeedScraper, "OpenDataFeedScraper", "odds_url")(str(self.cache_dir)).fetch_records(
                 cache_name=f"odds_{year}.json",
                 source_url=self.config.odds_url,
                 fmt=self.config.odds_format,
@@ -593,10 +619,12 @@ class RealDataCollector:
             ("weather_context_json", self.config.weather_context_url, f"weather_context_{year}.json", "records"),
             ("travel_context_json", self.config.travel_context_url, f"travel_context_{year}.json", "records"),
         ]
-        feed_scraper = OpenDataFeedScraper(str(self.cache_dir))
+        feed_scraper = None
         for artifact_key, source_url, filename, records_key in supplemental_feeds:
             if not source_url:
                 continue
+            if feed_scraper is None:
+                feed_scraper = _require(OpenDataFeedScraper, "OpenDataFeedScraper", artifact_key)(str(self.cache_dir))
             records = feed_scraper.fetch_records(
                 cache_name=filename,
                 source_url=source_url,

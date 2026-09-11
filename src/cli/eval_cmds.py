@@ -586,6 +586,8 @@ def run_backtest_harness(args):
         years=years,
         config_overrides=overrides,
         kaggle_dir=kaggle_dir,
+        allow_seed_fallback=getattr(args, "allow_seed_fallback", False),
+        walk_forward=getattr(args, "walk_forward", False),
     )
 
     result = harness.run()
@@ -750,5 +752,17 @@ def register(subparsers):
     )
     bh_parser.add_argument(
         "--save-baseline", default=None, metavar="PATH", help="Save this run as the new regression baseline at PATH"
+    )
+    bh_parser.add_argument(
+        "--allow-seed-fallback",
+        action="store_true",
+        help="If the pipeline fails for a year, record the seed baseline for it (marked seed_fallback) "
+        "instead of aborting. Off by default: a substituted Brier is not a model score.",
+    )
+    bh_parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="Train each fold only on seasons strictly before the held-out year. Default LOYO trains on "
+        "all other seasons, including later ones.",
     )
     bh_parser.set_defaults(func=run_backtest_harness)

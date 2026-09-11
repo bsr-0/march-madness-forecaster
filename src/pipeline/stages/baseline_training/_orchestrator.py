@@ -427,20 +427,27 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # Seed map for absolute features in matchup vector
     _seed_map: Dict[str, int] = {}
     # Roster overlay from current-year FeatureEngineer (RAPM, WARP, depth, etc.)
+    # Indices resolved by feature name against the live vector layout -- the
+    # third copy of this map to hardcode indices from a retired 71-wide
+    # layout, and the one that raised IndexError (69 >= TEAM_FEATURE_DIM=56)
+    # on the current-year training path. See data_loader.roster_overlay_index_map.
+    from ..data_loader import roster_overlay_index_map
+
+    _ov_idx = roster_overlay_index_map()
     _roster_overlay: Dict[str, Dict[int, float]] = {}
     for _tid, _tf in pipeline.feature_engineer.team_features.items():
         _seed_map[_tid] = _tf.seed if hasattr(_tf, "seed") and _tf.seed else 0
         _roster_overlay[_tid] = {
-            11: _tf.total_rapm,
-            12: _tf.top5_rapm,
-            13: _tf.bench_rapm,
-            14: _tf.total_warp,
-            15: _tf.roster_continuity,
-            17: _tf.avg_experience,
-            18: _tf.bench_depth_score,
-            54: _tf.top5_minutes_share,
-            69: _tf.backcourt_rapm,
-            70: _tf.frontcourt_rapm,
+            _ov_idx["total_rapm"]: _tf.total_rapm,
+            _ov_idx["top5_rapm"]: _tf.top5_rapm,
+            _ov_idx["bench_rapm"]: _tf.bench_rapm,
+            _ov_idx["total_warp"]: _tf.total_warp,
+            _ov_idx["roster_continuity"]: _tf.roster_continuity,
+            _ov_idx["avg_experience"]: _tf.avg_experience,
+            _ov_idx["bench_depth"]: _tf.bench_depth_score,
+            _ov_idx["top5_minutes_share"]: _tf.top5_minutes_share,
+            _ov_idx["backcourt_rapm"]: _tf.backcourt_rapm,
+            _ov_idx["frontcourt_rapm"]: _tf.frontcourt_rapm,
         }
 
     # SEED LEAKAGE FIX: Seeds are assigned on Selection Sunday (~March

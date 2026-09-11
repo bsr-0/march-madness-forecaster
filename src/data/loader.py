@@ -27,6 +27,33 @@ class DataLoader:
     """Loads tournament data from JSON files."""
 
     @staticmethod
+    def resolve_teams_json_path(file_path: str) -> Optional[str]:
+        """Return the file that ``load_teams_from_json`` will actually read, or None.
+
+        ``teams_{year}.json`` is a *virtual* path: no such file has ever been
+        committed, and by design the loader redirects it into the sibling
+        ``tournament_context_{year}.json["teams"]``. Any existence check on
+        ``config.teams_json`` must apply the same redirect, or it rejects every
+        season the loader could have served -- which is exactly what the
+        pre-run validator did, sending every LOYO fold to the seed fallback.
+        """
+        path = Path(file_path)
+        if path.exists():
+            return str(path)
+        year_match = re.match(r"teams_(\d{4})\.json$", path.name)
+        if not year_match:
+            return None
+        ctx_path = path.with_name(f"tournament_context_{year_match.group(1)}.json")
+        if not ctx_path.exists():
+            return None
+        try:
+            with open(ctx_path, "r") as f:
+                ctx = json.load(f)
+        except (OSError, ValueError):
+            return None
+        return str(ctx_path) if isinstance(ctx, dict) and ctx.get("teams") else None
+
+    @staticmethod
     def load_teams_from_json(file_path: str) -> List[Team]:
         """
         Load teams from a JSON file.

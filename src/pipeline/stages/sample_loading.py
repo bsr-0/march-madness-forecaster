@@ -23,7 +23,7 @@ from ...data.features.proprietary_metrics import (
 )
 from ...data.features.torvik_ff_lookup import TorVikFFLookup
 from ...exceptions import LeakageError
-from .data_loader import load_roster_overlay
+from .data_loader import load_roster_overlay, resolve_roster_path
 from ..config import (
     MIN_SEASON_FEATURE_COMPLETENESS,
     ForecastConfig,
@@ -378,9 +378,9 @@ def _load_year_samples_incremental_core(
             logger.debug("Massey multi-system not available for year %d: %s", year, _mme)
 
     # Roster features — compute player-level overlays from cbbpy roster JSON.
-    roster_path = os.path.join(os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json")
-    if not os.path.isfile(roster_path):
-        roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
+    roster_path = resolve_roster_path(os.path.join(os.path.dirname(games_path), "historical"), year) or resolve_roster_path(
+        os.path.dirname(games_path), year
+    ) or os.path.join(os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json")
     team_roster_overlay = load_roster_overlay(
         roster_path, year=year, strict=getattr(config, "strict_leakage_mode", False)
     )

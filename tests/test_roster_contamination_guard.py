@@ -126,3 +126,40 @@ def test_the_real_shipped_files_are_contaminated():
         )
     if checked == 0:
         pytest.skip("no historical roster files present")
+
+
+# --- The current-year ingestion path must use the same guard -----------------
+
+
+def _config(roster_path: str):
+    from src.pipeline.config import ForecastConfig
+
+    return ForecastConfig(
+        year=YEAR,
+        roster_json=roster_path,
+        strict_leakage_mode=True,
+        enforce_feed_freshness=False,
+        scrape_live=False,
+        min_rapm_players_per_team=1,
+    )
+
+
+def test_build_rosters_refuses_a_contaminated_file_under_strict(tmp_path):
+    """build_rosters (the FeatureEngineer path, which produces the current
+    year's total_warp etc.) opened config.roster_json with no contamination
+    check at all. Same files, same leak, different door."""
+    path = _roster_file(tmp_path, YEAR, AFTER_TOURNAMENT)
+    cfg = _config(path)
+    with pytest.raises(dl.RosterContaminationError):
+        dl.build_rosters(cfg, teams=[])
+
+
+def test_build_rosters_gets_past_the_guard_with_a_clean_file(tmp_path):
+    """A clean file must not trip the guard. build_rosters then fails later for
+    an unrelated reason (no tournament teams were supplied) -- the point is
+    that the failure is that one, not RosterContaminationError."""
+    path = _roster_file(tmp_path, YEAR, BEFORE_TOURNAMENT)
+    payload = json.loads(open(path).read())
+    assert dl.assert_roster_payload_clean(payload, path, YEAR, strict=True) is True
+    with pytest.raises(ValueError, match="No tournament teams"):
+        dl.build_rosters(_config(path), teams=[])
