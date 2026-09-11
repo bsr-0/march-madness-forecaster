@@ -447,6 +447,41 @@ scale at inference, this fold is the first honest measurement of the ML pipeline
 identical rows. `artifacts/headline_measurement/ml_walkforward_2024_fold.json`,
 `ml_vs_fitted_2024.txt` (re-archived after this fix).
 
+**H10. Does the ML pipeline beat the site's fitted model? No — it loses every season, and
+loses to the seed table in seven of nine.** MEASURED 2026-09-11, nine-season walk-forward
+(2016–2019, 2021–2025), every fold `source=pipeline`, 567 identical main-draw games, all
+serving defects above (H8, H9) fixed, rule fixed before looking (paired 95% CI on log loss
+must exclude zero AND a season majority):
+
+| model | log loss | Brier | BSS vs seed | accuracy | seasons won |
+|---|---|---|---|---|---|
+| A — ML pipeline (`TournamentPipeline`, 9-feature logit) | 0.606 | 0.209 | −0.105 | 65.8% | 0 |
+| B — site fitted model (`docs/fit.js` mirror, 11-feature ridge) | 0.451 | 0.146 | +0.227 | 78.1% | 9 |
+| S — seed table | 0.562 | 0.189 | 0 | 70.7% | — |
+
+Paired A−B: log loss +0.155 [+0.116, +0.191], Brier +0.063 [+0.047, +0.078]; season-level
+paired t = +14.1. A is behind B by more than S is behind B in every season. Verdict by the
+pre-registered rule: **B beats A.** Provenance is symmetric: both read the same date-windowed
+`torvik_{year}.json` (B's `t_rank`/`barthag` match it exactly), so the M1 reconstruction
+caveat applies to both and explains no part of the gap.
+
+What this means: the ML pipeline — the GNN/transformer/stacking apparatus, the 56-dim team
+vector, the calibration stage — is, as of today, a *negative-value* component: a user is
+better served by the seed table than by its probabilities, and much better served by the
+33-line ridge in the browser. The shipped brackets never came from it (C3), so no user was
+harmed; but every README/FINDINGS sentence that presents the ML pipeline as the engine
+should be read against this table. The honest position for 2027 is that B is the model, and
+A is a research branch that has not yet earned a place in the product.
+
+Found on the way: `tournament_context_{2005,2008,2009,2019,2023}.json` each carried two
+different brackets (`seeds.teams`, read by every pool/seed/B path, was right; `teams.teams`,
+read only by the ML loader, was wrong — 2019 filed the West 16-seed play-in under East and
+killed the first nine-season run four folds in). Repaired from the `seeds` block
+(`scripts/reconcile_tournament_context.py`), pinned by
+`tests/test_tournament_context_consistency.py`; the harness now checkpoints each fold.
+Artifacts: `artifacts/headline_measurement/ml_walkforward_2016_2025_9fold.json`,
+`ml_vs_fitted_2016_2025.txt`.
+
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
 title game. They are `trank.php?begin=…&end=cutoff` date-window recomputes
