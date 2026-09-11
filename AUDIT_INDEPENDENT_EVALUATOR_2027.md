@@ -387,6 +387,33 @@ at `data_loader.py:858`, and the FINDINGS §4 note that Four Factors were consol
 `torvik_{year}.json` in 2026-08 suggests the enrichment may now be redundant — but that is a
 judgment about intent, not a mechanical fix.
 
+**H8. The served team vector clipped every Elo rating to 1000, so the production model
+predicted ~0.5 for everything.** CONFIRMED (found 2026-09-11, the first time a walk-forward
+fold ran end to end). `TeamFeatures.to_vector()` ended with `np.clip(result, -1000.0,
+1000.0)` — a "clearly broken data" guard added 2026-02-19 (`db15a57`). Elo ratings live on a
+1000–2200 scale (1278–2128 across the 2024 field), so every team was served
+`elo_rating = 1000.0` exactly and `diff_elo_rating` was identically zero for every matchup.
+Perturbing `elo_rating` on a `TeamFeatures` moved no vector slot at all. Training vectors come
+from `metrics_to_team_vector()`, which never clipped, so the model was fit on Elo and served
+without it — the FINDINGS §6c failure shape, on the feature that matters most: on the 2024
+walk-forward fold the fitted logit carries coefficient 1.12 on `diff_elo_rating` (training sd
+250 points) and nothing else above 0.12. Consequences, measured: every prediction within ±0.07
+of 0.5 (UConn–Stetson 0.52), Brier 0.246 on 63 main-draw games — worse than the seed
+baseline's 0.177 on the same rows and far behind the site's fitted model at 0.137 — and the
+Monte Carlo giving 1-seeds 9.6% of titles. The March 2026 production run
+(`run-production-2026`) used this same `_raw_fusion_probability → to_vector` path, so its
+probabilities were flat too; it shipped nothing user-facing only because the shipped brackets
+never came from this pipeline (C3). Fixed by removing the clip; `tests/test_team_vector_fidelity.py`
+asserts vector *content* (Elo round-trips at real magnitudes; each field moves exactly its
+slot) where the module previously asserted only its length.
+
+**Corollary for the recorded ML numbers.** `artifacts/backtest_result_temperature.json`
+(2026-05-06) evaluates 18 folds in 47.8 seconds with per-game predictions drawn from the seed
+table (values of exactly 1.000, 0.967, 0.033) and a 2025 Brier equal to the seed baseline's:
+it is the seed fallback end to end. No artifact in the repository contains a Brier produced by
+this model on these features with Elo intact; the first such number is the one measured
+below.
+
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
 title game. They are `trank.php?begin=…&end=cutoff` date-window recomputes
