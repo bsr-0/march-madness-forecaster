@@ -29,7 +29,10 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from ..normalize import normalize_team_id
-from ..scrapers import SportsReferenceScraper
+try:  # deleted in commit 44b048f (2026-04-21); optional so this module -- and `ingest-historical` -- still imports
+    from ..scrapers.sports_reference import SportsReferenceScraper
+except ModuleNotFoundError:
+    SportsReferenceScraper = None  # type: ignore[assignment,misc]
 from ..scrapers.bracket_ingestion import BracketIngestionPipeline
 from .game_fetchers import HistoricalGameFetcher, dedup_records, is_in_season_window, season_window
 from .providers import LibraryProviderHub
@@ -77,7 +80,9 @@ class HistoricalDataPipeline:
         self.output_dir = Path(self.config.output_dir)
         self.cache_dir = Path(self.config.cache_dir)
         self.providers = LibraryProviderHub()
-        self.sports_reference = SportsReferenceScraper(str(self.cache_dir))
+        # Optional provider (deleted in 44b048f); None means "not installed", and
+        # any step that needs it says so instead of raising TypeError here.
+        self.sports_reference = SportsReferenceScraper(str(self.cache_dir)) if SportsReferenceScraper else None
         self.game_fetcher = HistoricalGameFetcher(cache_dir=str(self.cache_dir))
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -255,6 +260,10 @@ class HistoricalDataPipeline:
         rows = self._ensure_team_ids(provider_result.records)
 
         if not rows:
+            if self.sports_reference is None:
+                raise RuntimeError(
+                    "team season stats need the sports_reference scraper, deleted in commit 44b048f (2026-04-21) and not restored"
+                )
             rows = self._ensure_team_ids(
                 self.sports_reference.fetch_team_season_stats(
                     season,
@@ -266,7 +275,12 @@ class HistoricalDataPipeline:
         if rows and game_records:
             zero_count = sum(1 for r in rows if (r.get("def_rtg") or 0) <= 0)
             if zero_count > len(rows) * 0.5:
-                from ..scrapers.sports_reference import SportsReferenceScraper
+                try:
+                    from ..scrapers.sports_reference import SportsReferenceScraper
+                except ModuleNotFoundError as _exc:
+                    raise RuntimeError(
+                        "sports_reference scraper was deleted in commit 44b048f (2026-04-21) and has not been restored"
+                    ) from _exc
 
                 team_paces = {
                     SportsReferenceScraper._normalize_id(r.get("team_name", "")): float(r.get("pace", 0))

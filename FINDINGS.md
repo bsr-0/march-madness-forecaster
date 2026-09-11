@@ -427,12 +427,29 @@ either key returns to the training matrix; one fails if the matrix and the UI
 menu drift apart. They are built by separate scripts, which is a quiet
 maintenance failure mode on its own.
 
-**Not fixed, and deliberately so.** The honest reconstruction is
+**Fixed 2026-09-10 — this note was stale.** The paragraph below said the
+rebuild was "blocked until game-level box scores land"; they had already
+landed on 2026-08-25..27 (`data/raw/historical/boxscores_{2008..2026}.json`,
+~5-6k dated games per season, every game before its tournament cutoff). The
+same contamination was found in the *pipeline* model too, not just the
+Bracket Lab matrix: `diff_total_warp` — annotated "largest coefficient" in
+`SIMPLE_FEATURE_SET` — is `Σ bpm·minute_share·games_played/300` over roster
+files scraped 2026-02-21 for every season, so it encoded tournament
+advancement directly (r(games_played, rounds won) = +0.49..+0.83 in every
+season 2011–2025; the max-games team in each file is that season's champion
+or runner-up). `scripts/build_boxscore_rosters.py` now rebuilds
+`rosters_boxscore_{year}.json` from pre-cutoff box scores with the identical
+`_build_payload` formulas; the rebuilt files score r = −0.04..+0.30 (mean
++0.12), and the genuinely pre-tournament 2026 file scores the same +0.10, so
+what remains is conference-tournament depth, not the leak. The loader guard
+was inverted (it *skipped* files whose `year` matched the season — every file
+on disk) and is now a hard error under `strict_leakage_mode`. Audit H5.
+
+*Original note, kept for the record:* The honest reconstruction is
 `minutes before tournament_start / team minutes before tournament_start`.
 `player_minutes_*.json` holds only season-level aggregates, so that quantity
 cannot be recovered — inferring it from the aggregate would substitute a new
-approximation for a known contamination. Blocked until game-level box scores
-land.
+approximation for a known contamination.
 
 ### Bracket Lab — known limitation, not a data-integrity problem
 

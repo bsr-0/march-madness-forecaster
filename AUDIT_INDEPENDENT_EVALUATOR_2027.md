@@ -232,6 +232,34 @@ the overlay with an error-level log, and raises `RosterContaminationError` under
 `strict_leakage_mode` — which both production configs set. Verified against the repo's own
 data: 2011–2025 drop, 2026 is retained. Pinned by `tests/test_roster_contamination_guard.py`.
 
+**Rebuilt 2026-09-10 (the "rebuild" option, chosen).** The FINDINGS note saying the rebuild
+was "blocked until game-level box scores land" was stale: `boxscores_{2008..2026}.json` had
+landed on 2026-08-25..27 — ~5–6k dated games per season, every one before its tournament
+cutoff. `scripts/build_boxscore_rosters.py` (`src/data/features/boxscore_rosters.py`)
+re-aggregates those games through the *same* `CBBpyRosterScraper._build_payload` formulas, so
+the rebuilt feature differs from the old one only by the games included, and bridges ESPN
+slugs onto canonical ids via `resolve_cbbpy_bridge` against the full D1 universe (94–97%
+bridged; 62–64 of 64 tournament teams matched per season). Result, r(roster games_played,
+tournament rounds won):
+
+| | cbbpy (shipped) | rebuilt |
+|---|---|---|
+| 2011–2025, range | +0.49 … +0.83 | −0.04 … +0.30 |
+| 2011–2025, mean | ≈ +0.72 | ≈ +0.12 |
+| 2026 (genuine Feb snapshot; control) | −0.05 | +0.10 |
+
+The rebuilt 2026 file — which cannot contain tournament games — scores the same +0.10 as the
+rebuilt historical seasons, so what remains is conference-tournament depth (real, pre-cutoff
+information), not the leak. Purdue 2024: 39 → 32 games, WARP 1.26 → 0.70. The rebuilt files
+carry `data_type: pre_tournament_rosters` and `max_game_date`, which the guard checks
+instead of the scrape timestamp (as `data_as_of` is for Torvik); every roster call site
+(`sample_loading`, `seed_baseline_loyo`, `backtest_harness`, `roster_adj_probabilities`,
+`sweep_training_window`) now prefers `rosters_boxscore_{year}.json`. Pinned by
+`tests/test_boxscore_rosters_rebuild.py`, including a real-data test that the 2024 file's
+correlation is under 0.25. The train/serve skew below is therefore closed for every season
+with box scores (2008–2026); `is_transfer`/`eligibility_year` remain the constants cbbpy
+always shipped (False / 1), so overlay slots built from them are inert, as before.
+
 **The consequence is a decision someone has to make, and is deliberately left open.**
 Dropping the overlay for contaminated seasons means training rows carry no roster features
 while a clean 2026/2027 snapshot still would — a train/serve skew of exactly the shape
@@ -308,6 +336,51 @@ H5's leak, though real, is currently latent: it contaminates a pipeline nothing 
 Note the same commit also deleted `src/prediction/torvik_probabilities.py` (H4) and
 `scripts/compute_pretournament_barthag.py` (M1). One unreviewed "upd" commit broke at least
 three separate paths, and each was found only by trying to execute them.
+
+**H7 update, 2026-09-10 — it is a family of 37, and the ML pipeline now runs.** A strict
+scan (module *and* attribute must resolve; the first pass wrongly accepted a parent package)
+finds **37 imports across `src/` and `scripts/` that point at modules deleted in `44b048f`**,
+against 95 of that commit's 124 deleted files never restored. Most are lazy or `try`-guarded
+and only fail when an optional feature runs. Four were not, and each took a whole subsystem
+down with it: `data_loader.py` (module level → no data loading at all),
+`baseline_training/_embeddings.py` (module level → no training),
+`src/ml/training/__init__.py` (eager re-export of two deleted feature modules → the package
+holding `symmetric_augment`, which every training run needs, was unimportable), and
+`src/data/ingestion/collector.py` + `historical_pipeline.py` (five deleted scraper names →
+**the README's `ingest` / `ingest-historical` commands, the first step of the March 2027
+runbook, have been unimportable since April**). `src/espn/__init__.py` had the same shape.
+
+Fixes, by kind: load-bearing data structures and guards restored verbatim from `44b048f~1`
+(`ml/gnn/schedule_graph.py`, `ml/transformer/game_sequence.py`,
+`ml/evaluation/evaluation_integrity.py` — the last is the `YearSplitPolicy` leakage guard);
+abandoned *feature* modules made optional at their package `__init__` or call site with an
+error naming the commit, rather than resurrected. `tests/test_src_packages_import.py` imports
+every one of the 28 `src` packages from the filesystem (not `pkgutil`, which hides everything
+beneath a broken package) and fails on any missing `src` module. All 28 pass.
+
+**Two more defects the first end-to-end run then exposed, both in the harness, both of which
+had been silently converting model failures into seed-baseline scores:**
+1. *No `teams_{year}.json` exists for any season.* It is a virtual path that
+   `DataLoader.load_teams_from_json` redirects into `tournament_context_{year}.json["teams"]`
+   — but the pre-run validator checked the literal string, so every LOYO fold failed
+   validation before training. Fixed with `DataLoader.resolve_teams_json_path`, used by both.
+2. *The harness substituted the seed baseline on any failure and reported it in the model's
+   Brier column* with only a log warning. A fresh run reproduces
+   `configs/backtest_baseline.json`'s 2025 entry (0.141963) to four decimals from the seed
+   fallback, so the committed regression baseline is at least partly the seed model scoring
+   itself. Fallback is now off by default (`--allow-seed-fallback` to opt in), every year
+   carries `per_year_source`, fallback years are marked and excluded from the mean and the
+   gate, and `--walk-forward` trains only on earlier seasons (the default LOYO trains on later
+   ones too). `tests/test_backtest_harness_provenance.py`.
+
+**And one in feature assembly:** the roster overlay stamped values by hardcoded index from a
+retired 71-wide layout (`TEAM_FEATURE_DIM` is 56). Indices 69/70 raised `IndexError`; the
+in-range ones were wrong too — `avg_experience`/`bench_depth` off by one (overwriting
+`xp_per_poss`), `top5_minutes_share` written into `injury_risk`. A March 2026 commit had
+renumbered 74/75 → 69/70 to stop an earlier `IndexError`. Three copies existed
+(`data_loader`, `sample_loading`, `_orchestrator`). Now resolved by feature name against
+`TeamFeatures.get_feature_names()` in one place, with a static test that fails on any literal
+index at an overlay site (`tests/test_roster_overlay_indices.py`).
 
 Not fixed here: resolving it means either restoring the package or removing the call site
 at `data_loader.py:858`, and the FINDINGS §4 note that Four Factors were consolidated into

@@ -264,10 +264,19 @@ class _PipelineRunner:
                 }
             )
 
-        # Required files
+        # Required files. teams_json may be the virtual teams_{year}.json path
+        # that DataLoader redirects into tournament_context_{year}.json; check
+        # what the loader would read, not the literal string.
+        from ..data.loader import DataLoader as _DL
+
+        def _present(label: str, path: str) -> bool:
+            if label == "teams_json":
+                return _DL.resolve_teams_json_path(path) is not None
+            return os.path.exists(path)
+
         for label, path in [("teams_json", cfg.teams_json), ("historical_games_json", cfg.historical_games_json)]:
             if path:
-                if not os.path.exists(path):
+                if not _present(label, path):
                     critical_failures.append(f"Required input file missing: {label}={path}")
                     checks.append({"check": f"file_{label}", "status": "CRITICAL", "path": path})
                 else:

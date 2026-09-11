@@ -239,7 +239,9 @@ def load_ncaa_tournament_with_seeds(
     team_massey_spread: Dict[str, float] = {}
     team_massey_multi: Dict = {}
 
-    roster_path = os.path.join(GAMES_DIR, f"cbbpy_rosters_{year}.json")
+    from src.pipeline.stages.data_loader import resolve_roster_path
+
+    roster_path = resolve_roster_path(GAMES_DIR, year) or os.path.join(GAMES_DIR, f"cbbpy_rosters_{year}.json")
     team_roster_overlay = load_roster_overlay(
         roster_path, year=year, strict=getattr(config, "strict_leakage_mode", False)
     )
