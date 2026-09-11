@@ -410,9 +410,12 @@ slot) where the module previously asserted only its length.
 **Corollary for the recorded ML numbers.** `artifacts/backtest_result_temperature.json`
 (2026-05-06) evaluates 18 folds in 47.8 seconds with per-game predictions drawn from the seed
 table (values of exactly 1.000, 0.967, 0.033) and a 2025 Brier equal to the seed baseline's:
-it is the seed fallback end to end. No artifact in the repository contains a Brier produced by
-this model on these features with Elo intact; the first such number is the one measured
-below.
+it is the seed fallback end to end. `artifacts/backtest_result.json` (2026-04-10, 174,167 s)
+is the 48-hour run the README's baseline descends from: 12 of its 17 per-year Briers equal the
+seed-fallback file's to four decimals (2008–2017, 2025), so the model was actually scored in at
+most five seasons (2018, 2021–2024) — and each of those ran after the 2026-02-19 clip, with
+Elo amputated. No artifact in the repository contains a Brier produced by this model with its
+features intact; the first such number is the one measured below.
 
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
