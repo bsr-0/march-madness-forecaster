@@ -429,6 +429,14 @@ class _PipelineRunner:
             p._massey_multi = self._load_massey_multi_system()
             p._torvik_map = torvik_map
             p._proprietary_map = proprietary_map
+            # _engineer_features reads rosters as getattr(p, "_rosters", {}); this
+            # attribute was never assigned, so on the shared (production and
+            # calibration) path every team was built with roster=None and all
+            # roster-derived features -- total_warp, top5_rapm, total_rapm,
+            # roster_continuity, bench_depth -- were served as 0.0 while
+            # training saw real values. train_for_predictions passed the dict
+            # directly and never had the bug.
+            p._rosters = rosters
         if hasattr(p, "_compliance_runner"):
             p._compliance_runner.run_stage_checks("post_data_load", ctx=p)
             if p._compliance_runner.has_blocking_failure("post_data_load"):
