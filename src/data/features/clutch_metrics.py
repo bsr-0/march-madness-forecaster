@@ -273,7 +273,7 @@ def _enforce_pre_tournament_cutoff(year: int, games: List[Dict]) -> None:
     time — see this module's docstring for why that's not redundant.
     """
     try:
-        from ...pipeline.config import TOURNAMENT_START_DATES
+        from ..season_calendar import TOURNAMENT_START_DATES
     except ImportError:
         return
 

@@ -340,8 +340,6 @@ jobs:
             Then push: `git push origin nightly/qaqc --force`
 
             ## HARD CONSTRAINTS — Violating any of these is a critical failure
-            - Do NOT modify `configs/production_2026.json` locked fields
-            - Do NOT modify `src/run_production_2026.py` behavior
             - Do NOT change ML model weights, architecture, or training logic
             - Do NOT change feature engineering formulas or constants
             - Do NOT change public API signatures (function names, parameter names)
@@ -539,8 +537,6 @@ jobs:
               and reports, you do not change the system under review.
             - Exception: you may add `# AUDIT NOTE:` comments in source files to
               flag specific concerns for human review (max 5 comments total).
-            - Do NOT modify `configs/production_2026.json`
-            - Do NOT modify `src/run_production_2026.py`
             - All tests must be self-contained (no network, no GPU, no large files)
             - Use `np.random.default_rng(42)` for any randomness
             - Tests that require real model outputs should use synthetic data that

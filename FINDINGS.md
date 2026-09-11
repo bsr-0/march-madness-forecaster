@@ -21,7 +21,11 @@ the ML pipeline with its features intact (audit H8/H9: Elo clipped to 1000, rost
 as zero, and most "model" folds were the seed fallback). The first honest measurement, nine
 seasons walk-forward on 567 identical games, is audit **H10**: ML pipeline Brier 0.209, seed
 table 0.189, site fitted model (`docs/fit.js`) 0.146; the fitted model wins 9 of 9 seasons.
-Read any sentence here that treats the ML pipeline as the engine against that table.
+Read any sentence here that treats the ML pipeline as the engine against that table. **The
+pipeline was removed the same day** (`src/pipeline/`, `src/ml/`, the harness, its CLI and
+tests); every §-reference below to `TournamentPipeline`, `ForecastConfig`, `FIXED_FEATURE_SET`,
+the 56-dim team vector, LOYO folds or `backtest-harness` describes code that now lives only in
+git history. The pool product (§1, §4-§5, the `meta_region_poolaware` line) is unaffected.
 
 The current stated claim is **12.0%, 95% CI 8.6–15.4%**, over the 14 evaluation
 seasons 2011–2025 (2026 excluded as an in-sample integration season; the backtest's

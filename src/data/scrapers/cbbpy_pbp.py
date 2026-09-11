@@ -476,10 +476,10 @@ class CBBpyPbpScraper:
             return start, end, None
 
         try:
-            from ...pipeline.config import TOURNAMENT_START_DATES
+            from ..season_calendar import TOURNAMENT_START_DATES
         except ImportError:
             raise ValueError(
-                "Cannot import TOURNAMENT_START_DATES from src.pipeline.config — "
+                "Cannot import TOURNAMENT_START_DATES from src.data.season_calendar — "
                 "refusing to guess a pre-tournament cutoff."
             )
 
@@ -488,7 +488,7 @@ class CBBpyPbpScraper:
             if year <= today.year:
                 raise ValueError(
                     f"TOURNAMENT_START_DATES missing entry for {year}; add it to "
-                    f"src/pipeline/config.py. Scraping an unbounded window would "
+                    f"src/data/season_calendar.py. Scraping an unbounded window would "
                     f"risk including tournament games in pre-tournament features — "
                     f"the same leakage class torvik.py's guard exists to prevent."
                 )

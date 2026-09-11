@@ -72,7 +72,7 @@ def _to_float(value: object) -> float:
 
 
 def _tournament_start(year: int) -> Optional[date]:
-    from ...pipeline.config import TOURNAMENT_START_DATES
+    from ..season_calendar import TOURNAMENT_START_DATES
 
     return TOURNAMENT_START_DATES.get(year)
 

@@ -204,3 +204,45 @@ def earliest_season() -> int:
 def latest_season() -> int:
     """Latest season with a Selection Sunday date on record."""
     return max(SELECTION_SUNDAY_DATES)
+
+
+# ---------------------------------------------------------------------------
+# First-round tip-off date per season (the point-in-time boundary). Lived in
+# src/pipeline/config.py until the ML pipeline was removed on 2026-09-11.
+# ---------------------------------------------------------------------------
+TOURNAMENT_START_DATES: Dict[int, date] = {
+    # Historical years (1996-2007) — first round dates sourced from
+    # sports-reference.com bracket pages.
+    1996: date(1996, 3, 14),
+    1997: date(1997, 3, 13),
+    1998: date(1998, 3, 12),
+    1999: date(1999, 3, 11),
+    2000: date(2000, 3, 16),
+    2001: date(2001, 3, 15),
+    2002: date(2002, 3, 14),
+    2003: date(2003, 3, 18),
+    2004: date(2004, 3, 16),
+    2005: date(2005, 3, 17),
+    2006: date(2006, 3, 16),
+    2007: date(2007, 3, 15),
+    # Modern era (2008+)
+    2008: date(2008, 3, 18),
+    2009: date(2009, 3, 17),
+    2010: date(2010, 3, 16),
+    2011: date(2011, 3, 15),
+    2012: date(2012, 3, 13),
+    2013: date(2013, 3, 19),
+    2014: date(2014, 3, 18),
+    2015: date(2015, 3, 17),
+    2016: date(2016, 3, 15),
+    2017: date(2017, 3, 14),
+    2018: date(2018, 3, 13),
+    2019: date(2019, 3, 19),
+    2021: date(2021, 3, 18),
+    2022: date(2022, 3, 15),
+    2023: date(2023, 3, 14),
+    2024: date(2024, 3, 19),
+    2025: date(2025, 3, 18),
+    2026: date(2026, 3, 17),
+    2027: date(2027, 3, 16),
+}

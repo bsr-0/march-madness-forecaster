@@ -38,7 +38,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from src.evaluation.bootstrap_metrics import expected_calibration_error
-from src.ml.evaluation.loyo_protocol import compute_ablation_threshold
+from src.evaluation.bootstrap_metrics import compute_ablation_threshold
 from src.prediction.kaggle_recency import resolve_recent_weighting, year_objective_weight
 from src.prediction.torvik_correction import (
     TorvikCorrectionConfig,

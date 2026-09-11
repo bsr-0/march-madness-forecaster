@@ -169,7 +169,7 @@ class TestFetchSeasonPbpCheckpointing:
     def test_writes_checkpoint_after_each_day(self, monkeypatch, tmp_path):
         from datetime import date as _date
 
-        from src.pipeline import config as pipeline_config
+        from src.data import season_calendar as pipeline_config
 
         monkeypatch.setattr(pipeline_config, "TOURNAMENT_START_DATES", {2025: _date(2024, 11, 4)})
 
@@ -186,7 +186,7 @@ class TestFetchSeasonPbpCheckpointing:
     def test_resumes_from_last_completed_date_without_rescraping(self, monkeypatch, tmp_path):
         from datetime import date as _date
 
-        from src.pipeline import config as pipeline_config
+        from src.data import season_calendar as pipeline_config
 
         monkeypatch.setattr(pipeline_config, "TOURNAMENT_START_DATES", {2025: _date(2024, 11, 4)})
 

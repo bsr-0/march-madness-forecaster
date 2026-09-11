@@ -8,7 +8,6 @@ from src.data.scrapers.unified_odds import (
     normalize_from_sbr,
     normalize_from_sbro,
 )
-from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
 
 
 class TestNormalizers:
@@ -141,16 +140,3 @@ class TestComputeTeamMarketFeatures:
         result = compute_team_market_features("duke", "2024-02-01", games)
         assert result["market_spread"] == pytest.approx(5.0)  # +5 from Duke's perspective
         assert result["market_implied_prob"] == pytest.approx(0.35)
-
-
-class TestFeatureVectorDim:
-    def test_dim_is_54(self):
-        assert TEAM_FEATURE_DIM == 56
-
-    def test_feature_names_include_market(self):
-        names = TeamFeatures.get_feature_names()
-        assert len(names) == 56
-        assert "market_implied_prob" in names
-        assert "market_spread" in names
-        assert names[52] == "market_implied_prob"
-        assert names[53] == "market_spread"

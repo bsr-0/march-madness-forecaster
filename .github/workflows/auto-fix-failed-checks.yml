@@ -101,10 +101,9 @@ jobs:
           Instructions:
           1. Analyze the failure logs to understand what went wrong.
           2. Only fix lint errors (ruff) and straightforward test failures.
-          3. Do NOT modify production-locked files (configs/production_2026.json, src/run_production_2026.py).
-          4. Do NOT modify the CI workflow files themselves.
-          5. Run 'ruff check src/ tests/' and 'pytest tests/ -m unit --tb=short -q' to verify your fixes.
-          6. Keep changes minimal — fix only what is broken, do not refactor.
+          3. Do NOT modify the CI workflow files themselves.
+          4. Run 'ruff check src/ tests/' and 'pytest tests/ -m unit --tb=short -q' to verify your fixes.
+          5. Keep changes minimal — fix only what is broken, do not refactor.
 
           Fix the issues now." \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep"

@@ -271,7 +271,7 @@ class RealDataCollector:
         if self.config.scrape_torvik:
             # Leakage guard: warn if collecting Torvik data after tournament start
             try:
-                from ...pipeline.config import TOURNAMENT_START_DATES
+                from ..season_calendar import TOURNAMENT_START_DATES
                 from datetime import date as _date
 
                 _cutoff = TOURNAMENT_START_DATES.get(year)

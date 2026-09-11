@@ -55,7 +55,7 @@ def _render(backtest, rows):
 
 
 def _parse_row(text, mode):
-    line = next(l for l in text.splitlines() if l.strip().startswith(mode + " "))
+    line = next(ln for ln in text.splitlines() if ln.strip().startswith(mode + " "))
     cols = line.split()
     return {"p_first": float(cols[3]), "ci": float(cols[4]), "n": int(cols[5])}
 

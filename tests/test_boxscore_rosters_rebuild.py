@@ -119,14 +119,3 @@ def test_rebuilt_2024_file_does_not_encode_tournament_advancement():
     assert len(common) >= 55, f"only {len(common)} tournament teams bridged"
     r = sp.pearsonr([games[t] for t in common], [wins[t] for t in common])[0]
     assert abs(r) < 0.25, f"games_played still tracks rounds won: r={r:+.3f} (cbbpy file was +0.686)"
-
-
-@pytest.mark.integration
-def test_rebuilt_file_is_accepted_by_the_contamination_guard():
-    from src.pipeline.stages.data_loader import load_roster_overlay
-
-    path = ROOT / "data" / "raw" / "historical" / "rosters_boxscore_2024.json"
-    if not path.exists():
-        pytest.skip("rosters_boxscore_2024.json not built")
-    overlay = load_roster_overlay(str(path), year=2024, strict=True)
-    assert len(overlay) > 300

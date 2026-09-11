@@ -31,7 +31,7 @@ FIRST_ROUND_MATCHUPS = {
 
 def _is_tournament_game(date_str: str, year: int) -> bool:
     from datetime import date as _dtdate
-    from ..pipeline.config import TOURNAMENT_START_DATES
+    from ..data.season_calendar import TOURNAMENT_START_DATES
 
     try:
         parts = date_str.split("-")
