@@ -386,7 +386,17 @@ class BacktestHarness:
                 # Year splits
                 dev_years=dev_years,
                 holdout_years=[year],
-                calibration_years=[],
+                # Temperature scaling is fit on the dev seasons' TOURNAMENT games
+                # (regular-season training never sees them, so they are
+                # game-level out-of-sample; under --walk-forward they are also
+                # strictly earlier seasons). This used to be [] -- which
+                # resolve_calibration_years() takes literally -- so the fit pool
+                # was the ~47 current-year validation rows, below the hard minimum
+                # of 80, and every fold died in calibration. The stage's own
+                # dev_years fallback loads the rows but the nested-calibration
+                # composition then recounts from the resolved years and drops
+                # them, so the fallback is not sufficient on its own.
+                calibration_years=dev_years,
                 # Per-year data files
                 kaggle_dir=self.kaggle_dir,
                 teams_json=teams_json,
