@@ -381,7 +381,9 @@ def _load_year_samples_incremental_core(
     roster_path = os.path.join(os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json")
     if not os.path.isfile(roster_path):
         roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
-    team_roster_overlay = load_roster_overlay(roster_path, year=year)
+    team_roster_overlay = load_roster_overlay(
+        roster_path, year=year, strict=getattr(config, "strict_leakage_mode", False)
+    )
 
     # Market odds data (unified odds layer).
     unified_odds_by_team = {}

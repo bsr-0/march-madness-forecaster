@@ -212,6 +212,36 @@ shift. FINDINGS §4 records excluding roster minutes from the *Bracket Lab* matr
 contamination survives in the pipeline model. (The regular-season features — Elo, win%,
 momentum, SOS, tempo, ORB, opp-TO — are PIT-correct: `proprietary_metrics.py:226-244,1485-1486,1681`.)
 
+**Quantified and FIXED 2026-09-10.** The mechanism is explicit in the scraper:
+`warp = max(0.0, bpm * minute_share * games_played / 300.0)`
+(`cbbpy_rosters.py:405`) is linear in games played, so a team that won six tournament
+games carries ~17% more WARP for every player. Measured on the shipped files, the
+correlation between a team's roster `games_played` and the tournament rounds it actually
+won is **+0.49 to +0.83 in every season 2011–2025** (champions carry 4–6.5 more games than
+R64 losers, i.e. exactly their tournament wins), against **−0.05 for 2026**, whose snapshot
+is genuinely mid-February. The team with the most games in each file is that season's
+champion or runner-up — 2008 Kansas, 2011 UConn, 2017 UNC, 2022 Kansas. `diff_total_warp`
+is the feature `SIMPLE_FEATURE_SET` annotates as the "largest coefficient".
+
+Fixed at the loader rather than the feature list, because both production configs set
+`enable_feature_selection: true` and therefore never read `SIMPLE_FEATURE_SET` — editing
+that list would have left the contaminated values available to the learned selector.
+`load_roster_overlay` now detects contamination correctly (the old check bailed out when
+`file_year == year`, which is the contaminated case and true of every file on disk), drops
+the overlay with an error-level log, and raises `RosterContaminationError` under
+`strict_leakage_mode` — which both production configs set. Verified against the repo's own
+data: 2011–2025 drop, 2026 is retained. Pinned by `tests/test_roster_contamination_guard.py`.
+
+**The consequence is a decision someone has to make, and is deliberately left open.**
+Dropping the overlay for contaminated seasons means training rows carry no roster features
+while a clean 2026/2027 snapshot still would — a train/serve skew of exactly the shape
+FINDINGS §6c describes, where a feature is constant in training and real at inference. That
+is better than leaking but is not a resting state. Under `strict_leakage_mode` the pipeline
+now raises instead of skewing, which forces the choice rather than making it silently. The
+honest options are to rebuild roster features from game-level box scores
+(`src/data/scrapers/espn_boxscore.py`, which FINDINGS §6d establishes has full historical
+coverage) or to drop them from both training and inference until that exists.
+
 **H6. Brackets are constructed for one pool size and scored against another.** CONFIRMED
 (found 2026-09-10 while re-measuring the headline). **FIXED 2026-09-10** — see the closing
 paragraph of this entry. `_run_one_year` resolves the real field
@@ -259,6 +289,30 @@ against a `n_opponents` already resolved to the real group size); the backtest w
 outlier.
 
 ### MEDIUM
+
+**H7. The ML pipeline cannot load data at all: a deleted package is still imported.**
+CONFIRMED (found 2026-09-10 while fixing H5). `src/pipeline/stages/data_loader.py:37`
+imports `src.conference_tournament.data_enrichment`; that package was deleted in commit
+`44b048f` (2026-04-21, message "upd") and never restored, so `data_loader` and
+`sample_loading` both raise `ModuleNotFoundError` on import. `pipeline_runner` imports
+`data_loader` lazily inside its delegation functions (`:703-766`), so the failure surfaces
+at runtime on the first data load rather than at import — which is why `src.main` and
+`tournament_pipeline` still import cleanly and the breakage has gone unnoticed.
+
+The practical meaning: **the ML training/production pipeline the README describes under
+"How it works" has been unable to run since 2026-04-21.** This is consistent with every
+other finding here — the shipped brackets come from `mc_pool_backtest.py` and
+`build_candidate_artifact.py`, neither of which touches this code path. It also explains why
+H5's leak, though real, is currently latent: it contaminates a pipeline nothing runs.
+
+Note the same commit also deleted `src/prediction/torvik_probabilities.py` (H4) and
+`scripts/compute_pretournament_barthag.py` (M1). One unreviewed "upd" commit broke at least
+three separate paths, and each was found only by trying to execute them.
+
+Not fixed here: resolving it means either restoring the package or removing the call site
+at `data_loader.py:858`, and the FINDINGS §4 note that Four Factors were consolidated into
+`torvik_{year}.json` in 2026-08 suggests the enrichment may now be redundant — but that is a
+judgment about intent, not a mechanical fix.
 
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026
@@ -456,8 +510,13 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    (`build_candidate_artifact.py`) still uses a third, different recipe. **Still open:**
    decide whether the shipped candidate bank adopts the backtested recipe or the site stops
    quoting a backtested P(1st) for brackets that recipe never produced.
-6. Remove `total_warp`/`top5_rapm` from training or rebuild them from pre-cutoff box
-   scores; make the roster timestamp guard a hard error.
+6. ~~Remove `total_warp`/`top5_rapm` from training; make the roster timestamp guard a hard
+   error~~ **DONE 2026-09-10** (guard half). See H5: the guard was inverted and warning-only;
+   it now drops the overlay and raises under `strict_leakage_mode`. **Still open:** rebuild
+   roster features from game-level box scores, or drop them from inference too — today a
+   clean 2026/2027 snapshot would be served to a model trained without them.
+6b. **Resolve H7 before anything above matters for the ML path.** `data_loader` imports a
+   package deleted in April, so the pipeline cannot load data at runtime.
 7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
    comment saying it is unfit; create the 2027 file or make its absence loud.
 8. Turn the March runbook into a script or a checked-in document; wire

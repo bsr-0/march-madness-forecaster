@@ -240,7 +240,9 @@ def load_ncaa_tournament_with_seeds(
     team_massey_multi: Dict = {}
 
     roster_path = os.path.join(GAMES_DIR, f"cbbpy_rosters_{year}.json")
-    team_roster_overlay = load_roster_overlay(roster_path, year=year)
+    team_roster_overlay = load_roster_overlay(
+        roster_path, year=year, strict=getattr(config, "strict_leakage_mode", False)
+    )
 
     # ── 4. Create incremental engine ─────────────────────────────────
     inc_engine = IncrementalMetricsEngine(
