@@ -439,6 +439,13 @@ assignment; `tests/test_shared_pipeline_rosters.py` pins the read/write pair, ch
 `getattr(p, "_x")` read in the runner has a writer, and drives the feature loop with a stub to
 confirm the roster arrives. The item-6 rebuild was therefore reaching training but not
 inference until this fix; with it, the rebuilt roster features are served end to end.
+**After the fix, same 2024 fold:** Brier 0.2079 → 0.2055 (main draw 0.2027), spread
+0.25–0.86, 1-seeds 39% of simulated titles — the roster features are served, and they move
+the score only slightly. With every one of the nine production features now on training
+scale at inference, this fold is the first honest measurement of the ML pipeline, and on
+2024 it still trails the seed baseline (0.177) and the site's fitted model (0.137) on
+identical rows. `artifacts/headline_measurement/ml_walkforward_2024_fold.json`,
+`ml_vs_fitted_2024.txt` (re-archived after this fix).
 
 **M1. "Pre-tournament" Torvik ratings are post-hoc reconstructions.** CONFIRMED / SUSPECTED.
 All 22 `torvik_{2005..2026}.json` files carry `scraped_at: 2026-04-06` — after the 2026

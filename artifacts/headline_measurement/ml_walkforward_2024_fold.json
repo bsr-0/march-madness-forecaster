@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-09-11T06:22:00.431128+00:00",
-  "elapsed_seconds": 1049.4,
+  "timestamp": "2026-09-11T07:00:37.024286+00:00",
+  "elapsed_seconds": 937.1,
   "aggregate_report": {
     "n_years": 1,
     "years": [
@@ -8,17 +8,17 @@
     ],
     "aggregate_metrics": {
       "brier_score": {
-        "estimate": 0.20791454442629445,
-        "ci_lower": 0.20791454442629445,
-        "ci_upper": 0.20791454442629445,
+        "estimate": 0.20549550064811808,
+        "ci_lower": 0.20549550064811808,
+        "ci_upper": 0.20549550064811808,
         "ci_level": 0.95,
         "n_bootstrap": 0,
         "n_samples": 1
       },
       "log_loss": {
-        "estimate": 0.6042774231126652,
-        "ci_lower": 0.6042774231126652,
-        "ci_upper": 0.6042774231126652,
+        "estimate": 0.598856375052113,
+        "ci_lower": 0.598856375052113,
+        "ci_upper": 0.598856375052113,
         "ci_level": 0.95,
         "n_bootstrap": 0,
         "n_samples": 1
@@ -32,17 +32,17 @@
         "feature_hash": "",
         "global_metrics": {
           "brier_score": {
-            "estimate": 0.20791454442629445,
-            "ci_lower": 0.17876406936521144,
-            "ci_upper": 0.23999744849114651,
+            "estimate": 0.20549550064811808,
+            "ci_lower": 0.17416394226291068,
+            "ci_upper": 0.24006190495442156,
             "ci_level": 0.95,
             "n_bootstrap": 5000,
             "n_samples": 67
           },
           "log_loss": {
-            "estimate": 0.6042774231126652,
-            "ci_lower": 0.5411937962604874,
-            "ci_upper": 0.6737603880222209,
+            "estimate": 0.598856375052113,
+            "ci_lower": 0.5308388477216511,
+            "ci_upper": 0.6744667293477792,
             "ci_level": 0.95,
             "n_bootstrap": 5000,
             "n_samples": 67
@@ -55,17 +55,17 @@
           ],
           "global_metrics": {
             "brier_score": {
-              "estimate": 0.20791454442629445,
-              "ci_lower": 0.17876406936521144,
-              "ci_upper": 0.23999744849114651,
+              "estimate": 0.20549550064811808,
+              "ci_lower": 0.17416394226291068,
+              "ci_upper": 0.24006190495442156,
               "ci_level": 0.95,
               "n_bootstrap": 5000,
               "n_samples": 67
             },
             "log_loss": {
-              "estimate": 0.6042774231126652,
-              "ci_lower": 0.542527443814625,
-              "ci_upper": 0.6720646346906709,
+              "estimate": 0.598856375052113,
+              "ci_lower": 0.5317974265577549,
+              "ci_upper": 0.67247350760825,
               "ci_level": 0.95,
               "n_bootstrap": 5000,
               "n_samples": 67
@@ -79,9 +79,9 @@
               "n_samples": 67
             },
             "ece": {
-              "estimate": 0.1964340729241783,
-              "ci_lower": 0.12925225784655797,
-              "ci_upper": 0.30207881894425404,
+              "estimate": 0.19049195788571685,
+              "ci_lower": 0.11973984711866058,
+              "ci_upper": 0.29091179947962703,
               "ci_level": 0.95,
               "n_bootstrap": 5000,
               "n_samples": 67
@@ -92,34 +92,34 @@
               "segment_name": "heavy_favorites",
               "n_games": 12,
               "n_upsets": 1,
-              "n_upsets_predicted": 0,
+              "n_upsets_predicted": 1,
               "brier": {
-                "estimate": 0.12743721326976373,
-                "ci_lower": 0.0654726860780337,
-                "ci_upper": 0.21808448149573748,
+                "estimate": 0.12788929730852108,
+                "ci_lower": 0.057418471337445716,
+                "ci_upper": 0.22807580863556112,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
               },
               "log_loss": {
-                "estimate": 0.42661705739082123,
-                "ci_lower": 0.28361342402487305,
-                "ci_upper": 0.6372300657791957,
+                "estimate": 0.42485735363301996,
+                "ci_lower": 0.2651993479594007,
+                "ci_upper": 0.6577445674051777,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
               },
               "ece": {
-                "estimate": 0.19668210649571674,
-                "ci_lower": 0.08497814038749602,
-                "ci_upper": 0.3232131915206668,
+                "estimate": 0.18526927983999242,
+                "ci_lower": 0.12525644352290663,
+                "ci_upper": 0.35238687769227095,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
               },
               "accuracy": {
-                "estimate": 0.9166666666666666,
-                "ci_lower": 0.75,
+                "estimate": 0.8333333333333334,
+                "ci_lower": 0.5833333333333334,
                 "ci_upper": 1.0,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
@@ -131,34 +131,34 @@
               "segment_name": "mid_tier",
               "n_games": 8,
               "n_upsets": 2,
-              "n_upsets_predicted": 4,
+              "n_upsets_predicted": 3,
               "brier": {
-                "estimate": 0.16851134298902293,
-                "ci_lower": 0.11124926609863073,
-                "ci_upper": 0.22304883314256366,
+                "estimate": 0.1536943087700035,
+                "ci_lower": 0.10284095457845764,
+                "ci_upper": 0.20346672897176318,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
               },
               "log_loss": {
-                "estimate": 0.520172463648933,
-                "ci_lower": 0.39815094757701947,
-                "ci_upper": 0.6375939287757093,
+                "estimate": 0.4890846030896875,
+                "ci_lower": 0.37200142938515146,
+                "ci_upper": 0.5965560694221648,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
               },
               "ece": {
-                "estimate": 0.21439159839297323,
-                "ci_lower": 0.1165324095550024,
-                "ci_upper": 0.43602526855721296,
+                "estimate": 0.2507619783144896,
+                "ci_lower": 0.14317380819662542,
+                "ci_upper": 0.4228916422631045,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
               },
               "accuracy": {
-                "estimate": 0.75,
-                "ci_lower": 0.375,
+                "estimate": 0.875,
+                "ci_lower": 0.625,
                 "ci_upper": 1.0,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
@@ -172,25 +172,25 @@
               "n_upsets": 8,
               "n_upsets_predicted": 3,
               "brier": {
-                "estimate": 0.3374677910865307,
-                "ci_lower": 0.29016045105464683,
-                "ci_upper": 0.38690999494903305,
+                "estimate": 0.34008233226325624,
+                "ci_lower": 0.2883012492427817,
+                "ci_upper": 0.395106945063221,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
               },
               "log_loss": {
-                "estimate": 0.8744455541897777,
-                "ci_lower": 0.7729569094792166,
-                "ci_upper": 0.9808952902962912,
+                "estimate": 0.8811099309130276,
+                "ci_lower": 0.7717166481014905,
+                "ci_upper": 0.9974969455249882,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
               },
               "ece": {
-                "estimate": 0.5073506846851595,
-                "ci_lower": 0.3286321787968197,
-                "ci_upper": 0.6161082668579483,
+                "estimate": 0.5092075730424647,
+                "ci_lower": 0.3310095870345632,
+                "ci_upper": 0.6225793067206175,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 12
@@ -213,25 +213,25 @@
               "n_upsets": 11,
               "n_upsets_predicted": 7,
               "brier": {
-                "estimate": 0.21646721238086616,
-                "ci_lower": 0.16751872447958852,
-                "ci_upper": 0.2669359162588914,
+                "estimate": 0.21391293828191735,
+                "ci_lower": 0.1631134976255246,
+                "ci_upper": 0.26968061283170813,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 32
               },
               "log_loss": {
-                "estimate": 0.6179415952549577,
-                "ci_lower": 0.5136837065429748,
-                "ci_upper": 0.7261517784518785,
+                "estimate": 0.6120088824771897,
+                "ci_lower": 0.4990744182170545,
+                "ci_upper": 0.730709819438792,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 32
               },
               "ece": {
-                "estimate": 0.15336676961018655,
-                "ci_lower": 0.09901808945507871,
-                "ci_upper": 0.3220986528705333,
+                "estimate": 0.16731306577145494,
+                "ci_lower": 0.11017918253640999,
+                "ci_upper": 0.32966249371024636,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 32
@@ -252,25 +252,25 @@
               "n_upsets": 2,
               "n_upsets_predicted": 1,
               "brier": {
-                "estimate": 0.16826384554300255,
-                "ci_lower": 0.13976779976557108,
-                "ci_upper": 0.19778502147626398,
+                "estimate": 0.1651121854194776,
+                "ci_lower": 0.13468340868166198,
+                "ci_upper": 0.19674364861738192,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 16
               },
               "log_loss": {
-                "estimate": 0.524568012318674,
-                "ci_lower": 0.4660005993509828,
-                "ci_upper": 0.5865853388282427,
+                "estimate": 0.5173153335310885,
+                "ci_lower": 0.45498038820715525,
+                "ci_upper": 0.5841870468889909,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 16
               },
               "ece": {
-                "estimate": 0.34348202872412326,
-                "ci_lower": 0.22139697669490352,
-                "ci_upper": 0.42612563448120894,
+                "estimate": 0.33985872172374776,
+                "ci_lower": 0.21714210729688715,
+                "ci_upper": 0.42235162175646174,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 16
@@ -291,25 +291,25 @@
               "n_upsets": 4,
               "n_upsets_predicted": 1,
               "brier": {
-                "estimate": 0.22286523437453115,
-                "ci_lower": 0.15197419599331585,
-                "ci_upper": 0.3145681531577446,
+                "estimate": 0.22678521821418873,
+                "ci_lower": 0.13433008359400025,
+                "ci_upper": 0.32466719796169247,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
               },
               "log_loss": {
-                "estimate": 0.6368382894252275,
-                "ci_lower": 0.4809910733436862,
-                "ci_upper": 0.8190332052774965,
+                "estimate": 0.6446752789194479,
+                "ci_lower": 0.4594273644372105,
+                "ci_upper": 0.8596739776515346,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
               },
               "ece": {
-                "estimate": 0.30734744874400843,
-                "ci_lower": 0.11807894539887656,
-                "ci_upper": 0.49944041401531264,
+                "estimate": 0.30932162800799956,
+                "ci_lower": 0.11094304345406136,
+                "ci_upper": 0.5141727552881811,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
@@ -317,7 +317,7 @@
               "accuracy": {
                 "estimate": 0.625,
                 "ci_lower": 0.25,
-                "ci_upper": 1.0,
+                "ci_upper": 0.8781249999999545,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 8
@@ -330,25 +330,25 @@
               "n_upsets": 1,
               "n_upsets_predicted": 0,
               "brier": {
-                "estimate": 0.28615913317136954,
-                "ci_lower": 0.14142760261610207,
-                "ci_upper": 0.5041788283890338,
+                "estimate": 0.27905926599319447,
+                "ci_lower": 0.12569053647574527,
+                "ci_upper": 0.5152299201871983,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 4
               },
               "log_loss": {
-                "estimate": 0.7880951878498572,
-                "ci_lower": 0.4693386811644655,
-                "ci_upper": 1.2762168060246852,
+                "estimate": 0.7775361827535611,
+                "ci_lower": 0.434644138598762,
+                "ci_upper": 1.3127842930486402,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 4
               },
               "ece": {
-                "estimate": 0.12142345189862991,
-                "ci_lower": 0.08932061094462007,
-                "ci_upper": 0.46899246657925453,
+                "estimate": 0.10297088252617448,
+                "ci_lower": 0.06920220349046091,
+                "ci_upper": 0.4836944519032397,
                 "ci_level": 0.95,
                 "n_bootstrap": 5000,
                 "n_samples": 4
@@ -369,25 +369,25 @@
               "n_upsets": 0,
               "n_upsets_predicted": 0,
               "brier": {
-                "estimate": 0.07824735497240935,
-                "ci_lower": 0.07824735497240935,
-                "ci_upper": 0.07824735497240935,
+                "estimate": 0.06830576445735256,
+                "ci_lower": 0.06830576445735256,
+                "ci_upper": 0.06830576445735256,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 2
               },
               "log_loss": {
-                "estimate": 0.3262402558506229,
-                "ci_lower": 0.3262402558506229,
-                "ci_upper": 0.3262402558506229,
+                "estimate": 0.3003888500235936,
+                "ci_lower": 0.3003888500235936,
+                "ci_upper": 0.3003888500235936,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 2
               },
               "ece": {
-                "estimate": 0.2775142748329844,
-                "ci_lower": 0.2775142748329844,
-                "ci_upper": 0.2775142748329844,
+                "estimate": 0.2584521210624282,
+                "ci_lower": 0.2584521210624282,
+                "ci_upper": 0.2584521210624282,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 2
@@ -407,25 +407,25 @@
               "n_upsets": 0,
               "n_upsets_predicted": 0,
               "brier": {
-                "estimate": 0.22704903405942478,
-                "ci_lower": 0.22704903405942478,
-                "ci_upper": 0.22704903405942478,
+                "estimate": 0.2140592130899225,
+                "ci_lower": 0.2140592130899225,
+                "ci_upper": 0.2140592130899225,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 1
               },
               "log_loss": {
-                "estimate": 0.6472118025488652,
-                "ci_lower": 0.6472118025488652,
-                "ci_upper": 0.6472118025488652,
+                "estimate": 0.621134168067283,
+                "ci_lower": 0.621134168067283,
+                "ci_upper": 0.621134168067283,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 1
               },
               "ece": {
-                "estimate": 0.4764966254439005,
-                "ci_lower": 0.4764966254439005,
-                "ci_upper": 0.4764966254439005,
+                "estimate": 0.462665335950212,
+                "ci_lower": 0.462665335950212,
+                "ci_upper": 0.462665335950212,
                 "ci_level": 0.95,
                 "n_bootstrap": 0,
                 "n_samples": 1
@@ -442,7 +442,7 @@
           }
         },
         "calibration_diagnostics": {
-          "ece": 0.19643407292417825,
+          "ece": 0.19049195788571682,
           "n_samples": 67,
           "reliability": {
             "bin_edges": [
@@ -462,12 +462,12 @@
               0,
               0,
               2,
-              2,
-              7,
-              25,
-              19,
-              9,
               3,
+              6,
+              25,
+              14,
+              12,
+              5,
               0
             ],
             "bin_accuracy": [
@@ -475,27 +475,27 @@
               0.0,
               0.5,
               1.0,
-              0.7142857142857143,
-              0.72,
-              0.8947368421052632,
-              0.7777777777777778,
+              0.6666666666666666,
+              0.76,
+              0.7857142857142857,
+              0.8333333333333334,
               1.0,
               0.0
             ],
             "bin_confidence": [
               0.0,
               0.0,
-              0.2695551073047061,
-              0.37067536094049275,
-              0.46264555051990347,
-              0.5485816970138679,
-              0.6516770910138012,
-              0.7510798695509495,
-              0.8212704477942886,
+              0.2563872141775505,
+              0.35838954397409567,
+              0.4665608051733748,
+              0.5515466285672326,
+              0.6496473608707317,
+              0.7378222550969191,
+              0.8224270205610494,
               0.0
             ],
-            "ece": 0.19643407292417825,
-            "mce": 0.6293246390595073
+            "ece": 0.19049195788571682,
+            "mce": 0.6416104560259044
           }
         },
         "reproducibility": {
@@ -510,10 +510,10 @@
   "risk_report": null,
   "regression_gate": null,
   "per_year_brier": {
-    "2024": 0.20791454442629445
+    "2024": 0.20549550064811808
   },
   "per_year_calibration_ece": {
-    "2024": 0.19643407292417825
+    "2024": 0.19049195788571682
   },
   "per_year_source": {
     "2024": "pipeline"
@@ -564,7 +564,7 @@
         "seed2": 16,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.806806
+        "pipeline": 0.819668
       },
       {
         "team1": "florida_atlantic",
@@ -573,7 +573,7 @@
         "seed2": 9,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.57963
+        "pipeline": 0.568203
       },
       {
         "team1": "san_diego_state",
@@ -582,7 +582,7 @@
         "seed2": 12,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.589395
+        "pipeline": 0.576326
       },
       {
         "team1": "auburn",
@@ -591,7 +591,7 @@
         "seed2": 13,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.770022
+        "pipeline": 0.769066
       },
       {
         "team1": "brigham_young",
@@ -600,7 +600,7 @@
         "seed2": 11,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.541645
+        "pipeline": 0.535038
       },
       {
         "team1": "illinois",
@@ -609,7 +609,7 @@
         "seed2": 14,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.63958
+        "pipeline": 0.633297
       },
       {
         "team1": "washington_state",
@@ -618,7 +618,7 @@
         "seed2": 10,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.274292
+        "pipeline": 0.25991
       },
       {
         "team1": "iowa_state",
@@ -627,7 +627,7 @@
         "seed2": 15,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.545919
+        "pipeline": 0.463183
       },
       {
         "team1": "connecticut",
@@ -636,7 +636,7 @@
         "seed2": 9,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.6967
+        "pipeline": 0.714268
       },
       {
         "team1": "san_diego_state",
@@ -645,7 +645,7 @@
         "seed2": 4,
         "round": "R32",
         "outcome": 0,
-        "pipeline": 0.48072
+        "pipeline": 0.470667
       },
       {
         "team1": "illinois",
@@ -654,7 +654,7 @@
         "seed2": 11,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.581691
+        "pipeline": 0.60598
       },
       {
         "team1": "iowa_state",
@@ -663,7 +663,7 @@
         "seed2": 7,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.622171
+        "pipeline": 0.580682
       },
       {
         "team1": "connecticut",
@@ -672,7 +672,7 @@
         "seed2": 4,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.642689
+        "pipeline": 0.679002
       },
       {
         "team1": "illinois",
@@ -681,7 +681,7 @@
         "seed2": 2,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.674646
+        "pipeline": 0.725365
       },
       {
         "team1": "connecticut",
@@ -690,7 +690,7 @@
         "seed2": 3,
         "round": "E8",
         "outcome": 1,
-        "pipeline": 0.660168
+        "pipeline": 0.684098
       },
       {
         "team1": "north_carolina",
@@ -699,7 +699,7 @@
         "seed2": 16,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.788597
+        "pipeline": 0.808484
       },
       {
         "team1": "mississippi_state",
@@ -708,7 +708,7 @@
         "seed2": 9,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.57343
+        "pipeline": 0.575221
       },
       {
         "team1": "saint_mary_s__ca",
@@ -717,7 +717,7 @@
         "seed2": 12,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.463693
+        "pipeline": 0.455289
       },
       {
         "team1": "alabama",
@@ -726,7 +726,7 @@
         "seed2": 13,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.53243
+        "pipeline": 0.598793
       },
       {
         "team1": "clemson",
@@ -735,7 +735,7 @@
         "seed2": 11,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.406125
+        "pipeline": 0.392591
       },
       {
         "team1": "baylor",
@@ -744,7 +744,7 @@
         "seed2": 14,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.687841
+        "pipeline": 0.709054
       },
       {
         "team1": "dayton",
@@ -753,7 +753,7 @@
         "seed2": 10,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.468452
+        "pipeline": 0.480869
       },
       {
         "team1": "arizona",
@@ -762,7 +762,7 @@
         "seed2": 15,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.715913
+        "pipeline": 0.721976
       },
       {
         "team1": "north_carolina",
@@ -771,7 +771,7 @@
         "seed2": 9,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.662513
+        "pipeline": 0.676164
       },
       {
         "team1": "alabama",
@@ -780,7 +780,7 @@
         "seed2": 6,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.504136
+        "pipeline": 0.515611
       },
       {
         "team1": "clemson",
@@ -789,7 +789,7 @@
         "seed2": 5,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.447225
+        "pipeline": 0.44106
       },
       {
         "team1": "arizona",
@@ -798,7 +798,7 @@
         "seed2": 7,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.626112
+        "pipeline": 0.629948
       },
       {
         "team1": "north_carolina",
@@ -807,7 +807,7 @@
         "seed2": 4,
         "round": "S16",
         "outcome": 0,
-        "pipeline": 0.589838
+        "pipeline": 0.577278
       },
       {
         "team1": "clemson",
@@ -816,7 +816,7 @@
         "seed2": 2,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.378549
+        "pipeline": 0.362479
       },
       {
         "team1": "alabama",
@@ -825,7 +825,7 @@
         "seed2": 6,
         "round": "E8",
         "outcome": 1,
-        "pipeline": 0.531756
+        "pipeline": 0.549023
       },
       {
         "team1": "houston",
@@ -834,7 +834,7 @@
         "seed2": 16,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.810932
+        "pipeline": 0.823387
       },
       {
         "team1": "nebraska",
@@ -843,7 +843,7 @@
         "seed2": 9,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.503829
+        "pipeline": 0.503713
       },
       {
         "team1": "wisconsin",
@@ -852,7 +852,7 @@
         "seed2": 12,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.264818
+        "pipeline": 0.252864
       },
       {
         "team1": "duke",
@@ -861,7 +861,7 @@
         "seed2": 13,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.692205
+        "pipeline": 0.719412
       },
       {
         "team1": "texas_tech",
@@ -870,7 +870,7 @@
         "seed2": 11,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.644641
+        "pipeline": 0.670044
       },
       {
         "team1": "kentucky",
@@ -879,7 +879,7 @@
         "seed2": 14,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.746614
+        "pipeline": 0.768746
       },
       {
         "team1": "florida",
@@ -888,7 +888,7 @@
         "seed2": 10,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.650998
+        "pipeline": 0.634876
       },
       {
         "team1": "marquette",
@@ -897,7 +897,7 @@
         "seed2": 15,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.607329
+        "pipeline": 0.675293
       },
       {
         "team1": "houston",
@@ -906,7 +906,7 @@
         "seed2": 9,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.712971
+        "pipeline": 0.720675
       },
       {
         "team1": "duke",
@@ -915,7 +915,7 @@
         "seed2": 12,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.573113
+        "pipeline": 0.589937
       },
       {
         "team1": "nc_state",
@@ -924,7 +924,7 @@
         "seed2": 14,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.543153
+        "pipeline": 0.53358
       },
       {
         "team1": "marquette",
@@ -933,7 +933,7 @@
         "seed2": 10,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.633242
+        "pipeline": 0.639653
       },
       {
         "team1": "houston",
@@ -942,7 +942,7 @@
         "seed2": 4,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.635389
+        "pipeline": 0.623762
       },
       {
         "team1": "nc_state",
@@ -951,7 +951,7 @@
         "seed2": 2,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.362802
+        "pipeline": 0.320099
       },
       {
         "team1": "houston",
@@ -960,7 +960,7 @@
         "seed2": 11,
         "round": "E8",
         "outcome": 0,
-        "pipeline": 0.776794
+        "pipeline": 0.789891
       },
       {
         "team1": "purdue",
@@ -969,7 +969,7 @@
         "seed2": 16,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.846073
+        "pipeline": 0.857607
       },
       {
         "team1": "utah_state",
@@ -978,7 +978,7 @@
         "seed2": 9,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.566149
+        "pipeline": 0.603145
       },
       {
         "team1": "gonzaga",
@@ -987,7 +987,7 @@
         "seed2": 12,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.482581
+        "pipeline": 0.488297
       },
       {
         "team1": "kansas",
@@ -996,7 +996,7 @@
         "seed2": 13,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.489723
+        "pipeline": 0.526757
       },
       {
         "team1": "south_carolina",
@@ -1005,7 +1005,7 @@
         "seed2": 11,
         "round": "R64",
         "outcome": 0,
-        "pipeline": 0.588481
+        "pipeline": 0.563367
       },
       {
         "team1": "creighton",
@@ -1014,7 +1014,7 @@
         "seed2": 14,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.660964
+        "pipeline": 0.693085
       },
       {
         "team1": "texas",
@@ -1023,7 +1023,7 @@
         "seed2": 10,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.588273
+        "pipeline": 0.590253
       },
       {
         "team1": "tennessee",
@@ -1032,7 +1032,7 @@
         "seed2": 15,
         "round": "R64",
         "outcome": 1,
-        "pipeline": 0.783246
+        "pipeline": 0.802989
       },
       {
         "team1": "purdue",
@@ -1041,7 +1041,7 @@
         "seed2": 9,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.70796
+        "pipeline": 0.732318
       },
       {
         "team1": "gonzaga",
@@ -1050,7 +1050,7 @@
         "seed2": 4,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.574501
+        "pipeline": 0.56259
       },
       {
         "team1": "creighton",
@@ -1059,7 +1059,7 @@
         "seed2": 11,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.551112
+        "pipeline": 0.566018
       },
       {
         "team1": "tennessee",
@@ -1068,7 +1068,7 @@
         "seed2": 7,
         "round": "R32",
         "outcome": 1,
-        "pipeline": 0.586967
+        "pipeline": 0.58311
       },
       {
         "team1": "purdue",
@@ -1077,7 +1077,7 @@
         "seed2": 5,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.644881
+        "pipeline": 0.646716
       },
       {
         "team1": "tennessee",
@@ -1086,7 +1086,7 @@
         "seed2": 3,
         "round": "S16",
         "outcome": 1,
-        "pipeline": 0.612427
+        "pipeline": 0.590726
       },
       {
         "team1": "purdue",
@@ -1095,7 +1095,7 @@
         "seed2": 2,
         "round": "E8",
         "outcome": 1,
-        "pipeline": 0.545589
+        "pipeline": 0.565104
       },
       {
         "team1": "connecticut",
@@ -1104,7 +1104,7 @@
         "seed2": 4,
         "round": "F4",
         "outcome": 1,
-        "pipeline": 0.687369
+        "pipeline": 0.702711
       },
       {
         "team1": "purdue",
@@ -1113,7 +1113,7 @@
         "seed2": 11,
         "round": "F4",
         "outcome": 1,
-        "pipeline": 0.757602
+        "pipeline": 0.780384
       },
       {
         "team1": "connecticut",
@@ -1122,7 +1122,7 @@
         "seed2": 1,
         "round": "NCG",
         "outcome": 1,
-        "pipeline": 0.523503
+        "pipeline": 0.537335
       }
     ]
   }
