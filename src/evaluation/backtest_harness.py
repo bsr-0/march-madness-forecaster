@@ -162,7 +162,13 @@ class BacktestHarness:
         kaggle_dir: Optional[str] = None,
         allow_seed_fallback: bool = False,
         walk_forward: bool = False,
+        checkpoint_path: Optional[str] = None,
     ):
+        # checkpoint_path: after every fold, write the per-year results so far
+        # (per_year_games, per_year_brier, per_year_source, walk_forward) to
+        # this file. A nine-season walk-forward run takes hours; a data defect
+        # in fold four used to discard folds one to three.
+        self.checkpoint_path = Path(checkpoint_path) if checkpoint_path else None
         # allow_seed_fallback: substitute the seed baseline when the pipeline
         # fails for a year. Off by default -- it used to be unconditional, and
         # the substituted Brier was reported in the same column as the model's
@@ -274,6 +280,7 @@ class BacktestHarness:
                 bt_result.accuracy * 100,
                 source,
             )
+            self._write_checkpoint(year_briers, year_sources, year_games, year_ece, years_to_eval)
 
         if not year_reports:
             raise ValueError("No years evaluated successfully")
@@ -313,6 +320,29 @@ class BacktestHarness:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _write_checkpoint(self, year_briers, year_sources, year_games, year_ece, years_planned) -> None:
+        """Persist the folds completed so far. Same keys as BacktestResult.to_dict()
+        for everything per-year, plus ``partial: True`` and the fold plan, so a
+        downstream reader (scripts/compare_pipeline_vs_pit.py) can use a
+        checkpoint from an aborted run and know exactly which seasons it lacks."""
+        if self.checkpoint_path is None:
+            return
+        payload = {
+            "partial": True,
+            "years_planned": list(years_planned),
+            "years_completed": sorted(year_briers),
+            "walk_forward": self.walk_forward,
+            "per_year_brier": {str(k): v for k, v in year_briers.items()},
+            "per_year_calibration_ece": {str(k): v for k, v in year_ece.items()},
+            "per_year_source": {str(k): v for k, v in year_sources.items()},
+            "per_year_games": {str(k): v for k, v in year_games.items()},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        self.checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.checkpoint_path.with_suffix(self.checkpoint_path.suffix + ".tmp")
+        tmp.write_text(json.dumps(payload, indent=2, default=str))
+        tmp.replace(self.checkpoint_path)
 
     def _run_year(
         self,

@@ -5581,8 +5581,8 @@
       {
         "name": "Memphis",
         "team_id": "memphis",
-        "seed": 6,
-        "region": "Midwest",
+        "seed": 1,
+        "region": "South",
         "conference": "",
         "rating": 1500.0,
         "school_slug": "memphis"
@@ -5973,6 +5973,15 @@
         "conference": "",
         "rating": 1500.0,
         "school_slug": "ut_arlington"
+      },
+      {
+        "name": "USC",
+        "team_id": "southern_california",
+        "seed": 6,
+        "region": "Midwest",
+        "conference": "",
+        "rating": 1500.0,
+        "school_slug": "southern-california"
       }
     ],
     "generated_at": "2026-04-01T23:51:21.382529+00:00",

@@ -5716,7 +5716,7 @@
       {
         "name": "Texas A M",
         "team_id": "texas_a_m",
-        "seed": 8,
+        "seed": 9,
         "region": "West",
         "conference": "",
         "rating": 1500.0,
@@ -5725,7 +5725,7 @@
       {
         "name": "Brigham Young",
         "team_id": "brigham_young",
-        "seed": 9,
+        "seed": 8,
         "region": "West",
         "conference": "",
         "rating": 1500.0,

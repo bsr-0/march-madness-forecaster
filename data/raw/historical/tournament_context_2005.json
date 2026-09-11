@@ -5539,7 +5539,7 @@
       {
         "name": "Stanford",
         "team_id": "stanford",
-        "seed": 8,
+        "seed": 9,
         "region": "South",
         "conference": "",
         "rating": 1500.0,
@@ -5566,7 +5566,7 @@
       {
         "name": "Mississippi State",
         "team_id": "mississippi_state",
-        "seed": 9,
+        "seed": 8,
         "region": "South",
         "conference": "",
         "rating": 1500.0,

@@ -6162,7 +6162,7 @@
         "name": "Fairleigh Dickinson",
         "team_id": "fairleigh_dickinson",
         "seed": 16,
-        "region": "East",
+        "region": "West",
         "conference": "",
         "rating": 1500.0,
         "school_slug": "fairleigh_dickinson"
@@ -6207,7 +6207,7 @@
         "name": "Prairie View",
         "team_id": "prairie_view",
         "seed": 16,
-        "region": "East",
+        "region": "West",
         "conference": "",
         "rating": 1500.0,
         "school_slug": "prairie_view"

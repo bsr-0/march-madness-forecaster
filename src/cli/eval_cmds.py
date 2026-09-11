@@ -580,6 +580,11 @@ def run_backtest_harness(args):
     if not kaggle_dir and Path("data/kaggle").exists():
         kaggle_dir = "data/kaggle"
 
+    output_path = args.output or "artifacts/backtest_result.json"
+    # Folds are written here as they complete; the file is removed once the
+    # full result is written, so its presence means an aborted run.
+    checkpoint_path = f"{output_path}.partial"
+
     harness = BacktestHarness(
         historical_dir=args.historical_dir,
         baseline_path=args.baseline if args.baseline else None,
@@ -588,17 +593,19 @@ def run_backtest_harness(args):
         kaggle_dir=kaggle_dir,
         allow_seed_fallback=getattr(args, "allow_seed_fallback", False),
         walk_forward=getattr(args, "walk_forward", False),
+        checkpoint_path=checkpoint_path,
     )
+    print(f"Per-fold checkpoint: {checkpoint_path}")
 
     result = harness.run()
     print(result.summary())
 
     # Save full result
-    output_path = args.output or "artifacts/backtest_result.json"
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(result.to_dict(), f, indent=2, default=str)
     print(f"\nFull report written to {output_path}")
+    Path(checkpoint_path).unlink(missing_ok=True)
 
     # Optionally save as new baseline
     if args.save_baseline:
