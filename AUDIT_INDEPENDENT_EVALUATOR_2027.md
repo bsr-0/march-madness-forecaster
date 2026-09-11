@@ -405,7 +405,13 @@ Monte Carlo giving 1-seeds 9.6% of titles. The March 2026 production run
 probabilities were flat too; it shipped nothing user-facing only because the shipped brackets
 never came from this pipeline (C3). Fixed by removing the clip; `tests/test_team_vector_fidelity.py`
 asserts vector *content* (Elo round-trips at real magnitudes; each field moves exactly its
-slot) where the module previously asserted only its length.
+slot) where the module previously asserted only its length. **After the fix, same fold:**
+UConn–Stetson 0.52 → 0.81, predictions span 0.27–0.85, 1-seeds win 37% of simulated titles,
+Brier 0.246 → 0.208 (main draw 0.205). That is a functioning model — and on 2024 it still
+trails the seed baseline (0.177) and the site's fitted model (0.137) on identical rows. One
+season cannot settle that; the nine-season walk-forward comparison is what does.
+Artifacts: `artifacts/headline_measurement/ml_walkforward_2024_fold.json`,
+`ml_vs_fitted_2024.txt`.
 
 **Corollary for the recorded ML numbers.** `artifacts/backtest_result_temperature.json`
 (2026-05-06) evaluates 18 folds in 47.8 seconds with per-game predictions drawn from the seed

@@ -1,0 +1,24 @@
+================================================================================================
+ML PIPELINE (A) vs SITE FITTED MODEL (B) vs SEED (S) -- identical games, walk-forward, main draw only
+================================================================================================
+games scored: 63   seasons: [2024]
+dropped: {'round=FF': 4}
+
+  model         log loss    Brier  BSS vs seed  accuracy
+  ------------------------------------------------------
+  A pipeline      0.5986   0.2052       -0.162     69.8%
+  B fitted        0.4270   0.1366        0.227     81.0%
+  S seed          0.5229   0.1766        0.000     69.8%
+
+  Paired per-game difference, A minus B (negative favours A), 95% bootstrap CI over games:
+    log loss  +0.1717  [+0.0655, +0.2654]
+    Brier     +0.0687  [+0.0240, +0.1086]
+
+  season     n     A LL     B LL     S LL  A Brier  B Brier   winner
+  ------------------------------------------------------------------
+  2024      63   0.5986   0.4270   0.5229   0.2052   0.1366        B
+
+  seasons won: A 0, B 1 of 1   paired t on season log loss (A-B): t=+nan
+
+  VERDICT: B (site fitted model) beats A on both the paired game CI and the season count.
+  Rule fixed in advance: a winner needs the paired 95% CI on log loss to exclude zero AND a season majority.
