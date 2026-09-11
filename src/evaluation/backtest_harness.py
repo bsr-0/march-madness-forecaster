@@ -333,6 +333,7 @@ class BacktestHarness:
         """
         predictions: Dict = {}
         failure: Optional[str] = None
+        failure_exc: Optional[BaseException] = None
         try:
             # Resolve per-year data files from historical dir
             def _resolve(pattern):
@@ -421,6 +422,11 @@ class BacktestHarness:
 
         except (DataReqError, Exception) as e:
             failure = f"{type(e).__name__}: {e}"
+            failure_exc = e
+            # The message alone loses the frame -- and a five-month-old
+            # NameError three modules deep is exactly the kind of thing this
+            # harness has been hiding. Keep the traceback in the log too.
+            logger.error("%d: pipeline failed: %s", year, failure, exc_info=True)
 
         actual_games = get_games_fn(year, results_dir)
         source = "pipeline"
@@ -432,7 +438,7 @@ class BacktestHarness:
                     f"{year}: pipeline failed ({reason}). Not substituting the seed baseline -- "
                     "pass allow_seed_fallback=True (CLI: --allow-seed-fallback) to record a "
                     "seed_fallback year explicitly."
-                )
+                ) from failure_exc
             logger.error("%d: Pipeline failed (%s); recording SEED FALLBACK, not a model score", year, reason)
             predictions = self._seed_baseline(actual_games)
             source = "seed_fallback"
