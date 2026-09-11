@@ -331,18 +331,30 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
     }
 
 
-def load_roster_overlay(roster_path: str, year: Optional[int] = None) -> Dict[str, Dict[str, float]]:
+class RosterContaminationError(RuntimeError):
+    """A roster file's stats include games played after its season's cutoff."""
+
+
+def load_roster_overlay(
+    roster_path: str,
+    year: Optional[int] = None,
+    strict: bool = False,
+) -> Dict[str, Dict[str, float]]:
     """Load cbbpy roster JSON and compute per-team feature overlays.
 
     Handles the cbbpy format: ``{"year": ..., "teams": [{"team_id": ..., "players": [...]}]}``.
 
     Args:
         roster_path: Path to cbbpy roster JSON file.
-        year: Season year for tournament date guard.  If provided, logs a
-            warning when the roster file's timestamp is on/after tournament
-            start (box-score stats may include tournament games).
+        year: Season year for the tournament date guard. A file scraped on or
+            after that season's tournament start has per-player ``games_played``
+            counts that include the tournament itself.
+        strict: Raise ``RosterContaminationError`` instead of dropping the
+            overlay when contamination is detected. Wired to
+            ``config.strict_leakage_mode``.
 
-    Returns ``{team_id: {feature_index: value, ...}}``.
+    Returns ``{team_id: {feature_index: value, ...}}``, or ``{}`` when the file
+    is contaminated for ``year``.
     """
     if not os.path.isfile(roster_path):
         return {}
@@ -353,29 +365,45 @@ def load_roster_overlay(roster_path: str, year: Optional[int] = None) -> Dict[st
     except Exception:
         return {}
 
-    # Tournament date guard — warn if roster was scraped post-tournament.
-    # Skip warning when the file's "year" field matches the requested year,
-    # indicating season-specific historical data scraped retroactively.
+    # TOURNAMENT DATE GUARD. A file scraped after its season's tournament has
+    # per-player `games_played` counts that include that team's tournament run,
+    # and `warp` is computed as `bpm * minute_share * games_played / 300`
+    # (cbbpy_rosters.py), so every roster feature derived from it encodes how
+    # far the team advanced. Measured on the shipped files: the correlation
+    # between a team's roster `games_played` and the tournament rounds it won
+    # is +0.49 to +0.83 in every season 2011-2025, and the team with the most
+    # games in each file is that season's champion or runner-up. 2026, whose
+    # snapshot is genuinely mid-February, is the control at -0.05.
+    #
+    # THIS GUARD USED TO SKIP EXACTLY THE CONTAMINATED CASE. It bailed out when
+    # `file_year == year`, on the reasoning that a season-specific file was
+    # "historical data scraped retroactively" — which is the contaminated case,
+    # not an exemption from it. Every per-season file on disk matches that
+    # condition, so the check never fired for any of them. It was also only a
+    # warning, so nothing stopped the values being stamped onto training rows.
     if year is not None and isinstance(data, dict):
-        file_year = data.get("year")
         ts_str = data.get("timestamp")
-        if ts_str and not (file_year and file_year == year):
+        cutoff = TOURNAMENT_START_DATES.get(year)
+        if ts_str and cutoff:
             try:
                 from datetime import date as _date
 
                 ts_date = _date.fromisoformat(ts_str[:10])
-                cutoff = TOURNAMENT_START_DATES.get(year)
-                if cutoff and ts_date >= cutoff:
-                    logger.warning(
-                        "Roster file %s has timestamp %s on/after tournament start %s "
-                        "for year %d — box-score stats may include tournament games.",
-                        roster_path,
-                        ts_str,
-                        cutoff,
-                        year,
-                    )
             except (ValueError, TypeError):
-                pass
+                ts_date = None
+            if ts_date is not None and ts_date >= cutoff:
+                msg = (
+                    "Roster file %s has timestamp %s on/after tournament start %s for year %d: "
+                    "games_played includes tournament games, so every derived roster feature "
+                    "leaks how far each team advanced."
+                ) % (roster_path, ts_str, cutoff, year)
+                if strict:
+                    raise RosterContaminationError(
+                        msg + " Re-scrape before the tournament, or rebuild from game-level "
+                        "box scores (src/data/scrapers/espn_boxscore.py)."
+                    )
+                logger.error(msg + " Dropping the roster overlay for this season.")
+                return {}
 
     teams_list: list = []
     if isinstance(data, dict):
