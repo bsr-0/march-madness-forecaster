@@ -145,3 +145,31 @@ def test_loyo_default_dev_years_include_the_future(tmp_path):
     h._run_year(2016, "unused", lambda *_: _GAMES, _Capture, _Cfg, RuntimeError)
     assert 2017 in captured["dev_years"], "default LOYO trains on later seasons -- that is the documented protocol"
     assert 2016 not in captured["dev_years"]
+
+
+# --- 4. Calibration is fit on the dev seasons' tournaments ------------------
+
+
+def test_calibration_years_are_the_dev_years(tmp_path):
+    """calibration_years=[] was taken literally by resolve_calibration_years(),
+    leaving ~47 current-year rows against a hard minimum of 80: every fold
+    died in calibration. Under walk-forward the dev seasons are strictly
+    earlier than the held-out one, so this is also the honest choice."""
+    captured = {}
+
+    class _Capture:
+        def __init__(self, config):
+            captured["dev"] = config.dev_years
+            captured["cal"] = config.calibration_years
+            raise RuntimeError("stop after capture")
+
+    class _Cfg:
+        def __init__(self, **kw):
+            self.dev_years = kw["dev_years"]
+            self.calibration_years = kw["calibration_years"]
+
+    h = _harness(tmp_path, walk_forward=True, allow_seed_fallback=True)
+    h.years = [2015, 2016, 2017]
+    h._run_year(2016, "unused", lambda *_: _GAMES, _Capture, _Cfg, RuntimeError)
+    assert captured["cal"] == captured["dev"]
+    assert captured["cal"] and max(captured["cal"]) < 2016
