@@ -422,6 +422,20 @@ temperature → shrink-to-0.5 → clip. When the bootstrap CI for T contains 1.0
 silently becomes identity (`stages/calibration.py:437-468`). No Python test exercises
 `_fit_calibration`'s split.
 
+**M3 update, 2026-09-10 — historical calibration rows were scaled twice in production.**
+Found by running the harness end-to-end. The historical-tournament calibration loader
+(`stages/calibration.py::_load_tournament_cal_year`) called `scaler.transform` on each
+year's rows and then `predict_proba_batch`, whose `_scale_batch` applies the model's fixed
+feature indices and scaler again. On the fixed-feature path this raised
+("X has 60 features, but StandardScaler is expecting 9"), every historical year was skipped,
+and the fit fell to ~47 current-year rows — which is why every harness fold died in
+calibration once it could reach it. On the learned-selector path — `enable_feature_selection:
+true` in both production configs — it did not raise: the rows were standardized **twice**, so
+the 2026 temperature (fit on 2008–2025 tournaments, per the M3 finding above) was fit on
+distorted probabilities and nobody could have seen it. Fixed by removing the manual step;
+pinned by `tests/test_calibration_loader_scaling.py` on a real fitted model. The 2026
+production calibration should be re-fit before that pipeline is used for anything.
+
 **M4. The pre-registration pre-registers nothing falsifiable.** CONFIRMED.
 `prospective_2027_v2_scoped.json` + `tests/test_frozen_2027_spec.py` freeze *methodology*
 (hash, features, scoring, pool size 30, 2000 trials) and that is genuinely valuable. But no
