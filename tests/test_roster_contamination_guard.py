@@ -27,24 +27,14 @@ import pytest
 
 
 def _import_data_loader():
-    """Import the module under test.
+    """Import the module under test — a plain import, which is itself a test.
 
-    `src/pipeline/stages/data_loader.py` imports
+    Until 2026-09-10 this needed a sys.modules stub: data_loader.py imported
     `src.conference_tournament.data_enrichment`, a package deleted in commit
-    44b048f (2026-04-21) and never restored, so the module is unimportable and
-    the ML pipeline fails at runtime the first time it loads data. That is a
-    separate defect, deliberately not papered over in the source; this stub
-    exists only so the leakage guard can be tested at all, and it will become
-    unnecessary the moment that import is resolved.
+    44b048f, so the module could not be imported at all (audit H7). That import
+    is now lazy inside the only branch that uses it, so if this line fails the
+    ML pipeline is unimportable again.
     """
-    name = "src.conference_tournament.data_enrichment"
-    if name not in sys.modules:
-        pkg = types.ModuleType("src.conference_tournament")
-        pkg.__path__ = []
-        mod = types.ModuleType(name)
-        mod.enrich_torvik_teams = lambda *a, **k: (a[0] if a else {})
-        sys.modules.setdefault("src.conference_tournament", pkg)
-        sys.modules[name] = mod
     from src.pipeline.stages import data_loader
 
     return data_loader

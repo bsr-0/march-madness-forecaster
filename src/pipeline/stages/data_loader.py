@@ -34,9 +34,6 @@ from ...data.scrapers.injury_report import (
     InjuryReportScraper,
     apply_injury_reports_to_roster,
 )
-from ...conference_tournament.data_enrichment import (
-    enrich_torvik_teams,
-)
 from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
@@ -853,6 +850,21 @@ def load_team_stat_sources(
             _data_dir,
             config.year,
         )
+        # Lazy import: `src.conference_tournament` was deleted in 44b048f
+        # (2026-04-21) and the module-level import made this whole module
+        # unimportable, taking the ML pipeline down with it at its first data
+        # load. This fallback only runs when the primary Torvik payload has no
+        # Four Factors, which the 2026-08 consolidation into torvik_{year}.json
+        # should make unreachable — so fail here, loudly, rather than up front.
+        try:
+            from ...conference_tournament.data_enrichment import enrich_torvik_teams
+        except ModuleNotFoundError as _exc:
+            raise DataRequirementError(
+                f"Four Factors are all zero in {config.torvik_json} and the enrichment "
+                "fallback (src.conference_tournament.data_enrichment) no longer exists — "
+                "it was deleted in commit 44b048f. Regenerate torvik_{year}.json with the "
+                "consolidated four_factors key (rescrape_pretournament_torvik.py) instead."
+            ) from _exc
         with open(config.torvik_json, "r") as f:
             _torvik_payload = json.load(f)
         _torvik_payload = enrich_torvik_teams(
