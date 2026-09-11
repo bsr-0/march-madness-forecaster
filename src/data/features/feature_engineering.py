@@ -618,11 +618,18 @@ class TeamFeatures:
             # Convert inf→NaN but preserve existing NaN for tree models
             result = np.where(inf_mask, np.nan, result)
 
-        # FIX #2: Soft clip at [-6σ, 6σ] equivalent.  This is a safety net
-        # against truly extreme outliers (data errors), not a normalization
-        # step.  StandardScaler handles normalization.  The clip uses ±1000
-        # as a "clearly broken data" guard.
-        result = np.clip(result, -1000.0, 1000.0)
+        # There is deliberately NO magnitude clip here. A ±1000 "clearly broken
+        # data" guard used to sit at this line, and Elo ratings live on a
+        # 1000-2200 scale: every team's elo_rating was clipped to exactly 1000.0
+        # at inference, so diff_elo_rating -- the feature carrying most of the
+        # production model's weight (coefficient 1.12; training sd 250 points)
+        # -- was identically zero for every matchup, and the served pipeline
+        # predicted ~0.5 for everything (2024 walk-forward: Brier 0.246, worse
+        # than the seed baseline; UConn-Stetson at 0.52). Training vectors come
+        # from metrics_to_team_vector, which never clipped, so the model was
+        # fit on Elo and served without it. inf is handled above; StandardScaler
+        # owns normalization; a hard clip on unscaled heterogeneous features is
+        # the wrong tool for outlier defence.
 
         if include_embeddings:
             if self.gnn_embedding is not None:
