@@ -334,6 +334,7 @@ class BacktestHarness:
         predictions: Dict = {}
         failure: Optional[str] = None
         failure_exc: Optional[BaseException] = None
+        actual_games = get_games_fn(year, results_dir) or []
         try:
             # Resolve per-year data files from historical dir
             def _resolve(pattern):
@@ -408,27 +409,27 @@ class BacktestHarness:
             pipeline = Pipeline(config)
             report = pipeline.run()
 
-            pairwise = report.get("pairwise_probabilities", {})
-            if not pairwise:
-                pairwise = report.get("matchup_predictions", {})
-            if not pairwise:
-                bracket = report.get("bracket", {})
-                if bracket:
-                    for game in bracket.get("games", []):
-                        t1 = game.get("team1_id", "")
-                        t2 = game.get("team2_id", "")
-                        prob = game.get("team1_win_prob", 0.5)
-                        if t1 and t2:
-                            predictions[(t1, t2)] = prob
-
-            if pairwise and not predictions:
-                for key, prob in pairwise.items():
-                    if isinstance(key, tuple):
-                        predictions[key] = prob
-                    elif isinstance(key, str) and "_vs_" in key:
-                        parts = key.split("_vs_")
-                        if len(parts) == 2:
-                            predictions[(parts[0], parts[1])] = prob
+            # The report carries round marginals (championship odds etc.), not
+            # per-game probabilities. This block used to look for
+            # "pairwise_probabilities" / "matchup_predictions" / "bracket.games",
+            # none of which any report has ever contained, so it always found
+            # nothing and the harness always fell through to the seed baseline.
+            # Ask the fitted pipeline directly, for exactly the games that will
+            # be scored, via the shipped probability path
+            # (raw -> calibrate -> shrink -> clip).
+            predict = getattr(pipeline, "predict_probability_production", None) or pipeline.predict_probability
+            n_unscored = 0
+            for game in actual_games:
+                t1, t2 = game.get("team1_id"), game.get("team2_id")
+                if not t1 or not t2:
+                    continue
+                try:
+                    predictions[(t1, t2)] = float(predict(t1, t2))
+                except Exception as _pe:  # noqa: BLE001 - one unknown team must not void the season
+                    n_unscored += 1
+                    logger.debug("%d: no prediction for %s vs %s: %s", year, t1, t2, _pe)
+            if n_unscored:
+                logger.warning("%d: %d of %d tournament games could not be scored by the pipeline", year, n_unscored, len(actual_games))
 
         except (DataReqError, Exception) as e:
             failure = f"{type(e).__name__}: {e}"
@@ -438,7 +439,6 @@ class BacktestHarness:
             # harness has been hiding. Keep the traceback in the log too.
             logger.error("%d: pipeline failed: %s", year, failure, exc_info=True)
 
-        actual_games = get_games_fn(year, results_dir)
         source = "pipeline"
 
         if not predictions and actual_games:
