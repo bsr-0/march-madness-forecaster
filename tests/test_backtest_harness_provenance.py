@@ -173,3 +173,58 @@ def test_calibration_years_are_the_dev_years(tmp_path):
     h._run_year(2016, "unused", lambda *_: _GAMES, _Capture, _Cfg, RuntimeError)
     assert captured["cal"] == captured["dev"]
     assert captured["cal"] and max(captured["cal"]) < 2016
+
+
+# --- 5. Predictions come from the fitted pipeline, per scored game ----------
+
+
+def test_predictions_are_asked_of_the_fitted_pipeline(tmp_path):
+    """The report has never carried per-game probabilities, so the old
+    key-lookup always found nothing and every season fell to the seed
+    baseline. The harness must ask the pipeline directly for each game."""
+    asked = []
+
+    class _Fitted:
+        def __init__(self, config):
+            pass
+
+        def run(self):
+            return {"simulation": {"championship_odds": {}}}  # what a real report looks like: marginals only
+
+        def predict_probability_production(self, t1, t2):
+            asked.append((t1, t2))
+            return 0.73
+
+    games = [
+        {"team1_id": "a", "team2_id": "b", "team1_seed": 1, "team2_seed": 16, "team1_won": True},
+        {"team1_id": "c", "team2_id": "d", "team1_seed": 8, "team2_seed": 9, "team1_won": False},
+    ]
+    h = _harness(tmp_path)
+    preds, out_games, source = h._run_year(2030, "unused", lambda *_: games, _Fitted, dict, RuntimeError)
+    assert source == "pipeline"
+    assert asked == [("a", "b"), ("c", "d")]
+    assert preds == {("a", "b"): 0.73, ("c", "d"): 0.73}
+    assert out_games == games
+
+
+def test_one_unscorable_game_does_not_void_the_season(tmp_path):
+    class _Fitted:
+        def __init__(self, config):
+            pass
+
+        def run(self):
+            return {}
+
+        def predict_probability_production(self, t1, t2):
+            if t1 == "ghost":
+                raise KeyError("ghost")
+            return 0.6
+
+    games = [
+        {"team1_id": "ghost", "team2_id": "b", "team1_seed": 1, "team2_seed": 16, "team1_won": True},
+        {"team1_id": "c", "team2_id": "d", "team1_seed": 8, "team2_seed": 9, "team1_won": False},
+    ]
+    h = _harness(tmp_path)
+    preds, _g, source = h._run_year(2030, "unused", lambda *_: games, _Fitted, dict, RuntimeError)
+    assert source == "pipeline"
+    assert preds == {("c", "d"): 0.6}
