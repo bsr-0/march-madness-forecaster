@@ -167,3 +167,54 @@ Unchanged from v1, and the reason for all of this: it must be possible to state,
 without reconstruction or trust, exactly what was known and when, exactly what
 was frozen (verified by hash), exactly which brackets were recommended, and
 exactly what happened — whether the result is good or bad.
+
+**What it cannot show: whether the method works.** One pool is one Bernoulli
+draw at the estimated rate (roughly p≈0.10–0.12, per the 2011–2025/2026
+backtest — see README "What the backtest number means"). A single first-place
+finish is consistent with a method that wins ~10% of the time and with pure
+luck; a single non-first-place finish is consistent with a method that wins
+~10% of the time and with the method being worthless. **2027 cannot confirm or
+refute the headline P(1st) figure, at n=1, whichever way it comes out.** What
+it CAN do is exactly the list above — produce an auditable, pre-committed
+record, with no reconstruction and no after-the-fact editing, that a much
+later n (multiple prospective seasons) could eventually evaluate. Report the
+2027 result as one recorded data point toward that eventual n, not as a
+verdict on its own.
+
+---
+
+## Correction, 2026-09-12 — two stale claims, audit recommendation 10
+
+**Three dangling references.** "Where each record now lives" above names
+`configs/frozen/product_v3.json`, `docs/build.js`, and `tests/test_spec_boundary.py`
+as live artifacts of the presentation-layer spec this document's scope
+correction split out. None exist. All three were deleted in `32f860e`
+("Remove the UI layer and its contracts ahead of a rebuild"), which replaced
+the UI they described (`docs/build.js`'s tiered-diversity Build/Explore/Track
+Record flow) with the current one (`docs/app.js`, built from
+`scripts/experiments/build_candidate_artifact.py` +
+`scripts/build_ui_payload.py`). **There is currently no live drift gate for
+the presentation-selection layer** — `candidate_selection.diversity_algorithm`,
+`k_returned`, and `product.strategies` (or their equivalents in the current
+architecture: `build_candidate_artifact.py`'s stratified-sampling quotas and
+`build_ui_payload.py`'s named strategies) are not hashed or checked against
+any frozen record the way the methodology spec (`prospective_2027_v2_scoped.json`,
+checked by `tests/test_frozen_2027_spec.py`) is. That gap is real and open;
+rebuilding a presentation-layer freeze for the current UI, if wanted, is new
+work, not a path fix. `src/governance/frozen_spec.py`'s `SCOPE_CORRECTION`
+dict is updated to record this rather than continue naming a dead path.
+
+**"No frontend yet."** "Everything else, unchanged from v1" above lists this
+as an open gap, inherited from `PROSPECTIVE_2027.md`. It was true when v1 and
+v2 were written (2026-08). It has not been true since the UI rebuild
+(`32f860e` and after): `docs/index.html` / `docs/app.js` is a shipped,
+deployed frontend (`.github/workflows/deploy-docs-on-push.yml`). What remains
+genuinely open from that original list: stale `noseed`/`blend` baselines, PBP
+features outside the frozen pipeline, and the bounded seed-table provenance
+exception.
+
+Nothing in the methodology spec itself — `TRAIN_YEARS`, features, scoring,
+pool size, sampler quotas, or the configuration hash at the top of this
+document — is touched by this correction. Both corrections are provenance
+and prose, the same category the 2026-08-21 scope correction above already
+established is in bounds for this "frozen" document.

@@ -590,6 +590,31 @@ path). Both freeze artifacts were produced from dirty trees (`git_dirty: true`);
 `artifacts/pipeline_freeze_2026.json` is labelled `pre-registration` but dated 2026-04-28,
 after the tournament; `production_2027.json` sets `require_freeze_file: false`.
 
+**RESOLVED 2026-09-11/12 (recommendation 10), partly by fix and partly by the ML-pipeline
+removal making it moot.** The freeze-artifact half (`git_dirty: true`, the mislabelled
+`pipeline_freeze_2026.json`, `production_2027.json`'s `require_freeze_file: false`) no longer
+applies: all three files were removed with the ML pipeline (H10) — there is no freeze artifact
+left to be dirty or mislabelled. What's real and specific to the pool product:
+
+- **The n=1 caveat is now stated.** `PROSPECTIVE_2027_v2.md` gained a "What it cannot show"
+  paragraph under "What April 2027 should be able to show": one pool is one Bernoulli draw at
+  the backtested rate, and 2027 cannot confirm or refute the headline P(1st) figure whichever
+  way it comes out — only add one recorded data point toward a much later n.
+- **The three dangling references are corrected, not silently patched.** `product_v3.json`,
+  `docs/build.js`, `tests/test_spec_boundary.py` were deleted in `32f860e`, the same commit
+  that removed the old UI these described. `frozen_spec.py:71`'s `SCOPE_CORRECTION["moved_to"]`
+  is a FROZEN, hashed value (`configs/frozen/prospective_2027_v2_scoped.json`) — changing it
+  would fail `test_live_system_has_not_drifted_from_the_freeze` for describing reality more
+  accurately, which is backwards. Left the value untouched with a comment explaining why, and
+  documented the real state in `PROSPECTIVE_2027_v2.md` instead: there is currently no live
+  drift gate for the presentation-selection layer (candidate stratification, named strategies)
+  the way there is for methodology. That gap is real and open; rebuilding one for the current
+  UI is new work, not a reference fix. Also corrected the doc's stale "no frontend yet" gap —
+  untrue since the UI rebuild the dangling references trace to.
+
+Verified: `tests/test_frozen_2027_spec.py` 13/13 passing including the drift check;
+`scripts/experiments/integration_test_2026.py` 32/32.
+
 **M5. CI is red and the nightly gate is off.** CONFIRMED.
 Latest `CI Pipeline` run (2026-09-09, 19h17m) failed: `Full Test Suite` on
 `FileNotFoundError` for gitignored `artifacts/candidates/candidates_2024.json`
@@ -832,8 +857,12 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    deliberately left disabled (autonomous write access, someone else's call). Also found and
    fixed the actual bug behind the browser-model failure this item named — a genuine
    train/serve z-score population mismatch, not stale data; see M5.
-10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
-    n=1, and fix the three dangling references.
+10. ~~Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
+    n=1, and fix the three dangling references.~~ **DONE 2026-09-12.** n=1 caveat added to
+    `PROSPECTIVE_2027_v2.md`. The three references genuinely are dead (deleted with the old
+    UI); corrected the document rather than the frozen record naming them, since that record
+    is hashed and pinned by `test_live_system_has_not_drifted_from_the_freeze` — "fixing" it
+    would itself be undetectable drift. See M4.
 
 14. ~~Reconcile or retire the third recipe.~~ **DONE 2026-09-11, by finding the recipe
     question was already moot.** The live site does not ship `meta_region_poolaware` (the
