@@ -50,6 +50,7 @@ from scripts.mc_pool_backtest import (
     ESPN_SCORING,
     N_OPPONENTS,
     POOL_HIST_PATH,
+    REFEREE_NOISE_STD,
     _load_torvik_barthag,
     _picks_dict_to_bool_array,
     build_espn_pick_distribution,
@@ -305,7 +306,7 @@ def main():
                     first_round_matchups=first_round,
                     matchup_probs=seed_pw,
                     seeds=seeds,
-                    noise_std=0.16,
+                    noise_std=REFEREE_NOISE_STD,
                     rng=rng,
                 )
                 sim_winners = {rnd: set(br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}

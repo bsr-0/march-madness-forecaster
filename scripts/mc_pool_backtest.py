@@ -153,6 +153,32 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 # setting. Pass --n-opponents explicitly to model a larger field.
 N_OPPONENTS = 29  # 30-person pool (29 opponents + the model's own bracket)
 
+# Logit-space idiosyncratic-game noise added on top of every simulated matchup
+# probability when drawing the "true" tournament outcome the referee scores
+# candidates against (simulate_tournament_outcomes, pool_competition.py). 0.16
+# is Lopez & Matthews (2015)'s estimate of game-to-game variance not explained
+# by pre-game win probability -- the same figure src/simulation/monte_carlo.py
+# cites for its own default, and the two engines apply it with the identical
+# logit(p) + N(0, noise_std) transform.
+#
+# NOT FIT TO THIS REPO'S DATA, and audit finding M2 is right to flag that: (1)
+# the paper is about point spreads, not probability logits, so translating it
+# into a logit-noise SD is a plausibility anchor, not a validated number; (2)
+# a real attempt at fitting it existed (src/simulation/mc_calibration.py,
+# calibrate_mc_parameters, grid-searching against historical seed-vs-seed
+# upset rates) but its own team-strength extraction was broken -- a 2024
+# smoke test had 16-seeds rated ABOVE 1-seeds (stetson 4.79 vs houston 3.51),
+# producing a simulated 1v16 upset rate of 70% against a historical 1.5%.
+# That module had zero live callers (its only consumer was the ML pipeline
+# removed in H10) and was retired 2026-09-11 rather than fixed and used to
+# calibrate a broken input -- see audit M2 and recommendation 7.
+#
+# So: not unfit by neglect, unfit by a first attempt that turned out broken.
+# Refitting it means first fixing _load_team_strengths against whatever
+# tournament_context team_metrics actually contains today, which is a
+# separate investigation from this constant's honesty.
+REFEREE_NOISE_STD = 0.16
+
 # Entry count above which bracket_construction._make_ev_scorer applies
 # `pool_factor` and construction genuinely changes. At or below it, pool size
 # does not affect the brackets built — which is why the H6 field-size defect
@@ -2320,7 +2346,7 @@ def draw_selection_trials(
     seeds,
     rng,
     chalk_noise_std=None,
-    noise_std=0.16,
+    noise_std=REFEREE_NOISE_STD,
 ):
     """Pre-draw the (opponent field, tournament outcome) pairs for candidate selection.
 
@@ -4363,7 +4389,7 @@ def _run_one_year(
                     first_round_matchups=first_round,
                     matchup_probs=seed_pw,
                     seeds=seeds,
-                    noise_std=0.16,
+                    noise_std=REFEREE_NOISE_STD,
                     rng=year_rng,
                 )
                 sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
@@ -4420,7 +4446,7 @@ def _run_one_year(
                         first_round_matchups=first_round,
                         matchup_probs=seed_pw,
                         seeds=seeds,
-                        noise_std=0.16,
+                        noise_std=REFEREE_NOISE_STD,
                         rng=mode_opp_rng,
                     )
                     sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
