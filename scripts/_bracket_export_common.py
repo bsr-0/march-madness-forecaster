@@ -1,10 +1,13 @@
-"""Shared helpers for the live bracket export scripts.
+"""Shared helpers for building a bracket_*.json-shaped export.
 
-generate_poolaware_bracket.py, generate_region_bracket.py, and
-generate_exhaustive_bracket.py all build the same docs/data/bracket_*.json
-shape from a seeds/regions/barthag/picks tuple. This module is the one
-place that shape gets built, so the three scripts can't drift from each
-other.
+Used by generate_poolaware_bracket.py, which is the only remaining caller.
+generate_region_bracket.py and generate_exhaustive_bracket.py were retired
+2026-09-11 along with generate-web-data.yml / deploy-pages.yml: both
+workflows had been unreachable since run-pipeline.yml (their only caller)
+was removed with the ML pipeline (audit H10), and neither script's output
+was ever fetched by docs/app.js -- the live site is built by
+build_candidate_artifact.py + build_ui_payload.py instead. See
+AUDIT_INDEPENDENT_EVALUATOR_2027.md finding C3.
 """
 
 import json
