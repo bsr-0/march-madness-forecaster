@@ -96,11 +96,26 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   built by `scripts/experiments/build_candidate_artifact.py`, which uses different rating
   sources, a different risk grid, and no exhaustive- or forced-champion candidates. Quote
   this figure for the strategy, not for a bracket on the page.
+- **Selected and scored against the same referee.** The candidate is chosen by, and later
+  measured by, P(1st) under the same simulated-outcome model (`seed_pw`, fit on
+  2010–2025 — overlapping every backtested season). Checked 2026-09-12 whether that inflates
+  the number: rescoring the already-selected bracket for all 13 evaluation seasons against an
+  independent Torvik-barthag/log5 referee it was never selected against gives pooled P(1st)
+  9.3% against 11.1% for the production referee, paired difference −1.75pp (95% CI
+  [−4.9, +1.3]pp) — **not detectably referee-sensitive at this sample size**, by a rule fixed
+  before running it. That bounds the concern; it does not retire it (13 seasons is not a lot,
+  and the CI's low end is not small next to the headline). See
+  `scripts/independent_referee_check.py` and `AUDIT_INDEPENDENT_EVALUATOR_2027.md` finding C2.
 
-**The one number measured against reality, not a model of reality.** For 2023–2026 — the
-only seasons with a recorded real pool — the bracket `meta_region_poolaware` actually
-selected can be scored against the real tournament result and ranked against the real
-pool's real scores:
+Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced by the
+command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
+history and dead ends in `FINDINGS.md`.
+
+### The real-outcome record
+
+Co-primary with the simulated figure above, not a footnote to it: for 2023–2026 — the only
+seasons with a recorded real pool — the bracket `meta_region_poolaware` actually selected can
+be scored against the real tournament result and ranked against the real pool's real scores.
 
 | Year | Real score | Rank | Pool size | Champion picked |
 |---|---:|---:|---:|---|
@@ -110,24 +125,23 @@ pool's real scores:
 | 2026 | 840 | 12th | 30 | Florida |
 
 **0 of 4 finished 1st; 0 of 4 finished top 3.** n=4 is not a rate — one different outcome
-moves this by 25 points — and it neither confirms nor refutes the simulated figure above.
-It beats the same strategy's own mean-of-50 `seed` baseline scored the same honest way in
-every year (reproduce with `python -m scripts.real_pool_placement`; full table in
+moves this by 25 points — and it neither confirms nor refutes the simulated figure above; the
+two are separate evidence, not the same claim checked twice. It beats the same strategy's own
+mean-of-50 `seed` baseline scored the same honest way in every year (reproduce with
+`python -m scripts.real_pool_placement`; full table in
 `artifacts/real_pool_placement/placement_2023_2026.txt`), but it has not yet actually won a
-real pool.
+real pool. 2027 will add a fifth point; see `PROSPECTIVE_2027_v2.md` for what a fifth point
+can and cannot settle at this n.
 
-**Why this number moved, and why it is not a cherry-pick.** It was published as "11.2%",
-then "about 11%", and is measured here at 12.0%. The figure did not improve because
-anything was tuned: `b73d351` (2026-09-06, *"every season shipped a wrong R64"*) fixed the
-play-in resolution, which changed the field in **every** season. Every P(1st) published
-before that date — 11.2%, 11.33%, 10.47%, 11.87% — was computed on brackets containing
-teams that never played the Round of 64. Those figures are void rather than superseded, and
-the spread among them is itself the argument for quoting a CI instead of a digit: they all
-sit inside a single standard error of each other.
+### Why the simulated number moved, and why it is not a cherry-pick
 
-Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced by the
-command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
-history and dead ends in `FINDINGS.md`.
+It was published as "11.2%", then "about 11%", and is measured here at 12.0%. The figure did
+not improve because anything was tuned: `b73d351` (2026-09-06, *"every season shipped a wrong
+R64"*) fixed the play-in resolution, which changed the field in **every** season. Every P(1st)
+published before that date — 11.2%, 11.33%, 10.47%, 11.87% — was computed on brackets
+containing teams that never played the Round of 64. Those figures are void rather than
+superseded, and the spread among them is itself the argument for quoting a CI instead of a
+digit: they all sit inside a single standard error of each other.
 
 ## Maintenance
 

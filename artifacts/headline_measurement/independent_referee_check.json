@@ -1,0 +1,106 @@
+{
+  "years": [
+    2011,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "n_repeats": 500,
+  "rows": [
+    {
+      "year": 2011,
+      "champion": "ohio_state",
+      "p1_seed": 0.026,
+      "p1_torvik": 0.044
+    },
+    {
+      "year": 2013,
+      "champion": "gonzaga",
+      "p1_seed": 0.118,
+      "p1_torvik": 0.068
+    },
+    {
+      "year": 2014,
+      "champion": "virginia",
+      "p1_seed": 0.154,
+      "p1_torvik": 0.042
+    },
+    {
+      "year": 2015,
+      "champion": "villanova",
+      "p1_seed": 0.138,
+      "p1_torvik": 0.068
+    },
+    {
+      "year": 2016,
+      "champion": "north_carolina",
+      "p1_seed": 0.142,
+      "p1_torvik": 0.058
+    },
+    {
+      "year": 2017,
+      "champion": "gonzaga",
+      "p1_seed": 0.102,
+      "p1_torvik": 0.122
+    },
+    {
+      "year": 2018,
+      "champion": "virginia",
+      "p1_seed": 0.052,
+      "p1_torvik": 0.03
+    },
+    {
+      "year": 2019,
+      "champion": "virginia",
+      "p1_seed": 0.088,
+      "p1_torvik": 0.152
+    },
+    {
+      "year": 2021,
+      "champion": "baylor",
+      "p1_seed": 0.078,
+      "p1_torvik": 0.04
+    },
+    {
+      "year": 2022,
+      "champion": "baylor",
+      "p1_seed": 0.134,
+      "p1_torvik": 0.07
+    },
+    {
+      "year": 2023,
+      "champion": "purdue",
+      "p1_seed": 0.16,
+      "p1_torvik": 0.136
+    },
+    {
+      "year": 2024,
+      "champion": "purdue",
+      "p1_seed": 0.102,
+      "p1_torvik": 0.152
+    },
+    {
+      "year": 2025,
+      "champion": "houston",
+      "p1_seed": 0.142,
+      "p1_torvik": 0.226
+    }
+  ],
+  "pooled_p1_seed": 0.11046153846153846,
+  "pooled_p1_torvik": 0.09292307692307694,
+  "paired_diff_mean": -0.017538461538461537,
+  "paired_diff_ci95": [
+    -0.04923461538461538,
+    0.013230769230769233
+  ],
+  "referee_sensitive": false
+}

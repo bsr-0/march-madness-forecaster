@@ -100,6 +100,29 @@ differing. This is in-sample by construction: the metric partly measures "how we
 selector pick the candidate that wins most often under the referee", and the referee learned
 its seed-advancement rates from the years being judged.
 
+**PARTLY ADDRESSED 2026-09-12 (recommendation 11): measured, not fixed.** Selection still uses
+`seed_pw` — rebuilding it against an independent referee is a larger, riskier change than this
+pass attempted (it would re-run and could change which candidate every season selects, i.e.
+could change the shipped strategy itself, not just how it's reported). What this pass did:
+built `scripts/independent_referee_check.py`, which takes the bracket each of the 13 canonical
+evaluation seasons ALREADY selected (unmodified selection code, unmodified
+`artifacts/backtest_brackets/*.json`) and rescores that fixed bracket against Torvik
+barthag/log5 (`build_torvik_probabilities`) — a referee that never saw seed-advancement
+history and was not selected against. Opponent pick behaviour stays on `seed_pw` (a separate
+question: how real people pick, not which referee grades the outcome); only the "true outcome"
+draw changes, with both referees sharing opponent draws per repeat for a clean paired
+comparison. Result: pooled P(1st) 9.3% (torvik) vs 11.1% (seed_pw), paired difference
+−1.75pp, 95% CI [−4.9, +1.3]pp — **not referee-sensitive at this sample size**, by a rule
+fixed before running it (`artifacts/headline_measurement/independent_referee_check.{txt,json}`).
+That bounds C2's concern without retiring it: 13 seasons is not a lot of power, and the CI's
+low end (−4.9pp) is not small against an ~11pp headline. Building this also surfaced and fixed
+a real, separate bug: `build_first_round_matchups` needs `derive_f4_region_pairing`'s real,
+year-specific region order (NCAA rotates which regions meet in the Final Four) — called with
+the default order instead, 2015's saved bracket silently mismatched the actual F4 pairing (a
+scoring corruption, not just a display one, had it not raised); guarded by
+`tests/test_independent_referee_check.py`. Still open: an independent referee inside
+*selection itself*, and RDoF audit coverage over the strategy search (recommendation 12).
+
 **C3. The shipped bracket is not the backtested strategy.** CONFIRMED.
 `scripts/generate_poolaware_bracket.py:91-95` builds candidates from `tv` and `mass_avg`
 only. The backtest recipe also sweeps `mass_best`, `blend`, `tv_mass80` — and the log shows
@@ -909,8 +932,17 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     directly comparable to the headline.
 
 **Structural (2028)**
-11. Evaluate against an *independent* referee (e.g. market-implied or Torvik pairwise, not
-    the seed model used for selection) and add real-outcome placement as a co-primary metric.
+11. ~~Evaluate against an *independent* referee (e.g. market-implied or Torvik pairwise, not
+    the seed model used for selection) and add real-outcome placement as a co-primary
+    metric.~~ **MEASURED 2026-09-12, not fully fixed.** The already-selected bracket for
+    every evaluation season, rescored against an independent Torvik referee: not detectably
+    referee-sensitive at this sample size (paired 95% CI [−4.9, +1.3]pp), which bounds C2's
+    circularity concern but doesn't retire it — selection itself still runs on `seed_pw`.
+    README's "What the backtest number means" now carries this result, and the real-outcome
+    table is promoted to its own section, explicitly labelled co-primary rather than nested
+    under the simulated figure. See C2. **Still open:** an independent referee *inside*
+    selection (a materially larger change — it could alter which candidate each season
+    picks) is 2028-scale work, same as recommendation 12.
 12. Bring the pool-strategy search under the RDoF audit; keep one never-touched holdout year.
 13. Opponent model with chalk clustering / correlated picks, pool-size and payout inputs,
     multi-entry support — the features that separate a recommender from a pool tool.
