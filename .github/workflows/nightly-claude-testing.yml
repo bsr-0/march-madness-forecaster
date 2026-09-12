@@ -431,8 +431,17 @@ jobs:
 
             ### Audit 2: Monte Carlo Simulation Assumptions
             Read these files:
-            - `src/simulation/monte_carlo.py` — core simulation engine
-            - `src/simulation/mc_calibration.py` — simulation calibration
+            - `src/simulation/pool_competition.py` — the live simulator
+              (`simulate_tournament_outcomes`), used by the pool backtest
+            - `src/simulation/monte_carlo.py` — a second, unused engine kept for
+              a planned future feature (richer noise model, per-sim retention);
+              see ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md
+            - `scripts/mc_pool_backtest.py` — `REFEREE_NOISE_STD` and its comment
+              (audit M2/recommendation 7: a real fit attempt existed,
+              `src/simulation/mc_calibration.py`, but its team-strength
+              extraction was broken — 16-seeds rated above 1-seeds — and it was
+              retired 2026-09-11 rather than fixed and used to calibrate a
+              broken input)
 
             Interrogate the simulation:
             - The logit-space noise_std is 0.16. What is the empirical basis? Is

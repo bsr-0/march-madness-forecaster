@@ -529,6 +529,30 @@ regional correlation are disabled in production (`simulation.py:135`, `config.py
 Joint per-sim outcomes are discarded (`monte_carlo.py:459-495`), so the pipeline stack
 cannot do pool scoring at all — which is why a second, non-shared simulator exists.
 
+**RESOLVED 2026-09-11 (recommendation 7), by finding the fit had already been tried and
+was broken, not merely skipped.** `pipeline_runner.py` and `production_2027.json` no longer
+exist (removed with the ML pipeline, H10), so half of this finding is moot on its own.
+For the live path (`mc_pool_backtest.py`'s `noise_std=0.16`, still real, still uncalibrated):
+attempted to actually run `calibrate_mc_parameters` before deciding whether to fit or retire
+it. `_score_year`'s 2024 smoke test returned a simulated 1-vs-16 upset rate of 70% against a
+historical 1.5%, and a seed-1 champion share of 0.3% against an expected 45–70% — because
+`_load_team_strengths`'s averaged `off_rtg - def_rtg` had a 16-seed (stetson, 4.79) rated
+above three of the four 1-seeds (houston 3.51), uncorrelated with seed entirely. The
+calibration module was not merely unused; the one attempt to use it would have fit
+`noise_std` against a broken predict_fn and shipped a confidently-wrong number as "fit."
+Retired `src/simulation/mc_calibration.py` and the placeholder artifact rather than debug and
+run it — that first requires finding out what `tournament_context` `team_metrics` actually
+contains today, a separate investigation from this constant's honesty. `monte_carlo.py`
+itself is kept: the bug is in `mc_calibration.py`'s own team-strength extraction, not in
+`MonteCarloEngine`, and `ARCHITECTURE_AUDIT_PREFERENCE_BRACKETS.md` has it earmarked for a
+planned future feature (richer noise model, per-sim outcome retention). `noise_std=0.16` is
+now one named constant (`REFEREE_NOISE_STD`, `mc_pool_backtest.py`) shared by every caller
+that used to hardcode the literal (`generate_poolaware_bracket.py`,
+`recency_hparam_fitter.py`), with a comment giving its real provenance (Lopez & Matthews
+2015, a point-spread paper repurposed for logit noise — the nightly audit prompt's own
+skepticism about that translation is worth taking seriously) and stating plainly that it is
+not fit to this repo's data, and why the one attempt to fix that doesn't count.
+
 **M3. Calibration regime changes silently between 2026 and 2027.** CONFIRMED.
 2026's config never sets `calibration_years`, so the default 2008–2025 fires (~1,000
 tournament games) while logs claim "holdout-year OOS by default"
@@ -723,8 +747,16 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    clean 2026/2027 snapshot would be served to a model trained without them.
 6b. ~~Resolve H7 before anything above matters for the ML path.~~ **MOOT 2026-09-11:** the
    ML path was measured (H10) and removed. Nothing in the product depends on it.
-7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
-   comment saying it is unfit; create the 2027 file or make its absence loud.
+7. ~~Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
+   comment saying it is unfit; create the 2027 file or make its absence loud.~~ **DONE
+   2026-09-11 — deleted, not fit.** Tried fitting it first: `calibrate_mc_parameters`'s own
+   team-strength extraction is broken (a 2024 smoke test rated a 16-seed above three of four
+   1-seeds), so it would have calibrated `noise_std` against nonsense. Retired
+   `src/simulation/mc_calibration.py` and `artifacts/mc_calibration_2026.json`; the "create
+   the 2027 file" half is moot since `production_2027.json` (its would-be consumer) no longer
+   exists post-H10. `noise_std=0.16` is now `REFEREE_NOISE_STD` in `mc_pool_backtest.py`, one
+   constant shared by every caller, with a comment giving its real provenance and stating
+   plainly that it is uncalibrated. See M2.
 8. ~~Turn the March runbook into a script or a checked-in document; wire
    `candidates_2027.json` → payload → deploy into one workflow.~~ **DONE
    2026-09-11.** The old `RUNBOOK_2027.md` (deleted in the 2026-08-18

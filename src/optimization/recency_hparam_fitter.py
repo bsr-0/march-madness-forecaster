@@ -39,6 +39,7 @@ import numpy as np
 from scripts.mc_pool_backtest import (
     ALL_MODES,
     ESPN_SCORING,
+    REFEREE_NOISE_STD,
     ROUND_NAMES,
     PoolHyperparameters,
     _load_team_stats,
@@ -289,7 +290,7 @@ class RecencyAlphaFitter:
                     first_round_matchups=ctx.first_round,
                     matchup_probs=ctx.seed_pw,
                     seeds=ctx.seeds,
-                    noise_std=0.16,
+                    noise_std=REFEREE_NOISE_STD,
                     rng=rng,
                 )
                 sim_winners = {rnd: set(br[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
