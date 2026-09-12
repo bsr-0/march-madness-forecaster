@@ -1,0 +1,165 @@
+====================================================================================================
+RESEARCHER DEGREES OF FREEDOM — POOL-STRATEGY SEARCH
+audit finding H2 / recommendation 12    generated 2026-09-12T14:35:12
+registry hash eeb113561961e009
+====================================================================================================
+
+1. INVENTORY
+   registered knobs: 41
+     tier 1_external       2
+     tier 2_structural     6
+     tier 3_freely_tuned   33
+   by how the value was arrived at:
+     searched                     4
+     frozen_after_search          1
+     never_searched               27
+     external                     2
+     tuned_on_metric              4
+     removed_after_measuring      3
+   degrees of freedom spent: 12
+   effective (flatness-discounted): 11.0
+   independent seasons: 14
+   DoF per season: 0.86
+   knobs whose choice saw 2026's outcome: 12
+
+2. REGISTRY
+
+   tier 3 — freely tuned (33)
+     n_opponents  =  29   [never_searched]
+       scripts/mc_pool_backtest.py:154 — N_OPPONENTS
+     pool_factor_threshold  =  50   [never_searched]
+       scripts/mc_pool_backtest.py:187 — _POOL_FACTOR_THRESHOLD
+     all_modes_family_size  =  79   [searched] [saw 2026]
+       scripts/mc_pool_backtest.py:344 — ALL_MODES
+     removed_candidate_family_upset_aware  =  'removed 2026-05-03'   [removed_after_measuring] [saw 2026]
+       scripts/mc_pool_backtest.py:4026-4034 — comment only; the code is gone
+     removed_candidate_family_confidence_routed  =  'removed 2026-05-16'   [removed_after_measuring] [saw 2026]
+       scripts/mc_pool_backtest.py:4036-4042 — comment only; the code is gone
+     poolaware_selector_estimator  =  'binary_p1'   [tuned_on_metric] [saw 2026]
+       scripts/mc_pool_backtest.py:4107-4113 — inline literal (the selection loop)
+     small_pool_mode_pruning  =  'opt_seed, opt_blend, opt_torvik, hedge_tv removed'   [removed_after_measuring] [saw 2026]
+       scripts/mc_pool_backtest.py:426-433 — comment; SMALL_POOL_MODES aliases ALL_MODES
+     poolaware_risk_levels  =  [0.1, 0.3, 0.5, 0.7, 0.9]   [never_searched]
+       src/optimization/poolaware_recipe.py:30 — POOLAWARE_RISK_LEVELS
+     poolaware_exhaustive_risks  =  [0.3, 0.5, 0.7]   [never_searched]
+       src/optimization/poolaware_recipe.py:34 — POOLAWARE_EXHAUSTIVE_RISKS
+     tv_mass80_torvik_weight  =  0.8   [never_searched]
+       src/optimization/poolaware_recipe.py:37 — TV_MASS80_TORVIK_WEIGHT
+     poolaware_base_order  =  ['tv', 'mass_avg', 'mass_best', 'blend', 'tv_mass80']   [never_searched]
+       src/optimization/poolaware_recipe.py:70-89 — build_poolaware_prob_bases (inline order)
+     poolaware_forced_champion_risk  =  0.5   [never_searched]
+       scripts/mc_pool_backtest.py:4001 — inline literal (candidate family (a))
+     pa_trials  =  500   [tuned_on_metric] [saw 2026]
+       scripts/mc_pool_backtest.py:2729, 4786, 5040 — three unshared literals
+     blend_alpha  =  0.5   [never_searched]
+       scripts/mc_pool_backtest.py:440 — PoolHyperparameters.blend_alpha
+     fixed_alpha_grid_at_risk_35  =  [0.0, 0.25, 0.5, 0.75, 1.0]   [searched] [saw 2026]
+       scripts/mc_pool_backtest.py:3212-3230 — inline literal (0, 25, 50, 75, 100)
+     fixed_risk_grid  =  [0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9]   [tuned_on_metric] [saw 2026]
+       scripts/mc_pool_backtest.py:3235 — inline literal (10, 20, 30, 40, 50, 70, 90)
+     meta_region_blend_weights  =  [0.9, 0.1]   [never_searched]
+       scripts/mc_pool_backtest.py:4200-4204 — inline literal
+     pool_chalk_noise_std  =  0.0   [never_searched]
+       scripts/mc_pool_backtest.py:2670 — local initial value in _run_one_year
+     pool_blend_weight  =  0.7   [searched] [saw 2026]
+       scripts/mc_pool_backtest.py:2728 — run_backtest.pool_blend_weight
+     pool_competition_noise_std  =  0.16   [never_searched]
+       src/simulation/pool_competition.py:95 — compute_bracket_win_probability.noise_std
+     seed_outcome_window  =  'recent'   [searched] [saw 2026]
+       src/prediction/seed_probabilities.py:33 — OUTCOME_WINDOW
+     seed_recent_first_season  =  2010   [never_searched]
+       src/data/seed_pick_model.py:131 — RECENT_FIRST_SEASON
+     seed_recent_prior_strength  =  8   [never_searched]
+       src/data/seed_pick_model.py — _RECENT_PRIOR_STRENGTH
+     seed_recent_min_games  =  8   [never_searched]
+       src/data/seed_pick_model.py — _RECENT_MIN_GAMES
+     candidate_bank_pool_size  =  30   [never_searched]
+       scripts/experiments/build_candidate_artifact.py:84 — DEFAULT_POOL_SIZE
+     candidate_bank_risk_grid  =  [0.1, 0.2, 0.35, 0.5, 0.7]   [tuned_on_metric] [saw 2026]
+       scripts/experiments/build_candidate_artifact.py:810 — inline literal
+     blend_region_35_risk  =  0.35   [frozen_after_search] [saw 2026]
+       scripts/experiments/build_candidate_artifact.py:503 — _blend_region_bracket.risk
+     candidate_bank_min_per_champion  =  8   [never_searched]
+       scripts/experiments/build_candidate_artifact.py:275 — stratified_sample.min_per_champion
+     candidate_bank_ev_strata  =  10   [never_searched]
+       scripts/experiments/build_candidate_artifact.py:276 — stratified_sample.ev_strata
+     recency_alpha_grid  =  [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]   [never_searched]
+       src/optimization/recency_hparam_fitter.py:66 — _DEFAULT_ALPHA_GRID
+     recency_window_years  =  3   [never_searched]
+       src/optimization/recency_hparam_fitter.py:120 — RecencyAlphaFitter.window_years
+     recency_fitter_n_opponents  =  30   [never_searched]
+       src/optimization/recency_hparam_fitter.py — RecencyAlphaFitter.n_opponents
+     recency_pa_trials_fit  =  100   [never_searched]
+       src/optimization/recency_hparam_fitter.py:127 — RecencyAlphaFitter.pa_trials_fit
+
+   tier 2 — structural (6)
+     n_repeats  =  50   [never_searched]
+       scripts/mc_pool_backtest.py:243 — N_REPEATS
+     n_model_brackets  =  50   [never_searched]
+       scripts/mc_pool_backtest.py:244 — N_MODEL_BRACKETS
+     recency_risk_grids_duplicated  =  [0.1, 0.3, 0.5, 0.7, 0.9]   [never_searched]
+       src/optimization/recency_hparam_fitter.py:64 — _REGION_RISK_LEVELS
+     evaluation_years  =  [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]   [never_searched]
+       scripts/mc_pool_backtest.py:117 — EVALUATION_YEARS
+     contaminated_eval_years  =  [2026]   [never_searched]
+       scripts/mc_pool_backtest.py:116 — CONTAMINATED_EVAL_YEARS
+     per_year_rng_seeds  =  [42, 77777, 54321, 99999]   [never_searched]
+       scripts/mc_pool_backtest.py:3342, 3610, 3927, 3960, 4156 — inline literals (seed + year)
+
+   tier 1 — external (2)
+     espn_scoring  =  {'R64': 10, 'R32': 20, 'S16': 40, 'E8': 80, 'F4': 160, 'CHAMP': 320}   [external]
+       scripts/mc_pool_backtest.py:139 — ESPN_SCORING
+     referee_noise_std  =  0.16   [external]
+       scripts/mc_pool_backtest.py:180 — REFEREE_NOISE_STD
+
+3. DRIFT
+   verified against live code: 29/41 (71%)
+   drifted: 0
+   not machine-checkable (inline literals): 12
+
+4. MULTIPLICITY — is the headline just the best of many?
+   family size:        78 modes, 14 seasons
+   headline mode:      meta_region_poolaware
+   aggregate P(1st):   0.1200
+   baseline P(1st):    0.0399
+   best by t-stat:     meta_region_poolaware
+   best by P(1st):     fixed_blendA100_r35 (0.1214, +0.14pp vs headline) [CIRCULAR — graded by its own probability source, see H11]
+   best non-circular:  meta_region_poolaware (0.1200)
+     circular: fixed_blendA100_r35 — alpha=1.0 is pure seed_rp, and the referee is seed_pw -- graded by its own source. Its alpha sweep shows the signature: .0879 / .1050 / .1086 / .1036 then a 1.8pp jump to .1214 at exactly the endpoint that coincides with the referee.
+   modes beating seed at FWER<0.05: 15
+   p, uncorrected:     9.999000099990002e-05
+   p, stepdown:        0.0005999400059994001
+   p, best-of-family:  0.0005999400059994001
+   VERDICT:            survives_correction
+   not corrected:      This corrects over the strategy family that still exists in ALL_MODES. It does NOT correct over the search's history: candidate families that were built, measured, found worse and deleted (scripts/mc_pool_backtest.py:4026-4042 records two, with dates 2026-05-03 and 2026-05-16 and the numbers that justified each removal). Those specifications are gone from the code, so no resampling scheme can restore them to the family. Carried as removed_after_measuring entries in src.governance.pool_rdof_audit.REGISTRY.
+
+5. SENSITIVITY — does the headline depend on the unjustified knobs?
+   swept on seasons: 14 (2026 and 2027 excluded by construction)
+   knob                            spread  category       eff DoF  gap to best  prod best?
+   pa_trials                       0.43pp  flat_plateau       0.0      +0.00pp  True
+   poolaware_base_order            0.00pp  flat_plateau       0.0      +0.00pp  True
+   poolaware_risk_levels           0.57pp  flat_plateau       0.0      +0.00pp  True
+   referee_noise_std               1.07pp  flat_plateau       0.0      +0.29pp  False
+   total effective DoF over swept knobs: 0.0
+   One-at-a-time from the production setting, not a full factorial: a factorial over these four axes is ~200 cells and several days, and the question asked here is whether any single unjustified knob moves the headline. Interaction effects are therefore NOT measured and this cannot rule them out.
+
+6. HOLDOUT
+   Level 1 (untouched):        [2027] — untouched
+     enforced by: assert_not_sequestered(), called by scripts/pool_rdof_audit.py --sweep
+   Level 2.5 (param-clean):    2026 — evaluated=True
+     P(1st): {'meta_region_poolaware': 0.11, 'seed': 0.0336}
+     why not Level 1: The candidate-family set was pruned using aggregates that included it: scripts/mc_pool_backtest.py:4026-4042 records family (d) removed 2026-05-03 ('selected in only 1/15 years') and family (e) removed 2026-05-16, where a 15-season window is BACKTEST_YEARS = 2011-2026 excluding 2020. The 2026 tournament ended that April, so its outcome was known. CONTAMINATED_EVAL_YEARS was not added until 2026-09-09 (a3fb412). The removed families no longer exist as code, so those decisions cannot be re-run on a 2026-free window.
+   2011-2025 were all both trained on (as priors for later seasons) and searched over, so none is a holdout. 2008-2010 are training-only and never evaluated, which is not the same thing. 2020 has no tournament. A never-touched holdout cannot be manufactured retroactively; it can only be sequestered going forward.
+
+7. FINDINGS
+   DRIFT: none. 29/41 entries verified against live code (71% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.
+   DoF RATIO: 12 degrees of freedom spent against 14 independent seasons = 0.86 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.
+   SENSITIVITY: after flatness discounting, 11.0 effective DoF (0.79 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.
+   CIRCULARITY: 4 knob(s) were set because of their effect on this metric and 3 candidate family/families were deleted for scoring worse on the evaluation seasons. No resampling scheme can correct for the removed ones -- their code is gone. This is the irreducible core of finding H2.
+   MULTIPLICITY: meta_region_poolaware aggregate P(1st) 0.1200 vs baseline 0.0399; best-of-family p = 0.0005999400059994001, stepdown-adjusted p = 0.0005999400059994001 over 78 modes. VERDICT survives_correction.
+   HOLDOUT: Level 1 = [2027] (untouched); Level 2.5 = 2026 (evaluated=True). No historical season is a holdout and none can be made one retroactively.
+
+====================================================================================================
+DISCLOSURE
+   This audit counts and measures the search that produced the headline; it does not repair it. The strategy was selected on the same 14 seasons it is reported on, so the figure remains in-sample for strategy choice however it is corrected. The first genuinely prospective evaluation is 2027, n=1.
+====================================================================================================

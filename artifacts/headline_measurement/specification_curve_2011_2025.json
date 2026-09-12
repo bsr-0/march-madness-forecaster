@@ -1,0 +1,411 @@
+{
+  "axes": {
+    "pa_trials": {
+      "best_p_first": 0.11999999999999998,
+      "best_value": 500,
+      "category": "flat_plateau",
+      "cells": [
+        {
+          "aggregate_p_first": 0.1157142857142857,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": false,
+          "label": "200",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.04,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.09,
+            "2018": 0.05,
+            "2019": 0.09,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.15,
+            "2025": 0.2
+          },
+          "reused": false,
+          "value": 200,
+          "wall_time_minutes": 1.4
+        },
+        {
+          "aggregate_p_first": 0.11999999999999998,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": true,
+          "label": "500",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": true,
+          "value": 500,
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.11785714285714285,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": false,
+          "label": "1000",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.05,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.16,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": 1000,
+          "wall_time_minutes": 1.7
+        }
+      ],
+      "effective_dof": 0.0,
+      "gap_to_best_pp": 0.0,
+      "production_is_best": true,
+      "production_p_first": 0.11999999999999998,
+      "production_value": 500,
+      "spread_pp": 0.43,
+      "why_swept": "Raised 200 -> 500 BECAUSE IT HELPED on these same evaluation seasons (FINDINGS.md:137-139) -- provenance by its own effect on the metric being reported, which is the definition of a researcher degree of freedom."
+    },
+    "poolaware_base_order": {
+      "best_p_first": 0.11999999999999998,
+      "best_value": "recipe",
+      "category": "flat_plateau",
+      "cells": [
+        {
+          "aggregate_p_first": 0.11999999999999998,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": true,
+          "label": "recipe",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": true,
+          "value": "recipe",
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.11999999999999998,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": false,
+          "label": "reversed",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": "reversed",
+          "wall_time_minutes": 1.5
+        }
+      ],
+      "effective_dof": 0.0,
+      "gap_to_best_pp": 0.0,
+      "production_is_best": true,
+      "production_p_first": 0.11999999999999998,
+      "production_value": "recipe",
+      "spread_pp": 0.0,
+      "why_swept": "The selector's tie-break is strictly-greater, so the recipe's base order can decide which bracket ships without changing any probability -- the recipe says so itself (poolaware_recipe.py:70-73). An undocumented DoF worth its own axis."
+    },
+    "poolaware_risk_levels": {
+      "best_p_first": 0.12000000000000001,
+      "best_value": [
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9
+      ],
+      "category": "flat_plateau",
+      "cells": [
+        {
+          "aggregate_p_first": 0.11999999999999998,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": true,
+          "label": "production",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": true,
+          "value": [
+            0.1,
+            0.3,
+            0.5,
+            0.7,
+            0.9
+          ],
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.1142857142857143,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": false,
+          "label": "coarse",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.06,
+            "2014": 0.14,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.05,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": [
+            0.2,
+            0.5,
+            0.8
+          ],
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.12000000000000001,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": false,
+          "label": "fine",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.14,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.08,
+            "2021": 0.06,
+            "2022": 0.1,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": [
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9
+          ],
+          "wall_time_minutes": 1.6
+        }
+      ],
+      "effective_dof": 0.0,
+      "gap_to_best_pp": 0.0,
+      "production_is_best": true,
+      "production_p_first": 0.11999999999999998,
+      "production_value": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "spread_pp": 0.57,
+      "why_swept": "No numeric provenance recorded anywhere for this grid (poolaware_recipe.py:30)."
+    },
+    "referee_noise_std": {
+      "best_p_first": 0.12285714285714285,
+      "best_value": 0.08,
+      "category": "flat_plateau",
+      "cells": [
+        {
+          "aggregate_p_first": 0.12285714285714285,
+          "baseline_aggregate_p_first": 0.040171428571428566,
+          "is_production": false,
+          "label": "0.08",
+          "per_year": {
+            "2011": 0.03,
+            "2012": 0.06,
+            "2013": 0.15,
+            "2014": 0.08,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.1,
+            "2018": 0.08,
+            "2019": 0.14,
+            "2021": 0.07,
+            "2022": 0.12,
+            "2023": 0.18,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": 0.08,
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.11999999999999998,
+          "baseline_aggregate_p_first": 0.03987142857142857,
+          "is_production": true,
+          "label": "0.16",
+          "per_year": {
+            "2011": 0.02,
+            "2012": 0.05,
+            "2013": 0.17,
+            "2014": 0.09,
+            "2015": 0.16,
+            "2016": 0.21,
+            "2017": 0.11,
+            "2018": 0.07,
+            "2019": 0.11,
+            "2021": 0.07,
+            "2022": 0.11,
+            "2023": 0.17,
+            "2024": 0.13,
+            "2025": 0.21
+          },
+          "reused": false,
+          "value": 0.16,
+          "wall_time_minutes": 1.5
+        },
+        {
+          "aggregate_p_first": 0.11214285714285713,
+          "baseline_aggregate_p_first": 0.04002857142857143,
+          "is_production": false,
+          "label": "0.24",
+          "per_year": {
+            "2011": 0.03,
+            "2012": 0.06,
+            "2013": 0.19,
+            "2014": 0.08,
+            "2015": 0.14,
+            "2016": 0.22,
+            "2017": 0.08,
+            "2018": 0.04,
+            "2019": 0.1,
+            "2021": 0.06,
+            "2022": 0.09,
+            "2023": 0.16,
+            "2024": 0.13,
+            "2025": 0.19
+          },
+          "reused": false,
+          "value": 0.24,
+          "wall_time_minutes": 1.5
+        }
+      ],
+      "effective_dof": 0.0,
+      "gap_to_best_pp": 0.29,
+      "production_is_best": false,
+      "production_p_first": 0.11999999999999998,
+      "production_value": 0.16,
+      "spread_pp": 1.07,
+      "why_swept": "Cited to Lopez & Matthews (2015), a point-spread paper, and never fit to this repo's data -- audit finding M2. The one attempt to fit it (src/simulation/mc_calibration.py) was broken and was retired rather than fixed."
+    }
+  },
+  "design_note": "One-at-a-time from the production setting, not a full factorial: a factorial over these four axes is ~200 cells and several days, and the question asked here is whether any single unjustified knob moves the headline. Interaction effects are therefore NOT measured and this cannot rule them out.",
+  "excluded_seasons": {
+    "2026": "parameter-clean holdout -- deriving parameters here would contaminate it",
+    "2027": "sequestered prospective holdout"
+  },
+  "flat_threshold_pp": 1.5,
+  "measurement": "one-at-a-time specification curve over un-provenanced tier-3 knobs",
+  "mild_threshold_pp": 3.0,
+  "n_seasons": 14,
+  "not_adopted": "No sweep optimum is adopted into the code by this script, deliberately. Adopting the best cell would itself be a new researcher degree of freedom -- exactly what the deleted rdof_audit.adopt_sensitivity_optima() did wrong. Any adoption is a separate decision requiring a SPEC_VERSION bump.",
+  "provenance": {
+    "canonical_contract": {
+      "n_opponents": 29,
+      "n_repeats": 100,
+      "opponent_source": "pool",
+      "pa_trials": 500,
+      "team_identity": true
+    },
+    "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+    "git_dirty": true,
+    "timestamp": "2026-09-12T14:29:48"
+  },
+  "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "threshold_basis": "1.5pp is one season-level standard error on the headline (audit H1)",
+  "total_effective_dof": 0.0
+}

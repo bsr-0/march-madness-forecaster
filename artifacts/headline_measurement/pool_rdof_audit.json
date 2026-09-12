@@ -1,0 +1,7449 @@
+{
+  "dof_summary": {
+    "by_status": {
+      "external": 2,
+      "frozen_after_search": 1,
+      "never_searched": 27,
+      "removed_after_measuring": 3,
+      "searched": 4,
+      "tuned_on_metric": 4
+    },
+    "by_tier": {
+      "1_external": 2,
+      "2_structural": 6,
+      "3_freely_tuned": 33
+    },
+    "contaminated_names": [
+      "all_modes_family_size",
+      "removed_candidate_family_upset_aware",
+      "removed_candidate_family_confidence_routed",
+      "poolaware_selector_estimator",
+      "small_pool_mode_pruning",
+      "pa_trials",
+      "fixed_alpha_grid_at_risk_35",
+      "fixed_risk_grid",
+      "pool_blend_weight",
+      "seed_outcome_window",
+      "candidate_bank_risk_grid",
+      "blend_region_35_risk"
+    ],
+    "dof_per_season": 0.86,
+    "effective_dof_is_measured": true,
+    "effective_dof_per_season": 0.79,
+    "effective_dof_spent": 11.0,
+    "n_contaminated_by_2026": 12,
+    "n_evaluation_seasons": 14,
+    "n_registered": 41,
+    "note": "The denominator is seasons, not season x repeat trials. Audit finding H1 established the season as the unit of independence and measured the inflation from using repeats at roughly 3x.",
+    "raw_dof_spent": 12
+  },
+  "drift": {
+    "coverage": 0.707,
+    "drifted": [],
+    "n_checked": 29,
+    "n_registered": 41,
+    "unresolvable": [
+      {
+        "name": "removed_candidate_family_upset_aware",
+        "reason": "removed_candidate_family_upset_aware has no live_symbol (inline literal at scripts/mc_pool_backtest.py:4026-4034 \u2014 comment only; the code is gone)"
+      },
+      {
+        "name": "removed_candidate_family_confidence_routed",
+        "reason": "removed_candidate_family_confidence_routed has no live_symbol (inline literal at scripts/mc_pool_backtest.py:4036-4042 \u2014 comment only; the code is gone)"
+      },
+      {
+        "name": "poolaware_selector_estimator",
+        "reason": "poolaware_selector_estimator has no live_symbol (inline literal at scripts/mc_pool_backtest.py:4107-4113 \u2014 inline literal (the selection loop))"
+      },
+      {
+        "name": "small_pool_mode_pruning",
+        "reason": "small_pool_mode_pruning has no live_symbol (inline literal at scripts/mc_pool_backtest.py:426-433 \u2014 comment; SMALL_POOL_MODES aliases ALL_MODES)"
+      },
+      {
+        "name": "poolaware_base_order",
+        "reason": "poolaware_base_order has no live_symbol (inline literal at src/optimization/poolaware_recipe.py:70-89 \u2014 build_poolaware_prob_bases (inline order))"
+      },
+      {
+        "name": "poolaware_forced_champion_risk",
+        "reason": "poolaware_forced_champion_risk has no live_symbol (inline literal at scripts/mc_pool_backtest.py:4001 \u2014 inline literal (candidate family (a)))"
+      },
+      {
+        "name": "fixed_alpha_grid_at_risk_35",
+        "reason": "fixed_alpha_grid_at_risk_35 has no live_symbol (inline literal at scripts/mc_pool_backtest.py:3212-3230 \u2014 inline literal (0, 25, 50, 75, 100))"
+      },
+      {
+        "name": "fixed_risk_grid",
+        "reason": "fixed_risk_grid has no live_symbol (inline literal at scripts/mc_pool_backtest.py:3235 \u2014 inline literal (10, 20, 30, 40, 50, 70, 90))"
+      },
+      {
+        "name": "meta_region_blend_weights",
+        "reason": "meta_region_blend_weights has no live_symbol (inline literal at scripts/mc_pool_backtest.py:4200-4204 \u2014 inline literal)"
+      },
+      {
+        "name": "pool_chalk_noise_std",
+        "reason": "pool_chalk_noise_std has no live_symbol (inline literal at scripts/mc_pool_backtest.py:2670 \u2014 local initial value in _run_one_year)"
+      },
+      {
+        "name": "candidate_bank_risk_grid",
+        "reason": "candidate_bank_risk_grid has no live_symbol (inline literal at scripts/experiments/build_candidate_artifact.py:810 \u2014 inline literal)"
+      },
+      {
+        "name": "per_year_rng_seeds",
+        "reason": "per_year_rng_seeds has no live_symbol (inline literal at scripts/mc_pool_backtest.py:3342, 3610, 3927, 3960, 4156 \u2014 inline literals (seed + year))"
+      }
+    ]
+  },
+  "holdout": {
+    "contamination_checks": [],
+    "level_1_sequestered": {
+      "enforced_by": "assert_not_sequestered(), called by scripts/pool_rdof_audit.py --sweep",
+      "spent": [],
+      "status": "untouched",
+      "years": [
+        2027
+      ]
+    },
+    "level_2_5_parameter_clean": {
+      "evaluated": true,
+      "what_is_clean": "The prediction model never trains on it (train_noseed_model filters y < max_year) and every parametric knob is swept on 2011-2025 only.",
+      "why_not_level_1": "The candidate-family set was pruned using aggregates that included it: scripts/mc_pool_backtest.py:4026-4042 records family (d) removed 2026-05-03 ('selected in only 1/15 years') and family (e) removed 2026-05-16, where a 15-season window is BACKTEST_YEARS = 2011-2026 excluding 2020. The 2026 tournament ended that April, so its outcome was known. CONTAMINATED_EVAL_YEARS was not added until 2026-09-09 (a3fb412). The removed families no longer exist as code, so those decisions cannot be re-run on a 2026-free window.",
+      "year": 2026
+    },
+    "no_historical_holdout": "2011-2025 were all both trained on (as priors for later seasons) and searched over, so none is a holdout. 2008-2010 are training-only and never evaluated, which is not the same thing. 2020 has no tournament. A never-touched holdout cannot be manufactured retroactively; it can only be sequestered going forward."
+  },
+  "holdout_evaluation": {
+    "evidence_level": "2.5 -- structurally contaminated, parameter-clean",
+    "evidence_level_explanation": "2026 is NOT a Level-1 holdout and cannot be made one. The candidate-family set was pruned using aggregates that included it: scripts/mc_pool_backtest.py:4026-4042 records family (d) removed 2026-05-03 ('selected in only 1/15 years') and family (e) removed 2026-05-16, where a 15-season window is BACKTEST_YEARS = 2011-2026 excluding 2020. The 2026 tournament ended in April 2026, so its outcome was known. CONTAMINATED_EVAL_YEARS, which now strips 2026 from aggregates, was not added until 2026-09-09 (a3fb412) -- four months after those prunings. The removed families no longer exist as code, so those decisions cannot be re-run on a 2026-free window. What IS true is that the prediction model never trains on it (train_noseed_model's walk-forward filter is y < max_year) and the parametric knobs are derived on 2011-2025 only. That makes it parameter-clean, not untouched.",
+    "measurement": "parameter-clean holdout evaluation, 2026",
+    "p_first": {
+      "meta_region_poolaware": 0.11,
+      "seed": 0.0336
+    },
+    "provenance": {
+      "canonical_contract": {
+        "n_opponents": 29,
+        "n_repeats": 100,
+        "opponent_source": "pool",
+        "pa_trials": 500,
+        "team_identity": true
+      },
+      "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+      "git_dirty": true,
+      "timestamp": "2026-09-12T14:31:02"
+    },
+    "registry_hash_at_evaluation": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+    "wall_time_minutes": 0.9,
+    "year": 2026
+  },
+  "metadata": {
+    "audit_finding": "H2",
+    "audit_recommendation": 12,
+    "generated_at": "2026-09-12T14:35:12",
+    "registry_hash": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+    "report_type": "pool_strategy_researcher_degrees_of_freedom_audit"
+  },
+  "multiplicity": {
+    "aggregate_p_first": {
+      "blend": 0.03131428571428572,
+      "champ_equity_pit": 0.03928571428571429,
+      "champ_equity_tv": 0.05714285714285715,
+      "champ_first_chalkfade_tv": 0.03368571428571429,
+      "champ_first_tv": 0.03125714285714286,
+      "det_champ_tv": 0.04252857142857143,
+      "det_e8_tv": 0.04617142857142858,
+      "det_f4_tv": 0.043914285714285704,
+      "e8_first_tv": 0.03188571428571429,
+      "f4_first_tv": 0.03765714285714287,
+      "fixed_blendA0_r35": 0.08785714285714287,
+      "fixed_blendA100_r35": 0.12142857142857146,
+      "fixed_blendA25_r35": 0.105,
+      "fixed_blendA50_r35": 0.10857142857142855,
+      "fixed_blendA75_r35": 0.10357142857142856,
+      "fixed_blend_r10": 0.09857142857142857,
+      "fixed_blend_r20": 0.105,
+      "fixed_blend_r30": 0.10285714285714286,
+      "fixed_blend_r40": 0.10999999999999999,
+      "fixed_blend_r50": 0.10857142857142857,
+      "fixed_blend_r70": 0.10071428571428571,
+      "fixed_blend_r90": 0.075,
+      "fixed_massavg_r10": 0.0692857142857143,
+      "fixed_massavg_r20": 0.07571428571428572,
+      "fixed_massavg_r30": 0.07571428571428572,
+      "fixed_massavg_r40": 0.07571428571428572,
+      "fixed_massavg_r50": 0.07357142857142858,
+      "fixed_massavg_r70": 0.0892857142857143,
+      "fixed_massavg_r90": 0.08285714285714287,
+      "fixed_tv_r10": 0.06571428571428573,
+      "fixed_tv_r20": 0.06785714285714287,
+      "fixed_tv_r30": 0.0642857142857143,
+      "fixed_tv_r40": 0.0642857142857143,
+      "fixed_tv_r50": 0.06142857142857144,
+      "fixed_tv_r70": 0.05142857142857143,
+      "fixed_tv_r90": 0.042857142857142864,
+      "knn": 0.0243,
+      "lev_tilt_100": 0.05142857142857144,
+      "lev_tilt_200": 0.04785714285714287,
+      "lev_tilt_25": 0.06142857142857144,
+      "lev_tilt_50": 0.054285714285714284,
+      "meta_exhaustive": 0.05857142857142857,
+      "meta_exhaustive_gbm": 0.034999999999999996,
+      "meta_exhaustive_margin": 0.03214285714285715,
+      "meta_gbm": 0.04642857142857143,
+      "meta_gbm_aug": 0.03071428571428572,
+      "meta_gbm_champ_first": 0.09071428571428572,
+      "meta_gbm_champ_leverage": 0.06071428571428572,
+      "meta_gbm_champ_top1": 0.048571428571428585,
+      "meta_gbm_elim": 0.045,
+      "meta_gbm_epap": 0.02,
+      "meta_gbm_lr": 0.011428571428571429,
+      "meta_gbm_margin": 0.054285714285714284,
+      "meta_gbm_minimal": 0.05071428571428572,
+      "meta_gbm_multiseed": 0.03642857142857143,
+      "meta_gbm_no9": 0.045714285714285714,
+      "meta_gbm_nochalk": 0.04357142857142856,
+      "meta_gbm_tuned": 0.049999999999999996,
+      "meta_gbm_upset": 0.022142857142857148,
+      "meta_gbm_vegas": 0.03500000000000001,
+      "meta_gbm_xgb": 0.05642857142857143,
+      "meta_leverage": 0.010714285714285713,
+      "meta_region": 0.06142857142857144,
+      "meta_region_4champ": 0.06142857142857144,
+      "meta_region_blend": 0.06357142857142858,
+      "meta_region_blend90": 0.07214285714285715,
+      "meta_region_elo": 0.024285714285714292,
+      "meta_region_gbm": 0.045,
+      "meta_region_knn": 0.026428571428571433,
+      "meta_region_massey": 0.07357142857142858,
+      "meta_region_poolaware": 0.11999999999999998,
+      "meta_region_upset": 0.06285714285714286,
+      "meta_sa": 0.007142857142857143,
+      "meta_sa_chalk": 0.012857142857142859,
+      "meta_sa_vol": 0.007142857142857143,
+      "noseed": 0.026785714285714284,
+      "pit": 0.02977142857142857,
+      "seed": 0.03987142857142857,
+      "torvik": 0.03200000000000001
+    },
+    "baseline_aggregate_p_first": 0.03987142857142857,
+    "baseline_mode": "seed",
+    "best_aggregate_p_first": 0.12142857142857146,
+    "best_mode_by_aggregate_p_first": "fixed_blendA100_r35",
+    "best_mode_by_test_statistic": "meta_region_poolaware",
+    "best_mode_is_circular": true,
+    "best_non_circular_mode": "meta_region_poolaware",
+    "best_non_circular_p_first": 0.11999999999999998,
+    "circular_modes": {
+      "fixed_blendA100_r35": "alpha=1.0 is pure seed_rp, and the referee is seed_pw -- graded by its own source. Its alpha sweep shows the signature: .0879 / .1050 / .1086 / .1036 then a 1.8pp jump to .1214 at exactly the endpoint that coincides with the referee."
+    },
+    "decision_rule": "pre-registered in the module docstring before this ran",
+    "dropped_modes": [],
+    "headline_aggregate_p_first": 0.11999999999999998,
+    "headline_is_highest_scoring": false,
+    "headline_mode": "meta_region_poolaware",
+    "headline_p_adjusted": 0.0005999400059994001,
+    "headline_p_unadjusted": 9.999000099990002e-05,
+    "mean_gap_to_best_pp": 0.143,
+    "measurement": "multiplicity correction over the surviving strategy family",
+    "n_modes_in_family": 78,
+    "n_modes_run": 79,
+    "n_modes_surviving_fwer_05": 15,
+    "p_max_statistic": 0.0005999400059994001,
+    "per_year_per_mode": [
+      {
+        "mode": "seed",
+        "p_first": 0.0324,
+        "year": 2011
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0234,
+        "year": 2011
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0314,
+        "year": 2011
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0244,
+        "year": 2011
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0202,
+        "year": 2011
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.16,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.04,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0294,
+        "year": 2011
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0238,
+        "year": 2011
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0288,
+        "year": 2011
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0314,
+        "year": 2011
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0134,
+        "year": 2011
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0174,
+        "year": 2011
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0182,
+        "year": 2011
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.027,
+        "year": 2011
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.07,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.11,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.05,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.11,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.07,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.07,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.06,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.0,
+        "year": 2011
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.04,
+        "year": 2011
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.04,
+        "year": 2011
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.06,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.03,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.01,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.02,
+        "year": 2011
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.04,
+        "year": 2011
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0194,
+        "year": 2012
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.016,
+        "year": 2012
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0148,
+        "year": 2012
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0158,
+        "year": 2012
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0046,
+        "year": 2012
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.06,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.07,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.06,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.02,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.015,
+        "year": 2012
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0188,
+        "year": 2012
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0204,
+        "year": 2012
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0192,
+        "year": 2012
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0296,
+        "year": 2012
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0336,
+        "year": 2012
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0326,
+        "year": 2012
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0088,
+        "year": 2012
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.02,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.02,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.01,
+        "year": 2012
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.01,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.02,
+        "year": 2012
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.01,
+        "year": 2012
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.03,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.04,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.05,
+        "year": 2012
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.0,
+        "year": 2012
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0386,
+        "year": 2013
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0174,
+        "year": 2013
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0214,
+        "year": 2013
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0306,
+        "year": 2013
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.024,
+        "year": 2013
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.17,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.17,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.07,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.07,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.05,
+        "year": 2013
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0244,
+        "year": 2013
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0276,
+        "year": 2013
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0404,
+        "year": 2013
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.032,
+        "year": 2013
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.05,
+        "year": 2013
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0444,
+        "year": 2013
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0544,
+        "year": 2013
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0344,
+        "year": 2013
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.09,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.12,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.03,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.05,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.09,
+        "year": 2013
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.02,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.01,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.17,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.06,
+        "year": 2013
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.04,
+        "year": 2013
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.048,
+        "year": 2014
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0196,
+        "year": 2014
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0388,
+        "year": 2014
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0266,
+        "year": 2014
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0322,
+        "year": 2014
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.02,
+        "year": 2014
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.04,
+        "year": 2014
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.02,
+        "year": 2014
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.03,
+        "year": 2014
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.03,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.11,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.13,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.18,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.16,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.16,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.14,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.12,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.09,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.14,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.14,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.14,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.16,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0266,
+        "year": 2014
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.028,
+        "year": 2014
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0292,
+        "year": 2014
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0286,
+        "year": 2014
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0076,
+        "year": 2014
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0136,
+        "year": 2014
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0068,
+        "year": 2014
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.015,
+        "year": 2014
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.04,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.07,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.05,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.12,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.02,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.13,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.15,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.09,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.01,
+        "year": 2014
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.0,
+        "year": 2014
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.048,
+        "year": 2015
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0316,
+        "year": 2015
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0302,
+        "year": 2015
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0394,
+        "year": 2015
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0316,
+        "year": 2015
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.02,
+        "year": 2015
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.01,
+        "year": 2015
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.01,
+        "year": 2015
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.01,
+        "year": 2015
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.15,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.16,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.16,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.12,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.16,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.17,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.17,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.16,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.17,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.13,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.07,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.03,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.1,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.1,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.06,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.06,
+        "year": 2015
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0348,
+        "year": 2015
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0378,
+        "year": 2015
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0458,
+        "year": 2015
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.037,
+        "year": 2015
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0452,
+        "year": 2015
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0514,
+        "year": 2015
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0488,
+        "year": 2015
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0394,
+        "year": 2015
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.01,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.1,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.03,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.14,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.02,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.14,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.1,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.03,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.12,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.03,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.03,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.1,
+        "year": 2015
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.07,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.12,
+        "year": 2015
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.07,
+        "year": 2015
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.07,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.04,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.08,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.16,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.05,
+        "year": 2015
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.11,
+        "year": 2015
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0676,
+        "year": 2016
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0286,
+        "year": 2016
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0438,
+        "year": 2016
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0394,
+        "year": 2016
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0592,
+        "year": 2016
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.1,
+        "year": 2016
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.1,
+        "year": 2016
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.09,
+        "year": 2016
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.08,
+        "year": 2016
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.17,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.2,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.24,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.22,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.2,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.18,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.14,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.14,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.14,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.15,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.11,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.09,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.09,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.08,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.08,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.05,
+        "year": 2016
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.05,
+        "year": 2016
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0458,
+        "year": 2016
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0498,
+        "year": 2016
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0482,
+        "year": 2016
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0382,
+        "year": 2016
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0304,
+        "year": 2016
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0488,
+        "year": 2016
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0452,
+        "year": 2016
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.029,
+        "year": 2016
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.01,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.12,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.01,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.09,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.07,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.01,
+        "year": 2016
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.08,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.05,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.03,
+        "year": 2016
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.04,
+        "year": 2016
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.02,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.08,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.13,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.06,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.21,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.05,
+        "year": 2016
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.0,
+        "year": 2016
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.024,
+        "year": 2017
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.016,
+        "year": 2017
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0188,
+        "year": 2017
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0254,
+        "year": 2017
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.027,
+        "year": 2017
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.09,
+        "year": 2017
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.03,
+        "year": 2017
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.1,
+        "year": 2017
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.12,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.08,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.03,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.1,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.1,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.07,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.12,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.13,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.04,
+        "year": 2017
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0236,
+        "year": 2017
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0208,
+        "year": 2017
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0236,
+        "year": 2017
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0222,
+        "year": 2017
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0678,
+        "year": 2017
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0622,
+        "year": 2017
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0656,
+        "year": 2017
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0082,
+        "year": 2017
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.02,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.03,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.08,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.04,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.03,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.04,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.05,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.03,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.05,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2017
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.06,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.02,
+        "year": 2017
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.02,
+        "year": 2017
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.02,
+        "year": 2017
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.01,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.1,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.11,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.1,
+        "year": 2017
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.0,
+        "year": 2017
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0304,
+        "year": 2018
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.022,
+        "year": 2018
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0276,
+        "year": 2018
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0272,
+        "year": 2018
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0214,
+        "year": 2018
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.02,
+        "year": 2018
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.08,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.12,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.08,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.06,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.02,
+        "year": 2018
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0248,
+        "year": 2018
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0296,
+        "year": 2018
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0272,
+        "year": 2018
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0236,
+        "year": 2018
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0294,
+        "year": 2018
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0186,
+        "year": 2018
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0316,
+        "year": 2018
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0254,
+        "year": 2018
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.08,
+        "year": 2018
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.02,
+        "year": 2018
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.02,
+        "year": 2018
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.01,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.03,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.04,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.07,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.05,
+        "year": 2018
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.02,
+        "year": 2018
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.032,
+        "year": 2019
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0288,
+        "year": 2019
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0328,
+        "year": 2019
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0422,
+        "year": 2019
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0442,
+        "year": 2019
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.12,
+        "year": 2019
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.07,
+        "year": 2019
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.02,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.13,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.07,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.05,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.07,
+        "year": 2019
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0436,
+        "year": 2019
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0372,
+        "year": 2019
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0522,
+        "year": 2019
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0448,
+        "year": 2019
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0768,
+        "year": 2019
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0754,
+        "year": 2019
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0794,
+        "year": 2019
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0344,
+        "year": 2019
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.05,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.06,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.05,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.09,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.06,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.09,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.04,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.05,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.05,
+        "year": 2019
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.01,
+        "year": 2019
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.02,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.06,
+        "year": 2019
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.01,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.04,
+        "year": 2019
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.04,
+        "year": 2019
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.08,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.1,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.11,
+        "year": 2019
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.03,
+        "year": 2019
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0352,
+        "year": 2021
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0222,
+        "year": 2021
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0298,
+        "year": 2021
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.023,
+        "year": 2021
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0204,
+        "year": 2021
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.08,
+        "year": 2021
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.08,
+        "year": 2021
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.09,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.11,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.05,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.05,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.08,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.05,
+        "year": 2021
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0242,
+        "year": 2021
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.026,
+        "year": 2021
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.024,
+        "year": 2021
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0208,
+        "year": 2021
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.033,
+        "year": 2021
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0264,
+        "year": 2021
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0378,
+        "year": 2021
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0222,
+        "year": 2021
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.05,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.02,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.02,
+        "year": 2021
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.0,
+        "year": 2021
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.04,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.02,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.03,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.07,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.09,
+        "year": 2021
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.06,
+        "year": 2021
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0372,
+        "year": 2022
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.029,
+        "year": 2022
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0226,
+        "year": 2022
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.023,
+        "year": 2022
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0098,
+        "year": 2022
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.09,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.11,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.1,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.11,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.11,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.11,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.05,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.04,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0262,
+        "year": 2022
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0238,
+        "year": 2022
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0272,
+        "year": 2022
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0236,
+        "year": 2022
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.0152,
+        "year": 2022
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0112,
+        "year": 2022
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.016,
+        "year": 2022
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0238,
+        "year": 2022
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.06,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.06,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.06,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.05,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.05,
+        "year": 2022
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.03,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.11,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.01,
+        "year": 2022
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.02,
+        "year": 2022
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0612,
+        "year": 2023
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0408,
+        "year": 2023
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0462,
+        "year": 2023
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.032,
+        "year": 2023
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.034,
+        "year": 2023
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.07,
+        "year": 2023
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.03,
+        "year": 2023
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.1,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.18,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.13,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.09,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.03,
+        "year": 2023
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0366,
+        "year": 2023
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0392,
+        "year": 2023
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.041,
+        "year": 2023
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0336,
+        "year": 2023
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.018,
+        "year": 2023
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.0204,
+        "year": 2023
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0192,
+        "year": 2023
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0282,
+        "year": 2023
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.01,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.0,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.05,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.13,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.05,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.05,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.05,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.03,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.03,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.13,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.02,
+        "year": 2023
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.01,
+        "year": 2023
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.05,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.01,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.07,
+        "year": 2023
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.13,
+        "year": 2023
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.06,
+        "year": 2023
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.06,
+        "year": 2023
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.11,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.16,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.17,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.04,
+        "year": 2023
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.01,
+        "year": 2023
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0328,
+        "year": 2024
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0264,
+        "year": 2024
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.026,
+        "year": 2024
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0332,
+        "year": 2024
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.0332,
+        "year": 2024
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.16,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.13,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.13,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.11,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.16,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.17,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0348,
+        "year": 2024
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0388,
+        "year": 2024
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0386,
+        "year": 2024
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.032,
+        "year": 2024
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.033,
+        "year": 2024
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.043,
+        "year": 2024
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.0396,
+        "year": 2024
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0188,
+        "year": 2024
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.02,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.13,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.02,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.08,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.03,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.1,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.08,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.09,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.01,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.13,
+        "year": 2024
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2024
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.0,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.11,
+        "year": 2024
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.16,
+        "year": 2024
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.01,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.04,
+        "year": 2024
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.02,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.0,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.15,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.06,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.13,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.05,
+        "year": 2024
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.02,
+        "year": 2024
+      },
+      {
+        "mode": "seed",
+        "p_first": 0.0514,
+        "year": 2025
+      },
+      {
+        "mode": "noseed",
+        "p_first": 0.0532,
+        "year": 2025
+      },
+      {
+        "mode": "blend",
+        "p_first": 0.0542,
+        "year": 2025
+      },
+      {
+        "mode": "torvik",
+        "p_first": 0.0658,
+        "year": 2025
+      },
+      {
+        "mode": "pit",
+        "p_first": 0.055,
+        "year": 2025
+      },
+      {
+        "mode": "champ_equity_tv",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "champ_equity_pit",
+        "p_first": 0.05,
+        "year": 2025
+      },
+      {
+        "mode": "lev_tilt_25",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "lev_tilt_50",
+        "p_first": 0.19,
+        "year": 2025
+      },
+      {
+        "mode": "lev_tilt_100",
+        "p_first": 0.19,
+        "year": 2025
+      },
+      {
+        "mode": "lev_tilt_200",
+        "p_first": 0.19,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blendA0_r35",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blendA25_r35",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blendA50_r35",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blendA75_r35",
+        "p_first": 0.16,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blendA100_r35",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r10",
+        "p_first": 0.22,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r20",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r30",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r40",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r50",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r70",
+        "p_first": 0.16,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_blend_r90",
+        "p_first": 0.13,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r10",
+        "p_first": 0.01,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r20",
+        "p_first": 0.01,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r30",
+        "p_first": 0.01,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r40",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r50",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r70",
+        "p_first": 0.09,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_massavg_r90",
+        "p_first": 0.08,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r10",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r20",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r30",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r40",
+        "p_first": 0.19,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r50",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r70",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "fixed_tv_r90",
+        "p_first": 0.13,
+        "year": 2025
+      },
+      {
+        "mode": "champ_first_tv",
+        "p_first": 0.0478,
+        "year": 2025
+      },
+      {
+        "mode": "champ_first_chalkfade_tv",
+        "p_first": 0.0704,
+        "year": 2025
+      },
+      {
+        "mode": "f4_first_tv",
+        "p_first": 0.0806,
+        "year": 2025
+      },
+      {
+        "mode": "e8_first_tv",
+        "p_first": 0.0594,
+        "year": 2025
+      },
+      {
+        "mode": "det_champ_tv",
+        "p_first": 0.146,
+        "year": 2025
+      },
+      {
+        "mode": "det_f4_tv",
+        "p_first": 0.1484,
+        "year": 2025
+      },
+      {
+        "mode": "det_e8_tv",
+        "p_first": 0.1512,
+        "year": 2025
+      },
+      {
+        "mode": "knn",
+        "p_first": 0.0256,
+        "year": 2025
+      },
+      {
+        "mode": "meta_leverage",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_aug",
+        "p_first": 0.14,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_nochalk",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_tuned",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_champ_first",
+        "p_first": 0.14,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_champ_top1",
+        "p_first": 0.14,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_champ_leverage",
+        "p_first": 0.14,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_upset",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_epap",
+        "p_first": 0.0,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_xgb",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_multiseed",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_no9",
+        "p_first": 0.05,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_lr",
+        "p_first": 0.01,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_margin",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_vegas",
+        "p_first": 0.02,
+        "year": 2025
+      },
+      {
+        "mode": "meta_sa",
+        "p_first": 0.0,
+        "year": 2025
+      },
+      {
+        "mode": "meta_exhaustive",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "meta_sa_chalk",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_elim",
+        "p_first": 0.04,
+        "year": 2025
+      },
+      {
+        "mode": "meta_gbm_minimal",
+        "p_first": 0.0,
+        "year": 2025
+      },
+      {
+        "mode": "meta_sa_vol",
+        "p_first": 0.0,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_gbm",
+        "p_first": 0.14,
+        "year": 2025
+      },
+      {
+        "mode": "meta_exhaustive_gbm",
+        "p_first": 0.1,
+        "year": 2025
+      },
+      {
+        "mode": "meta_exhaustive_margin",
+        "p_first": 0.13,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_blend",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_4champ",
+        "p_first": 0.18,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_elo",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_massey",
+        "p_first": 0.03,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_blend90",
+        "p_first": 0.2,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_poolaware",
+        "p_first": 0.21,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_upset",
+        "p_first": 0.19,
+        "year": 2025
+      },
+      {
+        "mode": "meta_region_knn",
+        "p_first": 0.02,
+        "year": 2025
+      }
+    ],
+    "provenance": {
+      "canonical_contract": {
+        "n_opponents": 29,
+        "n_repeats": 100,
+        "opponent_source": "pool",
+        "pa_trials": 500,
+        "team_identity": true
+      },
+      "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+      "git_dirty": true,
+      "timestamp": "2026-09-12T14:35:12"
+    },
+    "residual_not_corrected": "This corrects over the strategy family that still exists in ALL_MODES. It does NOT correct over the search's history: candidate families that were built, measured, found worse and deleted (scripts/mc_pool_backtest.py:4026-4042 records two, with dates 2026-05-03 and 2026-05-16 and the numbers that justified each removal). Those specifications are gone from the code, so no resampling scheme can restore them to the family. Carried as removed_after_measuring entries in src.governance.pool_rdof_audit.REGISTRY.",
+    "seasons": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "stepdown": {
+      "best": "meta_region_poolaware",
+      "n_resamples": 10000,
+      "n_seasons": 14,
+      "n_strategies": 78,
+      "p_max_statistic": 0.0005999400059994001,
+      "per_strategy": {
+        "blend": {
+          "mean_diff": -0.008557142857142859,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9989001099890011,
+          "t_stat": -4.037095239133151
+        },
+        "champ_equity_pit": {
+          "mean_diff": -0.0005857142857142847,
+          "p_adjusted": 0.9999000099990001,
+          "p_unadjusted": 0.528047195280472,
+          "t_stat": -0.057435047043581475
+        },
+        "champ_equity_tv": {
+          "mean_diff": 0.017271428571428573,
+          "p_adjusted": 0.8092190780921907,
+          "p_unadjusted": 0.11038896110388961,
+          "t_stat": 1.294550529207149
+        },
+        "champ_first_chalkfade_tv": {
+          "mean_diff": -0.006185714285714286,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9689031096890312,
+          "t_stat": -2.045955796145309
+        },
+        "champ_first_tv": {
+          "mean_diff": -0.008614285714285713,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9967003299670033,
+          "t_stat": -3.1881016499058417
+        },
+        "det_champ_tv": {
+          "mean_diff": 0.0026571428571428557,
+          "p_adjusted": 0.9944005599440056,
+          "p_unadjusted": 0.40405959404059594,
+          "t_stat": 0.2617828712817142
+        },
+        "det_e8_tv": {
+          "mean_diff": 0.0063,
+          "p_adjusted": 0.9631036896310369,
+          "p_unadjusted": 0.28057194280571945,
+          "t_stat": 0.625294667623896
+        },
+        "det_f4_tv": {
+          "mean_diff": 0.004042857142857143,
+          "p_adjusted": 0.9836016398360165,
+          "p_unadjusted": 0.35226477352264773,
+          "t_stat": 0.415957139255613
+        },
+        "e8_first_tv": {
+          "mean_diff": -0.007985714285714287,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.985001499850015,
+          "t_stat": -2.4424600356717776
+        },
+        "f4_first_tv": {
+          "mean_diff": -0.0022142857142857133,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.7111288871112889,
+          "t_stat": -0.5834490556933266
+        },
+        "fixed_blendA0_r35": {
+          "mean_diff": 0.047985714285714284,
+          "p_adjusted": 0.0633936606339366,
+          "p_unadjusted": 0.0022997700229977,
+          "t_stat": 3.3899691879547946
+        },
+        "fixed_blendA100_r35": {
+          "mean_diff": 0.08155714285714286,
+          "p_adjusted": 0.000999900009999,
+          "p_unadjusted": 9.999000099990002e-05,
+          "t_stat": 5.698934706283249
+        },
+        "fixed_blendA25_r35": {
+          "mean_diff": 0.06512857142857142,
+          "p_adjusted": 0.0053994600539946005,
+          "p_unadjusted": 9.999000099990002e-05,
+          "t_stat": 4.766744063298648
+        },
+        "fixed_blendA50_r35": {
+          "mean_diff": 0.0687,
+          "p_adjusted": 0.007899210078992101,
+          "p_unadjusted": 0.00039996000399960006,
+          "t_stat": 4.60375687253936
+        },
+        "fixed_blendA75_r35": {
+          "mean_diff": 0.0637,
+          "p_adjusted": 0.0044995500449955,
+          "p_unadjusted": 0.00019998000199980003,
+          "t_stat": 4.87796900344249
+        },
+        "fixed_blend_r10": {
+          "mean_diff": 0.058699999999999995,
+          "p_adjusted": 0.04609539046095391,
+          "p_unadjusted": 0.0026997300269973002,
+          "t_stat": 3.5955476747053505
+        },
+        "fixed_blend_r20": {
+          "mean_diff": 0.06512857142857144,
+          "p_adjusted": 0.0183981601839816,
+          "p_unadjusted": 0.0005999400059994001,
+          "t_stat": 4.127269513107759
+        },
+        "fixed_blend_r30": {
+          "mean_diff": 0.0629857142857143,
+          "p_adjusted": 0.012998700129987,
+          "p_unadjusted": 0.00029997000299970003,
+          "t_stat": 4.306758466384821
+        },
+        "fixed_blend_r40": {
+          "mean_diff": 0.07012857142857143,
+          "p_adjusted": 0.007599240075992401,
+          "p_unadjusted": 0.00039996000399960006,
+          "t_stat": 4.63189937623982
+        },
+        "fixed_blend_r50": {
+          "mean_diff": 0.06870000000000001,
+          "p_adjusted": 0.0051994800519948,
+          "p_unadjusted": 0.00029997000299970003,
+          "t_stat": 4.834210886556354
+        },
+        "fixed_blend_r70": {
+          "mean_diff": 0.06084285714285715,
+          "p_adjusted": 0.0023997600239976003,
+          "p_unadjusted": 0.00019998000199980003,
+          "t_stat": 5.24247851554722
+        },
+        "fixed_blend_r90": {
+          "mean_diff": 0.035128571428571426,
+          "p_adjusted": 0.03899610038996101,
+          "p_unadjusted": 0.001999800019998,
+          "t_stat": 3.725704613073104
+        },
+        "fixed_massavg_r10": {
+          "mean_diff": 0.02941428571428572,
+          "p_adjusted": 0.3281671832816718,
+          "p_unadjusted": 0.0193980601939806,
+          "t_stat": 2.288782084429759
+        },
+        "fixed_massavg_r20": {
+          "mean_diff": 0.03584285714285714,
+          "p_adjusted": 0.26477352264773524,
+          "p_unadjusted": 0.014798520147985201,
+          "t_stat": 2.471511909491815
+        },
+        "fixed_massavg_r30": {
+          "mean_diff": 0.03584285714285714,
+          "p_adjusted": 0.23947605239476052,
+          "p_unadjusted": 0.0122987701229877,
+          "t_stat": 2.5474468629040876
+        },
+        "fixed_massavg_r40": {
+          "mean_diff": 0.03584285714285714,
+          "p_adjusted": 0.23357664233576642,
+          "p_unadjusted": 0.012598740125987402,
+          "t_stat": 2.569651828251789
+        },
+        "fixed_massavg_r50": {
+          "mean_diff": 0.03370000000000001,
+          "p_adjusted": 0.26477352264773524,
+          "p_unadjusted": 0.015398460153984602,
+          "t_stat": 2.4658933946708403
+        },
+        "fixed_massavg_r70": {
+          "mean_diff": 0.04941428571428571,
+          "p_adjusted": 0.0364963503649635,
+          "p_unadjusted": 0.0012998700129987,
+          "t_stat": 3.7753299750231495
+        },
+        "fixed_massavg_r90": {
+          "mean_diff": 0.04298571428571429,
+          "p_adjusted": 0.0410958904109589,
+          "p_unadjusted": 0.0013998600139986002,
+          "t_stat": 3.6606945906327963
+        },
+        "fixed_tv_r10": {
+          "mean_diff": 0.025842857142857143,
+          "p_adjusted": 0.49605039496050396,
+          "p_unadjusted": 0.0390960903909609,
+          "t_stat": 1.8909235579047914
+        },
+        "fixed_tv_r20": {
+          "mean_diff": 0.027985714285714287,
+          "p_adjusted": 0.42905709429057093,
+          "p_unadjusted": 0.03189681031896811,
+          "t_stat": 2.010073808708859
+        },
+        "fixed_tv_r30": {
+          "mean_diff": 0.024414285714285715,
+          "p_adjusted": 0.5467453254674532,
+          "p_unadjusted": 0.048095190480951906,
+          "t_stat": 1.7912189370816474
+        },
+        "fixed_tv_r40": {
+          "mean_diff": 0.024414285714285715,
+          "p_adjusted": 0.5065493450654934,
+          "p_unadjusted": 0.0400959904009599,
+          "t_stat": 1.8733587849162918
+        },
+        "fixed_tv_r50": {
+          "mean_diff": 0.021557142857142855,
+          "p_adjusted": 0.595040495950405,
+          "p_unadjusted": 0.053594640535946404,
+          "t_stat": 1.7027754567828908
+        },
+        "fixed_tv_r70": {
+          "mean_diff": 0.01155714285714286,
+          "p_adjusted": 0.9107089291070893,
+          "p_unadjusted": 0.21407859214078592,
+          "t_stat": 0.9231980126767364
+        },
+        "fixed_tv_r90": {
+          "mean_diff": 0.002985714285714287,
+          "p_adjusted": 0.9881011898810119,
+          "p_unadjusted": 0.36636336366363365,
+          "t_stat": 0.3626676182929537
+        },
+        "knn": {
+          "mean_diff": -0.015571428571428571,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9995000499950005,
+          "t_stat": -4.700708429840167
+        },
+        "lev_tilt_100": {
+          "mean_diff": 0.01155714285714286,
+          "p_adjusted": 0.9078092190780922,
+          "p_unadjusted": 0.203979602039796,
+          "t_stat": 0.9397519767545989
+        },
+        "lev_tilt_200": {
+          "mean_diff": 0.007985714285714287,
+          "p_adjusted": 0.960903909609039,
+          "p_unadjusted": 0.29847015298470153,
+          "t_stat": 0.6557972716333839
+        },
+        "lev_tilt_25": {
+          "mean_diff": 0.02155714285714286,
+          "p_adjusted": 0.6784321567843216,
+          "p_unadjusted": 0.07239276072392761,
+          "t_stat": 1.5506541228277466
+        },
+        "lev_tilt_50": {
+          "mean_diff": 0.014414285714285715,
+          "p_adjusted": 0.8386161383861613,
+          "p_unadjusted": 0.14378562143785623,
+          "t_stat": 1.1488320005010801
+        },
+        "meta_exhaustive": {
+          "mean_diff": 0.0187,
+          "p_adjusted": 0.6231376862313769,
+          "p_unadjusted": 0.058694130586941305,
+          "t_stat": 1.6491687741980412
+        },
+        "meta_exhaustive_gbm": {
+          "mean_diff": -0.004871428571428571,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.7543245675432457,
+          "t_stat": -0.6889282533256014
+        },
+        "meta_exhaustive_margin": {
+          "mean_diff": -0.0077285714285714275,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.7789221077892211,
+          "t_stat": -0.8048971373763397
+        },
+        "meta_gbm": {
+          "mean_diff": 0.0065571428571428595,
+          "p_adjusted": 0.9621037896210379,
+          "p_unadjusted": 0.2756724327567243,
+          "t_stat": 0.6331851832622839
+        },
+        "meta_gbm_aug": {
+          "mean_diff": -0.009157142857142858,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.8021197880211979,
+          "t_stat": -0.9295518092850709
+        },
+        "meta_gbm_champ_first": {
+          "mean_diff": 0.05084285714285715,
+          "p_adjusted": 0.0011998800119988001,
+          "p_unadjusted": 0.00019998000199980003,
+          "t_stat": 5.49832623613754
+        },
+        "meta_gbm_champ_leverage": {
+          "mean_diff": 0.020842857142857146,
+          "p_adjusted": 0.5417458254174583,
+          "p_unadjusted": 0.04559544045595441,
+          "t_stat": 1.8090929900987855
+        },
+        "meta_gbm_champ_top1": {
+          "mean_diff": 0.0087,
+          "p_adjusted": 0.9406059394060594,
+          "p_unadjusted": 0.2243775622437756,
+          "t_stat": 0.8073835911917632
+        },
+        "meta_gbm_elim": {
+          "mean_diff": 0.0051285714285714285,
+          "p_adjusted": 0.9736026397360263,
+          "p_unadjusted": 0.29077092290770923,
+          "t_stat": 0.5530300482637776
+        },
+        "meta_gbm_epap": {
+          "mean_diff": -0.01987142857142857,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9864013598640136,
+          "t_stat": -2.349061829898886
+        },
+        "meta_gbm_lr": {
+          "mean_diff": -0.02844285714285714,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -7.040734164666114
+        },
+        "meta_gbm_margin": {
+          "mean_diff": 0.014414285714285715,
+          "p_adjusted": 0.8785121487851215,
+          "p_unadjusted": 0.17688231176882313,
+          "t_stat": 1.0371892783765433
+        },
+        "meta_gbm_minimal": {
+          "mean_diff": 0.010842857142857144,
+          "p_adjusted": 0.943005699430057,
+          "p_unadjusted": 0.23077692230776922,
+          "t_stat": 0.7737291263152382
+        },
+        "meta_gbm_multiseed": {
+          "mean_diff": -0.003442857142857143,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.6759324067593241,
+          "t_stat": -0.4814698602233791
+        },
+        "meta_gbm_no9": {
+          "mean_diff": 0.0058428571428571436,
+          "p_adjusted": 0.9621037896210379,
+          "p_unadjusted": 0.2638736126387361,
+          "t_stat": 0.6334976175667044
+        },
+        "meta_gbm_nochalk": {
+          "mean_diff": 0.0036999999999999997,
+          "p_adjusted": 0.9753024697530247,
+          "p_unadjusted": 0.3087691230876912,
+          "t_stat": 0.4947134491341166
+        },
+        "meta_gbm_tuned": {
+          "mean_diff": 0.010128571428571428,
+          "p_adjusted": 0.8356164383561644,
+          "p_unadjusted": 0.1217878212178782,
+          "t_stat": 1.2369005207014014
+        },
+        "meta_gbm_upset": {
+          "mean_diff": -0.017728571428571427,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9721027897210279,
+          "t_stat": -2.1186462697605806
+        },
+        "meta_gbm_vegas": {
+          "mean_diff": -0.004871428571428571,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.6559344065593441,
+          "t_stat": -0.4589142658713551
+        },
+        "meta_gbm_xgb": {
+          "mean_diff": 0.01655714285714286,
+          "p_adjusted": 0.39286071392860716,
+          "p_unadjusted": 0.027897210278972105,
+          "t_stat": 2.1310706494693834
+        },
+        "meta_leverage": {
+          "mean_diff": -0.029157142857142854,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -7.174201672819672
+        },
+        "meta_region": {
+          "mean_diff": 0.021557142857142855,
+          "p_adjusted": 0.595040495950405,
+          "p_unadjusted": 0.053594640535946404,
+          "t_stat": 1.7027754567828908
+        },
+        "meta_region_4champ": {
+          "mean_diff": 0.021557142857142855,
+          "p_adjusted": 0.595040495950405,
+          "p_unadjusted": 0.053594640535946404,
+          "t_stat": 1.7027754567828908
+        },
+        "meta_region_blend": {
+          "mean_diff": 0.0237,
+          "p_adjusted": 0.49795020497950204,
+          "p_unadjusted": 0.0372962703729627,
+          "t_stat": 1.8872942261364758
+        },
+        "meta_region_blend90": {
+          "mean_diff": 0.032271428571428576,
+          "p_adjusted": 0.3281671832816718,
+          "p_unadjusted": 0.020597940205979402,
+          "t_stat": 2.2953457881612347
+        },
+        "meta_region_elo": {
+          "mean_diff": -0.015585714285714286,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9406059394060594,
+          "t_stat": -1.6278755554441375
+        },
+        "meta_region_gbm": {
+          "mean_diff": 0.0051285714285714285,
+          "p_adjusted": 0.9736026397360263,
+          "p_unadjusted": 0.3023697630236976,
+          "t_stat": 0.535268045337096
+        },
+        "meta_region_knn": {
+          "mean_diff": -0.013442857142857142,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.92000799920008,
+          "t_stat": -1.5330405352205274
+        },
+        "meta_region_massey": {
+          "mean_diff": 0.03370000000000001,
+          "p_adjusted": 0.26477352264773524,
+          "p_unadjusted": 0.015398460153984602,
+          "t_stat": 2.4658933946708403
+        },
+        "meta_region_poolaware": {
+          "mean_diff": 0.08012857142857144,
+          "p_adjusted": 0.0005999400059994001,
+          "p_unadjusted": 9.999000099990002e-05,
+          "t_stat": 6.134498780547795
+        },
+        "meta_region_upset": {
+          "mean_diff": 0.022985714285714283,
+          "p_adjusted": 0.5776422357764224,
+          "p_unadjusted": 0.051394860513948606,
+          "t_stat": 1.7375207505131955
+        },
+        "meta_sa": {
+          "mean_diff": -0.032728571428571426,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -8.600015215467469
+        },
+        "meta_sa_chalk": {
+          "mean_diff": -0.02701428571428572,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -6.708435408883321
+        },
+        "meta_sa_vol": {
+          "mean_diff": -0.032728571428571426,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -8.719933439745454
+        },
+        "noseed": {
+          "mean_diff": -0.013085714285714286,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 1.0,
+          "t_stat": -4.43756977473846
+        },
+        "pit": {
+          "mean_diff": -0.010099999999999998,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.9976002399760024,
+          "t_stat": -3.301152628671964
+        },
+        "torvik": {
+          "mean_diff": -0.007871428571428573,
+          "p_adjusted": 1.0,
+          "p_unadjusted": 0.979002099790021,
+          "t_stat": -2.302223431184934
+        }
+      }
+    },
+    "verdict": "survives_correction",
+    "wall_time_minutes": 0.0
+  },
+  "recommendations": [
+    "DRIFT: none. 29/41 entries verified against live code (71% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.",
+    "DoF RATIO: 12 degrees of freedom spent against 14 independent seasons = 0.86 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.",
+    "SENSITIVITY: after flatness discounting, 11.0 effective DoF (0.79 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.",
+    "CIRCULARITY: 4 knob(s) were set because of their effect on this metric and 3 candidate family/families were deleted for scoring worse on the evaluation seasons. No resampling scheme can correct for the removed ones -- their code is gone. This is the irreducible core of finding H2.",
+    "MULTIPLICITY: meta_region_poolaware aggregate P(1st) 0.1200 vs baseline 0.0399; best-of-family p = 0.0005999400059994001, stepdown-adjusted p = 0.0005999400059994001 over 78 modes. VERDICT survives_correction.",
+    "HOLDOUT: Level 1 = [2027] (untouched); Level 2.5 = 2026 (evaluated=True). No historical season is a holdout and none can be made one retroactively."
+  ],
+  "registry": [
+    {
+      "code_path": "scripts/mc_pool_backtest.py:154 \u2014 N_OPPONENTS",
+      "contaminated_by": [],
+      "current_value": 29,
+      "derivation": "29 (a 30-person pool) since 2026-09-10. 'THIS WAS 999 UNTIL 2026-09-10, and the change is a bug fix rather than a preference... the old default silently measured a pool 33x larger than any that exists here for every pre-2023 season.' P(1st) is mechanically pool-size dependent (~2.5x worse at 1000 entries), so this is part of the claim, not a detail.",
+      "live_symbol": "scripts.mc_pool_backtest:N_OPPONENTS",
+      "live_transform": null,
+      "name": "n_opponents",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        9,
+        999
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:139 \u2014 ESPN_SCORING",
+      "contaminated_by": [],
+      "current_value": {
+        "CHAMP": 320,
+        "E8": 80,
+        "F4": 160,
+        "R32": 20,
+        "R64": 10,
+        "S16": 40
+      },
+      "derivation": "ESPN's published round values, 'verified against real brackets rather than documentation'. Not a choice this project makes; changing it would model a different pool.",
+      "live_symbol": "scripts.mc_pool_backtest:ESPN_SCORING",
+      "live_transform": null,
+      "name": "espn_scoring",
+      "status": "external",
+      "swept_by": null,
+      "tier": 1,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:243 \u2014 N_REPEATS",
+      "contaminated_by": [],
+      "current_value": 50,
+      "derivation": "Monte-Carlo budget, not a modelling choice: more repeats reduce opponent-sampling variance and converge on the same estimand. The canonical published contract overrides it to 100. Tier 2 because the direction is monotone and the limit is the true value.",
+      "live_symbol": "scripts.mc_pool_backtest:N_REPEATS",
+      "live_transform": null,
+      "name": "n_repeats",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": [
+        10,
+        1000
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:244 \u2014 N_MODEL_BRACKETS",
+      "contaminated_by": [],
+      "current_value": 50,
+      "derivation": "Stochastic brackets sampled per mode per repeat. A variance budget, like n_repeats.",
+      "live_symbol": "scripts.mc_pool_backtest:N_MODEL_BRACKETS",
+      "live_transform": null,
+      "name": "n_model_brackets",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": [
+        1,
+        500
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:180 \u2014 REFEREE_NOISE_STD",
+      "contaminated_by": [],
+      "current_value": 0.16,
+      "derivation": "Lopez & Matthews (2015). Registered tier 1 by citation, but the code itself says it is 'NOT FIT TO THIS REPO'S DATA, and audit finding M2 is right to flag that' -- the source is a point-spread paper, and the one attempt to fit it locally (src/simulation/mc_calibration.py) produced 16-seeds rated above 1-seeds and was retired on 2026-09-11 rather than repaired. A citation is provenance for the magnitude, not for this application.",
+      "live_symbol": "scripts.mc_pool_backtest:REFEREE_NOISE_STD",
+      "live_transform": null,
+      "name": "referee_noise_std",
+      "status": "external",
+      "swept_by": "referee_noise_std",
+      "tier": 1,
+      "valid_range": [
+        0.02,
+        0.3
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:187 \u2014 _POOL_FACTOR_THRESHOLD",
+      "contaminated_by": [],
+      "current_value": 50,
+      "derivation": "Pool size above which the EV scorer engages its pool factor. 'Which is why the H6 field-size defect was invisible at every real pool size' -- i.e. at the canonical pool of 30 this threshold means construction ignores pool size entirely.",
+      "live_symbol": "scripts.mc_pool_backtest:_POOL_FACTOR_THRESHOLD",
+      "live_transform": null,
+      "name": "pool_factor_threshold",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0,
+        1000
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:344 \u2014 ALL_MODES",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": 79,
+      "derivation": "The size of the family the headline mode was selected from. This is the single largest degree of freedom in the search and the direct subject of finding H2. Measured, not merely counted, by scripts/pool_rdof_audit.py --multiplicity.",
+      "live_symbol": "scripts.mc_pool_backtest:ALL_MODES",
+      "live_transform": "len",
+      "name": "all_modes_family_size",
+      "status": "searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        1,
+        200
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:4026-4034 \u2014 comment only; the code is gone",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": "removed 2026-05-03",
+      "derivation": "'Upset-aware candidates \u2014 REMOVED 2026-05-03... Result: 10.93% P(1st) WITH upset vs 11.20% WITHOUT.' Deleted because it lowered the reported number on the evaluation seasons. A 15-season aggregate is BACKTEST_YEARS, which includes 2026, whose tournament had finished that April -- so this decision saw the holdout. Not correctable by resampling: the specification no longer exists as code.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "removed_candidate_family_upset_aware",
+      "status": "removed_after_measuring",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:4036-4042 \u2014 comment only; the code is gone",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": "removed 2026-05-16",
+      "derivation": "'Confidence-routed candidates \u2014 REMOVED 2026-05-16... Result: 7.1% P(1st) WITH vs 11.9% WITHOUT \u2014 severe regression.' Same contamination as the upset family: the decision date is after the 2026 final and the window included 2026.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "removed_candidate_family_confidence_routed",
+      "status": "removed_after_measuring",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:4107-4113 \u2014 inline literal (the selection loop)",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": "binary_p1",
+      "derivation": "'Rank-based estimator (fraction-beaten) was tested 2026-05-16 and caused a severe regression: 7.1% vs 11.9% baseline.' The estimator was chosen by comparing the two on this metric, on this window.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "poolaware_selector_estimator",
+      "status": "tuned_on_metric",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:426-433 \u2014 comment; SMALL_POOL_MODES aliases ALL_MODES",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": "opt_seed, opt_blend, opt_torvik, hedge_tv removed",
+      "derivation": "'opt_seed, opt_blend, opt_torvik, hedge_tv removed. 13-year backtest (N=1000): opt_* statistically significantly worse... Council decision 2026-04-12.' Dated 2026-04-12, which is after the 2026 final.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "small_pool_mode_pruning",
+      "status": "removed_after_measuring",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "src/optimization/poolaware_recipe.py:30 \u2014 POOLAWARE_RISK_LEVELS",
+      "contaminated_by": [],
+      "current_value": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "derivation": "No numeric provenance is recorded for this grid anywhere in the repo.",
+      "live_symbol": "src.optimization.poolaware_recipe:POOLAWARE_RISK_LEVELS",
+      "live_transform": "sorted",
+      "name": "poolaware_risk_levels",
+      "status": "never_searched",
+      "swept_by": "poolaware_risk_levels",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "src/optimization/poolaware_recipe.py:34 \u2014 POOLAWARE_EXHAUSTIVE_RISKS",
+      "contaminated_by": [],
+      "current_value": [
+        0.3,
+        0.5,
+        0.7
+      ],
+      "derivation": "'far more expensive per candidate, so it gets 3 risk levels rather than 5' -- a compute justification for the grid's size, and none at all for its values.",
+      "live_symbol": "src.optimization.poolaware_recipe:POOLAWARE_EXHAUSTIVE_RISKS",
+      "live_transform": "sorted",
+      "name": "poolaware_exhaustive_risks",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "src/optimization/poolaware_recipe.py:37 \u2014 TV_MASS80_TORVIK_WEIGHT",
+      "contaminated_by": [],
+      "current_value": 0.8,
+      "derivation": "'Weight on torvik in the tv_mass80 mixed base.' That is the entire justification in the repo -- the audit's '0.8/0.2 blend with no provenance'. The base it defines was selected in 2 of 15 seasons, so the weight is load-bearing for those.",
+      "live_symbol": "src.optimization.poolaware_recipe:TV_MASS80_TORVIK_WEIGHT",
+      "live_transform": null,
+      "name": "tv_mass80_torvik_weight",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "src/optimization/poolaware_recipe.py:70-89 \u2014 build_poolaware_prob_bases (inline order)",
+      "contaminated_by": [],
+      "current_value": [
+        "tv",
+        "mass_avg",
+        "mass_best",
+        "blend",
+        "tv_mass80"
+      ],
+      "derivation": "'ORDER IS LOAD-BEARING. The selector keeps the first candidate that achieves the best P(1st) (p1 > best_p1, strictly greater), so ties are broken by position. Reordering this list can change which bracket ships without changing any probability.' An undocumented degree of freedom the recipe itself flags.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "poolaware_base_order",
+      "status": "never_searched",
+      "swept_by": "poolaware_base_order",
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:4001 \u2014 inline literal (candidate family (a))",
+      "contaminated_by": [],
+      "current_value": 0.5,
+      "derivation": "risk_level for the forced-1-seed-champion candidates. A bare literal in the middle of the candidate loop, with no comment and no sweep.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "poolaware_forced_champion_risk",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:2729, 4786, 5040 \u2014 three unshared literals",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": 500,
+      "derivation": "'This is why pa_trials was later raised 200->500 (the one accepted change in that family...)' (FINDINGS.md:137-139); the audit records it as 'raised 200->500 because it helped'. Provenance by its own effect on the number being reported, which is the definition of a researcher degree of freedom. Also duplicated across three call sites with no shared constant, so the three can drift apart.",
+      "live_symbol": "scripts.mc_pool_backtest:run_backtest.pa_trials",
+      "live_transform": null,
+      "name": "pa_trials",
+      "status": "tuned_on_metric",
+      "swept_by": "pa_trials",
+      "tier": 3,
+      "valid_range": [
+        50,
+        5000
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:440 \u2014 PoolHyperparameters.blend_alpha",
+      "contaminated_by": [],
+      "current_value": 0.5,
+      "derivation": "One of only two fields in PoolHyperparameters, the dataclass whose docstring promises 'every field here must be fittable from train_years alone'. In the canonical run it is not fitted at all: default_pool_hyperparameters does 'del train_years  # baseline is year-independent by design'. So the walk-forward firewall for pool-layer knobs exists and is unused.",
+      "live_symbol": "scripts.mc_pool_backtest:PoolHyperparameters.blend_alpha",
+      "live_transform": null,
+      "name": "blend_alpha",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:3212-3230 \u2014 inline literal (0, 25, 50, 75, 100)",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "derivation": "The alpha sweep for the fixed_blend* modes, pinned at risk 0.35. The run log at :3183-3212 records the sweep and admits the plateau: 'alpha=1.0 tops the P(1st) column and does not survive'.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "fixed_alpha_grid_at_risk_35",
+      "status": "searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:3235 \u2014 inline literal (10, 20, 30, 40, 50, 70, 90)",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": [
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "derivation": "Carries the sharpest self-reported RDoF confession in the repo (sample_fixed_region_risk, :1183-1225): 'CAVEAT ON THIS COMPARISON. The frozen levels were chosen after looking at which levels meta selects across these same 15 seasons, so the margins are optimistic.'",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "fixed_risk_grid",
+      "status": "tuned_on_metric",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:4200-4204 \u2014 inline literal",
+      "contaminated_by": [],
+      "current_value": [
+        0.9,
+        0.1
+      ],
+      "derivation": "'Light blend: 90% torvik + 10% GBM' \u2014 the comment restates the numbers, it does not justify them.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "meta_region_blend_weights",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:2670 \u2014 local initial value in _run_one_year",
+      "contaminated_by": [],
+      "current_value": 0.0,
+      "derivation": "Bracket-level correlation for synthetic opponents, zero on the canonical path. Zero means opponents are independent draws with no chalk clustering -- audit finding H3. src/simulation/pool_history_opponent_model.py uses 0.15 as a 'conservative default' and pool_competition.compute_bracket_win_probability defaults to 0.4, so the repo holds three different answers.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "pool_chalk_noise_std",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.5
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:2728 \u2014 run_backtest.pool_blend_weight",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": 0.7,
+      "derivation": "Only read on the --opponent pool_calibrated path, which the canonical contract does not use. FINDINGS records the sweep: 'blend weights 0.0-0.7 of a cross-year pool model: all degrade P(1st) monotonically.'",
+      "live_symbol": "scripts.mc_pool_backtest:run_backtest.pool_blend_weight",
+      "live_transform": null,
+      "name": "pool_blend_weight",
+      "status": "searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "src/simulation/pool_competition.py:95 \u2014 compute_bracket_win_probability.noise_std",
+      "contaminated_by": [],
+      "current_value": 0.16,
+      "derivation": "Its own docstring says it 'should match the main MC engine (default 0.12)' while the value is 0.16 and the main engine is also 0.16. The documentation is wrong about both; registered so the contradiction is visible rather than latent.",
+      "live_symbol": "src.simulation.pool_competition:compute_bracket_win_probability.noise_std",
+      "live_transform": null,
+      "name": "pool_competition_noise_std",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.02,
+        0.3
+      ]
+    },
+    {
+      "code_path": "src/prediction/seed_probabilities.py:33 \u2014 OUTCOME_WINDOW",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": "recent",
+      "derivation": "'THIS MODULE IS AN OUTCOME MODEL, SO IT USES THE RECENT WINDOW... Keeping both on one window was the previous behaviour and it quietly cancelled itself.' Sets the referee to 2010-2025 seed head-to-heads -- a window that overlaps every backtested season, which is the circularity of audit finding C2.",
+      "live_symbol": "src.prediction.seed_probabilities:OUTCOME_WINDOW",
+      "live_transform": null,
+      "name": "seed_outcome_window",
+      "status": "searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": null
+    },
+    {
+      "code_path": "src/data/seed_pick_model.py:131 \u2014 RECENT_FIRST_SEASON",
+      "contaminated_by": [],
+      "current_value": 2010,
+      "derivation": "The cut defining 'recent'. Justified by an effect size \u2014 '6-11: the favourite wins 62.2% across the full history and 48.3% since 2010' \u2014 which is a reason the cut matters, not a reason it falls in 2010.",
+      "live_symbol": "src.data.seed_pick_model:RECENT_FIRST_SEASON",
+      "live_transform": null,
+      "name": "seed_recent_first_season",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        1985,
+        2020
+      ]
+    },
+    {
+      "code_path": "src/data/seed_pick_model.py \u2014 _RECENT_PRIOR_STRENGTH",
+      "contaminated_by": [],
+      "current_value": 8,
+      "derivation": "Shrinkage strength on the recent-window seed table. No provenance recorded.",
+      "live_symbol": "src.data.seed_pick_model:_RECENT_PRIOR_STRENGTH",
+      "live_transform": null,
+      "name": "seed_recent_prior_strength",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0,
+        50
+      ]
+    },
+    {
+      "code_path": "src/data/seed_pick_model.py \u2014 _RECENT_MIN_GAMES",
+      "contaminated_by": [],
+      "current_value": 8,
+      "derivation": "Minimum games before the recent window is trusted over the prior. No provenance recorded.",
+      "live_symbol": "src.data.seed_pick_model:_RECENT_MIN_GAMES",
+      "live_transform": null,
+      "name": "seed_recent_min_games",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0,
+        50
+      ]
+    },
+    {
+      "code_path": "scripts/experiments/build_candidate_artifact.py:84 \u2014 DEFAULT_POOL_SIZE",
+      "contaminated_by": [],
+      "current_value": 30,
+      "derivation": "'opponent field assumed by every P(1st) in the artifact' \u2014 30 entries, i.e. 29 opponents.",
+      "live_symbol": "scripts.experiments.build_candidate_artifact:DEFAULT_POOL_SIZE",
+      "live_transform": null,
+      "name": "candidate_bank_pool_size",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        2,
+        1000
+      ]
+    },
+    {
+      "code_path": "scripts/experiments/build_candidate_artifact.py:810 \u2014 inline literal",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": [
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.7
+      ],
+      "derivation": "'The risk grid spans the measured plateau (0.2-0.5) plus its edges.' A DIFFERENT grid from the backtest's (0.1, 0.3, 0.5, 0.7, 0.9), and the plateau it spans was measured on the evaluation seasons.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "candidate_bank_risk_grid",
+      "status": "tuned_on_metric",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/experiments/build_candidate_artifact.py:503 \u2014 _blend_region_bracket.risk",
+      "contaminated_by": [
+        2026
+      ],
+      "current_value": 0.35,
+      "derivation": "'0.35 is the middle of that plateau, picked for being unremarkable.' The shipped 'Maximise chance of winning' strategy, and NOT meta_region_poolaware -- its own docstring records the opposite finding: 'CHOOSING THE LEVEL PER SEASON IS WORSE THAN FIXING IT. Walk-forward selection over the 21-config grid scores 0.1092 against 0.1317 for a fixed mid-plateau level.'",
+      "live_symbol": "scripts.experiments.build_candidate_artifact:_blend_region_bracket.risk",
+      "live_transform": null,
+      "name": "blend_region_35_risk",
+      "status": "frozen_after_search",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/experiments/build_candidate_artifact.py:275 \u2014 stratified_sample.min_per_champion",
+      "contaminated_by": [],
+      "current_value": 8,
+      "derivation": "'The floor is what keeps unlikely-but-plausible champions in the artifact.' Value unjustified.",
+      "live_symbol": "scripts.experiments.build_candidate_artifact:stratified_sample.min_per_champion",
+      "live_transform": null,
+      "name": "candidate_bank_min_per_champion",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0,
+        100
+      ]
+    },
+    {
+      "code_path": "scripts/experiments/build_candidate_artifact.py:276 \u2014 stratified_sample.ev_strata",
+      "contaminated_by": [],
+      "current_value": 10,
+      "derivation": "'the EV strata are what keep the low-EV / high-P(1st) region.' Value unjustified. Both this and min_per_champion ARE inside the hashed frozen 2027 spec, so they cannot be changed without a SPEC_VERSION bump.",
+      "live_symbol": "scripts.experiments.build_candidate_artifact:stratified_sample.ev_strata",
+      "live_transform": null,
+      "name": "candidate_bank_ev_strata",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        1,
+        100
+      ]
+    },
+    {
+      "code_path": "src/optimization/recency_hparam_fitter.py:66 \u2014 _DEFAULT_ALPHA_GRID",
+      "contaminated_by": [],
+      "current_value": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "derivation": "The one real walk-forward fitter in the repo, and it is 'Diagnostic only: this module is NOT wired into scripts/generate_poolaware_bracket.py'. Registered because the walk-forward discipline the headline claims is implemented here and not used.",
+      "live_symbol": "src.optimization.recency_hparam_fitter:_DEFAULT_ALPHA_GRID",
+      "live_transform": "sorted",
+      "name": "recency_alpha_grid",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "src/optimization/recency_hparam_fitter.py:120 \u2014 RecencyAlphaFitter.window_years",
+      "contaminated_by": [],
+      "current_value": 3,
+      "derivation": "Trailing seasons the fitter tunes on. No provenance recorded.",
+      "live_symbol": "src.optimization.recency_hparam_fitter:RecencyAlphaFitter.window_years",
+      "live_transform": null,
+      "name": "recency_window_years",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        1,
+        15
+      ]
+    },
+    {
+      "code_path": "src/optimization/recency_hparam_fitter.py \u2014 RecencyAlphaFitter.n_opponents",
+      "contaminated_by": [],
+      "current_value": 30,
+      "derivation": "30, against the canonical contract's 29 \u2014 a 31-person pool, not a 30-person one. This is audit recommendation 15, and the module's own LOAD-BEARING CAVEAT says why it matters: 'the fitter silently tunes blend_alpha against a different opponent field than the one actually used for selection. Nothing in the HparamFitter protocol enforces this \u2014 it is pure documentation discipline.'",
+      "live_symbol": "src.optimization.recency_hparam_fitter:RecencyAlphaFitter.n_opponents",
+      "live_transform": null,
+      "name": "recency_fitter_n_opponents",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        9,
+        999
+      ]
+    },
+    {
+      "code_path": "src/optimization/recency_hparam_fitter.py:127 \u2014 RecencyAlphaFitter.pa_trials_fit",
+      "contaminated_by": [],
+      "current_value": 100,
+      "derivation": "100 against production's 500, so the fitter selects under 5x the selection noise production has.",
+      "live_symbol": "src.optimization.recency_hparam_fitter:RecencyAlphaFitter.pa_trials_fit",
+      "live_transform": null,
+      "name": "recency_pa_trials_fit",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 3,
+      "valid_range": [
+        10,
+        5000
+      ]
+    },
+    {
+      "code_path": "src/optimization/recency_hparam_fitter.py:64 \u2014 _REGION_RISK_LEVELS",
+      "contaminated_by": [],
+      "current_value": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "derivation": "A hand-copy of poolaware_recipe.POOLAWARE_RISK_LEVELS rather than an import, so the two can drift silently. Tier 2 because it is not an independent choice \u2014 it is supposed to equal the recipe's grid, and a test now asserts that.",
+      "live_symbol": "src.optimization.recency_hparam_fitter:_REGION_RISK_LEVELS",
+      "live_transform": "sorted",
+      "name": "recency_risk_grids_duplicated",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:117 \u2014 EVALUATION_YEARS",
+      "contaminated_by": [],
+      "current_value": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "derivation": "2011 floor because TRAIN_YEARS starts 2008 and the walk-forward contract needs at least 3 prior seasons; 2020 absent (no tournament); 2026 stripped as contaminated. Tier 2: every boundary is forced by something other than preference.",
+      "live_symbol": "scripts.mc_pool_backtest:EVALUATION_YEARS",
+      "live_transform": "sorted",
+      "name": "evaluation_years",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:116 \u2014 CONTAMINATED_EVAL_YEARS",
+      "contaminated_by": [],
+      "current_value": [
+        2026
+      ],
+      "derivation": "Added 2026-09-09 in a3fb412 \u2014 four months AFTER the candidate-family prunings of 2026-05-03 and 2026-05-16 that used a 15-season aggregate including 2026. The guard is correct and arrived too late to have prevented what it guards against.",
+      "live_symbol": "scripts.mc_pool_backtest:CONTAMINATED_EVAL_YEARS",
+      "live_transform": "sorted",
+      "name": "contaminated_eval_years",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py:3342, 3610, 3927, 3960, 4156 \u2014 inline literals (seed + year)",
+      "contaminated_by": [],
+      "current_value": [
+        42,
+        77777,
+        54321,
+        99999
+      ],
+      "derivation": "Five independent per-year streams. Tier 2: arbitrary but inconsequential, since each is offset by `year` and the estimand does not depend on the seed. The 77777 stream is regression-pinned by tests/test_parallel_run_backtest.py, so it is now load-bearing for reproducibility even though it was arbitrary when chosen.",
+      "live_symbol": null,
+      "live_transform": null,
+      "name": "per_year_rng_seeds",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": null
+    }
+  ],
+  "sensitivity": {
+    "axes": {
+      "pa_trials": {
+        "best_p_first": 0.11999999999999998,
+        "best_value": 500,
+        "category": "flat_plateau",
+        "cells": [
+          {
+            "aggregate_p_first": 0.1157142857142857,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": false,
+            "label": "200",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.04,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.09,
+              "2018": 0.05,
+              "2019": 0.09,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.15,
+              "2025": 0.2
+            },
+            "reused": false,
+            "value": 200,
+            "wall_time_minutes": 1.4
+          },
+          {
+            "aggregate_p_first": 0.11999999999999998,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": true,
+            "label": "500",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": true,
+            "value": 500,
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.11785714285714285,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": false,
+            "label": "1000",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.05,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.16,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": 1000,
+            "wall_time_minutes": 1.7
+          }
+        ],
+        "effective_dof": 0.0,
+        "gap_to_best_pp": 0.0,
+        "production_is_best": true,
+        "production_p_first": 0.11999999999999998,
+        "production_value": 500,
+        "spread_pp": 0.43,
+        "why_swept": "Raised 200 -> 500 BECAUSE IT HELPED on these same evaluation seasons (FINDINGS.md:137-139) -- provenance by its own effect on the metric being reported, which is the definition of a researcher degree of freedom."
+      },
+      "poolaware_base_order": {
+        "best_p_first": 0.11999999999999998,
+        "best_value": "recipe",
+        "category": "flat_plateau",
+        "cells": [
+          {
+            "aggregate_p_first": 0.11999999999999998,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": true,
+            "label": "recipe",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": true,
+            "value": "recipe",
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.11999999999999998,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": false,
+            "label": "reversed",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": "reversed",
+            "wall_time_minutes": 1.5
+          }
+        ],
+        "effective_dof": 0.0,
+        "gap_to_best_pp": 0.0,
+        "production_is_best": true,
+        "production_p_first": 0.11999999999999998,
+        "production_value": "recipe",
+        "spread_pp": 0.0,
+        "why_swept": "The selector's tie-break is strictly-greater, so the recipe's base order can decide which bracket ships without changing any probability -- the recipe says so itself (poolaware_recipe.py:70-73). An undocumented DoF worth its own axis."
+      },
+      "poolaware_risk_levels": {
+        "best_p_first": 0.12000000000000001,
+        "best_value": [
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.7,
+          0.8,
+          0.9
+        ],
+        "category": "flat_plateau",
+        "cells": [
+          {
+            "aggregate_p_first": 0.11999999999999998,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": true,
+            "label": "production",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": true,
+            "value": [
+              0.1,
+              0.3,
+              0.5,
+              0.7,
+              0.9
+            ],
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.1142857142857143,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": false,
+            "label": "coarse",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.06,
+              "2014": 0.14,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.05,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": [
+              0.2,
+              0.5,
+              0.8
+            ],
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.12000000000000001,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": false,
+            "label": "fine",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.14,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.08,
+              "2021": 0.06,
+              "2022": 0.1,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": [
+              0.1,
+              0.2,
+              0.3,
+              0.4,
+              0.5,
+              0.6,
+              0.7,
+              0.8,
+              0.9
+            ],
+            "wall_time_minutes": 1.6
+          }
+        ],
+        "effective_dof": 0.0,
+        "gap_to_best_pp": 0.0,
+        "production_is_best": true,
+        "production_p_first": 0.11999999999999998,
+        "production_value": [
+          0.1,
+          0.3,
+          0.5,
+          0.7,
+          0.9
+        ],
+        "spread_pp": 0.57,
+        "why_swept": "No numeric provenance recorded anywhere for this grid (poolaware_recipe.py:30)."
+      },
+      "referee_noise_std": {
+        "best_p_first": 0.12285714285714285,
+        "best_value": 0.08,
+        "category": "flat_plateau",
+        "cells": [
+          {
+            "aggregate_p_first": 0.12285714285714285,
+            "baseline_aggregate_p_first": 0.040171428571428566,
+            "is_production": false,
+            "label": "0.08",
+            "per_year": {
+              "2011": 0.03,
+              "2012": 0.06,
+              "2013": 0.15,
+              "2014": 0.08,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.1,
+              "2018": 0.08,
+              "2019": 0.14,
+              "2021": 0.07,
+              "2022": 0.12,
+              "2023": 0.18,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": 0.08,
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.11999999999999998,
+            "baseline_aggregate_p_first": 0.03987142857142857,
+            "is_production": true,
+            "label": "0.16",
+            "per_year": {
+              "2011": 0.02,
+              "2012": 0.05,
+              "2013": 0.17,
+              "2014": 0.09,
+              "2015": 0.16,
+              "2016": 0.21,
+              "2017": 0.11,
+              "2018": 0.07,
+              "2019": 0.11,
+              "2021": 0.07,
+              "2022": 0.11,
+              "2023": 0.17,
+              "2024": 0.13,
+              "2025": 0.21
+            },
+            "reused": false,
+            "value": 0.16,
+            "wall_time_minutes": 1.5
+          },
+          {
+            "aggregate_p_first": 0.11214285714285713,
+            "baseline_aggregate_p_first": 0.04002857142857143,
+            "is_production": false,
+            "label": "0.24",
+            "per_year": {
+              "2011": 0.03,
+              "2012": 0.06,
+              "2013": 0.19,
+              "2014": 0.08,
+              "2015": 0.14,
+              "2016": 0.22,
+              "2017": 0.08,
+              "2018": 0.04,
+              "2019": 0.1,
+              "2021": 0.06,
+              "2022": 0.09,
+              "2023": 0.16,
+              "2024": 0.13,
+              "2025": 0.19
+            },
+            "reused": false,
+            "value": 0.24,
+            "wall_time_minutes": 1.5
+          }
+        ],
+        "effective_dof": 0.0,
+        "gap_to_best_pp": 0.29,
+        "production_is_best": false,
+        "production_p_first": 0.11999999999999998,
+        "production_value": 0.16,
+        "spread_pp": 1.07,
+        "why_swept": "Cited to Lopez & Matthews (2015), a point-spread paper, and never fit to this repo's data -- audit finding M2. The one attempt to fit it (src/simulation/mc_calibration.py) was broken and was retired rather than fixed."
+      }
+    },
+    "design_note": "One-at-a-time from the production setting, not a full factorial: a factorial over these four axes is ~200 cells and several days, and the question asked here is whether any single unjustified knob moves the headline. Interaction effects are therefore NOT measured and this cannot rule them out.",
+    "excluded_seasons": {
+      "2026": "parameter-clean holdout -- deriving parameters here would contaminate it",
+      "2027": "sequestered prospective holdout"
+    },
+    "flat_threshold_pp": 1.5,
+    "measurement": "one-at-a-time specification curve over un-provenanced tier-3 knobs",
+    "mild_threshold_pp": 3.0,
+    "n_seasons": 14,
+    "not_adopted": "No sweep optimum is adopted into the code by this script, deliberately. Adopting the best cell would itself be a new researcher degree of freedom -- exactly what the deleted rdof_audit.adopt_sensitivity_optima() did wrong. Any adoption is a separate decision requiring a SPEC_VERSION bump.",
+    "provenance": {
+      "canonical_contract": {
+        "n_opponents": 29,
+        "n_repeats": 100,
+        "opponent_source": "pool",
+        "pa_trials": 500,
+        "team_identity": true
+      },
+      "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+      "git_dirty": true,
+      "timestamp": "2026-09-12T14:29:48"
+    },
+    "seasons": [
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "threshold_basis": "1.5pp is one season-level standard error on the headline (audit H1)",
+    "total_effective_dof": 0.0
+  }
+}

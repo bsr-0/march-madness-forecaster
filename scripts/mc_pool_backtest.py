@@ -27,7 +27,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Sequence, Tuple
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 from scripts._common import _load_torvik_ff, load_tournament_results  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -2727,6 +2727,9 @@ def _run_one_year(
     opponent_strategy="shared",
     pool_blend_weight=0.7,
     pa_trials=500,
+    referee_noise_std=REFEREE_NOISE_STD,
+    poolaware_risk_levels=None,
+    poolaware_base_order="recipe",
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -3621,6 +3624,7 @@ def _run_one_year(
                     matchup_probs=seed_pw,
                     seeds=seeds,
                     rng=_cf_rng,
+                    noise_std=referee_noise_std,
                 )
                 for ci in range(len(cand_champs)):
                     p1 = score_candidate_p1(cand_brackets[ci], _cf_trials, first_round, ESPN_SCORING)
@@ -3937,6 +3941,7 @@ def _run_one_year(
                         matchup_probs=seed_pw,
                         seeds=seeds,
                         rng=_4c_rng,
+                        noise_std=referee_noise_std,
                     )
                     for ci in range(len(cand_brackets)):
                         p1 = score_candidate_p1(cand_brackets[ci], _4c_trials, first_round, ESPN_SCORING)
@@ -3990,8 +3995,20 @@ def _run_one_year(
                     massey_best=base_round_probs.get("massey_best"),
                     blend=base_round_probs.get("blend"),
                 )
+                # The recipe's order decides ties (the selector keeps the first
+                # candidate reaching the best P(1st)), so the order is itself a
+                # degree of freedom. Reversing it is a sweep axis for
+                # scripts/pool_rdof_audit.py --sweep; production never does.
+                if poolaware_base_order == "reversed":
+                    _pa_prob_bases = list(reversed(_pa_prob_bases))
+                elif poolaware_base_order != "recipe":
+                    raise ValueError(
+                        f"poolaware_base_order must be 'recipe' or 'reversed', got {poolaware_base_order!r}"
+                    )
 
-                _pa_risk_levels = POOLAWARE_RISK_LEVELS
+                _pa_risk_levels = (
+                    POOLAWARE_RISK_LEVELS if poolaware_risk_levels is None else tuple(poolaware_risk_levels)
+                )
 
                 # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
                 for forced in one_seed_teams:
@@ -4119,6 +4136,7 @@ def _run_one_year(
                         seeds=seeds,
                         rng=_pa_rng,
                         chalk_noise_std=pool_chalk_noise_std,
+                        noise_std=referee_noise_std,
                     )
                     for ci, (bvec, _) in enumerate(_pa_candidates):
                         p1 = score_candidate_p1(bvec, _pa_trials_set, first_round, ESPN_SCORING)
@@ -4389,7 +4407,7 @@ def _run_one_year(
                     first_round_matchups=first_round,
                     matchup_probs=seed_pw,
                     seeds=seeds,
-                    noise_std=REFEREE_NOISE_STD,
+                    noise_std=referee_noise_std,
                     rng=year_rng,
                 )
                 sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
@@ -4446,7 +4464,7 @@ def _run_one_year(
                         first_round_matchups=first_round,
                         matchup_probs=seed_pw,
                         seeds=seeds,
-                        noise_std=REFEREE_NOISE_STD,
+                        noise_std=referee_noise_std,
                         rng=mode_opp_rng,
                     )
                     sim_winners = {rnd: set(sim_by_round[0][ri]) for ri, rnd in enumerate(ROUND_NAMES)}
@@ -4784,6 +4802,9 @@ def run_backtest(
     eval_start_year: int = None,
     pool_blend_weight: float = 0.7,
     pa_trials: int = 500,
+    referee_noise_std: float = REFEREE_NOISE_STD,
+    poolaware_risk_levels: Optional[Sequence[float]] = None,
+    poolaware_base_order: str = "recipe",
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -4809,6 +4830,28 @@ def run_backtest(
 
     Args:
         opponent_source: "seed" for SEED_PICK_RATES, "espn" for real ESPN data.
+        referee_noise_std: Logit-space noise on the simulated-outcome referee,
+            applied identically to the evaluation draws and to the three
+            candidate-selection draw sites. Threaded as a parameter rather
+            than read from the ``REFEREE_NOISE_STD`` global at each call site
+            so that the RDoF sensitivity sweep
+            (``scripts/pool_rdof_audit.py --sweep``) can vary it with
+            ``workers > 1``: ``ProcessPoolExecutor`` uses the *spawn* start
+            method here, so worker processes re-import this module and a
+            monkeypatched global would silently revert to 0.16 in every child.
+            Defaults to the global, so production behaviour is unchanged and
+            ``tests/test_parallel_run_backtest.py``'s bit-equality lock still
+            holds.
+        poolaware_risk_levels: Override for ``POOLAWARE_RISK_LEVELS`` in the
+            ``meta_region_poolaware`` candidate sweep. ``None`` means the
+            recipe's own grid. Threaded for the same spawn-safety reason as
+            ``referee_noise_std``.
+        poolaware_base_order: ``"recipe"`` (production) or ``"reversed"``.
+            The selector's tie-break is strictly-greater, so the recipe's base
+            order can decide which bracket ships without changing any
+            probability (``src/optimization/poolaware_recipe.py:70-73``).
+            Reversing it measures how much that costs; it is a sweep axis, not
+            a production option.
         hparam_fitter: Walk-forward fitter for pool hyperparameters. Called
             as ``hparam_fitter(train_years)`` per test year with the training
             window. Defaults to ``default_pool_hyperparameters`` (no-op
@@ -4819,6 +4862,15 @@ def run_backtest(
     # seasons included (integration / equivalence checks run 2026 on purpose).
     # The default sweep returns evaluation seasons only; aggregates never include
     # a contaminated season either way (report_backtest_results strips them).
+    # Validate sweep overrides here rather than letting them surface from inside
+    # a worker: _run_one_year only reaches the poolaware branch partway through a
+    # season, and under ProcessPoolExecutor a typo would otherwise cost real
+    # compute before failing.
+    if poolaware_base_order not in ("recipe", "reversed"):
+        raise ValueError(f"poolaware_base_order must be 'recipe' or 'reversed', got {poolaware_base_order!r}")
+    if poolaware_risk_levels is not None and not len(tuple(poolaware_risk_levels)):
+        raise ValueError("poolaware_risk_levels was given but is empty; pass None for the recipe's own grid")
+
     explicit_years = years is not None
     if years is None:
         years = BACKTEST_YEARS
@@ -4865,6 +4917,9 @@ def run_backtest(
         opponent_strategy,
         pool_blend_weight,
         pa_trials,
+        referee_noise_std,
+        poolaware_risk_levels,
+        poolaware_base_order,
     )
 
     def _absorb(outcome: dict) -> None:

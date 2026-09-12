@@ -37,7 +37,7 @@ on a manual, single-person process.
 | Dimension | Grade | One-line reason |
 |---|---|---|
 | Construction / selection methodology | B | Sound mechanics; objective is optimised and evaluated inside the same synthetic referee |
-| Evidence for the headline P(1st) | D | Simulated outcomes, in-sample sweep, no year-level CI, contaminated 2026 included |
+| Evidence for the headline P(1st) | C | **Revised 2026-09-12.** Three of this row's four original complaints are now fixed: the CI is season-level (H1), 2026 is excluded (`CONTAMINATED_EVAL_YEARS`), and the best-of-79 sweep is multiplicity-corrected and survives (H2). What keeps it from better: the outcomes are still simulated by a referee the strategy was selected against (C2), and 12 degrees of freedom against 14 seasons is not fixable by analysis |
 | Prediction model integrity | C+ | Game-level PIT is genuinely careful; one confirmed feature leak (roster WARP/RAPM); MC noise never fit |
 | Data provenance for 2027 | C | "Pre-tournament" Torvik files are April-2026 date-window reconstructions; no live picks endpoint |
 | Governance / pre-registration | B− | Real hash-pinned freeze, but pre-registers no number, no bracket, no failure criterion |
@@ -45,6 +45,14 @@ on a manual, single-person process.
 | 2027 user value (web page) | B | Usable, shareable, SE-aware display; fixed 30-person ESPN-behaviour WTA pool only |
 | 2027 user value (CLI / clone-and-run) | F | `optimize-pool` fails in every mode today |
 | Maintainability / bus factor | D | 1 maintainer, 112 scripts, CI red, nightly cron disabled |
+
+**Scorecard freshness.** Grades were assigned when this audit was written and the
+recommendation pass has since fixed a good deal. Only "Evidence for the headline P(1st)" has
+been re-assessed against the current code (2026-09-12, under recommendation 12); every other
+row still reflects the original review and several are known to be stale — the dead CLI modes,
+the `CLAUDE.md` links and the ML-pipeline framing under "Documentation honesty" have all been
+addressed. Read the individual findings, which carry dated status notes, in preference to this
+table.
 
 ---
 
@@ -197,6 +205,67 @@ includes 2026, which the frozen spec itself classifies as contaminated. The RDoF
 module (`src/ml/evaluation/rdof_audit.py`) covers only ML-pipeline constants and LOYO Brier;
 it has zero references to the pool-strategy search. The FINDINGS permutation test
 (p=0.0076) corrected over modes in one run, not over the history of removed candidates.
+
+**MEASURED AND COUNTED 2026-09-12 (recommendation 12). Not fixed — H2 stands.** The RDoF
+audit module referenced above no longer exists: it went with the ML pipeline in `ea06a40`
+(H10), and it never had a single reference to the pool search anyway. Rebuilt scoped to this
+product as `src/governance/pool_rdof_audit.py` + `scripts/pool_rdof_audit.py`, with the one
+thing the original got badly wrong repaired — its registry was a hand-maintained literal
+that drifted from the code until it needed a section titled *"Previously Unregistered
+Constants"*, so here every entry that can name a live symbol does, and
+`tests/test_pool_rdof_audit.py` fails the build when registry and code disagree (29 of 41
+entries machine-checked; the other 12 are inline literals with no importable binding, which
+is itself a finding).
+
+The count: **41 registered knobs — 33 tier-3 (freely tuned), 12 of which are degrees of
+freedom actually spent on this metric, against 14 independent seasons (0.86 DoF per
+season).** Twelve were chosen while 2026's outcome was known and in scope. Four were set
+*because of their effect on this number*, the sharpest being the frozen-risk grid, whose own
+docstring confesses it: *"The frozen levels were chosen after looking at which levels meta
+selects across these same 15 seasons, so the margins are optimistic."* Three candidate
+families/mode groups were deleted for scoring worse. That last category is the irreducible
+part — the code is gone, so no resampling scheme can return those specifications to the
+family, and it is why this item is measured rather than closed.
+
+**The two measurements that did not exist before.** Both pre-registered their decision rule in
+`scripts/pool_rdof_audit.py`'s docstring before being run.
+
+*Multiplicity.* Every one of the 79 modes, re-measured on the 14 evaluation seasons under the
+canonical contract (85 min; every prior multi-mode run in `artifacts/backtest_runs/` predates
+`b73d351` and is void), then a Romano-Wolf stepdown on the P(1st) deltas against `seed` —
+sign-flipping whole seasons with one shared sign vector per draw, so the cross-mode correlation
+that `--opponent-strategy shared` deliberately creates is carried into the null instead of
+assumed away. `meta_region_poolaware` scores **0.1200** against `seed`'s 0.0399, reproducing the
+published 12.0% exactly. **Stepdown-adjusted p = 0.0006** against a pre-registered 0.05, and the
+best-of-family p is the same number. **The headline is not an artifact of selecting the best of
+79.** 15 of the 78 comparable modes clear FWER < 0.05, so this is not one lucky arm either.
+
+*Sensitivity.* A one-at-a-time specification curve over the four tier-3 knobs with the worst
+provenance debt, on 2011–2025 only. **All four are flat** — `referee_noise_std` 1.07pp across
+0.08/0.16/0.24, `pa_trials` 0.43pp across 200/500/1000, `POOLAWARE_RISK_LEVELS` 0.57pp across
+three grids, and base order exactly 0.00pp. Against a 1.5pp season-level standard error none of
+them moves the headline, so they cost ~0 effective degrees of freedom. Two consequences worth
+stating plainly: the M2 complaint that `noise_std=0.16` was never fit to this repo is correct
+and **turns out not to matter**, and the `pa_trials` 200→500 change made *because it helped*
+bought nothing detectable — a degree of freedom spent for no return.
+
+**What this does not settle, and why H2 stands.** The correction covers the 79 modes that still
+exist, not the search's history. Three candidate families/mode groups were deleted for scoring
+worse (2026-04-12, 2026-05-03, 2026-05-16) and their code is gone, so no resampling scheme can
+return them to the family; they are registered as `removed_after_measuring` and that debt is
+permanent. The sweep is one-at-a-time, so interactions are unmeasured. And the ratio is
+unchanged by any of it: **12 degrees of freedom against 14 independent seasons**, roughly one
+free choice per observation, which only time can fix.
+
+**One finding that was not the question asked.** The highest *aggregate* P(1st) in the family is
+not the production strategy — `fixed_blendA100_r35` scores 0.1214 — but that mode is built from
+pure seed probabilities while the referee grading every trial is the same seed model, so it is
+C2's circularity rather than a rival strategy, and its number must not be quoted as a
+competitor. Logged as **H11**, with what it does and does not say about whether per-season
+selection earns its complexity.
+
+Full inventory with per-knob provenance in `artifacts/headline_measurement/pool_rdof_audit.txt`;
+raw matrices in `mode_multiplicity_2011_2025.json` and `specification_curve_2011_2025.json`.
 
 **H3. Opponent model is synthetic for 11 of 15 years and leaks future behaviour into
 early years.** CONFIRMED. Opponents are independent draws (`chalk_noise_std=0.0`,
@@ -738,6 +807,48 @@ it does not exist. Nine of nineteen documented commands (`sota`, `pre-tournament
 `SIMPLE_FEATURE_SET` with `enable_feature_selection: true`, so the production set is
 learned, not the listed seven. `ARCHITECTURE_AUDIT…` line citations are stale.
 
+**H11. The mode that tops the P(1st) table is the one built from the referee's own
+probabilities — C2's circularity, in its sharpest available form.** FOUND 2026-09-12 while
+measuring H2's multiplicity question. On the 79-mode × 14-season run, the highest aggregate
+P(1st) in the whole family is **`fixed_blendA100_r35` at 0.1214**, above
+`meta_region_poolaware`'s 0.1200. The first reading — "a fixed rule with no per-season search
+matches the production search" — is wrong, and checking what that mode *is* before reporting
+it is what makes it a finding instead of a headline.
+
+`blend = alpha * seed_rp + (1 - alpha) * noseed_rp`, so **alpha=1.0 is pure seed
+probabilities, with no no-seed model in it at all**. And the referee that draws the "true"
+tournament in every trial is `seed_pw` — the same seed model. That bracket is therefore
+constructed from the grader's own beliefs, and scoring well is close to what it means to be
+that bracket. The alpha curve makes the point better than the level does:
+
+| alpha (weight on seed) | 0.00 | 0.25 | 0.50 | 0.75 | 1.00 |
+|---|---|---|---|---|---|
+| aggregate P(1st) | .0879 | .1050 | .1086 | .1036 | **.1214** |
+
+A smooth mixture weight producing a flat plateau across its interior and then a 1.8pp jump
+at exactly the endpoint that coincides with the referee is far more consistent with
+circularity than with a real effect. `mc_pool_backtest.py:3183` reached the same place from
+the other side and said alpha=1.0 "does not survive" — it is worse on mean rank than
+alpha=0.75, and wins only 8 of 15 seasons against the shipped 0.5.
+
+**What this does say about the search.** Excluding the circular endpoint, the best fixed
+rule in the family is `fixed_blend_r40` at 0.1100, about 1pp below the search's 0.1200 — so
+the selection machinery does appear to add something, rather than nothing. But 1pp is well
+inside the 1.5pp season-level standard error, and season by season `meta_region_poolaware`
+beats `fixed_blendA100_r35` in only **5 of 14 seasons (2 ties, 7 losses)**. Set against
+`build_candidate_artifact.py:514`'s independent *"CHOOSING THE LEVEL PER SEASON IS WORSE
+THAN FIXING IT"*, the fair summary is that **whether per-season selection earns its
+complexity is unresolved at n=14, in either direction** — not that it is worthless, and not
+that it is established.
+
+The practical consequence is for C2, not for the strategy: any future comparison that
+includes a probability base equal to the referee is not measuring bracket quality on that
+arm, and `fixed_blendA100_r35`'s number should never be quoted as a competitor to the
+headline without this caveat attached. Recommendation 16 proposes settling the
+search-versus-fixed question with a pre-registered 2027 A/B using a *non-circular* fixed
+arm, since a fourth pass over the same 14 seasons is exactly the behaviour H2 exists to
+flag.
+
 ---
 
 ## 4. Value to a user in March 2027
@@ -943,9 +1054,57 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     under the simulated figure. See C2. **Still open:** an independent referee *inside*
     selection (a materially larger change — it could alter which candidate each season
     picks) is 2028-scale work, same as recommendation 12.
-12. Bring the pool-strategy search under the RDoF audit; keep one never-touched holdout year.
+12. ~~Bring the pool-strategy search under the RDoF audit; keep one never-touched holdout
+    year.~~ **DONE 2026-09-12 (measured, not repaired).** The RDoF audit module this pointed
+    at no longer existed — `src/ml/evaluation/rdof_audit.py` went with the ML pipeline in
+    `ea06a40` (H10), and it never referenced the pool search anyway. Rebuilt scoped to this
+    product: `src/governance/pool_rdof_audit.py` (41-knob registry with provenance quoted
+    from the code, a six-way `status` vocabulary distinguishing *searched* from
+    *tuned_on_metric* from *removed_after_measuring*, DoF accounting against seasons rather
+    than repeats), `src/evaluation/multiplicity.py` (Romano-Wolf stepdown),
+    `scripts/pool_rdof_audit.py` (driver, decision rules pre-registered in its docstring),
+    `tests/test_pool_rdof_audit.py` (21 tests).
+
+    The original's worst flaw is fixed rather than inherited: its registry was a
+    hand-maintained literal that drifted from the code until it needed a section titled
+    *"Previously Unregistered Constants"* plus a hand-copied `_N_TUNED_CONSTANTS = 58` in a
+    second module. Here `live_value()` resolves each entry by import and a test fails the
+    build on any disagreement — 29 of 41 machine-checked, zero drift; a second test fails
+    when a new module-level constant appears in the searched files and is neither registered
+    nor explicitly excused, because drift by *addition* is what actually happened last time.
+    Its most dangerous function, `adopt_sensitivity_optima()`, is deliberately not ported:
+    auto-adopting a sweep optimum is itself a fresh degree of freedom.
+
+    Results in H2 and H11. Headline survives multiplicity correction (stepdown p = 0.0006
+    over 78 modes); all four swept knobs flat; 12 DoF against 14 seasons.
+
+    **The holdout half could not be done as asked, and that is a finding.** No season is
+    never-touched and none can be made so retroactively. 2026 — the obvious candidate — is
+    *not* blocked by training leakage (`train_noseed_model` filters `y < max_year`, so
+    nothing evaluated on 2026 trains on it) but by the search: candidate families were
+    deleted on 2026-04-12, 2026-05-03 and 2026-05-16 on the strength of 15-season aggregates,
+    and a 15-season window includes 2026, whose tournament ended that April.
+    `CONTAMINATED_EVAL_YEARS` did not exist until 2026-09-09 (`a3fb412`). Promoting 2026 in
+    the frozen spec would additionally require a `SPEC_VERSION` bump, voiding the 2027
+    prospective claim — trading a genuinely untouched holdout for a partly-decontaminated
+    one. So two tiers instead, with the weaker one labelled: **2027 stays Level 1** and is
+    now *enforced* (`assert_not_sequestered` raises; a test asserts no search or aggregate
+    path admits it), and **2026 is Level 2.5** — structurally contaminated, parameter-clean,
+    scored once at 0.110 against `seed`'s 0.034. A lockfile hashes the registry at evaluation
+    time so any later knob change is detectable as contamination of that result.
 13. Opponent model with chalk clustering / correlated picks, pool-size and payout inputs,
     multi-entry support — the features that separate a recommender from a pool tool.
+16. **Pre-register a 2027 A/B: `fixed_blend_r40` vs `meta_region_poolaware`.** New, from H11.
+    Does per-season candidate selection earn its complexity? At n=14 it is unresolved: the
+    search leads the best non-circular fixed rule by ~1pp, which is inside one season-level
+    standard error, while `build_candidate_artifact.py:514` found the opposite sign on its
+    own grid. A difference between two named strategies is the one question a single
+    prospective season can usefully answer — it needs a sign, not a level — but only if both
+    are declared before Selection Sunday. **The fixed arm must not be
+    `fixed_blendA100_r35`**, despite it topping the table: it is built from the referee's own
+    probabilities (H11), so it would measure circularity rather than construction. Deciding
+    this on the 2011–2025 window instead would be a fourth choice made on the same data,
+    which is the behaviour H2 exists to flag.
 
 ---
 
