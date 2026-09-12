@@ -1,8 +1,8 @@
 name: Deploy docs on push
 
 # Deploys the static docs/ folder to GitHub Pages whenever anything the site
-# actually serves changes on main. Runs independently of the full ML pipeline
-# so UI changes are visible immediately after a push.
+# actually serves changes on main. This is now the ONLY deploy path (see
+# below) so UI changes are visible immediately after a push.
 #
 # THE FILTER IS A LIST OF FILES THAT MUST EXIST, and it silently stopped
 # matching. It previously watched "docs/style.css", which is not the name of
@@ -15,8 +15,16 @@ name: Deploy docs on push
 # Prefer a broad "docs/**" over enumerating files. A path filter that lists
 # filenames breaks the moment one is renamed, and breaks by doing nothing.
 #
-# run-pipeline.yml also regenerates docs/data/*.json and deploys; the overlap
-# is harmless, and this path matters when the payloads are rebuilt by hand.
+# generate-web-data.yml + deploy-pages.yml used to regenerate docs/data/*.json
+# and deploy for a bracket_2026.json / team_profiles.json / style.css UI that
+# no longer exists; docs/app.js has never fetched any of those files. Both
+# workflows were `workflow_call`-only and their sole caller, run-pipeline.yml,
+# was removed with the ML pipeline on 2026-09-11 (audit H10), which made them
+# unreachable -- they were deleted the same day rather than repaired. The
+# season_*.json / candidates_*.json this site actually reads are built by
+# scripts/experiments/build_candidate_artifact.py + scripts/build_ui_payload.py
+# and committed by hand; wiring that build into CI is audit recommendation 8,
+# still open.
 
 on:
   push:

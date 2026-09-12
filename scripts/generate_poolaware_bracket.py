@@ -1,4 +1,5 @@
-"""Generate the meta_region_poolaware bracket for 2026 and export to docs/data/.
+"""Build the meta_region_poolaware bracket for a live year -- a reference tool,
+not part of the live site.
 
 Replicates the meta_region_poolaware candidate-generation + pool-simulation
 selection block from mc_pool_backtest.py (search "meta_region_poolaware") for
@@ -7,11 +8,31 @@ diverse candidate brackets (forced 1-seed champions, risk sweeps, prob-base
 sweeps, exhaustive-champion sweeps), score each by simulating against a
 realistic opponent pool, and keep the highest binary-P(1st) candidate.
 
-Torvik is THE production strategy (11.3% P(1st), 15-yr LOYO — see
-MEMORY.md §3) and is what docs/data/bracket_2026.json contains.
+WHAT THIS IS FOR. This is the strategy `mc_pool_backtest.py` measures at
+~12% P(1st) (README "What the backtest number means"). Nothing else builds
+that exact strategy for a live year, so this script is the only way to see
+the concrete bracket the headline number describes, or to spot-check it
+against a season's real outcome.
 
-Owns docs/data/bracket_2026.json. generate_web_data.py no longer writes
-this file — do not reintroduce that.
+WHAT THIS IS NOT. Its output, docs/data/bracket_2026.json, is not read by
+docs/app.js and never has been since the current UI shipped. The live site
+is built by scripts/experiments/build_candidate_artifact.py and
+scripts/build_ui_payload.py, which serve a different, separately-validated
+fixed rule (`blend_region_35`, ~10-11% P(1st) -- see the comment on
+`_blend_region_bracket` in build_candidate_artifact.py) via
+docs/data/season_*.json. The two numbers are not the same strategy and
+should not be quoted for each other. This is audit finding C3; the README's
+"What the backtest number means" section carries the same caveat for users.
+
+Kept, with `src/optimization/poolaware_recipe.py` and
+`tests/test_poolaware_recipe.py`, as the guard against the recipe drifting
+from what the backtest actually measures -- that drift is exactly what C3
+first found. `generate_region_bracket.py` and `generate_exhaustive_bracket.py`
+served the same "reference build" role for the other two backtest strategies
+but had no such guard and no other purpose; both were retired 2026-09-11
+along with the unreachable generate-web-data.yml / deploy-pages.yml
+(orphaned when run-pipeline.yml, their only caller, was removed with the ML
+pipeline -- see audit H10).
 """
 
 import json

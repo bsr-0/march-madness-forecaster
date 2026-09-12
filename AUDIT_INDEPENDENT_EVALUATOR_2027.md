@@ -137,10 +137,21 @@ displays**, because no bracket on the site is produced by the recipe that number
 
 Fixed here: the backtest and `generate_poolaware_bracket.py` now share one recipe
 (`src/optimization/poolaware_recipe.py`, pinned by `tests/test_poolaware_recipe.py`), so
-those two cannot drift again. NOT fixed: the live artifact path still uses its own recipe.
-Reconciling it is a product decision, not a bug fix — either the bank adopts the backtested
-recipe, or the site stops attaching a backtested P(1st) to brackets that recipe never
-produced.
+those two cannot drift again.
+
+**Resolved 2026-09-11 (recommendation 14): the product decision this asked for had already
+been made, independently, just not connected to this finding.** The live site does not ship
+`build_candidate_artifact.py`'s bank through the "recommended" card at all — `build_ui_payload.py`
+uses it only as a fallback when a named strategy is missing. The card users see
+("Maximise chance of winning") ships `blend_region_35`, a third strategy again: one fixed
+base, one fixed risk level, chosen over a search specifically *because* — per its own
+comment — "only the fixed rule has out-of-sample evidence... the candidate-selection route
+has never been backtested at all." It carries its own separate number (~10–11% P(1st),
+2011–2026), never quotes the ~12% figure, and the README already disclaims that figure for
+every shipped bracket. Three recipes still exist, but only one is shown to users with a
+number attached, and that number is its own. See recommendation 14 for what was actually
+broken (an unreachable deploy workflow, deleted) and what remains (recommendation 8: wiring
+the live build into CI at all).
 
 ### HIGH
 
@@ -721,13 +732,46 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
 10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
     n=1, and fix the three dangling references.
 
-14. **Reconcile or retire the third recipe.** See the C3 update: the live artifact path
-    (`build_candidate_artifact.py`) still builds its bank from a different base set, risk
-    grid and construction mode than the measured strategy, so the headline figure describes
-    no bracket the site shows. Also `deploy-pages.yml:31-40` still lists three files deleted
-    with the old UI (`bracket_2026.json`, `style.css`, `team_profiles.json`) among its
-    REQUIRED_FILES, so that workflow cannot pass, and `generate_poolaware_bracket.py` writes
-    a file nothing reads.
+14. ~~Reconcile or retire the third recipe.~~ **DONE 2026-09-11, by finding the recipe
+    question was already moot.** The live site does not ship `meta_region_poolaware` (the
+    searched, multi-base strategy `mc_pool_backtest.py` measures at ~12%) in any form —
+    `build_ui_payload.py`'s "Maximise chance of winning" card ships `blend_region_35`, a
+    different, deliberately *fixed* rule (one base, one risk level, `region_top_n` only)
+    with its own separate backtest evidence (~10–11% P(1st), 2011–2026; see the comment on
+    `_blend_region_bracket` in `build_candidate_artifact.py`) — chosen specifically because,
+    per that comment, "only the fixed rule has out-of-sample evidence... the
+    candidate-selection route has never been backtested at all." The card's own copy never
+    quotes either backtest number, and the README already carries the disclaimer that the
+    ~12% figure "does not describe any bracket this site currently displays." So the product
+    decision recommendation 14 asked for had already been made, just not written down: two
+    different strategies, two different (separately honest) numbers, neither claimed as the
+    other.
+
+    What was a real bug: `generate-web-data.yml` and `deploy-pages.yml` — the workflow this
+    item's REQUIRED_FILES complaint was about — turned out to be unreachable, not merely
+    wrong. Both are `workflow_call`-only, and their sole caller was `run-pipeline.yml`,
+    deleted today with the ML pipeline (H10) without checking what else it triggered. They
+    were already dead in every practical sense before that: `validate_web_data.py`'s own
+    docstring says "that workflow has never actually been triggered", their scripts wrote
+    payloads (`bracket_2026.json`, `dashboard.json`, `ml_backtest.json`, `team_profiles.json`,
+    ...) that `docs/app.js` has never fetched — it fetches exactly `seasons.json`,
+    `training.json`, and `season_${year}.json` — and the real deploy path is
+    `deploy-docs-on-push.yml`, which pushes `docs/**` straight to Pages with no generation
+    step at all. Deleted both workflows and the scripts that existed only to feed them
+    (`generate_web_data.py`, `build_dashboard_data.py`, `generate_ml_backtest_data.py`,
+    `generate_actual_results.py`, `validate_web_data.py`, `generate_region_bracket.py`,
+    `generate_exhaustive_bracket.py`) rather than patch checks that were never going to run.
+
+    Kept `generate_poolaware_bracket.py`: unlike its two siblings it is guarded by
+    `tests/test_poolaware_recipe.py` (the C3 drift regression test) and is the only way to
+    materialize the exact bracket the ~12% figure describes for a live year — genuine value
+    as a reference/audit tool, just never a live-site input. Its docstring now says so.
+
+    **Still open, and sharper now that it's isolated:** `build_ui_payload.py` and
+    `build_candidate_artifact.py` — the scripts that build what `docs/app.js` actually reads
+    — are run by no CI workflow at all; `season_*.json` / `candidates_*.json` are committed
+    by hand. That is recommendation 8 ("wire `candidates_2027.json` → payload → deploy into
+    one workflow"), not a new item, but this is the concrete mechanism behind it.
 15. **Unify the opponent-count default.** `run_experiment.py` defaults to 30 opponents (a
     31-person pool) while the canonical contract is 29 (30-person), so its numbers are not
     directly comparable to the headline.
