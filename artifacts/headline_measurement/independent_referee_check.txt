@@ -1,0 +1,28 @@
+Independent-referee check (audit C2/recommendation 11), 2026-09-12.
+Torvik barthag + log5 referee vs the seed_pw referee used for selection.
+
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+  2011  champ=ohio_state            P1(seed)=0.0260  P1(torvik)=0.0440
+  2013  champ=gonzaga               P1(seed)=0.1180  P1(torvik)=0.0680
+  2014  champ=virginia              P1(seed)=0.1540  P1(torvik)=0.0420
+  2015  champ=villanova             P1(seed)=0.1380  P1(torvik)=0.0680
+  2016  champ=north_carolina        P1(seed)=0.1420  P1(torvik)=0.0580
+  2017  champ=gonzaga               P1(seed)=0.1020  P1(torvik)=0.1220
+  2018  champ=virginia              P1(seed)=0.0520  P1(torvik)=0.0300
+  2019  champ=virginia              P1(seed)=0.0880  P1(torvik)=0.1520
+  2021  champ=baylor                P1(seed)=0.0780  P1(torvik)=0.0400
+  2022  champ=baylor                P1(seed)=0.1340  P1(torvik)=0.0700
+  2023  champ=purdue                P1(seed)=0.1600  P1(torvik)=0.1360
+  2024  champ=purdue                P1(seed)=0.1020  P1(torvik)=0.1520
+  2025  champ=houston               P1(seed)=0.1420  P1(torvik)=0.2260
+
+========================================================================================
+pooled P(1st): seed_pw referee 0.1105   torvik referee 0.0929
+paired per-season difference (torvik - seed_pw): -0.0175  95% CI [-0.0492, +0.0132]  n=13
+
+VERDICT: not referee-sensitive at this sample size -- the paired CI includes zero.
+The headline P(1st) is not detectably an artifact of grading against the selection referee.
+Rule fixed in advance: referee-sensitive iff the paired 95% CI excludes zero.
+
+wrote /Users/benrosen/Documents/march-madness-forecaster/artifacts/headline_measurement/independent_referee_check.json
