@@ -725,8 +725,24 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    ML path was measured (H10) and removed. Nothing in the product depends on it.
 7. Either fit `mc_calibration` or delete the placeholder and hard-code the constant with a
    comment saying it is unfit; create the 2027 file or make its absence loud.
-8. Turn the March runbook into a script or a checked-in document; wire
-   `candidates_2027.json` → payload → deploy into one workflow.
+8. ~~Turn the March runbook into a script or a checked-in document; wire
+   `candidates_2027.json` → payload → deploy into one workflow.~~ **DONE
+   2026-09-11.** The old `RUNBOOK_2027.md` (deleted in the 2026-08-18
+   consolidation) described a pipeline that no longer exists — a single
+   CLI-selected bracket typed by hand into ESPN — and got the timing wrong:
+   it read as buildable right after Selection Sunday, but
+   `build_candidate_artifact.py` resolves play-in games and hard-refuses
+   ("wait for them") until the First Four are played, so the real window is
+   Wednesday evening through Thursday's Round-of-64 tip, not the ~24 hours
+   from bracket announcement. New `RUNBOOK_2027.md` states the corrected
+   timeline and the 76-team/12-play-in field, and `scripts/build_season.py`
+   wires the three-step build (refresh team stats → build the candidate
+   artifact → rebuild every `docs/data/season_*.json`) into one command,
+   verified end to end on a real season with tiny simulation counts. Field
+   acquisition, the go/no-go review, and the final `git push` stay manual,
+   deliberately — a once-a-year, high-stakes deploy with no human review is
+   a worse failure mode than a 30-minute manual step, and `git push` already
+   triggers `deploy-docs-on-push.yml` with no separate deploy command needed.
 9. Get CI green: commit or fixture the candidate artifacts the tests need, fix the
    `pytest_asyncio` pin, re-enable the nightly cron or delete the README claim.
 10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
