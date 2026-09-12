@@ -62,8 +62,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from scripts.build_ui_payload import VARIABLES, zscores  # noqa: E402
-from scripts.build_training_matrix import season_z  # noqa: E402
+from scripts.build_ui_payload import VARIABLES, season_z, zscores  # noqa: E402
 from src.data.features.point_in_time_ratings import (  # noqa: E402
     SELECTION_SUNDAY_DAY,
     games_before,

@@ -38,7 +38,7 @@ from typing import Any, Dict, List
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from scripts.build_ui_payload import VARIABLES, zscores  # noqa: E402
+from scripts.build_ui_payload import VARIABLES, season_z, zscores  # noqa: E402,F401
 
 STATS_PATH = REPO / "docs" / "data" / "team_stats_by_year.json"
 CONTEXT_GLOB = "tournament_context_*.json"
@@ -48,21 +48,11 @@ OUT = REPO / "docs" / "data" / "training.json"
 # 63-game bracket the UI solves. Excluded so the fit describes bracket games.
 SKIP_ROUNDS = {"FF"}
 
-
-def season_z(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
-    """Standardise every variable within one season's field.
-
-    Within-season standardisation is what makes 2011 and 2026 comparable: a
-    +1.5 sigma offense means the same thing in both, even though raw efficiency
-    numbers drift across eras.
-    """
-    ids = [r["team_id"] for r in rows]
-    out: Dict[str, Dict[str, float]] = {tid: {} for tid in ids}
-    for key, _label, _group, higher_better, _desc in VARIABLES:
-        vals = [r.get(key) if isinstance(r.get(key), (int, float)) else None for r in rows]
-        for tid, z in zip(ids, zscores(vals, higher_better)):
-            out[tid][key] = z
-    return out
+# season_z() moved to build_ui_payload.py 2026-09-11 (audit recommendation 9):
+# build_season() there needed the exact same function rather than a second,
+# independently-drifting copy standardising over a different population.
+# Imported back here (and re-exported, `# noqa: F401`) so every existing
+# caller of `build_training_matrix.season_z` keeps working unchanged.
 
 
 def _orient(game: Dict[str, Any], a: str, b: str, s1: int, s2: int):
