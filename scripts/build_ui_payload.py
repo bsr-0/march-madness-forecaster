@@ -203,6 +203,33 @@ def zscores(values: List[float], higher_better: bool) -> List[float]:
     return [0.0 if v is None else round(sign * (v - mean) / sd, 4) for v in values]
 
 
+def season_z(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
+    """Standardise every variable within one season's FULL stats field.
+
+    Within-season standardisation is what makes 2011 and 2026 comparable: a
+    +1.5 sigma offense means the same thing in both, even though raw efficiency
+    numbers drift across eras.
+
+    Moved here from build_training_matrix.py 2026-09-11 (audit recommendation
+    9 / M5): that module already imported VARIABLES and zscores from this one,
+    and build_season() below used to standardise independently over a
+    DIFFERENT, narrower population (the candidate artifact's post-play-in
+    Round-of-64 teams, not the full pre-play-in field `rows` here carries) --
+    a genuine, if small, divergence (found: 2018 texas_southern, 0.8252 sigma
+    on massey_avg_rank) between the number the candidate-bank UI showed for a
+    team and the number the fitted-model tab's training matrix used for that
+    same team, same variable, same season. One function, one population,
+    used by both, closes it structurally rather than by re-running a script.
+    """
+    ids = [r["team_id"] for r in rows]
+    out: Dict[str, Dict[str, float]] = {tid: {} for tid in ids}
+    for key, _label, _group, higher_better, _desc in VARIABLES:
+        vals = [r.get(key) if isinstance(r.get(key), (int, float)) else None for r in rows]
+        for tid, z in zip(ids, zscores(vals, higher_better)):
+            out[tid][key] = z
+    return out
+
+
 # Bracket rounds in order, as the results file names them. "FF" is the First
 # Four play-in, which is not one of the 63 bracket games.
 RESULT_ROUNDS = ["R64", "R32", "S16", "E8", "F4", "NCG"]
@@ -310,14 +337,24 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     teams = art["teams"]
     by_id = {r["team_id"]: r for r in rows}
 
-    # Stat values aligned to the artifact's team order, then standardised.
+    # Standardise over the season's FULL stats field (`rows`), matching
+    # build_training_matrix.py's season_z() exactly -- both import the same
+    # VARIABLES/zscores and are meant to agree (audit_snapshot_boundary.py's
+    # D1 check asserts it). `rows` is pre-play-in (68 teams in a 2026-format
+    # season); the artifact's `teams` is post-play-in (64, the Round-of-64
+    # field), so standardising against `teams` instead -- what this used to
+    # do -- silently used a different population than the training matrix for
+    # every play-in season. Found 2026-09-11: 2018 texas_southern's
+    # massey_avg_rank differed by 0.8252 sigma between the two. Population for
+    # the STATISTIC is `rows`; output is still reordered and subset to `teams`.
+    z_field = season_z(rows)
     z: Dict[str, List[float]] = {}
     raw: Dict[str, List[Any]] = {}
     for key, _label, _group, higher_better, _descriptive in VARIABLES:
         vals = [by_id.get(t["id"], {}).get(key) for t in teams]
         vals = [v if isinstance(v, (int, float)) else None for v in vals]
         raw[key] = [None if v is None else round(float(v), 4) for v in vals]
-        z[key] = zscores(vals, higher_better)
+        z[key] = [z_field.get(t["id"], {}).get(key, 0.0) for t in teams]
 
     # One bracket per strategy, from the canonical selector.
     #

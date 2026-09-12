@@ -35,13 +35,23 @@ REPO = Path(__file__).resolve().parents[1]
 DONOR = 2026  # the newest season with a real artifact on disk
 REHEARSAL = 2027
 
+# artifacts/candidates/*.json is gitignored (regenerable, multi-MB), so it is
+# absent on a fresh CI checkout and every test below used to skip silently
+# there -- the rehearsal this file exists to run never actually ran in CI.
+# docs/data/candidates_2026.json is a committed fixture kept for exactly this
+# (also used by test_material_difference.py and generate_parity_fixture.py):
+# same schema, same required meta fields, just older and missing
+# named_strategies -- which degrades to a printed warning and a fallback
+# build, not a failure. See audit recommendation 9.
+DONOR_ARTIFACT = REPO / "docs" / "data" / f"candidates_{DONOR}.json"
+
 
 @pytest.fixture
 def rehearsal(tmp_path, monkeypatch):
     """A world where 2027 has just been scraped, built entirely in tmp_path."""
     import scripts.build_ui_payload as builder
 
-    donor_art = REPO / "artifacts" / "candidates" / f"candidates_{DONOR}.json"
+    donor_art = DONOR_ARTIFACT
     if not donor_art.exists():
         pytest.skip(f"no {DONOR} artifact on disk to build a synthetic season from")
 
@@ -212,7 +222,7 @@ class TestTheDisclosureCannotVanishQuietly:
     def _artifact_without(self, tmp_path, *dropped):
         import scripts.build_ui_payload as builder
 
-        donor = REPO / "artifacts" / "candidates" / f"candidates_{DONOR}.json"
+        donor = DONOR_ARTIFACT
         if not donor.exists():
             pytest.skip("no donor artifact on disk")
         art = json.loads(donor.read_text())

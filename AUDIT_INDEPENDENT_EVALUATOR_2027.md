@@ -602,6 +602,55 @@ Local `pytest --co` fails at import (`pytest_asyncio` incompatibility). No test 
 headline number; backtest tests check plumbing equivalence, not scoring correctness against
 a hand-computed bracket.
 
+**RESOLVED 2026-09-11 (recommendation 9), three of four fixed, one deliberately left as-is.**
+
+*Candidate artifacts:* `test_selection_sunday_rehearsal.py` — the rehearsal for the one
+Selection-Sunday launch this whole product gets — pointed its donor artifact at the gitignored
+`artifacts/candidates/candidates_2026.json`, so on a fresh CI checkout the entire
+`TestANewSeasonBuildsReady` class (7 tests, the ones actually asserting the launch works)
+skipped silently rather than ran. Repointed at the already-committed
+`docs/data/candidates_2026.json` fixture (same schema, kept for `test_material_difference.py`
+and `generate_parity_fixture.py`), verified it produces an identical `ready` payload end to
+end. `test_baseline_evaluation.py` no longer exists (removed with the ML pipeline, H10).
+`test_schemas.py` currently passes.
+
+*`pytest_asyncio`:* `requirements-lock.txt` pinned `pytest-asyncio==1.3.0` — a plugin nothing
+in the repo uses (`grep` for `pytest.mark.asyncio` / `async def test_` / `pytest_asyncio\.`
+returns nothing) — which requires a `pytest` API (`FixtureDef` importable from the top-level
+package) that only exists from pytest 8+. CI itself was never at risk (it installs from
+`requirements.txt`, which doesn't list `pytest-asyncio` at all), but any developer who actually
+followed a lock-file-based setup and had an older `pytest` already present would hit exactly
+this `pytest --co` collection failure. Removed the unused pin rather than chase a compatible
+version pair for a plugin with zero callers.
+
+*Nightly cron:* README no longer claims a nightly CI run — that language was replaced entirely
+in yesterday's ML-pipeline removal (H10), so that half of this item is moot. Left
+`nightly-claude-testing.yml`'s cron commented out rather than re-enable it: it is explicitly,
+deliberately disabled ("DISABLED — workflow fully disabled until further notice"), carries
+`contents: write` / `pull-requests: write` and can commit autonomously, and re-arming an
+unattended, cost-incurring, write-capable nightly LLM job is a decision for whoever disabled
+it, not one to make as a side effect of an audit pass. If it is ever re-enabled: its own audit
+prompt still names several `src/ml/*` files deleted with H10 (calibration, ensemble,
+rdof_audit) beyond the one `mc_calibration.py` reference already fixed under recommendation 7
+— that prompt needs a real pass first, not just a flipped switch.
+
+*The actual CI-blocking bug, found while investigating the artifact-fixture fix:* the
+"shipped season payload matches the training path exactly" failure was not stale data —
+regenerating every payload reproduced the identical 0.8252-sigma mismatch. Root cause:
+`build_ui_payload.py`'s `build_season()` standardised each variable over `art["teams"]` (the
+candidate artifact's post-play-in Round-of-64 field, 64 teams) while
+`build_training_matrix.py`'s `season_z()` — which the live fitted-model tab's `training.json`
+is built from, and which `build_season()` is supposed to match — standardises over the full
+pre-play-in `stats_by_year[year]` field (68 teams). Two scripts, two populations, one shared
+`VARIABLES`/`zscores` import that made them look like they agreed. Moved `season_z()` into
+`build_ui_payload.py` (one function, one population, both callers) and had `build_season()`
+use it, subsetting only the OUTPUT to the artifact's team order. Changes every shipped z-score
+by a small amount (68→64-team population shift) on every filter/sort chip in the candidate-bank
+UI; changes nothing else — `raw` values, picks, and strategy selection are untouched. Verified:
+`audit_snapshot_boundary.py` exits 0 (27,776 D1 comparisons across 14 seasons, 0 mismatches,
+up from a hard failure); `node tests/test_calibration.js`, `test_picks_export.js`,
+`assert_prediction_invariants.py` all pass — the full `browser-model` CI job is green.
+
 **M6. Structural gaps versus what a sophisticated pool player expects.** CONFIRMED.
 Winner-take-all only on the backtest path; `payout_structure` exists in `pool_optimizer.py:40`
 but only feeds a manifest. No upset bonus, seed-weighted or round-multiplier scoring
@@ -775,8 +824,14 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
    deliberately — a once-a-year, high-stakes deploy with no human review is
    a worse failure mode than a 30-minute manual step, and `git push` already
    triggers `deploy-docs-on-push.yml` with no separate deploy command needed.
-9. Get CI green: commit or fixture the candidate artifacts the tests need, fix the
-   `pytest_asyncio` pin, re-enable the nightly cron or delete the README claim.
+9. ~~Get CI green: commit or fixture the candidate artifacts the tests need, fix the
+   `pytest_asyncio` pin, re-enable the nightly cron or delete the README claim.~~ **DONE
+   2026-09-11.** Fixture: `test_selection_sunday_rehearsal.py` repointed at the already-
+   committed `docs/data/candidates_2026.json`. `pytest_asyncio`: unused pin removed from
+   `requirements-lock.txt`. README claim: already gone, removed with H10. Nightly cron:
+   deliberately left disabled (autonomous write access, someone else's call). Also found and
+   fixed the actual bug behind the browser-model failure this item named — a genuine
+   train/serve z-score population mismatch, not stale data; see M5.
 10. Add to PROSPECTIVE_2027 a sentence stating what April 2027 can and cannot conclude at
     n=1, and fix the three dangling references.
 
