@@ -68,6 +68,16 @@ ORIGINAL_V2_SPEC_PATH = Path("configs/frozen/prospective_2027_v2.json")
 SCOPE_CORRECTION = {
     "date": "2026-08-21",
     "supersedes_scope_of": str(ORIGINAL_V2_SPEC_PATH),
+    # FROZEN VALUE -- do not "fix" this path. configs/frozen/product_v3.json,
+    # docs/build.js (the UI it described) and tests/test_spec_boundary.py (its
+    # drift test) were all deleted in 32f860e ("Remove the UI layer and its
+    # contracts ahead of a rebuild") on 2026-08-21 or after, and this field is
+    # part of the hashed, frozen spec (configs/frozen/prospective_2027_v2_scoped.json)
+    # that CI checks for drift -- changing its value here would fail that check
+    # for describing reality more accurately, which is exactly backwards. The
+    # staleness is real and is documented instead in PROSPECTIVE_2027_v2.md's
+    # 2026-09-12 correction (audit recommendation 10): there is currently no
+    # live drift gate for the presentation-selection layer this path once named.
     "moved_to": "configs/frozen/product_v3.json",
     "fields_moved": [
         "candidate_selection.diversity_algorithm",
