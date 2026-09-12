@@ -106,6 +106,33 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   before running it. That bounds the concern; it does not retire it (13 seasons is not a lot,
   and the CI's low end is not small next to the headline). See
   `scripts/independent_referee_check.py` and `AUDIT_INDEPENDENT_EVALUATOR_2027.md` finding C2.
+- **Chosen as the best of 79 candidate strategies — and it survives that.** Measured
+  2026-09-12: all 79 modes re-run on the 14 seasons, then a Romano–Wolf stepdown on the
+  P(1st) deltas of the other 78 against the `seed` baseline, resampling every mode under one
+  shared sign vector per draw so their correlation is carried into the null rather than
+  assumed away.
+  `meta_region_poolaware` scores 12.0% against seed's 4.0% with a **family-wise adjusted
+  p of 0.0006**, against a threshold fixed before the run — so the figure is not an artifact
+  of picking the best of many. Four un-provenanced knobs were swept at the same time
+  (referee noise, `pa_trials`, the risk grid, the candidate base order) and **all four are
+  flat**: none moves the headline by as much as one season-level standard error. What this
+  does *not* cover: three candidate families were deleted years ago for scoring worse, and
+  their code is gone, so no resampling can put them back in the family. Nor does it change
+  the underlying ratio — 12 tuning decisions against 14 independent seasons. Reproduce with
+  `python -m scripts.pool_rdof_audit --multiplicity --sweep`; full inventory in
+  `artifacts/headline_measurement/pool_rdof_audit.txt`; findings H2 and H11.
+- **One mode scores higher, and it is an artefact.** The same run put
+  `fixed_blendA100_r35` at 12.1%, just above the headline. That mode is built from *pure seed
+  probabilities*, and the referee drawing the "true" tournament in every trial is the same
+  seed model — so it is graded by its own source. Its alpha sweep gives it away: .088, .105,
+  .109, .104, then a 1.8pp jump to .121 at exactly the endpoint that coincides with the
+  referee. It is finding C2's circularity, not a better strategy, and its number should not
+  be quoted as a competitor. Excluding it, the best fixed rule scores 11.0% against the
+  search's 12.0% — so per-season selection does appear to add something, but 1pp sits inside
+  the 1.5pp season-level standard error and the search wins only 5 of 14 seasons head to
+  head. **Whether the selection machinery earns its complexity is unresolved at n=14.**
+  Finding H11; recommendation 16 proposes settling it with a pre-registered 2027 A/B using a
+  non-circular fixed arm, rather than a fourth pass over the same seasons.
 
 Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced by the
 command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
@@ -166,6 +193,11 @@ python scripts/mc_pool_backtest.py --team-identity --opponent pool \
 
 # Real-pool placement of the selected bracket, 2023-2026
 python -m scripts.real_pool_placement
+
+# Researcher-degrees-of-freedom audit over the pool-strategy search.
+# --registry-only is seconds; the two measurements are slow (~85 min and ~15 min).
+python -m scripts.pool_rdof_audit --registry-only
+python -m scripts.pool_rdof_audit --multiplicity --sweep --workers 8
 
 # Point-in-time boundary audit and prediction invariants (both run in CI)
 python3 scripts/audit_snapshot_boundary.py

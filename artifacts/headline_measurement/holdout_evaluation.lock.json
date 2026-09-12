@@ -1,0 +1,17 @@
+{
+  "evaluations": [
+    {
+      "evidence_level": "2.5",
+      "registry_hash": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+      "summary": {
+        "p_first": {
+          "meta_region_poolaware": 0.11,
+          "seed": 0.0336
+        }
+      },
+      "timestamp": "2026-09-12T14:31:02",
+      "year": 2026
+    }
+  ],
+  "superseded": []
+}

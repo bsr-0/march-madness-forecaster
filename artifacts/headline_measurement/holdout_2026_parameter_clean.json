@@ -1,0 +1,24 @@
+{
+  "evidence_level": "2.5 -- structurally contaminated, parameter-clean",
+  "evidence_level_explanation": "2026 is NOT a Level-1 holdout and cannot be made one. The candidate-family set was pruned using aggregates that included it: scripts/mc_pool_backtest.py:4026-4042 records family (d) removed 2026-05-03 ('selected in only 1/15 years') and family (e) removed 2026-05-16, where a 15-season window is BACKTEST_YEARS = 2011-2026 excluding 2020. The 2026 tournament ended in April 2026, so its outcome was known. CONTAMINATED_EVAL_YEARS, which now strips 2026 from aggregates, was not added until 2026-09-09 (a3fb412) -- four months after those prunings. The removed families no longer exist as code, so those decisions cannot be re-run on a 2026-free window. What IS true is that the prediction model never trains on it (train_noseed_model's walk-forward filter is y < max_year) and the parametric knobs are derived on 2011-2025 only. That makes it parameter-clean, not untouched.",
+  "measurement": "parameter-clean holdout evaluation, 2026",
+  "p_first": {
+    "meta_region_poolaware": 0.11,
+    "seed": 0.0336
+  },
+  "provenance": {
+    "canonical_contract": {
+      "n_opponents": 29,
+      "n_repeats": 100,
+      "opponent_source": "pool",
+      "pa_trials": 500,
+      "team_identity": true
+    },
+    "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+    "git_dirty": true,
+    "timestamp": "2026-09-12T14:31:02"
+  },
+  "registry_hash_at_evaluation": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+  "wall_time_minutes": 0.9,
+  "year": 2026
+}
