@@ -39,6 +39,7 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
 )
 from src.cli.pool_cmds import _build_first_round_matchups, _picks_dict_to_bool_array
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS, CANONICAL_POOL_SIZE
 from src.optimization.bracket_construction import construct_bracket
 from src.prediction.seed_probabilities import build_seed_probabilities
 from src.simulation.pool_competition import (
@@ -51,7 +52,11 @@ from src.simulation.pool_competition import (
 
 logging.basicConfig(level=logging.WARNING)
 
-N_OPPONENTS = 30
+# Canonical contract, imported not re-declared (recommendation 15). This
+# module previously set its own opponent count to 30 -- a 31-person pool --
+# so its numbers were a few percent off the published ones for no stated
+# reason. See src/evaluation/canonical_contract.py.
+N_OPPONENTS = CANONICAL_N_OPPONENTS
 N_TOURNAMENTS_P1 = 500  # MC sims for P(1st) estimation
 N_PLACEMENT_TRIALS = 200  # repeated opponent draws for stable placement
 CHALK_NOISE_STD = 0.4  # opponent correlation strength
@@ -73,7 +78,7 @@ def generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, n_target=
                 round_probs=round_probs,
                 public_picks=pick_dist,
                 risk_level=risk,
-                pool_size=31,
+                pool_size=CANONICAL_POOL_SIZE,
                 scoring_system=scoring,
             )
             key = tuple(sorted(picks.items()))

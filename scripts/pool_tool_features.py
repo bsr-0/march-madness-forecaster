@@ -56,13 +56,15 @@ from typing import Any, Dict, List, Optional, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
+
 OUT_DIR = Path("artifacts/headline_measurement")
 
 HEADLINE_MODE = "meta_region_poolaware"
 BASELINE_MODE = "seed"
 
 CANONICAL = dict(
-    n_opponents=29,
+    n_opponents=CANONICAL_N_OPPONENTS,
     n_repeats=100,
     opponent_source="pool",
     team_identity=True,

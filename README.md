@@ -127,12 +127,21 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   seed model — so it is graded by its own source. Its alpha sweep gives it away: .088, .105,
   .109, .104, then a 1.8pp jump to .121 at exactly the endpoint that coincides with the
   referee. It is finding C2's circularity, not a better strategy, and its number should not
-  be quoted as a competitor. Excluding it, the best fixed rule scores 11.0% against the
-  search's 12.0% — so per-season selection does appear to add something, but 1pp sits inside
-  the 1.5pp season-level standard error and the search wins only 5 of 14 seasons head to
-  head. **Whether the selection machinery earns its complexity is unresolved at n=14.**
-  Finding H11; recommendation 16 proposes settling it with a pre-registered 2027 A/B using a
-  non-circular fixed arm, rather than a fourth pass over the same seasons.
+  be quoted as a competitor. Against the best *non-circular* fixed rule,
+  `fixed_blend_r40`, the picture is this:
+
+  | | search | fixed rule | p | search better in |
+  |---|---:|---:|---:|---:|
+  | P(1st) — the objective it optimises | 12.0% | 11.0% | .45 | **6 of 14 seasons** |
+  | mean finishing rank | 10.5 | **9.1** | **.03** | 3 of 14 |
+
+  The per-season search wins its own objective in fewer than half the seasons, and loses
+  average placement significantly. Both are consistent — a higher-variance bracket wins
+  outright more often while placing worse — and for a winner-take-all pool P(1st) is the
+  right objective, so the production choice stands. But its measured benefit is not
+  distinguishable from zero, and **it cannot become so: resolving P(1st) would take 181
+  seasons at 80% power** (21 for mean rank). Finding H11; the series is pre-registered in
+  `PROSPECTIVE_2027_AB.md` so that no single season gets mistaken for the answer.
 
 Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced by the
 command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
@@ -252,6 +261,17 @@ node tests/test_calibration.js
 `configs/frozen/prospective_2027_v2_scoped.json` is the frozen methodology spec for the first
 prospective season (`src/governance/frozen_spec.py`, `PROSPECTIVE_2027_v2.md`);
 `scripts/experiments/integration_test_2026.py` is the end-to-end pass CI runs against it.
+
+A second, narrower pre-registration rides along: `PROSPECTIVE_2027_AB.md` +
+`configs/frozen/prospective_2027_ab.json` register an A/B between the per-season selector
+and a fixed rule. Its power calculation is the interesting part — the comparison needs **181
+seasons** to resolve, so what is registered is a ledger with a stopping rule rather than a
+test, specifically so one season is not read as an answer.
+
+```bash
+python -m scripts.ab_2027_preregistration --verify   # the protocol has not drifted
+python -m scripts.ab_2027_preregistration --tally    # the series so far (not a test)
+```
 
 ## Development
 

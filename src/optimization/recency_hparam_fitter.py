@@ -59,6 +59,7 @@ from scripts.mc_pool_backtest import (
     simulate_tournament_outcomes,
     train_noseed_model,
 )
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 from src.optimization.bracket_construction import construct_bracket
 
 _REGION_RISK_LEVELS: Tuple[float, ...] = (0.1, 0.3, 0.5, 0.7, 0.9)
@@ -120,7 +121,7 @@ class RecencyAlphaFitter:
         self,
         window_years: int = 3,
         alpha_grid: Sequence[float] = _DEFAULT_ALPHA_GRID,
-        n_opponents: int = 30,
+        n_opponents: int = CANONICAL_N_OPPONENTS,
         opponent_source: str = "pool",
         pool_blend_weight: float = 0.7,
         team_identity: bool = True,
@@ -313,13 +314,21 @@ class RecencyAlphaFitter:
 # matching outer CLI contract:
 #
 #   python -m scripts.mc_pool_backtest \
-#     --team-identity --opponent pool --n-opponents 30 \
+#     --team-identity --opponent pool --n-opponents 29 \
 #     --modes meta_region_poolaware --years 2024 2025 2026 \
-#     --hparam-fitter src.optimization.recency_hparam_fitter:recency_fitter_3yr_pool30 \
+#     --hparam-fitter src.optimization.recency_hparam_fitter:recency_fitter_3yr_canonical \
 #     --pa-trials 500
-recency_fitter_3yr_pool30 = RecencyAlphaFitter(
+#
+# RENAMED AND RETUNED 2026-09-13 (recommendation 15). This was
+# `recency_fitter_3yr_pool30` holding `n_opponents=30` -- a 31-person pool, so
+# the name asserted the one thing the value contradicted. The justification for
+# the odd value was that it matched "the contract baked into
+# docs/data/loyo_window_3yr_recency_fit.json". That file does not exist, and
+# nothing else in the repo referenced the instance, so there was nothing to
+# stay compatible with. Use --n-opponents 29 with it, not 30.
+recency_fitter_3yr_canonical = RecencyAlphaFitter(
     window_years=3,
-    n_opponents=30,
+    n_opponents=CANONICAL_N_OPPONENTS,
     opponent_source="pool",
     team_identity=True,
     pa_trials_fit=100,
