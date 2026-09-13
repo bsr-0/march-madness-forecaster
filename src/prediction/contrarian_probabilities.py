@@ -19,11 +19,12 @@ import logging
 import math
 from pathlib import Path
 from typing import Dict, Optional, Sequence
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
+POOL_HIST_PATH = POOL_HISTORY_PATH
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 

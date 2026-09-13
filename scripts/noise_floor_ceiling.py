@@ -31,10 +31,11 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PORTFOLIO_DIR = PROJECT_ROOT / "artifacts" / "backtest_brackets"
-POOL_PATH = PROJECT_ROOT / "data" / "pool_history" / "pool_hist_results.json"
+POOL_PATH = POOL_HISTORY_PATH
 OUTPUT_PATH = PROJECT_ROOT / "artifacts" / f"noise_floor_ceiling_{datetime.now():%Y-%m-%d}.json"
 YEARS = [2023, 2024, 2025, 2026]
 KILL_THRESHOLD = 3

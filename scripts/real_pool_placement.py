@@ -28,13 +28,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 from src.simulation.pool_history_opponent_model import load_pool_brackets
 
 ROOT = Path(__file__).resolve().parent.parent
 YEARS = [2023, 2024, 2025, 2026]
 BRACKET_DIR = ROOT / "artifacts" / "backtest_brackets"
-POOL_HIST_PATH = ROOT / "pool_hist_results.json"
+POOL_HIST_PATH = POOL_HISTORY_PATH
 
 
 def _load_saved_mode(year: int, mode: str) -> Optional[Dict[str, Any]]:

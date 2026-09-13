@@ -2,7 +2,20 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ['claude/**']
+    # `main` added 2026-09-13. It was missing, and the omission was invisible
+    # in the worst way: branch protection on `main` requires a status check
+    # named "CI" (the `all-gates` job below), but no trigger here could ever
+    # produce one for a direct push. So every push to main had to bypass the
+    # rule -- GitHub reports "Bypassed rule violations ... Required status
+    # check CI is expected" -- and the check that was meant to gate main
+    # silently gated nothing. CI Pipeline had never run on main in the repo's
+    # history; every recorded run was on a claude/** branch, and the most
+    # recent one before this fix (2026-09-09) had failed.
+    #
+    # This is the same failure mode as the deploy workflow whose path filter
+    # listed a stylesheet that had been renamed (see deploy-docs-on-push.yml):
+    # a gate that does nothing produces no error, no run, and no signal.
+    branches: ['main', 'claude/**']
   pull_request:
     branches: [main, master]
   # workflow_dispatch lets other workflows trigger CI on a given branch via

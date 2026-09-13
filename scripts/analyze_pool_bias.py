@@ -16,11 +16,12 @@ import os
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-POOL_DATA = "data/pool_history/pool_hist_results.json"
+POOL_DATA = POOL_HISTORY_PATH
 
 
 def load_pool_data():

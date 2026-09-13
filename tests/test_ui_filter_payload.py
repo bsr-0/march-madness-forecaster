@@ -36,6 +36,30 @@ def _payload(year):
     return json.loads(p.read_text())
 
 
+def _candidate_artifact(year):
+    """The candidate bank the payload was built from.
+
+    `artifacts/candidates/*.json` is gitignored (.gitignore:64) -- only the
+    .sha256 checksums are tracked -- so this file exists on a machine that has
+    run the build and never on a CI runner. Without this guard the test read it
+    directly and raised FileNotFoundError, which meant it could pass locally and
+    could NOT pass in CI, and had been failing there since it was written. That
+    single failure was the whole of CI's red status.
+
+    Skipping is the honest outcome rather than a weakening: the assertion needs
+    the artifact the payload was generated from, and CI does not have it. What
+    the skip costs is stated out loud so nobody reads a green CI run as having
+    checked this.
+    """
+    p = REPO / "artifacts" / "candidates" / f"candidates_{year}.json"
+    if not p.exists():
+        pytest.skip(
+            f"candidates_{year}.json absent (gitignored build output); predicate-flag "
+            "agreement is verified only where the candidate bank has been built"
+        )
+    return json.loads(p.read_text())
+
+
 def _decode(bits, first_round):
     rounds, current, i = [], list(first_round), 0
     for _ in range(6):
@@ -75,7 +99,7 @@ def test_predicate_flags_match_the_frozen_predicates(year):
 
     d = _payload(year)
     f = d["filters"]
-    art = json.loads((REPO / "artifacts" / "candidates" / f"candidates_{year}.json").read_text())
+    art = _candidate_artifact(year)
     preds = {k: fn for k, fn in preference_predicates(art).items() if k != "none"}
     keys = [p["key"] for p in sorted(f["predicates"], key=lambda p: p["i"])]
     assert keys == sorted(preds), "shipped predicate keys drifted from selection.py"

@@ -45,6 +45,25 @@ from src.data.normalize import normalize_team_id
 
 logger = logging.getLogger(__name__)
 
+# The one location of the real pool's bracket history.
+#
+# UNIFIED 2026-09-13. Two byte-identical copies existed --
+# `./pool_hist_results.json` and this one -- and the callers were split
+# between them, with no rule about which was authoritative. The split ran
+# straight through production: `scripts/mc_pool_backtest.py` read the root
+# copy while `src/cli/pool_cmds.py` read this one, so the backtest and the
+# CLI were one uncoordinated edit away from modelling different pools.
+#
+# Identical contents made it invisible. It would have surfaced the first time
+# the 2027 pool was scraped into one path and not the other, and it would
+# have surfaced as numbers that disagreed for no apparent reason rather than
+# as an error.
+#
+# This module owns the file's format, so it owns its location. Import this
+# rather than rebuilding the path from PROJECT_ROOT -- that is how the second
+# copy happened.
+POOL_HISTORY_PATH: Path = Path(__file__).resolve().parents[2] / "data" / "pool_history" / "pool_hist_results.json"
+
 # Round ordering used everywhere else in the pipeline.
 ROUNDS = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 
