@@ -736,17 +736,19 @@ REGISTRY: Tuple[PoolDegreeOfFreedom, ...] = (
     ),
     PoolDegreeOfFreedom(
         name="recency_fitter_n_opponents",
-        tier=TIER_FREE,
-        current_value=30,
+        tier=TIER_STRUCTURAL,
+        current_value=29,
         code_path="src/optimization/recency_hparam_fitter.py — RecencyAlphaFitter.n_opponents",
         live_symbol="src.optimization.recency_hparam_fitter:RecencyAlphaFitter.n_opponents",
         valid_range=(9, 999),
         derivation=(
-            "30, against the canonical contract's 29 — a 31-person pool, not a 30-person one. "
-            "This is audit recommendation 15, and the module's own LOAD-BEARING CAVEAT says "
-            "why it matters: 'the fitter silently tunes blend_alpha against a different "
-            "opponent field than the one actually used for selection. Nothing in the "
-            "HparamFitter protocol enforces this — it is pure documentation discipline.'"
+            "FIXED 2026-09-13 under recommendation 15. Was 30 — a 31-person pool, not the "
+            "canonical 30-person one — so the fitter tuned blend_alpha against a different "
+            "field than selection used, exactly the failure its own LOAD-BEARING CAVEAT "
+            "describes: 'Nothing in the HparamFitter protocol enforces this — it is pure "
+            "documentation discipline.' Now imported from "
+            "src/evaluation/canonical_contract.py, so it is no longer a choice this module "
+            "can make on its own. Tier 2 for that reason: it is pinned to the contract."
         ),
         status=STATUS_NEVER_SEARCHED,
     ),

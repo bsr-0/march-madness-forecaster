@@ -77,6 +77,7 @@ from src.prediction.pairwise import (
     marginals_from_pairwise,
 )
 from src.prediction.pairwise import log5 as _canonical_log5
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 from src.optimization.bracket_construction import POOL_FACTOR_THRESHOLD
 from src.optimization.payout import (
     VALID_PAYOUT_STRUCTURES,
@@ -165,7 +166,14 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 # each traced back to an omitted --n-opponents. A default that is wrong for every
 # real use and silently produces a plausible-looking number is a trap, not a
 # setting. Pass --n-opponents explicitly to model a larger field.
-N_OPPONENTS = 29  # 30-person pool (29 opponents + the model's own bracket)
+#
+# IMPORTED since 2026-09-13 (recommendation 15), not re-declared. Six other
+# modules had each written their own opponent count -- all 30, i.e. a
+# 31-person pool, none with a stated reason -- so runs that looked canonical
+# were measuring a different field. `src/evaluation/canonical_contract.py` is
+# now the single definition; a module that needs a different size has to say
+# so, and say why.
+N_OPPONENTS = CANONICAL_N_OPPONENTS  # 30-person pool (29 opponents + the model's own bracket)
 
 # Logit-space idiosyncratic-game noise added on top of every simulated matchup
 # probability when drawing the "true" tournament outcome the referee scores

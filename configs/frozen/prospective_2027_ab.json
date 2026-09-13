@@ -1,0 +1,59 @@
+{
+  "alpha": 0.05,
+  "arm_control": "fixed_blend_r40",
+  "arm_treatment": "meta_region_poolaware",
+  "barred_controls": {
+    "fixed_blendA100_r35": "alpha=1.0 is pure seed_rp and the referee is seed_pw: the arm would be graded by its own probability source. See audit finding H11."
+  },
+  "first_season": 2027,
+  "freeze_date": "2026-09-13",
+  "historical_estimate": {
+    "mean_rank": {
+      "cohens_d": -0.65,
+      "control_mean": 9.1368,
+      "n_seasons": 14,
+      "p_value": 0.03,
+      "paired_diff_raw": 1.3796,
+      "paired_sd": 2.1212,
+      "seasons_for_80pct_power": 21,
+      "treatment_better_seasons": 3,
+      "treatment_mean": 10.5164
+    },
+    "p_first": {
+      "cohens_d": 0.21,
+      "control_mean": 0.11,
+      "n_seasons": 14,
+      "p_value": 0.447,
+      "paired_diff_raw": 0.01,
+      "paired_sd": 0.0477,
+      "seasons_for_80pct_power": 181,
+      "treatment_better_seasons": 6,
+      "treatment_mean": 0.12
+    }
+  },
+  "honest_expectation": "This will not conclude. The decision-relevant metric needs 181 seasons at 80% power and the most sensitive one needs 21. The ledger exists so the data is admissible and so no single season is mistaken for an answer, not because an answer is anticipated.",
+  "measurement_contract": "src/evaluation/canonical_contract.py",
+  "metric_direction": {
+    "mean_rank": -1,
+    "p_first": 1
+  },
+  "primary_metrics": [
+    "p_first",
+    "mean_rank"
+  ],
+  "question": "Does per-season candidate selection (meta_region_poolaware) beat a fixed rule (fixed_blend_r40) that does no per-season selection?",
+  "spec_hash": "062fadc8a90875628c05d1cc77445f1b4e6e716e30db56bff451306ae5db9cb0",
+  "spec_version": "2027.ab.v1",
+  "stopping_rule": {
+    "analyse_at_seasons": [
+      21,
+      181
+    ],
+    "if_effect_absent_at_21": "If mean_rank has not resolved by 21 prospective seasons, the honest conclusion is that the difference is too small to matter at any horizon this project operates on, and the complexity question should be decided on grounds other than measured performance -- maintenance cost, explainability, or the in-sample evidence that already exists.",
+    "no_early_stopping": true,
+    "no_interim_analysis": true,
+    "per_season_reporting": "Each season's numbers are recorded and may be reported as a running tally. A running tally is a description, not a test: no significance claim may be made before a scheduled analysis point.",
+    "rationale": "21 is 80% power on mean_rank, 181 on p_first, from the historical effect sizes recorded above. Analysing at any other count is an interim look."
+  },
+  "test": "two-sided paired t-test across seasons, both metrics, no multiplicity correction across the two because both are primary"
+}

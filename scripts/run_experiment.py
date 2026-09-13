@@ -51,6 +51,7 @@ from src.prediction.strategy_pipeline import (
     IMPLEMENTED_ADJUSTMENTS,
     IMPLEMENTED_CONSTRUCTIONS,
 )
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 from src.evaluation.testing_budget import (
     TIER_CONFIGS,
     TierConfig,
@@ -318,7 +319,7 @@ def oracle_sweep_t3_years(
 def run_budget(
     strategies: Optional[Sequence[str]] = None,
     baseline_key: str = DEFAULT_BASELINE,
-    n_opponents: int = 30,
+    n_opponents: int = CANONICAL_N_OPPONENTS,
     *,
     use_cache: bool = False,
     write_cache: bool = False,
@@ -550,7 +551,7 @@ def _save_budget_summary(summary: dict) -> Path:
     return out_path
 
 
-def run_tier1(n_repeats=100, n_model=50, n_opponents=30, *, use_cache=False, write_cache=False, workers=1):
+def run_tier1(n_repeats=100, n_model=50, n_opponents=CANONICAL_N_OPPONENTS, *, use_cache=False, write_cache=False, workers=1):
     """Tier 1: Every base × forward mode. Identifies best bases."""
     bases = list(PROBABILITY_BASES)
     modes = ["forward"]
@@ -572,7 +573,7 @@ def run_tier2(
     tier1_results=None,
     n_repeats=100,
     n_model=50,
-    n_opponents=30,
+    n_opponents=CANONICAL_N_OPPONENTS,
     *,
     use_cache=False,
     write_cache=False,
@@ -624,7 +625,7 @@ def run_permutations(
     max_adjustments=1,
     n_repeats=100,
     n_model=50,
-    n_opponents=30,
+    n_opponents=CANONICAL_N_OPPONENTS,
     *,
     use_cache=False,
     write_cache=False,

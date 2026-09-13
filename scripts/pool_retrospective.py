@@ -9,6 +9,7 @@ Then computes P(1st) for each model bracket against each opponent model.
 """
 
 import json
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 import numpy as np
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -63,7 +64,7 @@ def build_pool_pick_distribution(pool_brackets):
     return dict(dist)
 
 
-def simulate_pool_competition(model_brackets, opponent_distribution, n_sims=5000, n_opponents=30, rng=None, label=""):
+def simulate_pool_competition(model_brackets, opponent_distribution, n_sims=5000, n_opponents=CANONICAL_N_OPPONENTS, rng=None, label=""):
     """
     Monte Carlo simulation of pool competition.
 
@@ -176,7 +177,7 @@ def main():
 
     rng = np.random.default_rng(42)
     n_sims = 10000
-    n_opponents = 30
+    n_opponents = CANONICAL_N_OPPONENTS
 
     # Pre-score all pool brackets
     pool_bracket_scores = [b["pts"] for b in pool_brackets]

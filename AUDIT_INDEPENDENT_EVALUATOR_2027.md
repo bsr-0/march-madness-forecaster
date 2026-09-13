@@ -892,10 +892,31 @@ that it is established.
 The practical consequence is for C2, not for the strategy: any future comparison that
 includes a probability base equal to the referee is not measuring bracket quality on that
 arm, and `fixed_blendA100_r35`'s number should never be quoted as a competitor to the
-headline without this caveat attached. Recommendation 16 proposes settling the
-search-versus-fixed question with a pre-registered 2027 A/B using a *non-circular* fixed
-arm, since a fourth pass over the same 14 seasons is exactly the behaviour H2 exists to
-flag.
+headline without this caveat attached.
+
+**SHARPENED 2026-09-13 by recommendation 16's power analysis, which answered more of this
+than the A/B it was meant to design.** Against the non-circular control `fixed_blend_r40`,
+over the 14 seasons:
+
+| metric | `meta_region_poolaware` | `fixed_blend_r40` | p | treatment better in |
+|---|---:|---:|---:|---:|
+| P(1st) — the objective it optimises | .1200 | .1100 | .447 | **6 of 14** |
+| mean rank | 10.52 | **9.14** | **.030** | 3 of 14 |
+
+So the per-season selector **wins its own objective in fewer than half the seasons at
+p=.45, and loses average placement in 11 of 14 at p=.03.** The two are consistent — a
+higher-variance bracket wins outright more often while finishing worse on average, exactly
+as the selector's own comment describes — and for a winner-take-all pool P(1st) is the
+objective that matters, so the production choice is defensible. What is not defensible is
+describing the selection machinery's benefit as established. It is not distinguishable from
+zero on its own terms.
+
+And it will not become so: **181 prospective seasons are needed to resolve P(1st) at 80%
+power, 21 for mean rank** (`artifacts/headline_measurement/ab_2027_power.json`). H11 is
+therefore not "unresolved pending more data" — it is unresolvable by waiting, and the
+complexity question has to be decided on other grounds: maintenance cost, explainability,
+or the in-sample evidence that already exists. Recommendation 16 records the series anyway,
+so that no single season gets read as the answer.
 
 ---
 
@@ -1086,9 +1107,35 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     — are run by no CI workflow at all; `season_*.json` / `candidates_*.json` are committed
     by hand. That is recommendation 8 ("wire `candidates_2027.json` → payload → deploy into
     one workflow"), not a new item, but this is the concrete mechanism behind it.
-15. **Unify the opponent-count default.** `run_experiment.py` defaults to 30 opponents (a
+15. ~~**Unify the opponent-count default.** `run_experiment.py` defaults to 30 opponents (a
     31-person pool) while the canonical contract is 29 (30-person), so its numbers are not
-    directly comparable to the headline.
+    directly comparable to the headline.~~ **DONE 2026-09-13.** It was not one module. Six
+    declared their own opponent count, every one of them 30, none with a recorded reason:
+    `run_experiment.py` (four separate defaults), `retrospective_scorer.py` (which also set
+    `POOL_SIZE = 31`), `rank_correlation_diagnostic.py` (likewise, with an inline
+    `pool_size=31`), `validate_opponent_model.py`, `pool_retrospective.py`, and
+    `recency_hparam_fitter.py`. The clearest symptom was an instance named
+    **`recency_fitter_3yr_pool30` holding `n_opponents=30`** — a 31-person pool, the name
+    asserting the one thing the value contradicted.
+
+    Its justification was that the odd value matched "the contract baked into
+    `docs/data/loyo_window_3yr_recency_fit.json`". **That file does not exist**, and nothing
+    else referenced the instance, so there was nothing to stay compatible with. Renamed
+    `recency_fitter_3yr_canonical` and put on the contract.
+
+    The fix is one definition — `src/evaluation/canonical_contract.py` — holding the whole
+    measurement contract (29 opponents, 30-person pool, 100 repeats, pool opponents,
+    team-identity scoring, 500 pa_trials, winner-take-all, 1 entry), with
+    `pool_size = n_opponents + n_entries` asserted at import. Every module above imports it,
+    including `mc_pool_backtest.N_OPPONENTS` itself. `tests/test_canonical_contract.py`
+    scans the pool pipeline and fails on a hardcoded opponent count, because **30 is a
+    plausible value for both `n_opponents` and `pool_size`** — which is what made this drift
+    invisible by reading. Same failure class as H6 (`N_OPPONENTS` was 999, so every pre-2023
+    season was measured in a pool 33× too large); one off instead of thirty-three, and
+    therefore harder to notice, not easier.
+
+    Found by the recommendation-12 registry, which flagged the value change the moment it
+    happened — the drift gate doing exactly its job on the first real edit after being built.
 
 **Structural (2028)**
 11. ~~Evaluate against an *independent* referee (e.g. market-implied or Torvik pairwise, not
@@ -1252,17 +1299,55 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     Reproduce all three: `python -m scripts.pool_tool_features --pool-factor --payout
     --multi-entry`. Artifacts `pool_factor_sensitivity.json`, `payout_objective.json`,
     `multi_entry_value.json` in `artifacts/headline_measurement/`.
-16. **Pre-register a 2027 A/B: `fixed_blend_r40` vs `meta_region_poolaware`.** New, from H11.
-    Does per-season candidate selection earn its complexity? At n=14 it is unresolved: the
+16. ~~**Pre-register a 2027 A/B: `fixed_blend_r40` vs `meta_region_poolaware`.**~~
+    **DONE 2026-09-13 — and the power calculation is the finding.** Doing it *before*
+    writing the protocol, rather than after the data disappoints, shows the proposed test
+    cannot conclude:
+
+    | metric | treatment | control | paired diff | p | treatment better in | **seasons for 80% power** |
+    |---|---:|---:|---:|---:|---:|---:|
+    | `p_first` | .1200 | .1100 | +1.00pp | .447 | 6 of 14 | **181** |
+    | `mean_rank` | 10.52 | **9.14** | −1.38 positions | **.030** | 3 of 14 | 21 |
+
+    **181 seasons — the year 2207 — on the metric a winner-take-all pool actually pays.**
+    A single prospective season is about 1/181 of the required evidence. Even the most
+    sensitive statistic needs 21.
+
+    **The two metrics disagree in sign, and the disagreeing one is significant.** The
+    production selector is nominally ahead on P(1st) — its own objective — in only 6 of 14
+    seasons at p=.45, and is *distinguishably worse* on average placement in 11 of 14 at
+    p=.03. Both are consistent: a higher-variance bracket wins outright more often while
+    finishing worse on average, which is what the selector's own comment says. For a
+    winner-take-all pool P(1st) is the right objective, so the production choice stands —
+    but the edge it is credited with is not statistically distinguishable from zero.
+
+    So what is registered is **not a test**: `PROSPECTIVE_2027_AB.md` +
+    `configs/frozen/prospective_2027_ab.json` (hashed) + `src/governance/ab_2027.py`
+    pre-register an accumulating ledger with scheduled analyses at 21 and 181 seasons, no
+    interim looks, no early stopping, write-once seasons, both metrics primary so neither
+    can be dropped for disagreeing, and `fixed_blendA100_r35` explicitly barred as a control
+    *with its reason* (it is graded by its own probability source — H11). `tally()` returns
+    no p-value by construction.
+
+    The point is not that an answer is coming. It is that **whichever arm wins 2027 will be
+    quotable as evidence by anyone who wants it to be**, and a rule fixed in advance saying
+    what one season is worth is the only defence against that. It costs the 2027 holdout
+    nothing: both brackets come from code that already runs.
+
+    *Superseded framing:* the original text below assumed the A/B was worth running to settle
+    the question. It is worth *recording*; it is not worth waiting for.
+
+    ~~Does per-season candidate selection earn its complexity? At n=14 it is unresolved: the
     search leads the best non-circular fixed rule by ~1pp, which is inside one season-level
     standard error, while `build_candidate_artifact.py:514` found the opposite sign on its
     own grid. A difference between two named strategies is the one question a single
     prospective season can usefully answer — it needs a sign, not a level — but only if both
-    are declared before Selection Sunday. **The fixed arm must not be
-    `fixed_blendA100_r35`**, despite it topping the table: it is built from the referee's own
-    probabilities (H11), so it would measure circularity rather than construction. Deciding
-    this on the 2011–2025 window instead would be a fourth choice made on the same data,
-    which is the behaviour H2 exists to flag.
+    are declared before Selection Sunday.~~ That last claim was the part that did not
+    survive: a single season cannot usefully answer even a question of sign here, because
+    the per-season noise is five times the effect. The constraint on the fixed arm did
+    survive and is enforced in code — **the control must not be `fixed_blendA100_r35`**,
+    which is built from the referee's own probabilities and would measure circularity
+    rather than construction.
 
 ---
 

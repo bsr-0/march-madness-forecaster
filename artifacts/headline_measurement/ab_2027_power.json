@@ -1,0 +1,179 @@
+{
+  "alpha": 0.05,
+  "arm_control": "fixed_blend_r40",
+  "arm_treatment": "meta_region_poolaware",
+  "barred_controls": {
+    "fixed_blendA100_r35": "alpha=1.0 is pure seed_rp and the referee is seed_pw: the arm would be graded by its own probability source. See audit finding H11."
+  },
+  "calendar_year_of_resolution": 2207,
+  "interpretation": "The two primary metrics disagree in SIGN on the historical window: the treatment arm is nominally ahead on p_first and clearly behind on mean_rank. Both are pre-declared primary for that reason -- dropping the inconvenient one after the fact is the behaviour this pre-registration exists to prevent. A winner-take-all pool pays on p_first, so the production choice is defensible; but the selector is credited with an edge that is not distinguishable from zero on its own objective.",
+  "measurement": "power analysis for the pre-registered 2027 A/B",
+  "per_metric": {
+    "mean_rank": {
+      "cohens_d": -0.6504175611011169,
+      "control_better_seasons": 11,
+      "control_mean": 9.136785714285713,
+      "direction": -1,
+      "n_seasons": 14,
+      "p_value": 0.030124447655827283,
+      "paired_diff_raw": 1.3796428571428572,
+      "paired_diff_signed": -1.3796428571428572,
+      "paired_sd": 2.1211648326456727,
+      "per_season": {
+        "2011": {
+          "control": 10.365,
+          "treatment": 10.095
+        },
+        "2012": {
+          "control": 10.18,
+          "treatment": 16.525
+        },
+        "2013": {
+          "control": 9.11,
+          "treatment": 11.495
+        },
+        "2014": {
+          "control": 7.540000000000001,
+          "treatment": 12.915
+        },
+        "2015": {
+          "control": 10.929999999999998,
+          "treatment": 11.075
+        },
+        "2016": {
+          "control": 8.43,
+          "treatment": 8.38
+        },
+        "2017": {
+          "control": 8.045000000000002,
+          "treatment": 8.755
+        },
+        "2018": {
+          "control": 7.9049999999999985,
+          "treatment": 8.0
+        },
+        "2019": {
+          "control": 11.865,
+          "treatment": 11.9
+        },
+        "2021": {
+          "control": 9.375,
+          "treatment": 11.27
+        },
+        "2022": {
+          "control": 10.009999999999998,
+          "treatment": 10.09
+        },
+        "2023": {
+          "control": 5.860000000000001,
+          "treatment": 8.315
+        },
+        "2024": {
+          "control": 8.22,
+          "treatment": 8.45
+        },
+        "2025": {
+          "control": 10.079999999999998,
+          "treatment": 9.965
+        }
+      },
+      "seasons_for_80pct_power": 21,
+      "seasons_for_90pct_power": 27,
+      "treatment_better_seasons": 3,
+      "treatment_mean": 10.516428571428571
+    },
+    "p_first": {
+      "cohens_d": 0.20956841107122737,
+      "control_better_seasons": 3,
+      "control_mean": 0.10999999999999999,
+      "direction": 1,
+      "n_seasons": 14,
+      "p_value": 0.44701490056400217,
+      "paired_diff_raw": 0.01,
+      "paired_diff_signed": 0.01,
+      "paired_sd": 0.04771711513621791,
+      "per_season": {
+        "2011": {
+          "control": 0.02,
+          "treatment": 0.02
+        },
+        "2012": {
+          "control": 0.04,
+          "treatment": 0.05
+        },
+        "2013": {
+          "control": 0.01,
+          "treatment": 0.17
+        },
+        "2014": {
+          "control": 0.15,
+          "treatment": 0.09
+        },
+        "2015": {
+          "control": 0.16,
+          "treatment": 0.16
+        },
+        "2016": {
+          "control": 0.22,
+          "treatment": 0.21
+        },
+        "2017": {
+          "control": 0.08,
+          "treatment": 0.11
+        },
+        "2018": {
+          "control": 0.07,
+          "treatment": 0.07
+        },
+        "2019": {
+          "control": 0.11,
+          "treatment": 0.11
+        },
+        "2021": {
+          "control": 0.06,
+          "treatment": 0.07
+        },
+        "2022": {
+          "control": 0.1,
+          "treatment": 0.11
+        },
+        "2023": {
+          "control": 0.17,
+          "treatment": 0.17
+        },
+        "2024": {
+          "control": 0.15,
+          "treatment": 0.13
+        },
+        "2025": {
+          "control": 0.2,
+          "treatment": 0.21
+        }
+      },
+      "seasons_for_80pct_power": 181,
+      "seasons_for_90pct_power": 242,
+      "treatment_better_seasons": 6,
+      "treatment_mean": 0.12000000000000001
+    }
+  },
+  "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "seasons_needed_worst_metric": 181,
+  "timestamp": "2026-09-13T05:24:20",
+  "verdict": "not_resolvable_prospectively",
+  "wall_time_minutes": 1.4
+}

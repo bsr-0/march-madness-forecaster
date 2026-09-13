@@ -38,6 +38,7 @@ from scripts.mc_pool_backtest import (
     load_tournament_results,
     resolve_first_four,
 )
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS, CANONICAL_POOL_SIZE
 from src.optimization.bracket_construction import construct_bracket
 from src.prediction.seed_probabilities import build_seed_round_probabilities
 from src.simulation.pool_competition import (
@@ -51,8 +52,12 @@ logger = logging.getLogger(__name__)
 
 HIST_DIR = Path("data/raw/historical")
 ALT_DIR = Path("data/raw")
-POOL_SIZE = 31
-N_OPPONENTS = 30
+# Canonical contract, imported not re-declared (recommendation 15). This
+# module previously set its own opponent count to 30 -- a 31-person pool --
+# so its numbers were a few percent off the published ones for no stated
+# reason. See src/evaluation/canonical_contract.py.
+POOL_SIZE = CANONICAL_POOL_SIZE
+N_OPPONENTS = CANONICAL_N_OPPONENTS
 N_OPPONENT_TRIALS = 200  # repeat opponent draws for stable median/max
 RISK_LEVEL = 0.96
 ALL_YEARS = [y for y in range(2011, 2026) if y != 2020]  # 2026 excluded: results file has broken team IDs

@@ -57,6 +57,7 @@ from scripts.mc_pool_backtest import (  # noqa: E402
     resolve_first_four,
     resolve_opponent_pick_distribution,
 )
+from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS  # noqa: E402
 from src.prediction.torvik_probabilities import (  # noqa: E402
     build_torvik_probabilities,
     load_torvik_barthag,
@@ -68,7 +69,7 @@ from src.simulation.pool_competition import (  # noqa: E402
 )
 
 EVAL_YEARS = [2011, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
-N_OPPONENTS = 29
+N_OPPONENTS = CANONICAL_N_OPPONENTS
 N_REPEATS = 500  # higher than the production default (100): this script runs one
 # mode for one year at a time, so the extra precision is cheap, and a smaller
 # season-level effect needs it to be detectable at n=13 seasons.
