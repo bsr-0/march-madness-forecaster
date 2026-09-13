@@ -698,10 +698,36 @@ def build_pool_behavioral_model(
         for tid in pick_dist:
             pick_dist[tid]["CHAMP"] = pick_dist[tid].get("CHAMP", 0.0) / champ_total
 
-    # Estimate chalk_noise_std from bracket-level variance
+    # Estimate chalk_noise_std from bracket-level variance.
+    #
+    # UNITS MISMATCH, KNOWN AND DELIBERATELY NOT "FIXED" (2026-09-13). This is
+    # the standard deviation of a FRACTION -- the share of each bracket's picks
+    # that went to a top-4 seed, so it lives in probability space and runs
+    # around 0.05. Its only consumer,
+    # `pool_competition.generate_opponent_brackets`, treats the number as a
+    # standard deviation in LOGIT space. The two are not the same quantity and
+    # no conversion happens anywhere.
+    #
+    # Left alone rather than rescaled, for three reasons. It reaches the
+    # simulator on exactly one branch -- the cross-year behavioural fallback,
+    # which of the 15 backtest seasons only 2012 takes (it is the one year with
+    # no archived ESPN picks) -- and there it feeds candidate SELECTION only;
+    # the evaluation opponent fields never pass a chalk parameter at all.
+    # Second, the parameter was measured on 2026-09-13 and does not do what its
+    # name says: it leaves within-field bracket agreement flat and instead
+    # controls how much the field's aggregate chalkiness varies between
+    # simulated pools (see that function's docstring for the table). So a
+    # "correct" rescaling would tune a knob that barely moves the outcome.
+    # Third, changing it would silently change which bracket 2012 selects,
+    # which is a behaviour change to buy accuracy in a quantity we have just
+    # shown to be nearly inert.
+    #
+    # If this is ever wired into a live path, convert properly first: a spread
+    # in pick-share is not a spread in logit.
     if len(bracket_chalk_fractions) >= 5:
         chalk_noise_std = float(np.std(bracket_chalk_fractions))
     else:
+        # Unreachable with the current 105-bracket history; kept as a floor.
         chalk_noise_std = 0.15  # conservative default
 
     return pick_dist, chalk_noise_std

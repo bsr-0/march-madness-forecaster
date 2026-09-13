@@ -59,6 +59,18 @@ from __future__ import annotations
 import math
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+# Entry count above which `_make_ev_scorer` applies its duplicate discount and
+# construction genuinely changes with pool size. At or below it, in the default
+# "threshold" mode, pool size does not affect the bracket built at all -- which
+# is why audit finding H6's field-size defect was invisible at every real pool
+# size, and why recommendation 13 lists "pool-size input" as missing.
+#
+# This is the single definition. `scripts.mc_pool_backtest` imports it rather
+# than re-declaring it: it was previously duplicated there as a literal, with a
+# test string-matching this file's source to keep the two in step. Importing
+# makes that class of drift impossible instead of detectable.
+POOL_FACTOR_THRESHOLD = 50
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -166,6 +178,7 @@ def _make_ev_scorer(
     pool_size: int,
     scoring_system: Dict[str, int],
     confidence_threshold: Optional[float] = None,
+    pool_factor_mode: str = "threshold",
 ) -> Callable[[str, str], float]:
     """Build a closure that scores (team_id, round_name) via the _ev_score formula.
 
@@ -187,7 +200,41 @@ def _make_ev_scorer(
     Kept as a closure so each construction mode can build one scorer with
     fixed risk_level/pool_size/scoring_system and then pass it around without
     threading 5 parameters everywhere.
+
+    POOL SIZE DOES NOTHING BELOW 51 ENTRIES, IN THE DEFAULT MODE
+    -----------------------------------------------------------
+    ``pool_factor`` is the only place ``pool_size`` is read, and the
+    ``pool_size > 50`` guard means every real pool this project has data for
+    (19, 25, 32, 30 entries) builds the *identical* bracket:
+    ``_make_ev_scorer(..., pool_size=19)`` and ``(..., pool_size=50)`` return
+    closures that cannot be told apart by any input. That is audit
+    recommendation 13's "pool-size input" gap -- pool size is real for scoring
+    and inert for construction.
+
+    ``pool_factor_mode`` exposes the choice instead of hiding it in a
+    threshold:
+
+      ``"threshold"``  (default) the incumbent behaviour, preserved exactly so
+                       the shipped bracket and the published headline do not
+                       move as a side effect of this parameter existing.
+      ``"continuous"`` the same duplicate-discount formula applied at every
+                       pool size. At 30 entries a 90%-owned pick has ~27
+                       expected duplicates and earns a 0.21 factor rather than
+                       1.0, so small-pool brackets become markedly more
+                       contrarian.
+      ``"off"``        no duplicate discount at any size; ``diff`` is pure
+                       uniqueness.
+
+    Whether "continuous" is an improvement is an empirical question, not an
+    obvious one -- a 19-person pool genuinely needs less differentiation than a
+    1000-person one, and the threshold is a crude way of saying so. It is
+    measured in ``scripts/pool_size_sensitivity.py`` rather than adopted on the
+    strength of the formula looking more principled.
     """
+    if pool_factor_mode not in ("threshold", "continuous", "off"):
+        raise ValueError(
+            f"pool_factor_mode must be 'threshold', 'continuous' or 'off', got {pool_factor_mode!r}"
+        )
 
     def scorer(team_id: str, round_name: str) -> float:
         model_prob = float(round_probs.get(team_id, {}).get(round_name, 0.0))
@@ -201,7 +248,11 @@ def _make_ev_scorer(
 
         uniqueness = max(0.0, 1.0 - public_prob)
         pool_factor = 1.0
-        if pool_size > 50:
+        if pool_factor_mode == "threshold":
+            if pool_size > POOL_FACTOR_THRESHOLD:
+                expected_dups = pool_size * public_prob
+                pool_factor = 1.0 / max(1.0, math.log2(max(expected_dups, 1.0)))
+        elif pool_factor_mode == "continuous":
             expected_dups = pool_size * public_prob
             pool_factor = 1.0 / max(1.0, math.log2(max(expected_dups, 1.0)))
         diff = uniqueness * pool_factor
@@ -1033,6 +1084,7 @@ def _region_top_n_construction(
     scoring_system: Dict[str, int],
     max_outcomes: int = 100,
     confidence_threshold: Optional[float] = None,
+    pool_factor_mode: str = "threshold",
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Pick the highest-EV complete-region outcome per region, then walk F4+CHAMP.
 
@@ -1040,7 +1092,9 @@ def _region_top_n_construction(
     highest EV score. Then assemble the 4 regional champions and walk
     F4 + CHAMP with greedy EV-score.
     """
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
+    scorer = _make_ev_scorer(
+        round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold, pool_factor_mode
+    )
 
     all_picks: Dict[str, str] = {}
     e8_winners: Dict[str, str] = {}
@@ -1094,6 +1148,7 @@ def _exhaustive_champion_search(
     pool_size: int,
     scoring_system: Dict[str, int],
     confidence_threshold: Optional[float] = None,
+    pool_factor_mode: str = "threshold",
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Build a bracket for each of 64 possible champions, pick the best by E[pts].
 
@@ -1108,7 +1163,9 @@ def _exhaustive_champion_search(
     """
     all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
 
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
+    scorer = _make_ev_scorer(
+        round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold, pool_factor_mode
+    )
 
     best_picks: Optional[Dict[str, str]] = None
     best_champion = ""
@@ -1170,6 +1227,7 @@ def construct_bracket(
     max_one_seeds_f4: int = 2,
     chalk_bias_table: Optional[Dict[int, Dict[str, float]]] = None,
     confidence_threshold: Optional[float] = None,
+    pool_factor_mode: str = "threshold",
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Construct a complete 63-game bracket using the specified mode.
 
@@ -1223,7 +1281,14 @@ def construct_bracket(
     # Exhaustive champion search: try all 64 teams, pick best E[pts].
     if mode == "exhaustive_champion":
         return _exhaustive_champion_search(
-            by_region, round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold
+            by_region,
+            round_probs,
+            public_picks,
+            risk_level,
+            pool_size,
+            scoring_system,
+            confidence_threshold,
+            pool_factor_mode=pool_factor_mode,
         )
 
     # Region-level construction: enumerate top outcomes per region.
@@ -1236,9 +1301,12 @@ def construct_bracket(
             pool_size,
             scoring_system,
             confidence_threshold=confidence_threshold,
+            pool_factor_mode=pool_factor_mode,
         )
 
-    scorer = _make_ev_scorer(round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold)
+    scorer = _make_ev_scorer(
+        round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold, pool_factor_mode
+    )
 
     # Determine locked teams and lock_through_round per mode.
     if mode == "champ_first":

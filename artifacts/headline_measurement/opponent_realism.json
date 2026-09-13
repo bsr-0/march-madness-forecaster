@@ -1,0 +1,229 @@
+{
+  "best_matching_chalk_per_year": {
+    "2023": 0.15,
+    "2024": 0.6,
+    "2025": 0.6,
+    "2026": 0.6
+  },
+  "chalk_grid": [
+    0.0,
+    0.15,
+    0.3,
+    0.4,
+    0.6
+  ],
+  "decision_rule": "Pre-registered in the module docstring before the first run: pooled z > +2 adopt chalk clustering; |z| <= 2 independence adequate, do not adopt; z < -2 the real pool is more diverse than independent draws and adopting would move the simulation away from reality.",
+  "limitations": "Only 2023-2026 have real pool brackets, all from one pool (groupId 0b6a2bbe-...), and the entrants overlap year to year -- so the effective sample is nearer 4 pool-years than 105 brackets, and a null result is weak evidence of absence rather than evidence of independence. The statistic is symmetric agreement, which is insensitive to WHICH games drive the correlation; a field could match on total agreement while clustering on entirely different games.",
+  "measurement": "inter-bracket agreement in the real pool vs an independent field",
+  "n_pool_years": 4,
+  "per_year": {
+    "2023": {
+      "best_matching_chalk": 0.15,
+      "excess_agreement": -0.017260919182487733,
+      "f4_region_order": [
+        "West",
+        "Midwest",
+        "South",
+        "East"
+      ],
+      "group_size": 19,
+      "independent_null_mean": 0.7085151986720614,
+      "independent_null_sd": 0.01020576873512197,
+      "n_brackets": 18,
+      "observed_agreement": 0.6912542794895736,
+      "simulator_comparison": [
+        {
+          "abs_error_vs_real": 0.0005996472663137853,
+          "chalk_noise_std": 0.0,
+          "simulated_agreement": 0.6918539267558874,
+          "simulated_sd_over_repeats": 0.011278464565691065
+        },
+        {
+          "abs_error_vs_real": 0.0003693329183522831,
+          "chalk_noise_std": 0.15,
+          "simulated_agreement": 0.6916236124079259,
+          "simulated_sd_over_repeats": 0.015765469751173482
+        },
+        {
+          "abs_error_vs_real": 0.0009627554725594178,
+          "chalk_noise_std": 0.3,
+          "simulated_agreement": 0.6902915240170142,
+          "simulated_sd_over_repeats": 0.018043669386167145
+        },
+        {
+          "abs_error_vs_real": 0.0021703496213300033,
+          "chalk_noise_std": 0.4,
+          "simulated_agreement": 0.6890839298682436,
+          "simulated_sd_over_repeats": 0.01989598336941213
+        },
+        {
+          "abs_error_vs_real": 0.004969395165473678,
+          "chalk_noise_std": 0.6,
+          "simulated_agreement": 0.6862848843241,
+          "simulated_sd_over_repeats": 0.025717523398039427
+        }
+      ],
+      "verdict": "independence_holds",
+      "z_score": -1.6912904486152307
+    },
+    "2024": {
+      "best_matching_chalk": 0.6,
+      "excess_agreement": -0.012491428571428598,
+      "f4_region_order": [
+        "East",
+        "West",
+        "Midwest",
+        "South"
+      ],
+      "group_size": 25,
+      "independent_null_mean": 0.6970416931216932,
+      "independent_null_sd": 0.008234838080335387,
+      "n_brackets": 25,
+      "observed_agreement": 0.6845502645502646,
+      "simulator_comparison": [
+        {
+          "abs_error_vs_real": 0.01014814814814824,
+          "chalk_noise_std": 0.0,
+          "simulated_agreement": 0.6946984126984128,
+          "simulated_sd_over_repeats": 0.010175211812642467
+        },
+        {
+          "abs_error_vs_real": 0.009621164021163753,
+          "chalk_noise_std": 0.15,
+          "simulated_agreement": 0.6941714285714283,
+          "simulated_sd_over_repeats": 0.008745738798013788
+        },
+        {
+          "abs_error_vs_real": 0.009475132275132303,
+          "chalk_noise_std": 0.3,
+          "simulated_agreement": 0.6940253968253969,
+          "simulated_sd_over_repeats": 0.011325812890198387
+        },
+        {
+          "abs_error_vs_real": 0.009648677248677129,
+          "chalk_noise_std": 0.4,
+          "simulated_agreement": 0.6941989417989417,
+          "simulated_sd_over_repeats": 0.012811462547368912
+        },
+        {
+          "abs_error_vs_real": 0.009180952380952512,
+          "chalk_noise_std": 0.6,
+          "simulated_agreement": 0.6937312169312171,
+          "simulated_sd_over_repeats": 0.017345218627713422
+        }
+      ],
+      "verdict": "independence_holds",
+      "z_score": -1.5169003263413103
+    },
+    "2025": {
+      "best_matching_chalk": 0.6,
+      "excess_agreement": -0.009566500256016353,
+      "f4_region_order": [
+        "West",
+        "South",
+        "Midwest",
+        "East"
+      ],
+      "group_size": 33,
+      "independent_null_mean": 0.698890616999488,
+      "independent_null_sd": 0.007809689022149876,
+      "n_brackets": 32,
+      "observed_agreement": 0.6893241167434716,
+      "simulator_comparison": [
+        {
+          "abs_error_vs_real": 0.01272977470558112,
+          "chalk_noise_std": 0.0,
+          "simulated_agreement": 0.7020538914490527,
+          "simulated_sd_over_repeats": 0.010014111358957753
+        },
+        {
+          "abs_error_vs_real": 0.010677803379416373,
+          "chalk_noise_std": 0.15,
+          "simulated_agreement": 0.700001920122888,
+          "simulated_sd_over_repeats": 0.010132131851342928
+        },
+        {
+          "abs_error_vs_real": 0.010028801843317892,
+          "chalk_noise_std": 0.3,
+          "simulated_agreement": 0.6993529185867895,
+          "simulated_sd_over_repeats": 0.011687134403935994
+        },
+        {
+          "abs_error_vs_real": 0.009242191500255847,
+          "chalk_noise_std": 0.4,
+          "simulated_agreement": 0.6985663082437275,
+          "simulated_sd_over_repeats": 0.0130538947419335
+        },
+        {
+          "abs_error_vs_real": 0.007770097286226352,
+          "chalk_noise_std": 0.6,
+          "simulated_agreement": 0.697094214029698,
+          "simulated_sd_over_repeats": 0.017387464282691723
+        }
+      ],
+      "verdict": "independence_holds",
+      "z_score": -1.2249527771059514
+    },
+    "2026": {
+      "best_matching_chalk": 0.6,
+      "excess_agreement": -0.009530760810071204,
+      "f4_region_order": [
+        "West",
+        "Midwest",
+        "East",
+        "South"
+      ],
+      "group_size": 31,
+      "independent_null_mean": 0.7220649698960044,
+      "independent_null_sd": 0.007322162787756251,
+      "n_brackets": 30,
+      "observed_agreement": 0.7125342090859332,
+      "simulator_comparison": [
+        {
+          "abs_error_vs_real": 0.010027367268746645,
+          "chalk_noise_std": 0.0,
+          "simulated_agreement": 0.7225615763546799,
+          "simulated_sd_over_repeats": 0.009146435783844864
+        },
+        {
+          "abs_error_vs_real": 0.008185367633643525,
+          "chalk_noise_std": 0.15,
+          "simulated_agreement": 0.7207195767195768,
+          "simulated_sd_over_repeats": 0.010072159745148702
+        },
+        {
+          "abs_error_vs_real": 0.00809633278598798,
+          "chalk_noise_std": 0.3,
+          "simulated_agreement": 0.7206305418719212,
+          "simulated_sd_over_repeats": 0.011555704151613272
+        },
+        {
+          "abs_error_vs_real": 0.0069126071884692,
+          "chalk_noise_std": 0.4,
+          "simulated_agreement": 0.7194468162744024,
+          "simulated_sd_over_repeats": 0.01237018485618905
+        },
+        {
+          "abs_error_vs_real": 0.005382959313993796,
+          "chalk_noise_std": 0.6,
+          "simulated_agreement": 0.717917168399927,
+          "simulated_sd_over_repeats": 0.014944512828068489
+        }
+      ],
+      "verdict": "independence_holds",
+      "z_score": -1.3016319202856372
+    }
+  },
+  "pooled_p_two_sided": 0.004138756105321217,
+  "pooled_stouffer_z": -2.8673877361740647,
+  "statistic": "mean pairwise agreement over the 63 games",
+  "supersedes": "artifacts/o4_opponent_independence_2026-04-14.json, which no script produces (it is a re-serialization) and which predates the b73d351 play-in fix, so its bracket vectors were built against a partly wrong Round-of-64 field.",
+  "timestamp": "2026-09-13T01:19:49",
+  "verdict": "reject_chalk_clustering_real_pool_is_more_diverse",
+  "years": [
+    2023,
+    2024,
+    2025,
+    2026
+  ]
+}

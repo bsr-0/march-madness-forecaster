@@ -166,10 +166,21 @@ def test_header_flags_a_field_large_enough_to_change_construction(backtest):
 
 
 def test_pool_factor_threshold_matches_bracket_construction(backtest):
-    """The threshold is duplicated from _make_ev_scorer; if that moves and
-    this does not, the header starts lying about comparability."""
-    src = (ROOT / "src" / "optimization" / "bracket_construction.py").read_text()
-    assert f"if pool_size > {backtest._POOL_FACTOR_THRESHOLD}:" in src
+    """The threshold must be one value, not two that agree.
+
+    This used to string-match `if pool_size > 50:` in bracket_construction.py's
+    source, because the constant was declared as a literal in both modules. It
+    is now defined once in bracket_construction and imported here, so the
+    check is an identity rather than a comparison — and the source-scraping
+    version could not survive the constant being given a name.
+    """
+    from src.optimization.bracket_construction import POOL_FACTOR_THRESHOLD
+
+    assert backtest._POOL_FACTOR_THRESHOLD is POOL_FACTOR_THRESHOLD
+    assert POOL_FACTOR_THRESHOLD == 50, (
+        "the pool-factor threshold moved. describe_pool_size's comparability warning and the "
+        "RDoF registry entry both quote it; update them together."
+    )
 
 
 def test_non_pool_sources_report_a_plain_size(backtest):

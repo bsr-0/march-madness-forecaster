@@ -77,6 +77,20 @@ from src.prediction.pairwise import (
     marginals_from_pairwise,
 )
 from src.prediction.pairwise import log5 as _canonical_log5
+from src.optimization.bracket_construction import POOL_FACTOR_THRESHOLD
+from src.optimization.payout import (
+    VALID_PAYOUT_STRUCTURES,
+    describe as describe_payout,
+    payout_shares,
+    resolve_pool_size,
+)
+from src.optimization.pool_objectives import (
+    objective_for,
+    p_first_from_scores,
+    precompute_trial_scores,
+    select_best_single,
+    select_portfolio,
+)
 from src.optimization.poolaware_recipe import (
     POOLAWARE_EXHAUSTIVE_RISKS,
     POOLAWARE_RISK_LEVELS,
@@ -182,9 +196,16 @@ REFEREE_NOISE_STD = 0.16
 # Entry count above which bracket_construction._make_ev_scorer applies
 # `pool_factor` and construction genuinely changes. At or below it, pool size
 # does not affect the brackets built — which is why the H6 field-size defect
-# was invisible at every real pool size. Kept in sync with _make_ev_scorer by
-# tests/test_aggregate_season_ci.py::test_pool_factor_threshold_matches_bracket_construction.
-_POOL_FACTOR_THRESHOLD = 50
+# was invisible at every real pool size, and why audit recommendation 13 counts
+# "pool-size input" as missing.
+#
+# IMPORTED, not re-declared (2026-09-13). It used to be a literal 50 here and a
+# literal 50 there, kept in step by a test that string-matched
+# `if pool_size > 50:` in bracket_construction.py's source. That test broke the
+# moment the threshold became a named constant — a fair warning that the guard
+# was protecting a duplication that did not need to exist. One definition, in
+# the module that uses it.
+_POOL_FACTOR_THRESHOLD = POOL_FACTOR_THRESHOLD
 
 # POOL-SIZE SWEEP, so this does not get re-run. Measured over 2011-2026 with
 # --team-identity --n-repeats 100, seed vs meta_region_poolaware:
@@ -2406,6 +2427,29 @@ def draw_selection_trials(
     return trials
 
 
+def _record_prize(all_prizes, m, rep, better, tied, share_vector):
+    """Prize share earned by entry ``m`` in realisation ``rep``.
+
+    ``better`` counts opponents scoring strictly higher and ``tied`` counts
+    opponents scoring exactly equal, so our entry sits in the tie group
+    occupying 0-based places ``better .. better + tied``. A real pool splits
+    those places' prizes evenly between the tied entrants, which is the mean of
+    that slice. Under ``winner_take_all`` this is 1.0 for an outright win and
+    ``1/(tied+1)`` for a shared first -- note that the incumbent P(1st)
+    statistic counts a shared first as a *full* win instead, which is why
+    P(1st) and expected prize are reported as separate columns rather than one
+    being derived from the other.
+
+    Entries finishing outside the paying places earn 0, which is already the
+    array's initial value.
+    """
+    lo = int(better)
+    if lo >= share_vector.size:
+        return
+    hi = min(lo + int(tied) + 1, share_vector.size)
+    all_prizes[m, rep] = float(share_vector[lo:hi].mean())
+
+
 def score_candidate_p1(bracket_vec, trials, first_round, scoring_system):
     """P(1st) for one candidate against a pre-drawn trial set.
 
@@ -2730,6 +2774,10 @@ def _run_one_year(
     referee_noise_std=REFEREE_NOISE_STD,
     poolaware_risk_levels=None,
     poolaware_base_order="recipe",
+    payout="winner_take_all",
+    payout_shares_override=None,
+    n_entries=1,
+    pool_factor_mode="threshold",
 ):
     """Worker: run the per-year backtest body. Picklable for ProcessPoolExecutor.
 
@@ -2872,7 +2920,30 @@ def _run_one_year(
     #
     # The distinction is not cosmetic: construct_bracket's pool_size drives
     # `pool_factor`, which engages above 50 entries.
-    pool_size = year_n_opponents + 1  # 1 model bracket + N opponents
+    # Entering k brackets takes k of the pool's seats; it does not grow the
+    # pool. A 30-person pool with 4 of our entries has 26 other people in it,
+    # not 33. Getting this wrong flatters every additional entry by quietly
+    # diluting the competition, and it showed: measured against a growing
+    # field the marginal value of a 4th entry came out LARGER than the 2nd,
+    # which is not how portfolios behave.
+    #
+    # entry_n_opponents is the single value both selection and evaluation draw
+    # against, so the two cannot drift apart. With the default n_entries=1 it
+    # is year_n_opponents unchanged and pool_size is the familiar N+1.
+    entry_n_opponents = max(1, year_n_opponents - (n_entries - 1))
+    pool_size = resolve_pool_size(entry_n_opponents, n_entries)  # our entries + N opponents
+
+    # Share-of-pot by finishing place, used to turn every (entry, realisation)
+    # rank into an expected-prize contribution. Under the default
+    # winner_take_all this is [1, 0, 0, ...] and the prize column is a
+    # tie-split variant of P(1st); under top_3 etc. it is the objective the
+    # pool actually pays. Computed once per season because it depends on the
+    # season's real pool size.
+    payout_share_vector = payout_shares(payout, pool_size, payout_shares_override)
+    # Reset per season; the poolaware selector sets it when it picks a
+    # portfolio, and every other meta mode must not inherit the previous
+    # mode's entries.
+    _meta_entry_brackets = None
 
     # Load the empirical chalk-bias table once per year. Falls back to the
     # static _chalk_multiplier table if no artifact is found.
@@ -3418,6 +3489,8 @@ def _run_one_year(
                 "model_brackets": model_brackets,
                 "model_scores_actual": model_scores_actual,
                 "all_ranks": np.zeros((n_model, n_repeats)),
+                "all_prizes": np.zeros((n_model, n_repeats)),
+                "is_portfolio": False,
             }
         )
 
@@ -3456,6 +3529,10 @@ def _run_one_year(
         }
 
         for meta_mode in _meta_modes_enabled:
+            # Per MODE, not per season: only the poolaware selector produces a
+            # portfolio, and a later mode in the same season must not inherit
+            # the entries an earlier one chose.
+            _meta_entry_brackets = None
             if meta_mode == "meta_leverage":
                 meta_bracket = build_leverage_bracket(
                     first_round,
@@ -3977,6 +4054,7 @@ def _run_one_year(
                             public_picks=_pa_pub,
                             pool_size=pool_size,
                             scoring_system=_pa_scoring,
+                            pool_factor_mode=pool_factor_mode,
                             **kwargs,
                         )
                         _pa_candidates.append((_picks_dict_to_bool_array(p, first_round), label))
@@ -4122,14 +4200,18 @@ def _run_one_year(
                     # scores high on rank but has low P(1st). Binary is the correct
                     # unbiased estimator of what pays out.
                     n_pa_trials = pa_trials
-                    best_pa_p1 = -1.0
-                    best_pa_idx = 0
+                    # Entering k brackets does not shrink the field -- k of the
+                    # pool's seats become ours, so there are k-1 fewer
+                    # opponents. resolve_pool_size writes the off-one once
+                    # (audit H6 turned on exactly this arithmetic).
+                    _pa_n_opp = entry_n_opponents
+                    _pa_pool_size = pool_size
                     # COMMON RANDOM NUMBERS -- see draw_selection_trials. This
                     # is the production selector, and the loop with the most
                     # candidates, so it is where independent draws cost most.
                     _pa_trials_set = draw_selection_trials(
                         n_pa_trials,
-                        n_opponents=year_n_opponents,
+                        n_opponents=_pa_n_opp,
                         first_round=first_round,
                         pick_dist=_pa_pub,
                         matchup_probs=seed_pw,
@@ -4138,17 +4220,67 @@ def _run_one_year(
                         chalk_noise_std=pool_chalk_noise_std,
                         noise_std=referee_noise_std,
                     )
-                    for ci, (bvec, _) in enumerate(_pa_candidates):
-                        p1 = score_candidate_p1(bvec, _pa_trials_set, first_round, ESPN_SCORING)
-                        if p1 > best_pa_p1:
-                            best_pa_p1 = p1
-                            best_pa_idx = ci
-                    meta_bracket = _pa_candidates[best_pa_idx][0]
-                    print(
-                        f"  {year}   {meta_mode:<24} "
-                        f"selected={_pa_candidates[best_pa_idx][1]} "
-                        f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                    # Score every candidate against every trial ONCE. The
+                    # previous loop called score_candidate_p1 per candidate,
+                    # which re-scored the identical opponent field for each --
+                    # 25x the necessary work on the dominant cost. Bit-identical
+                    # output, pinned by tests/test_pool_objectives.py.
+                    _pa_scores = precompute_trial_scores(
+                        [bvec for bvec, _ in _pa_candidates],
+                        _pa_trials_set,
+                        first_round,
+                        ESPN_SCORING,
                     )
+                    _pa_shares, _pa_tie = objective_for(payout, _pa_pool_size, payout_shares_override)
+                    if n_entries > 1:
+                        _pa_portfolio = select_portfolio(
+                            _pa_scores,
+                            n_entries,
+                            _pa_shares,
+                            labels=[label for _, label in _pa_candidates],
+                            tie_policy=_pa_tie,
+                        )
+                        best_pa_idx = _pa_portfolio.indices[0]
+                        best_pa_p1 = _pa_portfolio.p_any_first
+                        _pa_entry_indices = list(_pa_portfolio.indices)
+                        print(
+                            f"  {year}   {meta_mode:<24} "
+                            f"portfolio={'|'.join(_pa_portfolio.labels)} "
+                            f"(n_entries={n_entries}, payout={payout}, "
+                            f"E[prize]={_pa_portfolio.expected_prize:.4f}, "
+                            f"lift over 1 entry={_pa_portfolio.expected_prize - _pa_portfolio.single_best_expected_prize:+.4f}, "
+                            f"P(any 1st)={best_pa_p1:.3f})"
+                        )
+                    elif payout == "winner_take_all" and payout_shares_override is None:
+                        # Default path, untouched in meaning: argmax P(1st) with
+                        # the incumbent tie-as-win convention. Kept as its own
+                        # branch so the published headline cannot drift through
+                        # the payout machinery.
+                        best_pa_p1 = -1.0
+                        best_pa_idx = 0
+                        for ci in range(_pa_scores.n_candidates):
+                            p1 = p_first_from_scores(_pa_scores, ci)
+                            if p1 > best_pa_p1:
+                                best_pa_p1 = p1
+                                best_pa_idx = ci
+                        _pa_entry_indices = [best_pa_idx]
+                        print(
+                            f"  {year}   {meta_mode:<24} "
+                            f"selected={_pa_candidates[best_pa_idx][1]} "
+                            f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                        )
+                    else:
+                        best_pa_idx, _pa_prize = select_best_single(_pa_scores, _pa_shares, tie_policy=_pa_tie)
+                        best_pa_p1 = p_first_from_scores(_pa_scores, best_pa_idx)
+                        _pa_entry_indices = [best_pa_idx]
+                        print(
+                            f"  {year}   {meta_mode:<24} "
+                            f"selected={_pa_candidates[best_pa_idx][1]} "
+                            f"(best of {len(_pa_candidates)}, payout={payout}, "
+                            f"E[prize]={_pa_prize:.4f}, P1={best_pa_p1:.3f})"
+                        )
+                    meta_bracket = _pa_candidates[best_pa_idx][0]
+                    _meta_entry_brackets = [_pa_candidates[i][0] for i in _pa_entry_indices]
             elif meta_mode == "meta_region_blend":
                 # Light blend: 90% torvik + 10% GBM round probs → region construction
                 from src.optimization.bracket_construction import construct_bracket
@@ -4360,8 +4492,15 @@ def _run_one_year(
                 print(f"  WARNING: unknown meta mode '{meta_mode}', skipping")
                 continue
 
-            # Wrap single bracket as (1, 63) array for compatibility
-            meta_brackets = meta_bracket.reshape(1, 63)
+            # Wrap as (k, 63). k > 1 only for a multi-entry poolaware run:
+            # `_meta_entry_brackets` is the portfolio the selector chose ex
+            # ante. Every other meta mode produces exactly one bracket, and
+            # `_meta_entry_brackets` is reset to None before each mode so a
+            # portfolio cannot leak from one mode into the next.
+            if _meta_entry_brackets is not None and len(_meta_entry_brackets) > 1:
+                meta_brackets = np.stack([b.reshape(63) for b in _meta_entry_brackets])
+            else:
+                meta_brackets = meta_bracket.reshape(1, 63)
 
             if team_identity:
                 meta_scores = score_brackets_team_identity(
@@ -4378,10 +4517,19 @@ def _run_one_year(
                     "mode_name": meta_mode,
                     "model_brackets": meta_brackets,
                     "model_scores_actual": meta_scores,
-                    "all_ranks": np.zeros((1, n_repeats)),
+                    "all_ranks": np.zeros((meta_brackets.shape[0], n_repeats)),
+                    "all_prizes": np.zeros((meta_brackets.shape[0], n_repeats)),
+                    # A portfolio's entries are jointly ours: P(1st) means
+                    # P(ANY entry finishes first), and prize is the SUM over
+                    # entries. For stochastic modes the rows are alternative
+                    # samples of one entry, so both are means instead.
+                    "is_portfolio": meta_brackets.shape[0] > 1,
                 }
             )
-            print(f"  {year:<6} {meta_mode:<20} META bracket built (1 deterministic)")
+            print(
+                f"  {year:<6} {meta_mode:<20} META bracket built "
+                f"({meta_brackets.shape[0]} deterministic)"
+            )
 
     # Pass B: opponent field + simulated outcome generation.
     # Under --team-identity the ranking uses the simulated outcome (not
@@ -4394,7 +4542,7 @@ def _run_one_year(
         # field. Paired comparison → lower variance.
         for rep in range(n_repeats):
             opp = generate_opponent_brackets(
-                year_n_opponents,
+                entry_n_opponents,
                 first_round,
                 seed_pw,
                 pick_dist,
@@ -4428,6 +4576,7 @@ def _run_one_year(
                     model_scores_sim = payload["model_scores_actual"]
 
                 all_ranks = payload["all_ranks"]
+                all_prizes = payload["all_prizes"]
                 payload_n = all_ranks.shape[0]  # 1 for meta modes, n_model for stochastic
                 for m in range(payload_n):
                     # How many opponents scored strictly higher + 1; ties
@@ -4435,6 +4584,7 @@ def _run_one_year(
                     better = np.sum(opp_scores > model_scores_sim[m])
                     tied = np.sum(opp_scores == model_scores_sim[m])
                     all_ranks[m, rep] = better + 1 + tied / 2.0
+                    _record_prize(all_prizes, m, rep, better, tied, payout_share_vector)
     else:
         # opponent_strategy == "per_mode": spawn a deterministic rng
         # sub-stream per mode from SeedSequence(42 + year). Each mode
@@ -4451,7 +4601,7 @@ def _run_one_year(
             all_ranks = payload["all_ranks"]
             for rep in range(n_repeats):
                 opp = generate_opponent_brackets(
-                    year_n_opponents,
+                    entry_n_opponents,
                     first_round,
                     seed_pw,
                     pick_dist,
@@ -4480,10 +4630,12 @@ def _run_one_year(
                     opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
 
                 payload_n = all_ranks.shape[0]
+                all_prizes = payload["all_prizes"]
                 for m in range(payload_n):
                     better = np.sum(opp_scores > model_scores_sim[m])
                     tied = np.sum(opp_scores == model_scores_sim[m])
                     all_ranks[m, rep] = better + 1 + tied / 2.0
+                    _record_prize(all_prizes, m, rep, better, tied, payout_share_vector)
 
     # Pass C: per-mode aggregation, reporting, and --save-brackets
     # serialization. all_ranks is now fully populated for every mode.
@@ -4498,8 +4650,22 @@ def _run_one_year(
         best_rank = bracket_mean_ranks[best_bracket_idx]
         mean_rank = bracket_mean_ranks.mean()
 
-        # P(1st) across all brackets x repeats
-        p_first = (all_ranks == 1.0).mean()
+        # P(1st) and expected prize.
+        #
+        # For a stochastic mode the rows of all_ranks are alternative SAMPLES of
+        # one entry, so both statistics are means over rows: "how often does a
+        # bracket from this mode win". For a multi-entry portfolio the rows are
+        # entries we jointly submitted, so P(1st) means P(ANY of them finishes
+        # first) and the prize is the SUM over entries -- averaging there would
+        # report the typical entry's result and understate a portfolio whose
+        # whole point is that one entry covering a different outcome pays off.
+        all_prizes = payload["all_prizes"]
+        if payload.get("is_portfolio"):
+            p_first = (all_ranks.min(axis=0) == 1.0).mean()
+            expected_prize = float(all_prizes.sum(axis=0).mean())
+        else:
+            p_first = (all_ranks == 1.0).mean()
+            expected_prize = float(all_prizes.mean())
         p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
         p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
         # Count of binary win/lose trials behind p_first — needed by the
@@ -4509,10 +4675,18 @@ def _run_one_year(
         best_score = float(model_scores_actual[best_bracket_idx])
         mean_score = float(model_scores_actual.mean())
 
+        # The prize column is appended only when it says something the default
+        # columns do not -- a non-winner-take-all pool, or a portfolio. Adding
+        # it unconditionally would change the shape of every archived log for
+        # no gain, and under winner_take_all with one entry it is a tie-split
+        # restatement of P(1st) anyway (see tests/test_tie_conventions.py).
+        _prize_suffix = ""
+        if payout != "winner_take_all" or payout_shares_override is not None or n_entries > 1:
+            _prize_suffix = f" {expected_prize:9.4f}"
         print(
             f"  {year:<6} {mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
             f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
-            f"{best_score:8.0f} {mean_score:8.0f}"
+            f"{best_score:8.0f} {mean_score:8.0f}{_prize_suffix}"
         )
 
         _year_results.append(
@@ -4527,6 +4701,8 @@ def _run_one_year(
                 "p_top5": p_top5,
                 "p_top25": p_top25,
                 "n_trials": n_trials,
+                "expected_prize": expected_prize,
+                "n_entries": int(all_ranks.shape[0]) if payload.get("is_portfolio") else 1,
             }
         )
 
@@ -4805,6 +4981,10 @@ def run_backtest(
     referee_noise_std: float = REFEREE_NOISE_STD,
     poolaware_risk_levels: Optional[Sequence[float]] = None,
     poolaware_base_order: str = "recipe",
+    payout: str = "winner_take_all",
+    payout_shares_override: Optional[Sequence[float]] = None,
+    n_entries: int = 1,
+    pool_factor_mode: str = "threshold",
 ):
     """Run MC pool backtest across historical years with walk-forward integrity.
 
@@ -4870,6 +5050,10 @@ def run_backtest(
         raise ValueError(f"poolaware_base_order must be 'recipe' or 'reversed', got {poolaware_base_order!r}")
     if poolaware_risk_levels is not None and not len(tuple(poolaware_risk_levels)):
         raise ValueError("poolaware_risk_levels was given but is empty; pass None for the recipe's own grid")
+    if payout_shares_override is None and payout not in VALID_PAYOUT_STRUCTURES:
+        raise ValueError(f"unknown payout {payout!r}; known: {sorted(VALID_PAYOUT_STRUCTURES)}")
+    if n_entries < 1:
+        raise ValueError(f"n_entries must be >= 1, got {n_entries}")
 
     explicit_years = years is not None
     if years is None:
@@ -4881,7 +5065,19 @@ def run_backtest(
     print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]")
     print("=" * 100)
     print(f"  Pool size: {describe_pool_size(opponent_source, n_opponents)}")
+    # The header said "independent draws" unconditionally, which was true of
+    # every live path but would have gone on saying so if one stopped being.
+    # Opponents are independent by choice, not by oversight: the real
+    # 2023-2026 fields are LESS correlated than independent draws from their
+    # own marginals (pooled Stouffer z = -2.87), so clustering them would move
+    # the simulation away from reality. See scripts/pool_opponent_realism.py
+    # and audit finding H3.
     print(f"  Opponent model: {opponent_source} pick rates (independent draws)")
+    print(f"  Payout: {describe_payout(payout, resolve_pool_size(n_opponents, n_entries), payout_shares_override)}")
+    if n_entries > 1:
+        print(f"  Entries: {n_entries} (chosen jointly ex ante; P(1st) means P(any entry 1st))")
+    if pool_factor_mode != "threshold":
+        print(f"  Pool factor: {pool_factor_mode} (NON-DEFAULT — construction differs from the published runs)")
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
     print(f"  Years: {len(years)}")
@@ -4920,6 +5116,10 @@ def run_backtest(
         referee_noise_std,
         poolaware_risk_levels,
         poolaware_base_order,
+        payout,
+        payout_shares_override,
+        n_entries,
+        pool_factor_mode,
     )
 
     def _absorb(outcome: dict) -> None:
@@ -5092,6 +5292,42 @@ def main():
         f"Valid: {', '.join(CONSTRUCTION_MODES)}. Use 'all' for all modes.",
     )
     parser.add_argument(
+        "--pool-factor-mode",
+        type=str,
+        default="threshold",
+        choices=["threshold", "continuous", "off"],
+        help="How pool size enters bracket CONSTRUCTION. threshold (default) applies the "
+        "duplicate discount only above 50 entries, so at every real pool size here "
+        "construction ignores pool size entirely; continuous applies it at all sizes; off "
+        "never applies it. See scripts/pool_tool_features.py for the measurement.",
+    )
+    parser.add_argument(
+        "--payout",
+        type=str,
+        default="winner_take_all",
+        choices=sorted(VALID_PAYOUT_STRUCTURES),
+        help="Prize structure the pool pays under. Selection maximises expected share of the "
+        "pot rather than P(1st) whenever this is not winner_take_all. Default reproduces the "
+        "published headline exactly.",
+    )
+    parser.add_argument(
+        "--payout-shares",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Explicit prize shares for ranks 1..n, overriding --payout (e.g. "
+        "--payout-shares 50 30 20). Renormalised, so raw dollar amounts are fine.",
+    )
+    parser.add_argument(
+        "--n-entries",
+        type=int,
+        default=1,
+        help="How many brackets to enter in the pool (multi-entry). The portfolio is chosen "
+        "jointly and ex ante to maximise expected total prize; every entry is then scored, "
+        "so this is NOT best-of-N. k entries occupy k of the pool's seats, so the opponent "
+        "count drops by k-1 rather than the field growing.",
+    )
+    parser.add_argument(
         "--pa-trials",
         type=int,
         default=500,
@@ -5176,6 +5412,10 @@ def main():
             eval_start_year=args.eval_start_year,
             pool_blend_weight=args.pool_blend_weight,
             pa_trials=args.pa_trials,
+            payout=args.payout,
+            payout_shares_override=args.payout_shares,
+            n_entries=args.n_entries,
+            pool_factor_mode=args.pool_factor_mode,
         )
     finally:
         if log_file is not None:

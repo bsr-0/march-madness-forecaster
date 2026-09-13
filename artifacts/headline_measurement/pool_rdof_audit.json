@@ -3,15 +3,15 @@
     "by_status": {
       "external": 2,
       "frozen_after_search": 1,
-      "never_searched": 27,
+      "never_searched": 29,
       "removed_after_measuring": 3,
-      "searched": 4,
+      "searched": 5,
       "tuned_on_metric": 4
     },
     "by_tier": {
       "1_external": 2,
-      "2_structural": 6,
-      "3_freely_tuned": 33
+      "2_structural": 8,
+      "3_freely_tuned": 34
     },
     "contaminated_names": [
       "all_modes_family_size",
@@ -27,21 +27,21 @@
       "candidate_bank_risk_grid",
       "blend_region_35_risk"
     ],
-    "dof_per_season": 0.86,
+    "dof_per_season": 0.93,
     "effective_dof_is_measured": true,
-    "effective_dof_per_season": 0.79,
-    "effective_dof_spent": 11.0,
+    "effective_dof_per_season": 0.86,
+    "effective_dof_spent": 12.0,
     "n_contaminated_by_2026": 12,
     "n_evaluation_seasons": 14,
-    "n_registered": 41,
+    "n_registered": 44,
     "note": "The denominator is seasons, not season x repeat trials. Audit finding H1 established the season as the unit of independence and measured the inflation from using repeats at roughly 3x.",
-    "raw_dof_spent": 12
+    "raw_dof_spent": 13
   },
   "drift": {
-    "coverage": 0.707,
+    "coverage": 0.727,
     "drifted": [],
-    "n_checked": 29,
-    "n_registered": 41,
+    "n_checked": 32,
+    "n_registered": 44,
     "unresolvable": [
       {
         "name": "removed_candidate_family_upset_aware",
@@ -127,19 +127,19 @@
         "pa_trials": 500,
         "team_identity": true
       },
-      "git_commit": "7093b3e7625cebf2b77ac8b2e1a8db23795f8994",
+      "git_commit": "4908b916401fabb7cf372bdf9ca576f357c4befb",
       "git_dirty": true,
-      "timestamp": "2026-09-12T14:31:02"
+      "timestamp": "2026-09-13T02:12:28"
     },
-    "registry_hash_at_evaluation": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+    "registry_hash_at_evaluation": "b631d490e2fc00e40c3c7b011bc3841a54292c9aef770f7dea01ab75527eff59",
     "wall_time_minutes": 0.9,
     "year": 2026
   },
   "metadata": {
     "audit_finding": "H2",
     "audit_recommendation": 12,
-    "generated_at": "2026-09-12T14:35:12",
-    "registry_hash": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
+    "generated_at": "2026-09-13T02:13:03",
+    "registry_hash": "b631d490e2fc00e40c3c7b011bc3841a54292c9aef770f7dea01ab75527eff59",
     "report_type": "pool_strategy_researcher_degrees_of_freedom_audit"
   },
   "multiplicity": {
@@ -6290,9 +6290,9 @@
     "wall_time_minutes": 0.0
   },
   "recommendations": [
-    "DRIFT: none. 29/41 entries verified against live code (71% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.",
-    "DoF RATIO: 12 degrees of freedom spent against 14 independent seasons = 0.86 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.",
-    "SENSITIVITY: after flatness discounting, 11.0 effective DoF (0.79 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.",
+    "DRIFT: none. 32/44 entries verified against live code (73% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.",
+    "DoF RATIO: 13 degrees of freedom spent against 14 independent seasons = 0.93 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.",
+    "SENSITIVITY: after flatness discounting, 12.0 effective DoF (0.86 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.",
     "CIRCULARITY: 4 knob(s) were set because of their effect on this metric and 3 candidate family/families were deleted for scoring worse on the evaluation seasons. No resampling scheme can correct for the removed ones -- their code is gone. This is the irreducible core of finding H2.",
     "MULTIPLICITY: meta_region_poolaware aggregate P(1st) 0.1200 vs baseline 0.0399; best-of-family p = 0.0005999400059994001, stepdown-adjusted p = 0.0005999400059994001 over 78 modes. VERDICT survives_correction.",
     "HOLDOUT: Level 1 = [2027] (untouched); Level 2.5 = 2026 (evaluated=True). No historical season is a holdout and none can be made one retroactively."
@@ -6972,6 +6972,48 @@
         0.0,
         1.0
       ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py \u2014 run_backtest.payout",
+      "contaminated_by": [],
+      "current_value": "winner_take_all",
+      "derivation": "The pool's own rules, not a modelling choice -- tier 2 for the same reason ESPN_SCORING is tier 1. The default is winner_take_all because that is what the published headline measures and what the real pool behind pool_hist_results.json pays. Selection maximises expected share of the pot under any other setting; measured 2026-09-13 to change the selected bracket in 1 of 14 seasons under top_3 and 11 of 14 under top_25pct.",
+      "live_symbol": "scripts.mc_pool_backtest:run_backtest.payout",
+      "live_transform": null,
+      "name": "payout_structure",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": null
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py \u2014 run_backtest.n_entries",
+      "contaminated_by": [],
+      "current_value": 1,
+      "derivation": "How many brackets the user enters. One by default, matching every published figure. Measured 2026-09-13: the 2nd and 3rd entries raise P(winning the pool) by +4.21pp (p=.018) and +5.00pp (p=.010); the 4th by +1.86pp (p=.45), which is not distinguishable from zero. Expected prize per entry falls throughout.",
+      "live_symbol": "scripts.mc_pool_backtest:run_backtest.n_entries",
+      "live_transform": null,
+      "name": "n_entries",
+      "status": "never_searched",
+      "swept_by": null,
+      "tier": 2,
+      "valid_range": [
+        1,
+        25
+      ]
+    },
+    {
+      "code_path": "scripts/mc_pool_backtest.py \u2014 run_backtest.pool_factor_mode",
+      "contaminated_by": [],
+      "current_value": "threshold",
+      "derivation": "Whether pool size reaches bracket construction below 51 entries. SWEPT under recommendation 13 and the production value KEPT: 'continuous' scored +1.93pp on the mean, clearing the 1.5pp season-level SE, but won only 6 of 14 seasons and nearly half its gain is 2011 alone (.020 -> .150). The pre-registered rule required both a mean gain and 9 of 14 seasons; adopting on the mean alone would have been a forking path on the very metric H2 is about. 'off' scores 0.1200, identical to 'threshold' -- direct proof the gate never fires at a real pool size.",
+      "live_symbol": "scripts.mc_pool_backtest:run_backtest.pool_factor_mode",
+      "live_transform": null,
+      "name": "pool_factor_mode",
+      "status": "searched",
+      "swept_by": "pool_factor_mode",
+      "tier": 3,
+      "valid_range": null
     },
     {
       "code_path": "scripts/mc_pool_backtest.py:117 \u2014 EVALUATION_YEARS",

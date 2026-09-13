@@ -246,7 +246,7 @@ def generate_opponent_brackets(
     previous round in this bracket).
 
     When ``chalk_noise_std > 0``, opponents are drawn from a hierarchical
-    model that introduces realistic inter-bracket correlation:
+    model:
 
       1. A shared *pool narrative* factor is drawn once per call:
          ``pool_shift ~ N(0, chalk_noise_std)``
@@ -256,10 +256,43 @@ def generate_opponent_brackets(
          space by ``opp_shift * seed_gap_weight``, where the weight
          scales with the seed difference between the two teams.
 
-    This creates the correlation structure observed in real pools: most
-    opponents cluster around a shared chalk/contrarian tendency (shared
-    ESPN media diet), with individual variation. Setting ``chalk_noise_std``
-    to 0.0 (default) recovers the original independent sampling.
+    WHAT THIS PARAMETER ACTUALLY DOES -- measured 2026-09-13, because the
+    description that stood here for a year was wrong in a way that matters.
+    It claimed to create "the correlation structure observed in real pools",
+    with a recommended range of 0.3-0.6 "for realistic N=31 pool correlation".
+    Neither claim survives measurement (``scripts/pool_opponent_realism.py``):
+
+      chalk   within-field agreement      between-trial SD of
+                (mean +/- SD, 200 reps)     field chalkiness
+      0.00      0.69808 +/- 0.00932            0.00983
+      0.40      0.69769 +/- 0.01255            0.01873
+      1.00      0.69387 +/- 0.02565            0.04257
+
+    Within-field agreement -- inter-bracket correlation, the thing the old
+    docstring promised -- is FLAT: it moves by 0.004 across the entire range
+    while the repeat-to-repeat SD is 0.009 to 0.026. It does not cluster
+    opponents. The reason is structural rather than a bug: ``pool_shift`` is
+    constant within a call, so it shifts every bracket in the field the same
+    way and is invisible as *pairwise* agreement between them, while the
+    ``N(pool_shift, 0.5 * std)`` term adds independent per-opponent spread,
+    which makes brackets slightly MORE different from each other.
+
+    What it genuinely controls is the second column: how much the whole
+    field's chalkiness varies from one simulated pool to the next, a 4.3x
+    increase over the range. That is a real and useful thing to model --
+    uncertainty about whether this year's field will be chalky or contrarian
+    -- it is simply not "correlated picks", and it cannot close the H3
+    realism gap, which is about within-field structure.
+
+    And the direction the recommendation assumed is wrong for this pool
+    anyway: the real 2023-2026 fields are LESS correlated than independent
+    draws from their own marginals (pooled Stouffer z = -2.87, p = 0.004),
+    so adding clustering would move the simulation away from reality. See
+    ``artifacts/headline_measurement/opponent_realism.json`` and audit
+    finding H3 / recommendation 13.
+
+    Setting ``chalk_noise_std`` to 0.0 (default) recovers independent
+    sampling, and is what every production path uses.
 
     Args:
         n_opponents: Number of opponent brackets to generate.
@@ -270,9 +303,14 @@ def generate_opponent_brackets(
             From archetype blending or raw public picks.
         seeds: team_id -> tournament seed (1-16).
         rng: NumPy random generator.
-        chalk_noise_std: Controls opponent correlation strength. 0.0 = fully
-            independent (legacy behavior). Recommended range 0.3-0.6 for
-            realistic N=31 pool correlation.
+        chalk_noise_std: Spread of the field's aggregate chalkiness ACROSS
+            simulated pools -- not, despite its name and its former
+            description, inter-bracket correlation within one pool. See the
+            measured table above. 0.0 (every production path) draws each
+            opponent independently. The old "recommended range 0.3-0.6 for
+            realistic N=31 pool correlation" was never checked against the
+            real pool and does not survive being checked; there is no
+            recommended non-zero value.
 
     Returns:
         Boolean array of shape (n_opponents, 63) where True means the
