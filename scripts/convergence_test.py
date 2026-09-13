@@ -53,6 +53,7 @@ from src.simulation.pool_history_opponent_model import (
     build_pool_pick_distribution,
 )
 from src.data.historical_picks import load_historical_public_picks
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH  # noqa: E402
 
 
 def build_seed_pairwise(first_round, seeds):
@@ -72,7 +73,7 @@ def build_seed_pairwise(first_round, seeds):
 
 def build_pick_dist_with_fallback(year, seeds):
     """Build pick distribution, trying pool -> ESPN -> seed fallback."""
-    pool_hist_path = PROJECT_ROOT / "pool_hist_results.json"
+    pool_hist_path = POOL_HISTORY_PATH
     try:
         pool_brackets, group_size = load_pool_brackets(pool_hist_path, year)
         return build_pool_pick_distribution(pool_brackets, seeds), group_size - 1

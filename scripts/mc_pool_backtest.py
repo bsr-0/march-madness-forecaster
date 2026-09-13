@@ -78,6 +78,7 @@ from src.prediction.pairwise import (
 )
 from src.prediction.pairwise import log5 as _canonical_log5
 from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 from src.optimization.bracket_construction import POOL_FACTOR_THRESHOLD
 from src.optimization.payout import (
     VALID_PAYOUT_STRUCTURES,
@@ -131,7 +132,7 @@ BACKTEST_YEARS = [y for y in range(2011, 2027) if y != 2020]  # 15 years (2020 =
 CONTAMINATED_EVAL_YEARS = frozenset({2026})
 EVALUATION_YEARS = [y for y in BACKTEST_YEARS if y not in CONTAMINATED_EVAL_YEARS]
 LOG_DIR = PROJECT_ROOT / "artifacts" / "backtest_runs"
-POOL_HIST_PATH = PROJECT_ROOT / "pool_hist_results.json"
+POOL_HIST_PATH = POOL_HISTORY_PATH
 
 # THE ESPN NATIONAL PICK DISTRIBUTION IS A FAIR MODEL OF THIS POOL, measured
 # rather than assumed. scripts/analyze_pool_history.py tests the 105 real

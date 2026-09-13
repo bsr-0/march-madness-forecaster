@@ -31,8 +31,9 @@ from scripts.mc_pool_backtest import (
     build_espn_pick_distribution,
     load_seeds_and_regions,
 )
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH  # noqa: E402
 
-POOL_HIST_PATH = "data/pool_history/pool_hist_results.json"
+POOL_HIST_PATH = POOL_HISTORY_PATH
 POOL_YEARS = [2023, 2024, 2025, 2026]
 
 

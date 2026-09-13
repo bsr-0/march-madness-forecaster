@@ -13,6 +13,7 @@ from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 import numpy as np
 from collections import Counter, defaultdict
 from pathlib import Path
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -29,7 +30,7 @@ def load_model_brackets():
 
 def load_pool_brackets():
     """Load actual pool brackets for 2026."""
-    with open(ROOT / "pool_hist_results.json") as f:
+    with open(POOL_HISTORY_PATH) as f:
         data = json.load(f)
     return data["years"]["2026"]["brackets"]
 

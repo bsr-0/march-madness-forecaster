@@ -12,6 +12,7 @@ import json
 import numpy as np
 from collections import Counter, defaultdict
 from pathlib import Path
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -164,7 +165,7 @@ ROUND_ORDER = ["r64", "r32", "s16", "e8", "f4", "champ"]
 
 
 def load_pool_data():
-    with open(ROOT / "pool_hist_results.json") as f:
+    with open(POOL_HISTORY_PATH) as f:
         return json.load(f)
 
 

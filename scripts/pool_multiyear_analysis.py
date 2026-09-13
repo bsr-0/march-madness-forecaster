@@ -10,6 +10,7 @@ import json
 import numpy as np
 from collections import Counter, defaultdict
 from pathlib import Path
+from src.simulation.pool_history_opponent_model import POOL_HISTORY_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -464,7 +465,7 @@ def analyze_year(year, yr_data, actual):
 
 
 def main():
-    with open(ROOT / "pool_hist_results.json") as f:
+    with open(POOL_HISTORY_PATH) as f:
         pool = json.load(f)
 
     print("=" * 75)

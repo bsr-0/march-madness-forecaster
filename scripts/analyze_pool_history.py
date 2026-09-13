@@ -88,9 +88,12 @@ from scripts.mc_pool_backtest import (  # noqa: E402
     build_bracket_order,
     load_seeds_and_regions,
 )
-from src.simulation.pool_history_opponent_model import resolve_abbrev  # noqa: E402
+from src.simulation.pool_history_opponent_model import (  # noqa: E402
+    POOL_HISTORY_PATH,
+    resolve_abbrev,
+)
 
-POOL_HIST = REPO / "pool_hist_results.json"
+POOL_HIST = POOL_HISTORY_PATH
 PAYLOADS = REPO / "docs" / "data"
 
 # The scoring the product assumes. Checked, not trusted -- see module docstring.
