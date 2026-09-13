@@ -775,6 +775,63 @@ REGISTRY: Tuple[PoolDegreeOfFreedom, ...] = (
         ),
         status=STATUS_NEVER_SEARCHED,
     ),
+    # --- Pool-tool inputs, added under recommendation 13 (2026-09-13) -------
+    #
+    # These are user-facing inputs rather than researcher choices -- a pool
+    # either pays its top three or it does not. But each has a DEFAULT, and a
+    # default is a choice, so they are registered like any other. All three
+    # were chosen to preserve existing behaviour exactly, which is why the
+    # headline is unchanged by their existence.
+    PoolDegreeOfFreedom(
+        name="payout_structure",
+        tier=TIER_STRUCTURAL,
+        current_value="winner_take_all",
+        code_path="scripts/mc_pool_backtest.py — run_backtest.payout",
+        live_symbol="scripts.mc_pool_backtest:run_backtest.payout",
+        derivation=(
+            "The pool's own rules, not a modelling choice -- tier 2 for the same reason "
+            "ESPN_SCORING is tier 1. The default is winner_take_all because that is what the "
+            "published headline measures and what the real pool behind pool_hist_results.json "
+            "pays. Selection maximises expected share of the pot under any other setting; "
+            "measured 2026-09-13 to change the selected bracket in 1 of 14 seasons under "
+            "top_3 and 11 of 14 under top_25pct."
+        ),
+        status=STATUS_NEVER_SEARCHED,
+    ),
+    PoolDegreeOfFreedom(
+        name="n_entries",
+        tier=TIER_STRUCTURAL,
+        current_value=1,
+        code_path="scripts/mc_pool_backtest.py — run_backtest.n_entries",
+        live_symbol="scripts.mc_pool_backtest:run_backtest.n_entries",
+        valid_range=(1, 25),
+        derivation=(
+            "How many brackets the user enters. One by default, matching every published "
+            "figure. Measured 2026-09-13: the 2nd and 3rd entries raise P(winning the pool) "
+            "by +4.21pp (p=.018) and +5.00pp (p=.010); the 4th by +1.86pp (p=.45), which is "
+            "not distinguishable from zero. Expected prize per entry falls throughout."
+        ),
+        status=STATUS_NEVER_SEARCHED,
+    ),
+    PoolDegreeOfFreedom(
+        name="pool_factor_mode",
+        tier=TIER_FREE,
+        current_value="threshold",
+        code_path="scripts/mc_pool_backtest.py — run_backtest.pool_factor_mode",
+        live_symbol="scripts.mc_pool_backtest:run_backtest.pool_factor_mode",
+        derivation=(
+            "Whether pool size reaches bracket construction below 51 entries. SWEPT under "
+            "recommendation 13 and the production value KEPT: 'continuous' scored +1.93pp on "
+            "the mean, clearing the 1.5pp season-level SE, but won only 6 of 14 seasons and "
+            "nearly half its gain is 2011 alone (.020 -> .150). The pre-registered rule "
+            "required both a mean gain and 9 of 14 seasons; adopting on the mean alone would "
+            "have been a forking path on the very metric H2 is about. 'off' scores 0.1200, "
+            "identical to 'threshold' -- direct proof the gate never fires at a real pool size."
+        ),
+        status=STATUS_SEARCHED,
+        contaminated_by=(),
+        swept_by="pool_factor_mode",
+    ),
     # --- Evaluation window --------------------------------------------------
     PoolDegreeOfFreedom(
         name="evaluation_years",
@@ -1068,6 +1125,11 @@ def _read_lockfile() -> Dict[str, Any]:
     return data
 
 
+def _registry_values() -> Dict[str, str]:
+    """Per-knob values, for telling a behaviour change from a documentation one."""
+    return {d.name: repr(_jsonable(d.current_value)) for d in REGISTRY}
+
+
 def record_holdout_evaluation(year: int, evidence_level: str, summary: Dict[str, Any]) -> Dict[str, Any]:
     """Record that a holdout season has been evaluated, and against what config.
 
@@ -1083,6 +1145,11 @@ def record_holdout_evaluation(year: int, evidence_level: str, summary: Dict[str,
         "year": int(year),
         "evidence_level": evidence_level,
         "registry_hash": registry_hash(),
+        # Per-knob values as well as the hash, so a later check can tell a
+        # knob that CHANGED (the holdout result no longer describes the
+        # system) from a knob that was merely newly REGISTERED (the audit got
+        # more complete; nothing about the system moved).
+        "registry_values": _registry_values(),
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "summary": summary,
     }
@@ -1099,29 +1166,68 @@ def record_holdout_evaluation(year: int, evidence_level: str, summary: Dict[str,
 
 
 def check_holdout_contamination() -> List[Dict[str, Any]]:
-    """Holdout evaluations whose configuration no longer matches the live code.
+    """Holdout evaluations whose CONFIGURATION no longer matches the live code.
 
-    Returns one record per stale evaluation; empty means every recorded holdout
-    result still describes the current system.
+    Distinguishes a behaviour change from a documentation one, the way
+    ``frozen_spec.verify_freeze`` does for the methodology spec. A knob whose
+    value changed means the holdout result has stopped describing the shipped
+    system, and that is contamination. A knob that was merely added to the
+    registry means the audit got more complete while the system stood still,
+    and flagging that as contamination would punish improving the audit --
+    which would quickly teach everyone not to improve it.
+
+    Returns one record per genuinely stale evaluation; empty means every
+    recorded holdout still describes the current system. Newly registered
+    knobs are reported inside the record as ``newly_registered`` when a real
+    change is present, and are otherwise silent.
     """
-    current = registry_hash()
+    current_values = _registry_values()
     stale = []
     for entry in _read_lockfile().get("evaluations", []):
-        if entry.get("registry_hash") != current:
-            stale.append(
-                {
-                    "year": entry.get("year"),
-                    "evaluated_at": entry.get("timestamp"),
-                    "registry_hash_at_evaluation": entry.get("registry_hash"),
-                    "registry_hash_now": current,
-                    "message": (
-                        f"The {entry.get('year')} holdout was evaluated against a different "
-                        "configuration than the one now in the code. A registered knob has "
-                        "changed since, so that result no longer describes the shipped system "
-                        "and re-running it is not an out-of-sample evaluation."
-                    ),
-                }
-            )
+        recorded = entry.get("registry_values")
+        if recorded is None:
+            # Pre-dates value recording. Fall back to the hash, which cannot
+            # tell the two cases apart -- so say so rather than implying it can.
+            if entry.get("registry_hash") != registry_hash():
+                stale.append(
+                    {
+                        "year": entry.get("year"),
+                        "evaluated_at": entry.get("timestamp"),
+                        "changed_knobs": None,
+                        "message": (
+                            f"The {entry.get('year')} holdout was recorded before per-knob values "
+                            "were stored, so only the registry hash can be compared and it "
+                            "differs. That may be a real configuration change or merely a newly "
+                            "registered knob; re-record the evaluation to get a precise answer."
+                        ),
+                    }
+                )
+            continue
+
+        changed = {
+            name: {"at_evaluation": recorded[name], "now": current_values[name]}
+            for name in set(recorded) & set(current_values)
+            if recorded[name] != current_values[name]
+        }
+        added = sorted(set(current_values) - set(recorded))
+        removed = sorted(set(recorded) - set(current_values))
+        if not changed and not removed:
+            continue
+        stale.append(
+            {
+                "year": entry.get("year"),
+                "evaluated_at": entry.get("timestamp"),
+                "changed_knobs": changed,
+                "removed_knobs": removed,
+                "newly_registered": added,
+                "message": (
+                    f"The {entry.get('year')} holdout was evaluated against a different "
+                    f"configuration than the one now in the code: {sorted(changed) + removed}. "
+                    "That result no longer describes the shipped system, and re-running it is "
+                    "not an out-of-sample evaluation."
+                ),
+            }
+        )
     return stale
 
 

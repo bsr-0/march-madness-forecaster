@@ -213,13 +213,14 @@ product as `src/governance/pool_rdof_audit.py` + `scripts/pool_rdof_audit.py`, w
 thing the original got badly wrong repaired — its registry was a hand-maintained literal
 that drifted from the code until it needed a section titled *"Previously Unregistered
 Constants"*, so here every entry that can name a live symbol does, and
-`tests/test_pool_rdof_audit.py` fails the build when registry and code disagree (29 of 41
+`tests/test_pool_rdof_audit.py` fails the build when registry and code disagree (32 of 44
 entries machine-checked; the other 12 are inline literals with no importable binding, which
 is itself a finding).
 
-The count: **41 registered knobs — 33 tier-3 (freely tuned), 12 of which are degrees of
-freedom actually spent on this metric, against 14 independent seasons (0.86 DoF per
-season).** Twelve were chosen while 2026's outcome was known and in scope. Four were set
+The count: **44 registered knobs — 34 tier-3 (freely tuned), 13 of which are degrees of
+freedom actually spent on this metric, against 14 independent seasons (0.93 DoF per
+season).** (41/12 when first counted on 2026-09-12; the three added on 2026-09-13 are the
+payout, entry-count and pool-factor inputs built under recommendation 13.) Twelve were chosen while 2026's outcome was known and in scope. Four were set
 *because of their effect on this number*, the sharpest being the frozen-risk grid, whose own
 docstring confesses it: *"The frozen levels were chosen after looking at which levels meta
 selects across these same 15 seasons, so the margins are optimistic."* Three candidate
@@ -277,6 +278,53 @@ the future. Real 30-person-pool opponents exist for only 2023–2026, and on tho
 the project's own check is ρ=+0.42, p=0.34, with **2026 = −0.60** (FINDINGS §5b): higher
 estimated P(1st) placed *worse*. ESPN pick archives carry no capture timestamp; 2024–2025
 are flagged `real_unverified_source` and nothing reads the flag (SUSPECTED contamination).
+
+**MEASURED 2026-09-13 (recommendation 13). The "no chalk clustering" half of this finding is
+wrong — in the opposite direction from the one assumed.** The facts are as stated: opponents
+are independent draws, and every live path passes `chalk_noise_std=0.0`. What was never
+checked is whether the real pool is *more* correlated than independent draws, which is the
+premise the fix rests on. It is not. Measuring mean pairwise agreement — over all bracket
+pairs, the fraction of the 63 games where two entries pick the same winner — against a null
+that keeps each game's observed pick rate and destroys only the dependence:
+
+| year | n | observed | independent null | excess | z |
+|---|---:|---:|---:|---:|---:|
+| 2023 | 18 | .6913 | .7085 | −.0173 | −1.69 |
+| 2024 | 25 | .6846 | .6970 | −.0125 | −1.52 |
+| 2025 | 32 | .6893 | .6989 | −.0096 | −1.22 |
+| 2026 | 30 | .7125 | .7221 | −.0095 | −1.30 |
+
+**Every year is negative; pooled Stouffer z = −2.87, p = 0.004.** The real pool's entries are
+*more* diverse than independent draws from their own marginals, so adding chalk clustering
+would move the simulation away from the thing it imitates. This reproduces, on post-`b73d351`
+code, the direction of `artifacts/o4_opponent_independence_2026-04-14.json` — which could not
+be relied on, being a re-serialization no script produces and predating the play-in fix that
+changed the Round-of-64 field every bracket vector is positionally aligned to.
+
+**And the knob that was supposed to deliver the fix does not do what it says.**
+`generate_opponent_brackets`'s `chalk_noise_std` documented itself as creating "the
+correlation structure observed in real pools", recommending "0.3-0.6 for realistic N=31 pool
+correlation". Measured over 200 repeats: within-field agreement is **flat** (.69808 at 0.0,
+.69387 at 1.0 — a 0.004 move against a 0.009–0.026 repeat SD) while the between-pool spread of
+field chalkiness rises 4.3×. The shared `pool_shift` is constant within a call, so it moves
+every bracket in the field together and is invisible as pairwise agreement; the
+`N(pool_shift, 0.5σ)` term adds independent spread, making brackets slightly *more* different.
+The parameter models something real — uncertainty about whether this year's field is chalky —
+but it is not correlated picks and cannot close this gap. Docstring corrected; behaviour
+pinned by `tests/test_opponent_realism.py`, which nothing previously covered (the two existing
+tests check that a float is returned and a kwarg forwarded).
+
+Also found: the `chalk_noise_std` *estimator* in `pool_history_opponent_model.py` returns the
+SD of a pick-share **fraction** (probability space, ≈0.05) which the consumer reads as a
+**logit**-space SD, with no conversion. Documented rather than rescaled — it reaches the
+simulator only on the behavioural-fallback branch that just 2012 takes, feeds selection
+only, and tunes a parameter now shown to be nearly inert.
+
+**What remains true in H3:** the opponent model is still synthetic for 11 of 15 seasons, 2012
+still builds its field from 2023–2026 behaviour, real opponents still exist for only four
+seasons, and the ESPN timestamp/flag problems are untouched. Reproduce with
+`python -m scripts.pool_opponent_realism`;
+`artifacts/headline_measurement/opponent_realism.json`.
 
 **H4. The documented CLI does not work in any mode.** CONFIRMED (run). **FIXED 2026-09-09.**
 `optimize-pool --mode meta_region_poolaware` (README:46-47) was rejected by argparse —
@@ -1069,7 +1117,7 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     hand-maintained literal that drifted from the code until it needed a section titled
     *"Previously Unregistered Constants"* plus a hand-copied `_N_TUNED_CONSTANTS = 58` in a
     second module. Here `live_value()` resolves each entry by import and a test fails the
-    build on any disagreement — 29 of 41 machine-checked, zero drift; a second test fails
+    build on any disagreement — 32 of 44 machine-checked, zero drift; a second test fails
     when a new module-level constant appears in the searched files and is neither registered
     nor explicitly excused, because drift by *addition* is what actually happened last time.
     Its most dangerous function, `adopt_sensitivity_optima()`, is deliberately not ported:
@@ -1092,8 +1140,118 @@ artifact and a decent single-pool recommender, not yet a general pool tool.
     path admits it), and **2026 is Level 2.5** — structurally contaminated, parameter-clean,
     scored once at 0.110 against `seed`'s 0.034. A lockfile hashes the registry at evaluation
     time so any later knob change is detectable as contamination of that result.
-13. Opponent model with chalk clustering / correlated picks, pool-size and payout inputs,
-    multi-entry support — the features that separate a recommender from a pool tool.
+13. ~~Opponent model with chalk clustering / correlated picks, pool-size and payout inputs,
+    multi-entry support — the features that separate a recommender from a pool tool.~~
+    **DONE 2026-09-13.** This item bundles four features. The first is refuted by
+    measurement and should not be built; the other three are built, measured, and shipped
+    behind flags that leave every published figure unchanged.
+
+    **1. Chalk clustering / correlated picks — REFUTED, do not build.** The premise is that
+    the real pool's entries are more correlated than the independent draws the simulator
+    uses. They are not: pooled Stouffer z = **−2.87** (p=0.004), negative in all four
+    seasons with real brackets — the real field is *more* diverse than independent draws
+    from its own marginals. Adding clustering would move the simulation away from reality.
+    Separately, the knob that would have delivered it (`chalk_noise_std`) was measured and
+    does not create within-field correlation at all; it controls between-pool variance in
+    field chalkiness. Both docstrings corrected, behaviour pinned by
+    `tests/test_opponent_realism.py`, evidence in H3. The realism gap H3 describes is real
+    but points the other way — the simulator is slightly *too* homogeneous, over-estimating
+    agreement by ~0.010 in 3 of 4 seasons — and no existing knob addresses that.
+
+    **2. Pool size — BUILT AND MEASURED 2026-09-13; measurement says do not adopt.**
+    Pool size was threaded end-to-end for *scoring* and correct per-season since the H6
+    fix, but a no-op for bracket *construction*: `_make_ev_scorer`'s `pool_factor` is gated
+    on `pool_size > 50`, so at 19–33 entries — every real pool here — `(…, pool_size=19)`
+    and `(…, pool_size=50)` returned bit-identical closures. Now exposed as
+    `pool_factor_mode` (`threshold` / `continuous` / `off`) rather than buried in a
+    threshold, and the constant is defined once in `bracket_construction` and imported
+    instead of duplicated in two files with a source-scraping test holding them together.
+
+    Measured over the 14 seasons: `off` scores **0.1200**, identical to `threshold` to the
+    last digit — direct confirmation that the gate never fires at any real pool size.
+    `continuous` scores **0.1393, a +1.93pp mean gain**, which clears the 1.5pp
+    season-level SE. It is still **not adopted**, because the pre-registered rule had a
+    second condition and it fails it: continuous wins **6 of 14 seasons** (5 ties, 3
+    losses) against a required 9. Nearly half the mean gain is one season — 2011 alone
+    moves 0.020 → 0.150, and without it the gain is ~0.9pp. A two-part rule fixed before
+    the run is the only reason this reads as "one outlier" rather than "+1.9pp
+    improvement"; adopting it would have been a textbook forking path, on the exact
+    metric H2 is about. Worth revisiting when there are more seasons, not now.
+
+    **3. Payout — BUILT AND MEASURED 2026-09-13.** `src/optimization/payout.py` gives
+    five structures plus custom shares a real objective: expected share of the pot,
+    `sum_k prize_k · P(rank = k)`, with ties split between the tied entrants as a real
+    pool does. Selection maximises it; `--payout` / `--payout-shares` on the backtest.
+    Default stays `winner_take_all`, which reduces exactly to the incumbent P(1st) — a
+    test pins the reduction, and the 14-season run reproduces 0.1200 to the digit.
+
+    How often the objective changes the chosen bracket, out of 14 seasons: **top_3 1,
+    top_5 3, top_10pct 7, top_25pct 11.** So for a pool paying its top quarter, the
+    P(1st)-optimal bracket is the wrong bracket in 11 of 14 seasons — the feature is not
+    cosmetic. And the strategy's edge is concentrated in winning outright:
+
+    | structure | places paid | E[prize] | vs seed | vs a random entry |
+    |---|---:|---:|---:|---:|
+    | winner_take_all | 1 | .1239 | 3.00× | **3.72×** |
+    | top_3 | 3 | .1031 | 2.89× | 3.09× |
+    | top_5 | 5 | .0976 | 2.92× | 2.93× |
+    | top_10pct | 3 | .0916 | 2.93× | 2.75× |
+    | top_25pct | 8 | .0696 | 2.81× | **2.09×** |
+
+    Against a random entry the edge nearly halves as the payout broadens; against `seed`
+    it is roughly flat, so both degrade together. **This strategy is worth most in a
+    winner-take-all pool**, which is a material thing to tell a user and was previously
+    unmeasurable.
+
+    **4. Multi-entry — BUILT AND MEASURED 2026-09-13.** Nothing existed: only
+    diverse-candidate *display* logic (Kaggle-scoped), one unused independent-entries
+    formula whose own docstring concedes the independence assumption is wrong for a
+    portfolio, and an explicit anti-best-of-N guard in `real_pool_placement.py`. That guard
+    matters — the repo treated best-of-k as a *bug class* — so the line is drawn
+    explicitly: `select_portfolio` chooses k brackets **jointly and before any outcome is
+    known**, by greedy forward selection on expected total prize over shared trials, and
+    **every** entry is then scored. An entry that finishes 20th contributes nothing and
+    still occupied a seat. k entries take k of the pool's seats rather than growing the
+    field, which is the difference between measuring a portfolio and diluting the
+    competition.
+
+    Measured over the 14 seasons, paired by season because season-to-season variance
+    dwarfs the effect (P(any entry finishes 1st), in a 30-person pool throughout):
+
+    | entries | P(any 1st) | marginal | 95% CI | p | seasons improved |
+    |---:|---:|---:|---|---:|---:|
+    | 1 | .1200 | — | | | |
+    | 2 | .1621 | **+4.21pp** | [+0.85, +7.58] | .018 | 9/14 |
+    | 3 | .2121 | **+5.00pp** | [+1.40, +8.60] | .010 | 11/14 |
+    | 4 | .2307 | +1.86pp | [−3.27, +6.99] | .448 | 7/14 |
+
+    **The 2nd and 3rd entries pay; the 4th is not distinguishable from zero.** Going 1→4
+    is +11.07pp (CI [+5.95, +16.19], 13 of 14 seasons), so the portfolio is real — it just
+    saturates. And the economics point the other way from the headline: expected prize
+    *per entry* falls monotonically — .1239, .1023, .1016, .0999 — so each extra bracket
+    buys a smaller return on its own entry fee. Whether that is worth paying is the
+    user's call and depends on a fee this project does not know, which is why nothing is
+    adopted here. Note the raw unpaired sequence (+4.2, +5.0, +1.9) reads as a curve that
+    rises before it falls; only pairing by season shows it as two real gains and one null.
+
+    **Found while building this, and not fixed: three tie conventions in one pipeline.**
+    A bracket tied with one opponent for first is worth **1.0 when selecting**
+    (`score_candidate_p1`'s `>=`), **0.0 when reporting** (`p_first = (all_ranks == 1.0)`,
+    and a tie makes `all_ranks` 1.5), and **0.5 when paying** (the new prize column, which
+    splits as a real pool does). The first two are both wrong and in opposite directions:
+    selection over-rewards ties, the published P(1st) discards them, so the headline is a
+    *lower bound* on "shares or takes first". Neither was changed — each defines published
+    numbers, and silently redefining one to tidy up a new feature is how figures drift.
+    Pinned by `tests/test_tie_conventions.py`; unifying them is a deliberate act that
+    requires re-running the headline.
+
+    The headroom that justified 2–4 is `artifacts/noise_floor_ceiling_2026-04-25.json`:
+    `mean_gap` of **8.08 rank positions** between the bracket the ranker picks and the best
+    available in its own portfolio, with `kill_opponent_calibration_track: false`.
+
+    Reproduce all three: `python -m scripts.pool_tool_features --pool-factor --payout
+    --multi-entry`. Artifacts `pool_factor_sensitivity.json`, `payout_objective.json`,
+    `multi_entry_value.json` in `artifacts/headline_measurement/`.
 16. **Pre-register a 2027 A/B: `fixed_blend_r40` vs `meta_region_poolaware`.** New, from H11.
     Does per-season candidate selection earn its complexity? At n=14 it is unresolved: the
     search leads the best non-circular fixed rule by ~1pp, which is inside one season-level

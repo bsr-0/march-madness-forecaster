@@ -1,0 +1,103 @@
+{
+  "adopt_continuous": false,
+  "continuous_minus_threshold_pp": 1.929,
+  "continuous_wins_seasons": 6,
+  "decision_rule": "Adopt continuous only if it beats threshold by more than 1.5pp (one season-level SE, audit H1) AND wins at least 9 of 14 seasons. Pre-registered before the run.",
+  "measurement": "pool size in bracket construction: threshold vs continuous vs off",
+  "modes": {
+    "continuous": {
+      "baseline_mean_p_first": 0.03987142857142857,
+      "mean_p_first": 0.1392857142857143,
+      "per_year_p_first": {
+        "2011": 0.15,
+        "2012": 0.05,
+        "2013": 0.15,
+        "2014": 0.18,
+        "2015": 0.16,
+        "2016": 0.24,
+        "2017": 0.11,
+        "2018": 0.12,
+        "2019": 0.08,
+        "2021": 0.08,
+        "2022": 0.11,
+        "2023": 0.17,
+        "2024": 0.15,
+        "2025": 0.2
+      },
+      "wall_time_minutes": 1.4
+    },
+    "off": {
+      "baseline_mean_p_first": 0.03987142857142857,
+      "mean_p_first": 0.11999999999999998,
+      "per_year_p_first": {
+        "2011": 0.02,
+        "2012": 0.05,
+        "2013": 0.17,
+        "2014": 0.09,
+        "2015": 0.16,
+        "2016": 0.21,
+        "2017": 0.11,
+        "2018": 0.07,
+        "2019": 0.11,
+        "2021": 0.07,
+        "2022": 0.11,
+        "2023": 0.17,
+        "2024": 0.13,
+        "2025": 0.21
+      },
+      "wall_time_minutes": 1.4
+    },
+    "threshold": {
+      "baseline_mean_p_first": 0.03987142857142857,
+      "mean_p_first": 0.11999999999999998,
+      "per_year_p_first": {
+        "2011": 0.02,
+        "2012": 0.05,
+        "2013": 0.17,
+        "2014": 0.09,
+        "2015": 0.16,
+        "2016": 0.21,
+        "2017": 0.11,
+        "2018": 0.07,
+        "2019": 0.11,
+        "2021": 0.07,
+        "2022": 0.11,
+        "2023": 0.17,
+        "2024": 0.13,
+        "2025": 0.21
+      },
+      "wall_time_minutes": 1.4
+    }
+  },
+  "n_seasons": 14,
+  "provenance": {
+    "canonical_contract": {
+      "n_opponents": 29,
+      "n_repeats": 100,
+      "opponent_source": "pool",
+      "pa_trials": 500,
+      "team_identity": true
+    },
+    "git_commit": "4908b916401fabb7cf372bdf9ca576f357c4befb",
+    "git_dirty": true,
+    "timestamp": "2026-09-13T01:49:08"
+  },
+  "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "verdict": "keep_threshold \u2014 the continuous discount does not clear the noise floor",
+  "what_this_does_not_settle": "Both arms are scored by the same simulated referee the strategy is selected against (audit C2), so this compares two construction rules under one model of how tournaments and opponents behave. It cannot say which builds better brackets against reality; only the real-outcome record can speak to that, and n=4 there."
+}

@@ -229,6 +229,54 @@ def test_holdout_lockfile_detects_a_knob_change_after_evaluation(tmp_path, monke
     assert "no longer describes the shipped system" in stale[0]["message"]
 
 
+def test_registering_a_new_knob_is_not_treated_as_contamination(tmp_path, monkeypatch):
+    """Improving the audit must not invalidate a holdout.
+
+    The counterpart to the test above, and a real near-miss: adding three
+    entries under recommendation 13 fired the contamination check even though
+    every default preserved existing behaviour and the 2026 result was
+    unchanged. A gate that punishes documenting a knob teaches people not to
+    document knobs. `frozen_spec.verify_freeze` already draws this line --
+    value changes are mismatches, new entries are warnings -- and the lockfile
+    now stores per-knob values so it can draw it too.
+    """
+    import src.governance.pool_rdof_audit as mod
+
+    monkeypatch.setattr(mod, "HOLDOUT_LOCKFILE", tmp_path / "lock.json")
+    record_holdout_evaluation(year=2026, evidence_level="2.5", summary={})
+
+    extended = mod.REGISTRY + (
+        mod.PoolDegreeOfFreedom(
+            name="a_knob_nobody_had_written_down",
+            tier=mod.TIER_FREE,
+            current_value=7,
+            code_path="somewhere.py:1",
+            derivation="newly documented; the code did not change",
+            status=mod.STATUS_NEVER_SEARCHED,
+        ),
+    )
+    monkeypatch.setattr(mod, "REGISTRY", extended)
+
+    assert check_holdout_contamination() == [], (
+        "registering an additional knob was flagged as contamination. Only a CHANGED or "
+        "REMOVED value means the holdout result stopped describing the system."
+    )
+
+
+def test_removing_a_registered_knob_is_contamination(tmp_path, monkeypatch):
+    """Dropping a knob from the registry hides a real configuration input."""
+    import src.governance.pool_rdof_audit as mod
+
+    monkeypatch.setattr(mod, "HOLDOUT_LOCKFILE", tmp_path / "lock.json")
+    record_holdout_evaluation(year=2026, evidence_level="2.5", summary={})
+
+    monkeypatch.setattr(mod, "REGISTRY", tuple(d for d in mod.REGISTRY if d.name != "n_opponents"))
+
+    stale = check_holdout_contamination()
+    assert len(stale) == 1
+    assert "n_opponents" in stale[0]["removed_knobs"]
+
+
 def test_parameter_clean_holdout_is_labelled_below_level_one():
     """2026 must never be reported as an untouched holdout.
 

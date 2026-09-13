@@ -1,30 +1,30 @@
 ====================================================================================================
 RESEARCHER DEGREES OF FREEDOM — POOL-STRATEGY SEARCH
-audit finding H2 / recommendation 12    generated 2026-09-12T14:35:12
-registry hash eeb113561961e009
+audit finding H2 / recommendation 12    generated 2026-09-13T02:13:03
+registry hash b631d490e2fc00e4
 ====================================================================================================
 
 1. INVENTORY
-   registered knobs: 41
+   registered knobs: 44
      tier 1_external       2
-     tier 2_structural     6
-     tier 3_freely_tuned   33
+     tier 2_structural     8
+     tier 3_freely_tuned   34
    by how the value was arrived at:
-     searched                     4
+     searched                     5
      frozen_after_search          1
-     never_searched               27
+     never_searched               29
      external                     2
      tuned_on_metric              4
      removed_after_measuring      3
-   degrees of freedom spent: 12
-   effective (flatness-discounted): 11.0
+   degrees of freedom spent: 13
+   effective (flatness-discounted): 12.0
    independent seasons: 14
-   DoF per season: 0.86
+   DoF per season: 0.93
    knobs whose choice saw 2026's outcome: 12
 
 2. REGISTRY
 
-   tier 3 — freely tuned (33)
+   tier 3 — freely tuned (34)
      n_opponents  =  29   [never_searched]
        scripts/mc_pool_backtest.py:154 — N_OPPONENTS
      pool_factor_threshold  =  50   [never_searched]
@@ -91,14 +91,20 @@ registry hash eeb113561961e009
        src/optimization/recency_hparam_fitter.py — RecencyAlphaFitter.n_opponents
      recency_pa_trials_fit  =  100   [never_searched]
        src/optimization/recency_hparam_fitter.py:127 — RecencyAlphaFitter.pa_trials_fit
+     pool_factor_mode  =  'threshold'   [searched]
+       scripts/mc_pool_backtest.py — run_backtest.pool_factor_mode
 
-   tier 2 — structural (6)
+   tier 2 — structural (8)
      n_repeats  =  50   [never_searched]
        scripts/mc_pool_backtest.py:243 — N_REPEATS
      n_model_brackets  =  50   [never_searched]
        scripts/mc_pool_backtest.py:244 — N_MODEL_BRACKETS
      recency_risk_grids_duplicated  =  [0.1, 0.3, 0.5, 0.7, 0.9]   [never_searched]
        src/optimization/recency_hparam_fitter.py:64 — _REGION_RISK_LEVELS
+     payout_structure  =  'winner_take_all'   [never_searched]
+       scripts/mc_pool_backtest.py — run_backtest.payout
+     n_entries  =  1   [never_searched]
+       scripts/mc_pool_backtest.py — run_backtest.n_entries
      evaluation_years  =  [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]   [never_searched]
        scripts/mc_pool_backtest.py:117 — EVALUATION_YEARS
      contaminated_eval_years  =  [2026]   [never_searched]
@@ -113,7 +119,7 @@ registry hash eeb113561961e009
        scripts/mc_pool_backtest.py:180 — REFEREE_NOISE_STD
 
 3. DRIFT
-   verified against live code: 29/41 (71%)
+   verified against live code: 32/44 (73%)
    drifted: 0
    not machine-checkable (inline literals): 12
 
@@ -152,9 +158,9 @@ registry hash eeb113561961e009
    2011-2025 were all both trained on (as priors for later seasons) and searched over, so none is a holdout. 2008-2010 are training-only and never evaluated, which is not the same thing. 2020 has no tournament. A never-touched holdout cannot be manufactured retroactively; it can only be sequestered going forward.
 
 7. FINDINGS
-   DRIFT: none. 29/41 entries verified against live code (71% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.
-   DoF RATIO: 12 degrees of freedom spent against 14 independent seasons = 0.86 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.
-   SENSITIVITY: after flatness discounting, 11.0 effective DoF (0.79 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.
+   DRIFT: none. 32/44 entries verified against live code (73% coverage); 12 are inline literals with no importable binding and cannot be machine-checked.
+   DoF RATIO: 13 degrees of freedom spent against 14 independent seasons = 0.93 per season. That is close to one free choice per observation, i.e. a design with roughly as many tuning decisions as data points, and it needs no external benchmark to be a problem: at this ratio the in-sample fit of the search is uninformative about out-of-sample performance almost regardless of what the fit is. Only time fixes the denominator -- one season per year.
+   SENSITIVITY: after flatness discounting, 12.0 effective DoF (0.86 per season). Knobs measured flat cost ~0; unmeasured knobs are counted at full weight because an unmeasured knob cannot be assumed harmless.
    CIRCULARITY: 4 knob(s) were set because of their effect on this metric and 3 candidate family/families were deleted for scoring worse on the evaluation seasons. No resampling scheme can correct for the removed ones -- their code is gone. This is the irreducible core of finding H2.
    MULTIPLICITY: meta_region_poolaware aggregate P(1st) 0.1200 vs baseline 0.0399; best-of-family p = 0.0005999400059994001, stepdown-adjusted p = 0.0005999400059994001 over 78 modes. VERDICT survives_correction.
    HOLDOUT: Level 1 = [2027] (untouched); Level 2.5 = 2026 (evaluated=True). No historical season is a holdout and none can be made one retroactively.

@@ -138,6 +138,46 @@ Source: `artifacts/headline_measurement/canonical_2011_2025_n14.txt`, produced b
 command above on the current code. Full critique in `AUDIT_INDEPENDENT_EVALUATOR_2027.md`;
 history and dead ends in `FINDINGS.md`.
 
+### Matching it to your actual pool
+
+The headline above describes one pool: 30 entries, winner-take-all, one bracket. If yours
+differs, say so — the answer changes.
+
+```bash
+# A pool that pays its top three, not just the winner
+python scripts/mc_pool_backtest.py --team-identity --opponent pool \
+  --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware --payout top_3
+
+# Your pool's actual split, in dollars or percentages (renormalised for you)
+... --payout-shares 50 30 20
+
+# Entering three brackets rather than one
+... --n-entries 3
+```
+
+**Payout matters, and not only cosmetically.** Selection maximises expected share of the
+pot rather than P(1st) whenever the payout is not winner-take-all. Over the 14 seasons that
+changes which bracket gets picked in **1 of 14 seasons for a top-3 pool and 11 of 14 for a
+pool paying the top quarter** — so for a broad-payout pool, the P(1st)-optimal bracket is
+usually the wrong one. It also changes what the strategy is worth: measured against a
+random entry its edge is **3.7× in winner-take-all and 2.1× at top-25%**. This strategy is
+worth most in a winner-take-all pool.
+
+**Multi-entry saturates fast.** Entering more brackets raises P(winning the pool) —
+12.0% → 16.2% → 21.2% → 23.1% for one through four entries — but the 2nd and 3rd entries
+are the ones that pay (+4.2pp, p=.018; +5.0pp, p=.010), while the 4th is indistinguishable
+from zero (+1.9pp, p=.45). Expected prize *per entry* falls throughout (.124 → .100), so
+extra brackets buy a smaller return on each entry fee. The k brackets are chosen jointly
+and before any result is known, and every one is scored — this is not "submit many, count
+the best". They also take k of the pool's seats rather than growing the field.
+
+**Pool size still does not change the bracket.** Construction applies its duplicate
+discount only above 50 entries, so at any realistic size the same bracket is built.
+`--pool-factor-mode continuous` lifts that gate, and was measured: +1.93pp mean, but
+winning only 6 of 14 seasons with nearly half the gain coming from 2011 alone. It fails
+the second half of a rule fixed before the run, so it is available and not the default.
+Details in `AUDIT_INDEPENDENT_EVALUATOR_2027.md` recommendation 13.
+
 ### The real-outcome record
 
 Co-primary with the simulated figure above, not a footnote to it: for 2023–2026 — the only

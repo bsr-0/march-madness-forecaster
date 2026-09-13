@@ -2,6 +2,66 @@
   "evaluations": [
     {
       "evidence_level": "2.5",
+      "registry_hash": "b631d490e2fc00e40c3c7b011bc3841a54292c9aef770f7dea01ab75527eff59",
+      "registry_values": {
+        "all_modes_family_size": "79",
+        "blend_alpha": "0.5",
+        "blend_region_35_risk": "0.35",
+        "candidate_bank_ev_strata": "10",
+        "candidate_bank_min_per_champion": "8",
+        "candidate_bank_pool_size": "30",
+        "candidate_bank_risk_grid": "[0.1, 0.2, 0.35, 0.5, 0.7]",
+        "contaminated_eval_years": "[2026]",
+        "espn_scoring": "{'R64': 10, 'R32': 20, 'S16': 40, 'E8': 80, 'F4': 160, 'CHAMP': 320}",
+        "evaluation_years": "[2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]",
+        "fixed_alpha_grid_at_risk_35": "[0.0, 0.25, 0.5, 0.75, 1.0]",
+        "fixed_risk_grid": "[0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9]",
+        "meta_region_blend_weights": "[0.9, 0.1]",
+        "n_entries": "1",
+        "n_model_brackets": "50",
+        "n_opponents": "29",
+        "n_repeats": "50",
+        "pa_trials": "500",
+        "payout_structure": "'winner_take_all'",
+        "per_year_rng_seeds": "[42, 77777, 54321, 99999]",
+        "pool_blend_weight": "0.7",
+        "pool_chalk_noise_std": "0.0",
+        "pool_competition_noise_std": "0.16",
+        "pool_factor_mode": "'threshold'",
+        "pool_factor_threshold": "50",
+        "poolaware_base_order": "['tv', 'mass_avg', 'mass_best', 'blend', 'tv_mass80']",
+        "poolaware_exhaustive_risks": "[0.3, 0.5, 0.7]",
+        "poolaware_forced_champion_risk": "0.5",
+        "poolaware_risk_levels": "[0.1, 0.3, 0.5, 0.7, 0.9]",
+        "poolaware_selector_estimator": "'binary_p1'",
+        "recency_alpha_grid": "[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]",
+        "recency_fitter_n_opponents": "30",
+        "recency_pa_trials_fit": "100",
+        "recency_risk_grids_duplicated": "[0.1, 0.3, 0.5, 0.7, 0.9]",
+        "recency_window_years": "3",
+        "referee_noise_std": "0.16",
+        "removed_candidate_family_confidence_routed": "'removed 2026-05-16'",
+        "removed_candidate_family_upset_aware": "'removed 2026-05-03'",
+        "seed_outcome_window": "'recent'",
+        "seed_recent_first_season": "2010",
+        "seed_recent_min_games": "8",
+        "seed_recent_prior_strength": "8",
+        "small_pool_mode_pruning": "'opt_seed, opt_blend, opt_torvik, hedge_tv removed'",
+        "tv_mass80_torvik_weight": "0.8"
+      },
+      "summary": {
+        "p_first": {
+          "meta_region_poolaware": 0.11,
+          "seed": 0.0336
+        }
+      },
+      "timestamp": "2026-09-13T02:12:28",
+      "year": 2026
+    }
+  ],
+  "superseded": [
+    {
+      "evidence_level": "2.5",
       "registry_hash": "eeb113561961e0094f74be1829d5165c6e3bc87e1296f28fcf052862e05af751",
       "summary": {
         "p_first": {
@@ -12,6 +72,5 @@
       "timestamp": "2026-09-12T14:31:02",
       "year": 2026
     }
-  ],
-  "superseded": []
+  ]
 }
