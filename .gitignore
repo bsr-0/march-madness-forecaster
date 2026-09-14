@@ -91,3 +91,10 @@ data/raw/historical/_pbp_backfill*.log
 
 # Playwright MCP snapshot/console artifacts from local UI testing
 .playwright-mcp/
+
+# Local agent/maintainer scratch notes — not part of the project record.
+AGENT_NOTES.md
+
+# Prospective pre-registration documents — kept locally, out of the repo.
+PROSPECTIVE_2027.md
+PROSPECTIVE_2027_v2.md
