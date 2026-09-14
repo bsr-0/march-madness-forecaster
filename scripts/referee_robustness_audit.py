@@ -145,6 +145,17 @@ def write_report(result: dict, path: Path) -> None:
                  f"{_ci(row['loro_minus_self']) if 'loro_minus_self' in row else '-'} | {row.get('choice_agreement_loro_vs_production', float('nan')):.2f} |")
     L.append("")
 
+    L.append("## Referee calibration on the real games (raw pairwise tables, play-ins excluded)\n")
+    L.append("Lower log loss and Brier are better. Sharpness is mean |p - 0.5|: how far from a coin flip the referee's "
+             "probabilities sit. A sharp referee that is also poorly calibrated rewards whoever agrees with it, not whoever wins pools.\n")
+    L.append("| referee | log loss | Brier | sharpness | games | seasons |")
+    L.append("|---|---|---|---|---|---|")
+    for r in refs:
+        c = result["referee_calibration"].get(r)
+        if c:
+            L.append(f"| {r} | {c['log_loss']:.4f} | {c['brier']:.4f} | {c['sharpness']:.3f} | {c['n_games']} | {c['n_seasons']} |")
+    L.append("")
+
     L.append("## Winner's curse on the selection trials\n")
     wc = result["winners_curse"]
     L.append(f"Selection-trial P(1st) of the chosen candidate under seed minus its fresh-trial P(1st) under seed: "
@@ -255,6 +266,7 @@ def main() -> int:
                 "self_referee_premium": premium,
                 "loro": loro,
                 "winners_curse": wc,
+                "referee_calibration": ra.pooled_calibration(seasons),
                 "criteria": criteria,
                 "non_independence": ra.NON_INDEPENDENCE,
                 "seasons": seasons,

@@ -1,0 +1,20 @@
+Referee robustness audit  20260913_235043  commit d7b3d0ed90d7
+  years=[2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]  n_eval_trials=300  pa_trials=500  workers=1
+  parity check: ON (14 expected labels)
+  2011  pool=30  chosen=blend_region_risk=0.5        parity=ok  P1(prod): seed=0.037  torvik=0.030  blend=0.037  pit=0.010  market=0.033  actual=0.000
+  2012  pool=30  chosen=tv_champ=syracuse            parity=ok  P1(prod): seed=0.053  torvik=0.193  blend=0.087  pit=0.010  market=0.080  actual=0.000
+  2013  pool=30  chosen=mass_avg_region_risk=0.9     parity=ok  P1(prod): seed=0.120  torvik=0.077  blend=0.083  pit=0.067  market=0.007  actual=0.000
+  2014  pool=30  chosen=blend_region_risk=0.9        parity=ok  P1(prod): seed=0.140  torvik=0.057  blend=0.133  pit=0.070  market=0.067  actual=0.000
+  2015  pool=30  chosen=blend_exhaust_risk=0.3       parity=ok  P1(prod): seed=0.153  torvik=0.070  blend=0.127  pit=0.090  market=0.030  actual=0.000
+  2016  pool=30  chosen=blend_region_risk=0.1        parity=ok  P1(prod): seed=0.167  torvik=0.037  blend=0.083  pit=0.123  market=0.100  fte=0.097  actual=0.023
+  2017  pool=30  chosen=mass_avg_region_risk=0.1     parity=ok  P1(prod): seed=0.097  torvik=0.140  blend=0.087  pit=0.160  market=0.050  fte=0.113  actual=0.007
+  2018  pool=30  chosen=blend_region_risk=0.1        parity=ok  P1(prod): seed=0.053  torvik=0.047  blend=0.040  pit=0.013  market=0.013  fte=0.033  actual=0.000
+  2019  pool=30  chosen=mass_avg_region_risk=0.1     parity=ok  P1(prod): seed=0.107  torvik=0.173  blend=0.097  pit=0.130  market=0.030  fte=0.137  actual=0.333
+  2021  pool=30  chosen=blend_region_risk=0.7        parity=ok  P1(prod): seed=0.070  torvik=0.067  blend=0.070  pit=0.083  market=0.017  fte=0.057  actual=0.263
+  2022  pool=30  chosen=blend_region_risk=0.5        parity=ok  P1(prod): seed=0.140  torvik=0.073  blend=0.117  pit=0.047  market=0.033  fte=0.020  actual=0.003
+  2023  pool=19  chosen=mass_avg_region_risk=0.5     parity=ok  P1(prod): seed=0.167  torvik=0.127  blend=0.170  pit=0.127  market=0.060  actual=0.000
+  2024  pool=25  chosen=blend_region_risk=0.5        parity=ok  P1(prod): seed=0.137  torvik=0.130  blend=0.117  pit=0.093  market=0.120  fte=0.120  actual=0.017
+  2025  pool=33  chosen=blend_region_risk=0.5        parity=ok  P1(prod): seed=0.163  torvik=0.253  blend=0.177  pit=0.180  market=0.100  actual=0.000
+
+VERDICT: INDETERMINATE   C1=INDETERMINATE  C2=PASS  C3=INDETERMINATE
+wrote /Users/benrosen/Documents/march-madness-forecaster/artifacts/referee_audit/referee_matrix.json and /Users/benrosen/Documents/march-madness-forecaster/artifacts/referee_audit/REPORT.md

@@ -1,0 +1,2112 @@
+{
+ "year": 2025,
+ "production_label": "blend_region_risk=0.5",
+ "candidates": [
+  {
+   "label": "tv_champ=duke",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.1",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "missouri",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.1",
+   "champion": "florida",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "clemson",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "duke",
+     "florida"
+    ],
+    "CHAMP": [
+     "florida"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.1",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "creighton",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "oregon",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "vanderbilt",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "clemson",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "duke",
+     "florida"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.1",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.1",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "missouri",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.3",
+   "champion": "alabama",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "creighton",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "oregon",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "vanderbilt",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "clemson",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "alabama",
+     "florida"
+    ],
+    "CHAMP": [
+     "alabama"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.3",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.3",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.5",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "duke",
+     "florida"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.5",
+   "champion": "alabama",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "creighton",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "oregon",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "vanderbilt",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "clemson",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "alabama",
+     "florida"
+    ],
+    "CHAMP": [
+     "alabama"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.5",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.5",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.7",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.7",
+   "champion": "alabama",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "alabama",
+     "florida"
+    ],
+    "CHAMP": [
+     "alabama"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.7",
+   "champion": "alabama",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "oregon",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "vanderbilt",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "clemson",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "alabama",
+     "florida"
+    ],
+    "CHAMP": [
+     "alabama"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.7",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "drake",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "mcneese_state",
+     "memphis",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "uc_san_diego",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "memphis",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "florida",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.9",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "colorado_state",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "mcneese_state",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "troy",
+     "uc_san_diego",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "marquette",
+     "maryland",
+     "purdue",
+     "saint_mary_s__ca",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "S16": [
+     "auburn",
+     "duke",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "maryland",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "houston",
+     "texas_tech"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.9",
+   "champion": "alabama",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "georgia",
+     "grand_canyon",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "uc_san_diego",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "memphis",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "alabama",
+     "florida"
+    ],
+    "CHAMP": [
+     "alabama"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.9",
+   "champion": "auburn",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "baylor",
+     "brigham_young",
+     "clemson",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "uc_san_diego",
+     "utah_state",
+     "vanderbilt",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "gonzaga",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "maryland",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech"
+    ],
+    "S16": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "florida",
+     "gonzaga",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "alabama",
+     "auburn",
+     "florida",
+     "tennessee"
+    ],
+    "F4": [
+     "alabama",
+     "auburn"
+    ],
+    "CHAMP": [
+     "auburn"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.9",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "drake",
+     "duke",
+     "florida",
+     "georgia",
+     "grand_canyon",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "mcneese_state",
+     "memphis",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "uc_san_diego",
+     "ucla",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "memphis",
+     "michigan_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "S16": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "florida",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.9",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "colorado_state",
+     "duke",
+     "florida",
+     "georgia",
+     "grand_canyon",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "liberty",
+     "louisville",
+     "marquette",
+     "mcneese_state",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "troy",
+     "uc_san_diego",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "colorado_state",
+     "duke",
+     "florida",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "michigan_state",
+     "purdue",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_exhaust_risk=0.5",
+   "champion": "florida",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "duke",
+     "florida"
+    ],
+    "CHAMP": [
+     "florida"
+    ]
+   }
+  },
+  {
+   "label": "tv_exhaust_risk=0.7",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "colorado_state",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "ucla",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "houston",
+     "iowa_state",
+     "maryland",
+     "tennessee",
+     "texas_tech"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "houston",
+     "texas_tech"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_exhaust_risk=0.7",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "clemson",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "maryland",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "missouri",
+     "oklahoma",
+     "oregon",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "maryland",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "alabama",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "michigan_state",
+     "st__john_s__ny",
+     "tennessee"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "duke"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  },
+  {
+   "label": "blend_exhaust_risk=0.7",
+   "champion": "houston",
+   "picks": {
+    "R64": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "brigham_young",
+     "drake",
+     "duke",
+     "florida",
+     "georgia",
+     "houston",
+     "illinois",
+     "iowa_state",
+     "kansas",
+     "kentucky",
+     "liberty",
+     "louisville",
+     "marquette",
+     "maryland",
+     "mcneese_state",
+     "memphis",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "uc_san_diego",
+     "utah_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "alabama",
+     "arizona",
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "kentucky",
+     "memphis",
+     "michigan_state",
+     "purdue",
+     "st__john_s__ny",
+     "tennessee",
+     "texas_a_m",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston",
+     "iowa_state",
+     "tennessee",
+     "texas_tech",
+     "wisconsin"
+    ],
+    "E8": [
+     "auburn",
+     "duke",
+     "florida",
+     "houston"
+    ],
+    "F4": [
+     "auburn",
+     "houston"
+    ],
+    "CHAMP": [
+     "houston"
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,1788 @@
+{
+ "year": 2012,
+ "production_label": "tv_champ=syracuse",
+ "candidates": [
+  {
+   "label": "tv_champ=syracuse",
+   "champion": "ohio_state",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "ohio_state"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.1",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.1",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "baylor",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "syracuse"
+    ],
+    "F4": [
+     "kentucky",
+     "syracuse"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.1",
+   "champion": "north_carolina",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_louis",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "syracuse"
+    ],
+    "F4": [
+     "michigan_state",
+     "north_carolina"
+    ],
+    "CHAMP": [
+     "north_carolina"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.1",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "purdue",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.3",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.3",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "purdue",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.5",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "baylor",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.5",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.7",
+   "champion": "ohio_state",
+   "picks": {
+    "R64": [
+     "alabama",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "south_dakota_state",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "vanderbilt",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "cincinnati",
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "ohio_state"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.7",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "baylor",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.7",
+   "champion": "north_carolina",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "harvard",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "long_beach_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_louis",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "south_florida",
+     "syracuse",
+     "virginia_commonwealth",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "syracuse"
+    ],
+    "F4": [
+     "michigan_state",
+     "north_carolina"
+    ],
+    "CHAMP": [
+     "north_carolina"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.7",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "st_bonaventure",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "cincinnati",
+     "duke",
+     "georgetown",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.9",
+   "champion": "ohio_state",
+   "picks": {
+    "R64": [
+     "alabama",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "connecticut",
+     "davidson",
+     "duke",
+     "florida",
+     "harvard",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "south_dakota_state",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "belmont",
+     "cincinnati",
+     "duke",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "michigan",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "saint_louis",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "missouri",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "ohio_state"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.9",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "baylor",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "gonzaga",
+     "harvard",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "long_beach_state",
+     "louisville",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "purdue",
+     "san_diego_state",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "cincinnati",
+     "duke",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "north_carolina",
+     "ohio_state",
+     "san_diego_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.9",
+   "champion": "north_carolina",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "brigham_young",
+     "cincinnati",
+     "duke",
+     "florida",
+     "georgetown",
+     "gonzaga",
+     "harvard",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "long_beach_state",
+     "louisville",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_louis",
+     "saint_mary_s__ca",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "virginia_commonwealth",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "cincinnati",
+     "georgetown",
+     "indiana",
+     "kentucky",
+     "louisville",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "georgetown",
+     "kentucky",
+     "louisville",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kentucky",
+     "missouri",
+     "north_carolina",
+     "ohio_state"
+    ],
+    "F4": [
+     "missouri",
+     "north_carolina"
+    ],
+    "CHAMP": [
+     "north_carolina"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.9",
+   "champion": "ohio_state",
+   "picks": {
+    "R64": [
+     "alabama",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "connecticut",
+     "davidson",
+     "duke",
+     "florida",
+     "harvard",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "south_dakota_state",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "belmont",
+     "cincinnati",
+     "duke",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "ohio_state"
+    ]
+   }
+  },
+  {
+   "label": "tv_exhaust_risk=0.5",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "belmont",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "florida_state",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "kansas",
+     "kentucky",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "nc_state",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_exhaust_risk=0.5",
+   "champion": "syracuse",
+   "picks": {
+    "R64": [
+     "baylor",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "florida_state",
+     "georgetown",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "georgetown",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "syracuse"
+    ],
+    "F4": [
+     "kentucky",
+     "syracuse"
+    ],
+    "CHAMP": [
+     "syracuse"
+    ]
+   }
+  },
+  {
+   "label": "tv_exhaust_risk=0.7",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio",
+     "ohio_state",
+     "purdue",
+     "saint_louis",
+     "south_dakota_state",
+     "south_florida",
+     "st_bonaventure",
+     "syracuse",
+     "vanderbilt",
+     "west_virginia",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "cincinnati",
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_exhaust_risk=0.7",
+   "champion": "syracuse",
+   "picks": {
+    "R64": [
+     "baylor",
+     "belmont",
+     "cincinnati",
+     "creighton",
+     "duke",
+     "florida",
+     "florida_state",
+     "gonzaga",
+     "indiana",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "notre_dame",
+     "ohio_state",
+     "saint_mary_s__ca",
+     "san_diego_state",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "R32": [
+     "baylor",
+     "duke",
+     "florida_state",
+     "indiana",
+     "kansas",
+     "kentucky",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "san_diego_state",
+     "syracuse",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "syracuse"
+    ],
+    "E8": [
+     "kentucky",
+     "michigan_state",
+     "north_carolina",
+     "syracuse"
+    ],
+    "F4": [
+     "kentucky",
+     "syracuse"
+    ],
+    "CHAMP": [
+     "syracuse"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_exhaust_risk=0.7",
+   "champion": "kentucky",
+   "picks": {
+    "R64": [
+     "alabama",
+     "baylor",
+     "belmont",
+     "brigham_young",
+     "cincinnati",
+     "connecticut",
+     "duke",
+     "florida",
+     "gonzaga",
+     "indiana",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisville",
+     "memphis",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "nevada_las_vegas",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "st_bonaventure",
+     "syracuse",
+     "temple",
+     "vanderbilt",
+     "wichita_state",
+     "wisconsin",
+     "xavier"
+    ],
+    "R32": [
+     "baylor",
+     "cincinnati",
+     "duke",
+     "kansas",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "missouri",
+     "murray_state",
+     "nc_state",
+     "new_mexico",
+     "north_carolina",
+     "ohio_state",
+     "syracuse",
+     "wichita_state",
+     "wisconsin"
+    ],
+    "S16": [
+     "baylor",
+     "kansas",
+     "kentucky",
+     "michigan_state",
+     "missouri",
+     "north_carolina",
+     "ohio_state",
+     "wisconsin"
+    ],
+    "E8": [
+     "kansas",
+     "kentucky",
+     "missouri",
+     "ohio_state"
+    ],
+    "F4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "CHAMP": [
+     "kentucky"
+    ]
+   }
+  }
+ ]
+}
