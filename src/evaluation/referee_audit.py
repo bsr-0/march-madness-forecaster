@@ -67,9 +67,16 @@ GAMES_PER_ROUND: Tuple[int, ...] = (32, 16, 8, 4, 2, 1)
 #: verdict. Order is the order columns are reported in.
 CRITERION_REFEREES: Tuple[str, ...] = ("seed", "torvik", "blend", "pit", "market")
 
-#: Reported alongside but never used for a decision: partial coverage (fte)
-#: or n = one outcome per season (actual).
+#: Reported alongside but never used for a decision: partial coverage (fte,
+#: odds_api) or n = one outcome per season (actual).
 SUPPLEMENTARY_REFEREES: Tuple[str, ...] = ("fte", "actual")
+
+#: Every referee the audit knows, in report-column order. The qualification
+#: audit decides at run time which of the full-coverage ones enter a verdict.
+ALL_REFEREE_ORDER: Tuple[str, ...] = ("seed", "torvik", "blend", "pit", "market", "market_v2", "odds_api", "fte", "actual")
+
+#: Referees that never produce a strategy row (referee-only).
+REFEREE_ONLY: Tuple[str, ...] = ("odds_api",)
 
 #: The referee the production selector uses.
 SELECTION_REFEREE = "seed"
@@ -103,6 +110,8 @@ OWN_REFEREE: Dict[str, str] = {
     "pit_argmax": "pit",
     "market": "market",
     "market_argmax": "market",
+    "market_v2": "market_v2",
+    "market_v2_argmax": "market_v2",
     "meta_region_poolaware": "seed",
     "meta_region_4champ": "seed",
 }
@@ -136,6 +145,11 @@ NON_INDEPENDENCE: Dict[str, Dict[str, str]] = {
         "market / market_argmax": "built from it",
         "(none of the production candidate bases)": "market is not a candidate base and was never selected against",
     },
+    "market_v2": {
+        "market_v2 / market_v2_argmax": "built from it",
+        "(none of the production candidate bases)": "same inputs as market with the construction defects fixed; not a candidate base, never selected against",
+    },
+    "odds_api": {"(none)": "direct multi-book closing consensus, 2021-2025 only; referee-only"},
     "fte": {"(none)": "external ratings; never used anywhere in the pipeline"},
     "actual": {"(none)": "reality"},
 }
@@ -163,6 +177,20 @@ CRITERIA: Dict[str, object] = {
 }
 
 
+#: Machine-readable copy of artifacts/referee_audit/PREREGISTRATION_QUALIFICATION.md.
+QUALIFICATION: Dict[str, object] = {
+    "metric_primary": "log_loss",
+    "metric_secondary": "brier",
+    "coin_flip_log_loss": math.log(2.0),
+    "coin_flip_brier": 0.25,
+    "incumbent": "seed",
+    "bootstrap_resamples": 5000,
+    "bootstrap_seed": 42,
+    "independent_referee_order": ["market_v2", "pit", "torvik", "blend"],
+    "full_coverage_required_for_primary": True,
+}
+
+
 @dataclass
 class AuditConfig:
     n_eval_trials: int = int(CRITERIA["n_eval_trials"])
@@ -174,6 +202,12 @@ class AuditConfig:
     expected_labels: Dict[int, str] = field(default_factory=dict)
     #: Directory to write the per-season frozen candidate set to (None = skip).
     candidates_dir: Optional[str] = None
+    #: Referees that enter the verdict (LORO rotates over these).
+    criterion_referees: Tuple[str, ...] = CRITERION_REFEREES
+    #: The independent referee named by C1.
+    independent_referee: str = INDEPENDENT_REFEREE
+    #: Referees to compute selection-trial P(1st) under (superset of criterion).
+    selection_referees: Optional[Tuple[str, ...]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +297,7 @@ class SeasonContext:
     massey_avg: Optional[object]
     massey_best: Optional[object]
     blend_rp: Optional[object]
+    market_v2_diagnostics: Dict[str, object] = field(default_factory=dict)
 
 
 def _full_pair_table(pairwise, teams: Sequence[str]) -> Dict[Tuple[str, str], float]:
@@ -322,7 +357,11 @@ def build_season_context(year: int, n_opponents_default: Optional[int] = None) -
     from src.optimization.payout import resolve_pool_size
     from src.prediction.massey_best_probabilities import build_massey_best_round_probabilities
     from src.prediction.massey_probabilities import load_massey_avg_barthag
-    from src.prediction.market_probabilities import load_market_ratings
+    from src.prediction.market_probabilities import (
+        load_market_ratings,
+        load_market_ratings_v2,
+        load_odds_api_market_ratings,
+    )
     from src.prediction.noseed_model import (
         build_blend_probabilities,
         build_blend_round_probabilities,
@@ -365,6 +404,9 @@ def build_season_context(year: int, n_opponents_default: Optional[int] = None) -
     torvik_base = build_base_from_ratings("torvik", seeds, regions, _load_torvik_barthag(year, seeds))
     pit_base = build_pit_base(year, seeds, regions)
     market_base = build_base_from_ratings("market", seeds, regions, load_market_ratings(year, seeds))
+    mv2_diag: Dict[str, object] = {}
+    market_v2_base = build_base_from_ratings("market_v2", seeds, regions, load_market_ratings_v2(year, seeds, diagnostics=mv2_diag))
+    odds_api_base = build_base_from_ratings("odds_api", seeds, regions, load_odds_api_market_ratings(year, seeds))
     massey_avg = build_base_from_ratings("massey_avg", seeds, regions, load_massey_avg_barthag(year, seeds, Path("data")))
     massey_best = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
 
@@ -373,6 +415,10 @@ def build_season_context(year: int, n_opponents_default: Optional[int] = None) -
         bases["pit"] = pit_base
     if market_base is not None:
         bases["market"] = market_base
+    if market_v2_base is not None:
+        bases["market_v2"] = market_v2_base
+    if odds_api_base is not None:
+        bases["odds_api"] = odds_api_base
 
     referees = {name: _full_pair_table(base.pairwise, first_round) for name, base in bases.items()}
     fte = load_fte_pairwise(year, first_round)
@@ -399,6 +445,7 @@ def build_season_context(year: int, n_opponents_default: Optional[int] = None) -
         massey_avg=massey_avg,
         massey_best=massey_best,
         blend_rp=blend_base,
+        market_v2_diagnostics=mv2_diag,
     )
 
 
@@ -590,6 +637,8 @@ def build_strategies(
         return vec.reshape(1, 63)
 
     for k, (name, base) in enumerate(ctx.bases.items()):
+        if name in REFEREE_ONLY:
+            continue
         strategies[f"{name}_argmax"] = argmax_vec(base)
         rng = np.random.default_rng(np.random.SeedSequence([cfg.stochastic_seed, ctx.year, k]))
         strategies[name] = sample_model_brackets(ctx.first_round, base, cfg.n_stochastic, rng)
@@ -769,12 +818,15 @@ def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
     t0 = time.time()
     ctx = build_season_context(year)
     t0 = _t("context", t0)
-    referee_names = [r for r in CRITERION_REFEREES if r in ctx.referees]
+    sel_refs = [r for r in (cfg.selection_referees or cfg.criterion_referees) if r in ctx.referees]
+    crit_refs = [r for r in cfg.criterion_referees if r in ctx.referees]
+    if SELECTION_REFEREE not in sel_refs:
+        sel_refs.insert(0, SELECTION_REFEREE)
     candidates = build_production_candidates(ctx)
     t0 = _t(f"{len(candidates)} candidates", t0)
-    p1_sel = selection_p1_by_referee(ctx, candidates, referee_names, cfg.pa_trials)
+    p1_sel = selection_p1_by_referee(ctx, candidates, sel_refs, cfg.pa_trials)
     t0 = _t("selection", t0)
-    choices = loro_choices(p1_sel, referee_names)
+    choices = loro_choices(p1_sel, crit_refs)
     prod_idx = choices[SELECTION_REFEREE]["production"]
     parity = check_parity(year, candidates[prod_idx][1], cfg.expected_labels)
     if not parity["ok"]:
@@ -809,6 +861,8 @@ def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
         "parity": parity,
         "metrics": metrics,
         "referee_calibration": referee_game_scores(ctx.referees, ctx.games, ctx.team_index),
+        "market_v2_diagnostics": ctx.market_v2_diagnostics,
+        "criterion_referees": crit_refs,
     }
 
 
@@ -839,7 +893,7 @@ def _series(seasons: Sequence[dict], referee: str, strategy: str, metric: str) -
 
 def aggregate(seasons: Sequence[dict], metric: str = "p_first") -> Dict[str, Dict[str, dict]]:
     """table[referee][strategy] = pooled mean, paired delta vs baseline, seasons."""
-    order = list(CRITERION_REFEREES) + list(SUPPLEMENTARY_REFEREES)
+    order = list(ALL_REFEREE_ORDER)
     present = {r for s in seasons for r in s["metrics"]}
     referees = [r for r in order if r in present] + sorted(present - set(order))
     strategies = sorted({st for s in seasons for r in s["metrics"].values() for st in r})
@@ -941,15 +995,26 @@ def pooled_calibration(seasons: Sequence[dict]) -> Dict[str, Dict[str, float]]:
     }
 
 
-def evaluate_criteria(table_p1: Mapping[str, Mapping[str, dict]], premium: Mapping[str, dict], loro: Mapping[str, dict]) -> Dict[str, object]:
-    """Apply the pre-registered C1/C2/C3 rules. Pure; tested on synthetic input."""
-    refs = list(CRITERIA["criterion_referees"])
+def evaluate_criteria(
+    table_p1: Mapping[str, Mapping[str, dict]],
+    premium: Mapping[str, dict],
+    loro: Mapping[str, dict],
+    criterion_referees: Optional[Sequence[str]] = None,
+    independent_referee: Optional[str] = None,
+) -> Dict[str, object]:
+    """Apply the pre-registered C1/C2/C3 rules. Pure; tested on synthetic input.
+
+    ``criterion_referees`` / ``independent_referee`` default to the first
+    audit's fixed sets; the qualification audit passes the qualified set.
+    """
+    refs = list(criterion_referees) if criterion_referees is not None else list(CRITERIA["criterion_referees"])
+    independent = independent_referee or INDEPENDENT_REFEREE
     prod = PRODUCTION_STRATEGY
 
     # C1
     deltas = {r: table_p1[r][prod]["delta_vs_baseline"] for r in refs if r in table_p1 and prod in table_p1[r]}
     all_positive = all(d["mean"] > 0 for d in deltas.values()) and len(deltas) == len(refs)
-    ind = deltas.get(INDEPENDENT_REFEREE)
+    ind = deltas.get(independent)
     ind_ci_excl = bool(ind and not (ind["ci_lo"] <= 0.0 <= ind["ci_hi"]) and ind["mean"] > 0)
     any_ci_below = any(d["ci_hi"] < 0 for d in deltas.values())
     if ind is None:
@@ -985,11 +1050,84 @@ def evaluate_criteria(table_p1: Mapping[str, Mapping[str, dict]], premium: Mappi
     statuses = [c1, c2, c3]
     verdict = "ROBUST" if all(s == "PASS" for s in statuses) else ("NOT ROBUST" if "FAIL" in statuses else "INDETERMINATE")
     return {
-        "C1_cross_referee_edge": {"status": c1, "deltas": deltas, "independent_ci_excludes_zero": ind_ci_excl},
+        "C1_cross_referee_edge": {"status": c1, "deltas": deltas, "independent_referee": independent, "independent_ci_excludes_zero": ind_ci_excl},
         "C2_self_referee_premium": {"status": c2, "detail": p},
         "C3_leave_one_referee_out": {"status": c3, "edges": e, "min_retained_fraction": frac},
+        "criterion_referees": refs,
         "verdict": verdict,
     }
+
+
+# ---------------------------------------------------------------------------
+# Referee qualification gate (pure function of per-season calibration rows)
+# ---------------------------------------------------------------------------
+
+
+def calibration_rows(year: int) -> Dict[str, object]:
+    """Phase-1 record: the season's referee calibration and nothing else."""
+    ctx = build_season_context(year)
+    return {
+        "year": year,
+        "referee_calibration": referee_game_scores(ctx.referees, ctx.games, ctx.team_index),
+        "market_v2_diagnostics": ctx.market_v2_diagnostics,
+    }
+
+
+def qualification_gate(rows: Sequence[dict], all_years: Sequence[int]) -> Dict[str, dict]:
+    """Apply G1/G2 from PREREGISTRATION_QUALIFICATION.md to every referee present.
+
+    Returns ``{referee: {status, coverage, deltas...}}``. Seed is the incumbent:
+    QUALIFIED by construction, flagged in-sample.
+    """
+    inc = str(QUALIFICATION["incumbent"])
+    ll_coin = float(QUALIFICATION["coin_flip_log_loss"])
+    br_coin = float(QUALIFICATION["coin_flip_brier"])
+    referees = sorted({r for row in rows for r in row["referee_calibration"]}, key=lambda r: ALL_REFEREE_ORDER.index(r) if r in ALL_REFEREE_ORDER else 99)
+    out: Dict[str, dict] = {}
+    for ref in referees:
+        yrs = [row["year"] for row in rows if ref in row["referee_calibration"] and inc in row["referee_calibration"]]
+        ll = np.array([row["referee_calibration"][ref]["log_loss"] for row in rows if row["year"] in yrs])
+        br = np.array([row["referee_calibration"][ref]["brier"] for row in rows if row["year"] in yrs])
+        ll_inc = np.array([row["referee_calibration"][inc]["log_loss"] for row in rows if row["year"] in yrs])
+        br_inc = np.array([row["referee_calibration"][inc]["brier"] for row in rows if row["year"] in yrs])
+        full = sorted(yrs) == sorted(all_years)
+        g1 = paired_bootstrap(ll - ll_coin)
+        g2_ll = paired_bootstrap(ll - ll_inc)
+        g2_br = paired_bootstrap(br - br_inc)
+        g1_pass = g1["ci_hi"] < 0
+        g2_pass = g2_ll["mean"] <= 0 and g2_br["mean"] <= 0
+        if ref == inc:
+            status = "QUALIFIED"
+        elif not g1_pass or g2_ll["ci_lo"] > 0:
+            status = "DISQUALIFIED"
+        elif g2_pass:
+            status = "QUALIFIED"
+        else:
+            status = "PROVISIONAL"
+        out[ref] = {
+            "status": status,
+            "incumbent": ref == inc,
+            "in_sample_note": "fit window 2010-2025 contains every evaluation season" if ref == inc else None,
+            "full_coverage": full,
+            "seasons": yrs,
+            "mean_log_loss": float(ll.mean()),
+            "mean_brier": float(br.mean()),
+            "G1_vs_coin_flip_log_loss": g1,
+            "G1_pass": bool(g1_pass),
+            "G2_vs_incumbent_log_loss": g2_ll,
+            "G2_vs_incumbent_brier": g2_br,
+            "G2_pass": bool(g2_pass),
+            "primary_eligible": status == "QUALIFIED" and full,
+        }
+    return out
+
+
+def choose_independent_referee(gate: Mapping[str, dict]) -> Optional[str]:
+    """First primary-eligible referee in the pre-registered order."""
+    for r in QUALIFICATION["independent_referee_order"]:  # type: ignore[union-attr]
+        if gate.get(r, {}).get("primary_eligible"):
+            return r
+    return None
 
 
 # ---------------------------------------------------------------------------

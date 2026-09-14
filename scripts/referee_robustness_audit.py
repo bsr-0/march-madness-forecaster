@@ -51,7 +51,7 @@ def _ci(d: dict) -> str:
 
 def write_report(result: dict, path: Path) -> None:
     refs = result["referees"]
-    crit_refs = [r for r in ra.CRITERION_REFEREES if r in refs]
+    crit_refs = [r for r in result.get("criterion_referees", ra.CRITERION_REFEREES) if r in refs]
     L: list[str] = []
     L.append("# Referee robustness audit: results\n")
     L.append(f"Run {result['generated_at']} at commit `{result['commit'][:12]}`. "
@@ -60,6 +60,21 @@ def write_report(result: dict, path: Path) -> None:
              f"{result['config']['pa_trials']} selection trials. Pre-registration: PREREGISTRATION.md.\n")
     L.append("Parity of the reproduced production selection against the canonical log: "
              + ("**all seasons match**" if result["parity_all_ok"] else "**MISMATCH**") + ".\n")
+
+    if result.get("qualification"):
+        q = result["qualification"]
+        L.append("## Referee qualification (PREREGISTRATION_QUALIFICATION.md; calibration only, no P(1st) used)\n")
+        L.append("| referee | status | primary | seasons | log loss | Brier | G1 vs coin flip [CI] | G2 vs seed, log loss [CI] | G2 vs seed, Brier [CI] |")
+        L.append("|---|---|---|---|---|---|---|---|---|")
+        for r, g in q.items():
+            L.append(f"| {r} | {g['status']}{' (incumbent, in-sample)' if g['incumbent'] else ''} | {'yes' if g['primary_eligible'] else 'no'} | {len(g['seasons'])} | "
+                     f"{g['mean_log_loss']:.4f} | {g['mean_brier']:.4f} | {_ci(g['G1_vs_coin_flip_log_loss'])} | {_ci(g['G2_vs_incumbent_log_loss'])} | {_ci(g['G2_vs_incumbent_brier'])} |")
+        L.append("")
+        L.append(f"Criterion referees (qualified, full coverage): {', '.join(crit_refs)}. "
+                 f"Independent referee for C1: {result['criteria']['C1_cross_referee_edge'].get('independent_referee')}.\n")
+        mv2 = [(s_['year'], s_.get('market_v2_diagnostics', {})) for s_ in result['seasons']]
+        L.append("market_v2 coverage (tournament teams still on the seed fallback): " + ", ".join(
+            f"{y}: {len(d.get('fallback_teams', []))}" for y, d in mv2) + ".\n")
 
     v = result["criteria"]
     L.append("## Verdict\n")
