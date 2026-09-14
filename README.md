@@ -96,16 +96,27 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   built by `scripts/experiments/build_candidate_artifact.py`, which uses different rating
   sources, a different risk grid, and no exhaustive- or forced-champion candidates. Quote
   this figure for the strategy, not for a bracket on the page.
-- **Selected and scored against the same referee.** The candidate is chosen by, and later
-  measured by, P(1st) under the same simulated-outcome model (`seed_pw`, fit on
-  2010–2025 — overlapping every backtested season). Checked 2026-09-12 whether that inflates
-  the number: rescoring the already-selected bracket for all 13 evaluation seasons against an
-  independent Torvik-barthag/log5 referee it was never selected against gives pooled P(1st)
-  9.3% against 11.1% for the production referee, paired difference −1.75pp (95% CI
-  [−4.9, +1.3]pp) — **not detectably referee-sensitive at this sample size**, by a rule fixed
-  before running it. That bounds the concern; it does not retire it (13 seasons is not a lot,
-  and the CI's low end is not small next to the headline). See
-  `scripts/independent_referee_check.py` and `AUDIT_INDEPENDENT_EVALUATOR_2027.md` finding C2.
+- **Selected and scored against the same referee — and the edge is robust to the qualified
+  referee set tested, including held-out referee selection.** The candidate is chosen by, and
+  later measured by, P(1st) under the same simulated-outcome model (`seed_pw`, fit on
+  2010–2025 — overlapping every backtested season). Audited 2026-09-13/14 with thresholds
+  fixed before each run (`artifacts/referee_audit/`): the frozen strategy and its frozen
+  candidate set were scored on common-random-number trials under every referee that passes a
+  calibration gate applied on the real games alone (seed, Torvik, the fitted `blend` model,
+  and the shipped browser model `pit`, the best-calibrated of them). Production's edge over
+  the `seed` baseline is +7.4 / +7.3 / +6.1 / +4.9pp under those four, every CI clear of zero;
+  its self-referee premium is 1.7pp with a CI spanning zero; and re-running the selection with
+  each referee held out keeps 60–101% of the in-sample edge, every held-out edge positive. So
+  the strategy is not winning merely because it is graded by its own production referee.
+  What this does **not** show: a proven real-world +7pp — the referee suite is model-based
+  and 14 seasons is few. The leave-one-referee-out result is the persuasive part, more than
+  the headline number. The one referee that had erased the edge (a Bradley–Terry fit to
+  betting lines) turned out to be half seed fallbacks and fit on a sign-filtered subsample;
+  corrected, it shows +2.9pp [+1.2, +4.6] but is still not better calibrated than the seed
+  table, so it stays out of the primary set. A genuinely strong market referee, pre-registered
+  and put through the same gate, is the open follow-up. See
+  `artifacts/referee_audit/FINDINGS.md`, `FINDINGS_QUALIFICATION.md`, the two
+  `PREREGISTRATION*.md` files, and `AUDIT_INDEPENDENT_EVALUATOR_2027.md` finding C2.
 - **Chosen as the best of 79 candidate strategies — and it survives that.** Measured
   2026-09-12: all 79 modes re-run on the 14 seasons, then a Romano–Wolf stepdown on the
   P(1st) deltas of the other 78 against the `seed` baseline, resampling every mode under one
