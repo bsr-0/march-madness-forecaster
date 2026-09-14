@@ -228,3 +228,91 @@ def test_fte_pairwise_is_symmetric_and_monotone(monkeypatch, tmp_path):
     assert pw.p("alpha", "beta") == pytest.approx(1 - pw.p("beta", "alpha"))
     assert pw.p("alpha", "gamma") > pw.p("alpha", "beta") > 0.5
     assert ra.load_fte_pairwise(2024, ["alpha", "beta", "delta"]) is None  # unmapped team -> no referee
+
+
+# --- referee qualification audit -------------------------------------------
+
+QUAL_PREREG = ROOT / "artifacts" / "referee_audit" / "PREREGISTRATION_QUALIFICATION.md"
+
+
+def test_qualification_constants_match_the_document():
+    text = QUAL_PREREG.read_text()
+    assert "G1, beats a coin flip" in text and ra.QUALIFICATION["coin_flip_log_loss"] == pytest.approx(np.log(2))
+    assert "not worse than the incumbent" in text and ra.QUALIFICATION["incumbent"] == "seed"
+    assert "`market_v2`, `pit`, `torvik`, `blend`" in text
+    assert ra.QUALIFICATION["independent_referee_order"] == ["market_v2", "pit", "torvik", "blend"]
+    assert "5000-resample" in text and ra.QUALIFICATION["bootstrap_resamples"] == 5000
+    assert "3.5 points / 4 = 0.875" in text
+    from src.prediction.market_probabilities import HOME_COURT_LOGIT
+
+    assert HOME_COURT_LOGIT == pytest.approx(0.875)
+
+
+def _cal_rows(per_ref, n=8):
+    rng = np.random.default_rng(5)
+    rows = []
+    for k in range(n):
+        cal = {}
+        for r, (ll, br) in per_ref.items():
+            noise = rng.normal(0, 0.01)
+            cal[r] = {"log_loss": ll + noise, "brier": br + noise / 3, "sharpness": 0.2, "n_games": 63}
+        rows.append({"year": 2011 + k, "referee_calibration": cal})
+    return rows
+
+
+def test_gate_qualifies_disqualifies_and_provisions_as_specified():
+    rows = _cal_rows({
+        "seed": (0.55, 0.187),
+        "torvik": (0.54, 0.183),      # better than seed -> QUALIFIED
+        "market": (0.60, 0.206),      # significantly worse -> DISQUALIFIED
+        "flat": (0.6931, 0.25),       # cannot beat a coin flip -> DISQUALIFIED
+        "meh": (0.5502, 0.18705),     # a hair worse, CI spans 0 -> PROVISIONAL
+    })
+    years = [r["year"] for r in rows]
+    gate = ra.qualification_gate(rows, years)
+    assert gate["seed"]["status"] == "QUALIFIED" and gate["seed"]["incumbent"]
+    assert gate["torvik"]["status"] == "QUALIFIED" and gate["torvik"]["primary_eligible"]
+    assert gate["market"]["status"] == "DISQUALIFIED"
+    assert gate["flat"]["status"] == "DISQUALIFIED" and not gate["flat"]["G1_pass"]
+    assert gate["meh"]["status"] == "PROVISIONAL" and not gate["meh"]["primary_eligible"]
+
+
+def test_gate_partial_coverage_is_never_primary():
+    rows = _cal_rows({"seed": (0.55, 0.187), "torvik": (0.54, 0.183)})
+    for r in rows[:3]:
+        r["referee_calibration"]["odds_api"] = {"log_loss": 0.50, "brier": 0.17, "sharpness": 0.3, "n_games": 63}
+    years = [r["year"] for r in rows]
+    gate = ra.qualification_gate(rows, years)
+    assert gate["odds_api"]["status"] == "QUALIFIED" and not gate["odds_api"]["full_coverage"]
+    assert not gate["odds_api"]["primary_eligible"]
+    assert ra.choose_independent_referee(gate) == "torvik"  # market_v2 absent, pit absent
+
+
+def test_market_v2_id_resolution_merges_spellings_without_guessing():
+    from src.prediction.market_probabilities import _make_canonical_key
+
+    key = _make_canonical_key()
+    assert key("indianau") == "indiana"
+    assert key("appalachianst") == "appalachian_state"
+    assert key("ohiostate") == "ohio_state"
+    assert key("ohio_state_buckeyes") == "ohio_state"
+    assert key("vcu_rams") == "virginia_commonwealth"
+    assert key("north_carolina_state_wolfpack") == "nc_state"
+    assert key("texasa_mcorpus") == "texas_a_m_corpus_christi"
+    assert key("texas_a_m_aggies") == "texas_a_m"
+    assert key("miamiflorida") == "miami__fl"
+    assert key("ohio") == "ohio"
+    assert key("zzz_not_a_team_xx") is None  # containment / fuzzy tiers are refused
+
+
+def test_evaluate_criteria_honours_a_custom_criterion_set():
+    prod = {r: 0.12 for r in ra.CRITERION_REFEREES}
+    seasons = _synthetic_seasons(prod)
+    table = ra.aggregate(seasons, "p_first")
+    refs = ["seed", "torvik", "pit"]
+    prem = ra.self_referee_premium(seasons, [ra.PRODUCTION_STRATEGY], referees=refs)
+    loro = ra.loro_table(seasons, referees=refs)
+    out = ra.evaluate_criteria(table, prem, loro, criterion_referees=refs, independent_referee="pit")
+    assert out["criterion_referees"] == refs
+    assert out["C1_cross_referee_edge"]["independent_referee"] == "pit"
+    assert out["verdict"] == "ROBUST"

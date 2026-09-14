@@ -387,3 +387,200 @@ def load_spread_power_ratings(
         return None
 
     return barthag
+
+
+# ---------------------------------------------------------------------------
+# market_v2: the corrected market referee (referee qualification audit)
+# ---------------------------------------------------------------------------
+#
+# Defined in artifacts/referee_audit/PREREGISTRATION_QUALIFICATION.md BEFORE
+# its calibration was measured. `load_market_ratings` above is left exactly as
+# it was: it is the harness's `odds` base and the first audit's `market`
+# referee, and rewriting it would move numbers that are already published.
+#
+# What v2 changes, and why each is a construction fix rather than a tuning:
+#   * team ids: the unified odds file carries un-normalised SBRO spellings
+#     (`ohiostate`, `ohio_state_buckeyes`) so v1 handed ~30 of 68 tournament
+#     teams per season the seed fallback. v2 resolves both sides through the
+#     curated TeamNameResolver's high-confidence tiers plus a short alias list.
+#   * the spread-sign consistency guard is gone: SBRO's sign convention is
+#     mixed (55-71% agreement), so the guard discarded most decisive games.
+#     Implied probability is the only signal, as `load_spread_power_ratings`
+#     already does.
+#   * home court: the repo's spread_power convention (3.5 pts / 4 = 0.875
+#     logit) is removed from non-neutral games before the fit.
+
+#: SBRO compact spellings the resolver's strict tiers cannot place. Values are
+#: the ids the tournament seeds files use. Curated from the unresolved list
+#: across 2011-2025, with no outcome data involved.
+ODDS_ID_ALIASES: Dict[str, str] = {
+    "vcu_rams": "virginia_commonwealth",
+    "vacommonwealth": "virginia_commonwealth",
+    "st_johns": "st__john_s__ny",
+    "longisland": "long_island_university",
+    "liu_brooklyn": "long_island_university",
+    "liu_brooklyn_blackbirds": "long_island_university",
+    "stephenaustin": "stephen_f_austin",
+    "bostonu": "boston_university",
+    "ncasheville": "unc_asheville",
+    "nc_asheville_bulldogs": "unc_asheville",
+    "southernmiss": "southern_miss",
+    "loyolamaryland": "loyola_md",
+    "middletennst": "middle_tennessee",
+    "middle_tn": "middle_tennessee",
+    "middle_tennessee_st_blue_raiders": "middle_tennessee",
+    "n_carolinaa_t": "north_carolina_a_t",
+    "n_carolinaat": "north_carolina_a_t",
+    "northwesternst": "northwestern_state",
+    "centralflorida": "ucf",
+    "ucf_knights": "ucf",
+    "prairieviewa_m": "prairie_view",
+    "prairieviewam": "prairie_view",
+    "prairie_view_a_m_panthers": "prairie_view",
+    "st_francispa": "saint_francis",
+    "miamiflorida": "miami__fl",
+    "miamiohio": "miami__oh",
+    "calsantabarb": "uc_santa_barbara",
+    "calirvine": "uc_irvine",
+    "csfullerton": "cal_state_fullerton",
+    "csbakersfield": "cal_state_bakersfield",
+    "csnorthridge": "cal_state_northridge",
+    "calpolyslo": "cal_poly",
+    "flagulfcoast": "florida_gulf_coast",
+    "ncwilmington": "unc_wilmington",
+    "ncgreensboro": "unc_greensboro",
+    "nccentral": "north_carolina_central",
+    "e_washington": "eastern_washington",
+    "loyolachicago": "loyola__il",
+    "mdbaltimoreco": "maryland_baltimore_county",
+    "collcharleston": "college_of_charleston",
+    "etennesseest": "east_tennessee_state",
+    "wiscgreenbay": "green_bay",
+    "wiscmilwaukee": "milwaukee",
+    "st_josephs": "saint_joseph_s",
+    "geowashington": "george_washington",
+    "ullafayette": "louisiana",
+    "arkansaslr": "little_rock",
+    "no_colorado": "northern_colorado",
+    "texsanantonio": "utsa",
+    "texasa_mcorpus": "texas_a_m_corpus_christi",
+    "detroitu": "detroit_mercy",
+}
+
+# SBRO also writes a trailing "u" for a university ("indianau", "houstonu") and
+# a trailing "st" for "state" ("appalachianst"). Each is expanded and accepted
+# ONLY on exact compact-spelling equality with a canonical id, so the rule can
+# merge a spelling but never guess one.
+_SBRO_SUFFIX_EXPANSIONS = (("u", ""), ("st", "state"))
+
+_STRICT_RESOLVER_METHODS = frozenset({"exact_id", "alias", "alias_id", "slug", "prefix_strip"})
+HOME_COURT_LOGIT = 3.5 / 4.0  # the spread_power convention, unchanged
+
+
+def _make_canonical_key():
+    """Return ``key(team_id) -> canonical id or None`` using only high-confidence resolution."""
+    from src.data.team_name_resolver import TeamNameResolver
+
+    resolver = TeamNameResolver()
+    known = set(resolver.known_teams)  # a property on this resolver, not a method
+    compact = {k.replace("_", ""): k for k in known}
+    cache: Dict[str, Optional[str]] = {}
+
+    def key(team_id: str) -> Optional[str]:
+        if team_id in cache:
+            return cache[team_id]
+        tid = ODDS_ID_ALIASES.get(team_id, team_id)
+        out: Optional[str]
+        if tid in known:
+            out = tid
+        elif tid.replace("_", "") in compact:
+            out = compact[tid.replace("_", "")]
+        elif any(tid.endswith(suf) and (tid[: -len(suf)] + rep).replace("_", "") in compact for suf, rep in _SBRO_SUFFIX_EXPANSIONS):
+            suf, rep = next((s, r) for s, r in _SBRO_SUFFIX_EXPANSIONS if tid.endswith(s) and (tid[: -len(s)] + r).replace("_", "") in compact)
+            out = compact[(tid[: -len(suf)] + rep).replace("_", "")]
+        else:
+            m = resolver.resolve(tid)
+            out = m.canonical_id if m.method in _STRICT_RESOLVER_METHODS else None
+        cache[team_id] = out
+        return out
+
+    return key
+
+
+def load_market_ratings_v2(
+    year: int,
+    seeds: Dict[str, int],
+    cutoff_date: Optional[str] = None,
+    diagnostics: Optional[Dict[str, object]] = None,
+) -> Optional[Dict[str, float]]:
+    """Corrected market referee. See the block comment above and the pre-registration.
+
+    ``diagnostics``, if given, receives ``n_games``, ``n_resolved_teams``,
+    ``fallback_teams`` (tournament teams still absent from the odds data,
+    which keep the seed fallback so the count is visible, never hidden).
+    """
+    from src.data.scrapers.unified_odds import load_unified_odds
+
+    if cutoff_date is None:
+        cutoff_date = f"{year}-{DEFAULT_CUTOFF_MMDD}"
+    games = [g for g in load_unified_odds(year) if g.game_date < cutoff_date]
+    if not games:
+        return None
+
+    key = _make_canonical_key()
+    # Seed ids canonicalised the same way; an id the resolver does not know keeps itself.
+    seed_key = {tid: (key(tid) or tid) for tid in seeds}
+
+    fitted = []
+    for g in games:
+        p = g.implied_prob_home
+        if p <= 0.01 or p >= 0.99:
+            continue
+        h, a = key(g.home_team_id), key(g.away_team_id)
+        if h is None or a is None or h == a:
+            continue
+        if not g.is_neutral:
+            logit = math.log(p / (1.0 - p)) - HOME_COURT_LOGIT
+            p = 1.0 / (1.0 + math.exp(-logit))
+        fitted.append((h, a, p))
+
+    tourney_keys = set(seed_key.values())
+    if sum(1 for h, a, _ in fitted if h in tourney_keys or a in tourney_keys) < MIN_GAMES_THRESHOLD:
+        return None
+
+    team_list = sorted({t for h, a, _ in fitted for t in (h, a)})
+    idx = {t: i for i, t in enumerate(team_list)}
+    r = [1.0] * len(team_list)
+    for _ in range(BT_MAX_ITER):
+        wins = [0.0] * len(team_list)
+        denom = [0.0] * len(team_list)
+        for h, a, p in fitted:
+            i, j = idx[h], idx[a]
+            wins[i] += p
+            wins[j] += 1.0 - p
+            inv = 1.0 / (r[i] + r[j])
+            denom[i] += inv
+            denom[j] += inv
+        max_delta = 0.0
+        for k in range(len(team_list)):
+            new_r = wins[k] / denom[k] if denom[k] > 1e-12 else r[k]
+            max_delta = max(max_delta, abs(new_r - r[k]))
+            r[k] = new_r
+        median_r = sorted(r)[len(r) // 2]
+        if median_r > 1e-12:
+            r = [x / median_r for x in r]
+        if max_delta < 1e-6:
+            break
+
+    barthag: Dict[str, float] = {}
+    fallback = []
+    for tid, seed in seeds.items():
+        k = seed_key[tid]
+        if k in idx:
+            barthag[tid] = r[idx[k]] / (r[idx[k]] + 1.0)
+        else:
+            barthag[tid] = max(0.10, 1.0 - seed * 0.04)
+            fallback.append(tid)
+    if diagnostics is not None:
+        diagnostics.update({"n_games": len(fitted), "n_resolved_teams": len(seeds) - len(fallback), "fallback_teams": sorted(fallback)})
+    return barthag
