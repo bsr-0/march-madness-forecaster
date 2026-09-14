@@ -1,0 +1,46 @@
+Referee qualification audit  20260914_001331  commit c408837df842  years=[2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+Phase 1: referee calibration on the real games (no strategy P(1st) computed)
+  2011  seed=0.572  torvik=0.636  blend=0.594  pit=0.515  market=0.658  market_v2=0.618  market_v2 fallback=0
+  2012  seed=0.535  torvik=0.538  blend=0.532  pit=0.601  market=0.652  market_v2=0.574  market_v2 fallback=0
+  2013  seed=0.610  torvik=0.573  blend=0.571  pit=0.443  market=0.654  market_v2=0.563  market_v2 fallback=0
+  2014  seed=0.585  torvik=0.569  blend=0.571  pit=0.507  market=0.613  market_v2=0.571  market_v2 fallback=1
+  2015  seed=0.519  torvik=0.467  blend=0.504  pit=0.417  market=0.515  market_v2=0.478  market_v2 fallback=1
+  2016  seed=0.553  torvik=0.536  blend=0.548  pit=0.504  market=0.608  market_v2=0.537  fte=0.535  market_v2 fallback=1
+  2017  seed=0.487  torvik=0.493  blend=0.485  pit=0.437  market=0.492  market_v2=0.479  fte=0.501  market_v2 fallback=0
+  2018  seed=0.594  torvik=0.591  blend=0.594  pit=0.509  market=0.623  market_v2=0.602  fte=0.590  market_v2 fallback=0
+  2019  seed=0.495  torvik=0.465  blend=0.489  pit=0.417  market=0.539  market_v2=0.509  fte=0.462  market_v2 fallback=1
+  2021  seed=0.617  torvik=0.596  blend=0.583  pit=0.493  market=0.633  market_v2=0.586  odds_api=0.581  fte=0.593  market_v2 fallback=0
+  2022  seed=0.582  torvik=0.598  blend=0.587  pit=0.458  market=0.636  market_v2=0.609  odds_api=0.601  fte=0.610  market_v2 fallback=0
+  2023  seed=0.629  torvik=0.615  blend=0.611  pit=0.476  market=0.649  market_v2=0.656  odds_api=0.644  market_v2 fallback=1
+  2024  seed=0.511  torvik=0.513  blend=0.509  pit=0.427  market=0.488  market_v2=0.523  odds_api=0.605  fte=0.504  market_v2 fallback=2
+  2025  seed=0.422  torvik=0.403  blend=0.423  pit=0.343  market=0.643  market_v2=0.674  odds_api=0.619  market_v2 fallback=1
+
+referee    status        primary  log_loss  brier    G1 vs coin flip              G2 vs seed (log loss)
+seed       QUALIFIED     yes      0.5506   0.1865   -0.143 [-0.173, -0.114]      +0.000 [+0.000, +0.000]
+torvik     QUALIFIED     yes      0.5424   0.1830   -0.151 [-0.186, -0.118]      -0.008 [-0.021, +0.007]
+blend      QUALIFIED     yes      0.5430   0.1830   -0.150 [-0.178, -0.124]      -0.008 [-0.016, -0.000]
+pit        QUALIFIED     yes      0.4676   0.1530   -0.226 [-0.255, -0.195]      -0.083 [-0.110, -0.053]
+market     DISQUALIFIED  no       0.6002   0.2061   -0.093 [-0.126, -0.063]      +0.050 [+0.022, +0.084]
+market_v2  PROVISIONAL   no       0.5697   0.1940   -0.123 [-0.153, -0.093]      +0.019 [-0.011, +0.061]
+odds_api   PROVISIONAL   no       0.6101   0.2102   -0.083 [-0.100, -0.064]      +0.058 [-0.004, +0.130]
+fte        QUALIFIED     no       0.5424   0.1825   -0.151 [-0.190, -0.112]      -0.006 [-0.020, +0.009]
+criterion referees: ['seed', 'torvik', 'blend', 'pit']   independent referee: pit
+
+Phase 2: referee matrix and LORO over the qualified set
+  2011  pool=30  chosen=blend_region_risk=0.5        parity=ok  seed=0.037  torvik=0.030  blend=0.037  pit=0.010  market=0.033  market_v2=0.007  actual=0.000
+  2012  pool=30  chosen=tv_champ=syracuse            parity=ok  seed=0.053  torvik=0.193  blend=0.087  pit=0.010  market=0.080  market_v2=0.123  actual=0.000
+  2013  pool=30  chosen=mass_avg_region_risk=0.9     parity=ok  seed=0.120  torvik=0.077  blend=0.083  pit=0.067  market=0.007  market_v2=0.067  actual=0.000
+  2014  pool=30  chosen=blend_region_risk=0.9        parity=ok  seed=0.140  torvik=0.057  blend=0.133  pit=0.070  market=0.067  market_v2=0.027  actual=0.000
+  2015  pool=30  chosen=blend_exhaust_risk=0.3       parity=ok  seed=0.153  torvik=0.070  blend=0.127  pit=0.090  market=0.030  market_v2=0.060  actual=0.000
+  2016  pool=30  chosen=blend_region_risk=0.1        parity=ok  seed=0.167  torvik=0.037  blend=0.083  pit=0.123  market=0.100  market_v2=0.053  fte=0.097  actual=0.023
+  2017  pool=30  chosen=mass_avg_region_risk=0.1     parity=ok  seed=0.097  torvik=0.140  blend=0.087  pit=0.160  market=0.050  market_v2=0.063  fte=0.113  actual=0.007
+  2018  pool=30  chosen=blend_region_risk=0.1        parity=ok  seed=0.053  torvik=0.047  blend=0.040  pit=0.013  market=0.013  market_v2=0.023  fte=0.033  actual=0.000
+  2019  pool=30  chosen=mass_avg_region_risk=0.1     parity=ok  seed=0.107  torvik=0.173  blend=0.097  pit=0.130  market=0.030  market_v2=0.100  fte=0.137  actual=0.333
+  2021  pool=30  chosen=blend_region_risk=0.7        parity=ok  seed=0.070  torvik=0.067  blend=0.070  pit=0.083  market=0.017  market_v2=0.053  odds_api=0.063  fte=0.057  actual=0.263
+  2022  pool=30  chosen=blend_region_risk=0.5        parity=ok  seed=0.140  torvik=0.073  blend=0.117  pit=0.047  market=0.033  market_v2=0.060  odds_api=0.077  fte=0.020  actual=0.003
+  2023  pool=19  chosen=mass_avg_region_risk=0.5     parity=ok  seed=0.167  torvik=0.127  blend=0.170  pit=0.127  market=0.060  market_v2=0.037  odds_api=0.113  actual=0.000
+  2024  pool=25  chosen=blend_region_risk=0.5        parity=ok  seed=0.137  torvik=0.130  blend=0.117  pit=0.093  market=0.120  market_v2=0.110  odds_api=0.070  fte=0.120  actual=0.017
+  2025  pool=33  chosen=blend_region_risk=0.5        parity=ok  seed=0.163  torvik=0.253  blend=0.177  pit=0.180  market=0.100  market_v2=0.113  odds_api=0.140  actual=0.000
+
+VERDICT (qualified set ['seed', 'torvik', 'blend', 'pit'], independent=pit): ROBUST   C1=PASS  C2=PASS  C3=PASS
+wrote /Users/benrosen/Documents/march-madness-forecaster/artifacts/referee_audit/referee_matrix_qualified.json and /Users/benrosen/Documents/march-madness-forecaster/artifacts/referee_audit/REPORT_QUALIFIED.md
