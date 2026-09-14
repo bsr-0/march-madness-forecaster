@@ -1,0 +1,1122 @@
+{
+ "generated_at": "20260914_001331",
+ "commit": "c408837df842da6a2ebec2f935888b47d0f41aa2",
+ "years": [
+  2011,
+  2012,
+  2013,
+  2014,
+  2015,
+  2016,
+  2017,
+  2018,
+  2019,
+  2021,
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "spec": {
+  "metric_primary": "log_loss",
+  "metric_secondary": "brier",
+  "coin_flip_log_loss": 0.6931471805599453,
+  "coin_flip_brier": 0.25,
+  "incumbent": "seed",
+  "bootstrap_resamples": 5000,
+  "bootstrap_seed": 42,
+  "independent_referee_order": [
+   "market_v2",
+   "pit",
+   "torvik",
+   "blend"
+  ],
+  "full_coverage_required_for_primary": true
+ },
+ "rows": [
+  {
+   "year": 2011,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5718124392129993,
+     "brier": 0.19860819605131377,
+     "sharpness": 0.20179284218452223,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.6355081640201573,
+     "brier": 0.22265642712873007,
+     "sharpness": 0.2105680785722157,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5938570261869875,
+     "brier": 0.20904696502622394,
+     "sharpness": 0.1921849965465773,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.5147374989750462,
+     "brier": 0.17387898659601606,
+     "sharpness": 0.2962219457144534,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6584490582669815,
+     "brier": 0.23330652441213984,
+     "sharpness": 0.19402813846860817,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.6180321475971196,
+     "brier": 0.2190938150774874,
+     "sharpness": 0.18041600290691448,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3284,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2012,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.53485238593829,
+     "brier": 0.17884229149848996,
+     "sharpness": 0.21110140180034145,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5379672796185351,
+     "brier": 0.17608369093686738,
+     "sharpness": 0.20481057869041938,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5324350385298939,
+     "brier": 0.17555127780891341,
+     "sharpness": 0.18252924738229906,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.6011015361243967,
+     "brier": 0.20385718920174684,
+     "sharpness": 0.2597437828715306,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6518008391357739,
+     "brier": 0.22763657757160025,
+     "sharpness": 0.20722044534511397,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5743938883608729,
+     "brier": 0.1913949738950745,
+     "sharpness": 0.18616225525111363,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3370,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2013,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.6097291469069896,
+     "brier": 0.21083234763382275,
+     "sharpness": 0.2185974490674777,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5733670673417677,
+     "brier": 0.19928778105827477,
+     "sharpness": 0.21858511354403437,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.571174931135532,
+     "brier": 0.1969784252943335,
+     "sharpness": 0.19571575693529744,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4425453798857125,
+     "brier": 0.1466925696514707,
+     "sharpness": 0.2562461086575644,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6535587501387394,
+     "brier": 0.22923730650713361,
+     "sharpness": 0.211108565090448,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5625353073884194,
+     "brier": 0.19422486789067314,
+     "sharpness": 0.17387251350393068,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3332,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2014,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5845932148090627,
+     "brier": 0.20565087118942102,
+     "sharpness": 0.2173115070961912,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5693379775661913,
+     "brier": 0.19806325318769105,
+     "sharpness": 0.21742344274801573,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.571232367071695,
+     "brier": 0.19876127029101662,
+     "sharpness": 0.20260477634275023,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.5074808899907173,
+     "brier": 0.17054888873935553,
+     "sharpness": 0.2491950859651564,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6134727910211553,
+     "brier": 0.21223077703932502,
+     "sharpness": 0.16446874971969414,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5705414100218833,
+     "brier": 0.19770477984678572,
+     "sharpness": 0.188639988573217,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3353,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "north_dakota_state"
+    ]
+   }
+  },
+  {
+   "year": 2015,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5187432935880796,
+     "brier": 0.17103590824040535,
+     "sharpness": 0.19960835037103808,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.4666246145390056,
+     "brier": 0.15206960660558286,
+     "sharpness": 0.23203956433823666,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.503965926291075,
+     "brier": 0.16470800158211854,
+     "sharpness": 0.1895693863876365,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.41740125583611365,
+     "brier": 0.13077028227566959,
+     "sharpness": 0.22721028377220936,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.5148622581371077,
+     "brier": 0.16825775439300256,
+     "sharpness": 0.1717557417319703,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.4781658612266336,
+     "brier": 0.15412916627256576,
+     "sharpness": 0.19866024385081732,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3410,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "north_dakota_state"
+    ]
+   }
+  },
+  {
+   "year": 2016,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5530719402344276,
+     "brier": 0.18815528454037525,
+     "sharpness": 0.21345106509924952,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5361543895499769,
+     "brier": 0.1787347192796319,
+     "sharpness": 0.21053044543433008,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5481064803406586,
+     "brier": 0.18375290415718534,
+     "sharpness": 0.1862017064912487,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.5040635675505538,
+     "brier": 0.1642625013617531,
+     "sharpness": 0.28688344605174476,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6076406648308953,
+     "brier": 0.20677236845035232,
+     "sharpness": 0.2053155270743606,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5368238996181346,
+     "brier": 0.17926754398147998,
+     "sharpness": 0.19483513736935043,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.535037253402428,
+     "brier": 0.17790726556118255,
+     "sharpness": 0.2259215760477506,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3408,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "chattanooga"
+    ]
+   }
+  },
+  {
+   "year": 2017,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.48663102224324845,
+     "brier": 0.1608848689940118,
+     "sharpness": 0.2076267319036752,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.49321284445951885,
+     "brier": 0.16791598415862305,
+     "sharpness": 0.21880258192733198,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.48535658107512,
+     "brier": 0.1598421647456978,
+     "sharpness": 0.19792881519057112,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4368325287633079,
+     "brier": 0.14031537310606368,
+     "sharpness": 0.2724360489483365,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.491667494844695,
+     "brier": 0.1613799119988356,
+     "sharpness": 0.1883429558438522,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.4785342448672065,
+     "brier": 0.15744899275313884,
+     "sharpness": 0.1892690043581552,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.5010847816913891,
+     "brier": 0.17046461152743098,
+     "sharpness": 0.21518704584433498,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3454,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2018,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5935660023267091,
+     "brier": 0.19979819906338026,
+     "sharpness": 0.21153798520554035,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5912206382405071,
+     "brier": 0.19877094316516306,
+     "sharpness": 0.22615821502207803,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5936232031935771,
+     "brier": 0.202954205795807,
+     "sharpness": 0.20149763239161886,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.5088293918677912,
+     "brier": 0.1714636454813844,
+     "sharpness": 0.26900599867888436,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6234668427692177,
+     "brier": 0.21600046781486057,
+     "sharpness": 0.17484509445162466,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.6015579368399738,
+     "brier": 0.20384313214430108,
+     "sharpness": 0.20823848385997357,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.5900101186393155,
+     "brier": 0.19598410154156357,
+     "sharpness": 0.23413841678725034,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3500,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2019,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.4948823790093245,
+     "brier": 0.16748498850959803,
+     "sharpness": 0.21569459449649803,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.4648981626759763,
+     "brier": 0.15535622267743204,
+     "sharpness": 0.23474335229471632,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.488754646488215,
+     "brier": 0.16229938911120736,
+     "sharpness": 0.20337166396138076,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4168639823711021,
+     "brier": 0.13314014845612585,
+     "sharpness": 0.2626881168400781,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.5391360662974988,
+     "brier": 0.18190079456677316,
+     "sharpness": 0.20060200112771734,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5085062798219785,
+     "brier": 0.1711156518382613,
+     "sharpness": 0.19875714389300406,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.4623039024038299,
+     "brier": 0.15384102001442063,
+     "sharpness": 0.2325902014622824,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 4667,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "fairleigh_dickinson"
+    ]
+   }
+  },
+  {
+   "year": 2021,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.616684117734274,
+     "brier": 0.2125251633048255,
+     "sharpness": 0.23484008481796356,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5956706479625685,
+     "brier": 0.20517941011151142,
+     "sharpness": 0.23620885659803134,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5833744067540405,
+     "brier": 0.20073886734152582,
+     "sharpness": 0.2161329019951368,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4929999953343133,
+     "brier": 0.16149865726919063,
+     "sharpness": 0.3145609429942933,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.633428044758977,
+     "brier": 0.21669551030590806,
+     "sharpness": 0.17325324464631287,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5857531188483531,
+     "brier": 0.2001285091764362,
+     "sharpness": 0.18880684748017226,
+     "n_games": 63
+    },
+    "odds_api": {
+     "log_loss": 0.5812247834562746,
+     "brier": 0.20003193286045723,
+     "sharpness": 0.19322755875330494,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.5934475518206654,
+     "brier": 0.2019948059658036,
+     "sharpness": 0.23629328862260293,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 3296,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2022,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5816944598857547,
+     "brier": 0.20036602416241073,
+     "sharpness": 0.21941477389245742,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5982827771147757,
+     "brier": 0.2071457172912797,
+     "sharpness": 0.2272733595257378,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5870530467970776,
+     "brier": 0.2003788996174721,
+     "sharpness": 0.20683150587506668,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4577258391696428,
+     "brier": 0.15361923643592176,
+     "sharpness": 0.25324761812235996,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6361856549507122,
+     "brier": 0.22654565112851124,
+     "sharpness": 0.16908430172759348,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.6086152708958011,
+     "brier": 0.2123011452830555,
+     "sharpness": 0.18193839252984506,
+     "n_games": 63
+    },
+    "odds_api": {
+     "log_loss": 0.6008565281361596,
+     "brier": 0.2055104980811942,
+     "sharpness": 0.19897502718731827,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.6104392310840223,
+     "brier": 0.20998454923786453,
+     "sharpness": 0.2230725978704061,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 4620,
+    "n_resolved_teams": 64,
+    "fallback_teams": []
+   }
+  },
+  {
+   "year": 2023,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.629097779729857,
+     "brier": 0.2141943683821309,
+     "sharpness": 0.20479406306470402,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.6149620348424081,
+     "brier": 0.2033907954235932,
+     "sharpness": 0.20927279513392763,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.6112759144697133,
+     "brier": 0.20692643577159067,
+     "sharpness": 0.19707513416747996,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4756510678699039,
+     "brier": 0.15257852217064785,
+     "sharpness": 0.2585365510201379,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.6489743331552988,
+     "brier": 0.22734010972771856,
+     "sharpness": 0.20023448885536096,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.655529337792103,
+     "brier": 0.2302664455686241,
+     "sharpness": 0.19350363336205748,
+     "n_games": 63
+    },
+    "odds_api": {
+     "log_loss": 0.6438774176406897,
+     "brier": 0.22095989134194408,
+     "sharpness": 0.16995744849063307,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 4962,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "northern_kentucky"
+    ]
+   }
+  },
+  {
+   "year": 2024,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.5114696876549225,
+     "brier": 0.1708021061671986,
+     "sharpness": 0.2180124720661869,
+     "n_games": 63
+    },
+    "torvik": {
+     "log_loss": 0.5132411112868345,
+     "brier": 0.17158396482088137,
+     "sharpness": 0.24200751363310596,
+     "n_games": 63
+    },
+    "blend": {
+     "log_loss": 0.5091741841439095,
+     "brier": 0.16869965799351455,
+     "sharpness": 0.2125320570710386,
+     "n_games": 63
+    },
+    "pit": {
+     "log_loss": 0.4269665868333414,
+     "brier": 0.13656245673281106,
+     "sharpness": 0.2765558003740333,
+     "n_games": 63
+    },
+    "market": {
+     "log_loss": 0.4877964285211855,
+     "brier": 0.15809572350231188,
+     "sharpness": 0.21588451882456994,
+     "n_games": 63
+    },
+    "market_v2": {
+     "log_loss": 0.5226310276383473,
+     "brier": 0.1719325603413209,
+     "sharpness": 0.21927897805639926,
+     "n_games": 63
+    },
+    "odds_api": {
+     "log_loss": 0.6054765214614666,
+     "brier": 0.21057901163654952,
+     "sharpness": 0.2229617894701169,
+     "n_games": 63
+    },
+    "fte": {
+     "log_loss": 0.5043179175238868,
+     "brier": 0.16749365844160627,
+     "sharpness": 0.23234625893282357,
+     "n_games": 63
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 4805,
+    "n_resolved_teams": 62,
+    "fallback_teams": [
+     "mississippi_state",
+     "south_dakota_state"
+    ]
+   }
+  },
+  {
+   "year": 2025,
+   "referee_calibration": {
+    "seed": {
+     "log_loss": 0.42160036500017767,
+     "brier": 0.13194813316279358,
+     "sharpness": 0.2023909662920506,
+     "n_games": 62
+    },
+    "torvik": {
+     "log_loss": 0.40346280954297176,
+     "brier": 0.12634161411281192,
+     "sharpness": 0.2333584633576533,
+     "n_games": 62
+    },
+    "blend": {
+     "log_loss": 0.42289650073003315,
+     "brier": 0.13126936242448464,
+     "sharpness": 0.20420016991896686,
+     "n_games": 62
+    },
+    "pit": {
+     "log_loss": 0.3432355150841471,
+     "brier": 0.10265796944889734,
+     "sharpness": 0.2813261568986233,
+     "n_games": 62
+    },
+    "market": {
+     "log_loss": 0.6428573841672931,
+     "brier": 0.22054983562511418,
+     "sharpness": 0.20419854611398058,
+     "n_games": 62
+    },
+    "market_v2": {
+     "log_loss": 0.674317761536836,
+     "brier": 0.23332249942321284,
+     "sharpness": 0.20695067285172983,
+     "n_games": 62
+    },
+    "odds_api": {
+     "log_loss": 0.6191087654319117,
+     "brier": 0.21370792908640066,
+     "sharpness": 0.21529492736932887,
+     "n_games": 62
+    }
+   },
+   "market_v2_diagnostics": {
+    "n_games": 4722,
+    "n_resolved_teams": 63,
+    "fallback_teams": [
+     "mississippi_state"
+    ]
+   }
+  }
+ ],
+ "gate": {
+  "seed": {
+   "status": "QUALIFIED",
+   "incumbent": true,
+   "in_sample_note": "fit window 2010-2025 contains every evaluation season",
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.5506020167338656,
+   "mean_brier": 0.18650919649286982,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.1425451638260798,
+    "ci_lo": -0.17286018331893435,
+    "ci_hi": -0.11421467132252773,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": 0.0,
+    "ci_lo": 0.0,
+    "ci_hi": 0.0,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": 0.0,
+    "ci_lo": 0.0,
+    "ci_hi": 0.0,
+    "n": 14
+   },
+   "G2_pass": true,
+   "primary_eligible": true
+  },
+  "torvik": {
+   "status": "QUALIFIED",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.5424221799115139,
+   "mean_brier": 0.18304143785414814,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.15072500064843136,
+    "ci_lo": -0.1855321030014031,
+    "ci_hi": -0.11759254267656867,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": -0.008179836822351587,
+    "ci_lo": -0.0208951304423995,
+    "ci_hi": 0.006562892220937117,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": -0.003467758638721694,
+    "ci_lo": -0.008476228303851571,
+    "ci_hi": 0.002402636130474616,
+    "n": 14
+   },
+   "G2_pass": true,
+   "primary_eligible": true
+  },
+  "blend": {
+   "status": "QUALIFIED",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.543020018086252,
+   "mean_brier": 0.18299341621150653,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.1501271624736933,
+    "ci_lo": -0.17834913642177433,
+    "ci_hi": -0.12413826378869663,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": -0.007581998647613485,
+    "ci_lo": -0.015533456355029512,
+    "ci_hi": -5.168563257907906e-05,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": -0.0035157802813633,
+    "ci_lo": -0.006453698509505071,
+    "ci_hi": -0.00037487116961114613,
+    "n": 14
+   },
+   "G2_pass": true,
+   "primary_eligible": true
+  },
+  "pit": {
+   "status": "QUALIFIED",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.4676025025468635,
+   "mean_brier": 0.1529890304947896,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.2255446780130817,
+    "ci_lo": -0.25546272229159733,
+    "ci_hi": -0.19548181907634163,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": -0.08299951418700192,
+    "ci_lo": -0.1095851898318563,
+    "ci_hi": -0.05279834882289924,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": -0.03352016599808022,
+    "ci_lo": -0.043565683615358786,
+    "ci_hi": -0.022001762248571807,
+    "n": 14
+   },
+   "G2_pass": true,
+   "primary_eligible": true
+  },
+  "market": {
+   "status": "DISQUALIFIED",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.6002354722139666,
+   "mean_brier": 0.20613923664597048,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.09291170834597876,
+    "ci_lo": -0.12646634045639307,
+    "ci_hi": -0.06329982775426685,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": 0.04963345548010103,
+    "ci_lo": 0.02216899633788278,
+    "ci_hi": 0.08363467507436177,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": 0.01963004015310067,
+    "ci_lo": 0.008100812766378047,
+    "ci_hi": 0.033690774325985995,
+    "n": 14
+   },
+   "G2_pass": false,
+   "primary_eligible": false
+  },
+  "market_v2": {
+   "status": "PROVISIONAL",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": true,
+   "seasons": [
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.5697098208895474,
+   "mean_brier": 0.19401243453517264,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.12343735967039794,
+    "ci_lo": -0.15342095402836006,
+    "ci_hi": -0.09291221860264823,
+    "n": 14
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": 0.019107804155681855,
+    "ci_lo": -0.010595006776731265,
+    "ci_hi": 0.060835314602634714,
+    "n": 14
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": 0.007503238042302843,
+    "ci_lo": -0.004594016063882006,
+    "ci_hi": 0.02425478970701216,
+    "n": 14
+   },
+   "G2_pass": false,
+   "primary_eligible": false
+  },
+  "odds_api": {
+   "status": "PROVISIONAL",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": false,
+   "seasons": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "mean_log_loss": 0.6101088032253006,
+   "mean_brier": 0.21015785260130912,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.08303837733464484,
+    "ci_lo": -0.10014335029573966,
+    "ci_hi": -0.06413095424452235,
+    "n": 5
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": 0.05799952122430326,
+    "ci_lo": -0.004439464896785705,
+    "ci_hi": 0.13021454016474937,
+    "n": 5
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": 0.024190693565437276,
+    "ci_lo": -0.001586398018271279,
+    "ci_hi": 0.054512612559160775,
+    "n": 5
+   },
+   "G2_pass": false,
+   "primary_eligible": false
+  },
+  "fte": {
+   "status": "QUALIFIED",
+   "incumbent": false,
+   "in_sample_note": null,
+   "full_coverage": false,
+   "seasons": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2024
+   ],
+   "mean_log_loss": 0.5423772509379338,
+   "mean_brier": 0.18252428746998173,
+   "G1_vs_coin_flip_log_loss": {
+    "mean": -0.15076992962201144,
+    "ci_lo": -0.18998212174778098,
+    "ci_hi": -0.11155767353636686,
+    "n": 7
+   },
+   "G1_pass": true,
+   "G2_vs_incumbent_log_loss": {
+    "mean": -0.005908407503303403,
+    "ci_lo": -0.0198237761500955,
+    "ci_hi": 0.009218381293369984,
+    "n": 7
+   },
+   "G2_vs_incumbent_brier": {
+    "mean": -0.003192374635989719,
+    "ci_lo": -0.00938845941357147,
+    "ci_hi": 0.0034168999347242435,
+    "n": 7
+   },
+   "G2_pass": true,
+   "primary_eligible": false
+  }
+ },
+ "criterion_referees": [
+  "seed",
+  "torvik",
+  "blend",
+  "pit"
+ ],
+ "independent_referee": "pit"
+}
