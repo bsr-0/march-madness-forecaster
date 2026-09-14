@@ -709,6 +709,43 @@ def evaluate_season(ctx: SeasonContext, strategies: Mapping[str, np.ndarray], cf
 
 
 # ---------------------------------------------------------------------------
+# Referee calibration on the real games
+# ---------------------------------------------------------------------------
+
+
+def referee_game_scores(referees: Mapping[str, Mapping[Tuple[str, str], float]], games: Sequence[dict], team_index: Mapping[str, int]) -> Dict[str, Dict[str, float]]:
+    """Log loss, Brier and sharpness of each referee's RAW pairwise table on the season's real games.
+
+    Play-in games are excluded (the field is the 64 that played the Round of
+    64). Raw means before the simulator's logit noise, so this measures the
+    table, not the draw. Which referee is credible is an empirical question,
+    and this is the number that answers it.
+    """
+    out: Dict[str, Dict[str, float]] = {}
+    for name, table in referees.items():
+        ll = br = sh = 0.0
+        n = 0
+        for g in games:
+            if g.get("round_name") == "FF":
+                continue
+            t1, t2 = g["team1_id"], g["team2_id"]
+            if t1 not in team_index or t2 not in team_index:
+                continue
+            p = table.get((t1, t2))
+            if p is None:
+                continue
+            p = min(max(float(p), 1e-6), 1 - 1e-6)
+            y = 1.0 if g["team1_won"] else 0.0
+            ll += -(y * math.log(p) + (1 - y) * math.log(1 - p))
+            br += (p - y) ** 2
+            sh += abs(p - 0.5)
+            n += 1
+        if n:
+            out[name] = {"log_loss": ll / n, "brier": br / n, "sharpness": sh / n, "n_games": n}
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Per-season driver
 # ---------------------------------------------------------------------------
 
@@ -720,12 +757,23 @@ def check_parity(year: int, chosen_label: str, expected: Mapping[int, str]) -> D
 
 def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
     """Everything for one season. Picklable entry point for a process pool."""
+    import sys
+    import time
+
     from src.simulation.pool_competition import picks_by_round
 
+    def _t(msg: str, t0: float) -> float:
+        print(f"    [{year}] {msg} {time.time() - t0:.0f}s", file=sys.__stdout__, flush=True)
+        return time.time()
+
+    t0 = time.time()
     ctx = build_season_context(year)
+    t0 = _t("context", t0)
     referee_names = [r for r in CRITERION_REFEREES if r in ctx.referees]
     candidates = build_production_candidates(ctx)
+    t0 = _t(f"{len(candidates)} candidates", t0)
     p1_sel = selection_p1_by_referee(ctx, candidates, referee_names, cfg.pa_trials)
+    t0 = _t("selection", t0)
     choices = loro_choices(p1_sel, referee_names)
     prod_idx = choices[SELECTION_REFEREE]["production"]
     parity = check_parity(year, candidates[prod_idx][1], cfg.expected_labels)
@@ -735,7 +783,9 @@ def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
             f"canonical log says {parity['expected']!r}. The audit does not describe production; stopping."
         )
     strategies = build_strategies(ctx, candidates, choices, cfg)
+    t0 = _t("strategies", t0)
     metrics = evaluate_season(ctx, strategies, cfg)
+    _t("evaluation", t0)
 
     labels = [l for _, l in candidates]
     if cfg.candidates_dir:
@@ -758,6 +808,7 @@ def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
         "choices": {h: {k: {"index": i, "label": labels[i]} for k, i in rules.items()} for h, rules in choices.items()},
         "parity": parity,
         "metrics": metrics,
+        "referee_calibration": referee_game_scores(ctx.referees, ctx.games, ctx.team_index),
     }
 
 
@@ -869,6 +920,25 @@ def loro_table(seasons: Sequence[dict], referees: Sequence[str] = CRITERION_REFE
             )
         out[held] = row
     return out
+
+
+def pooled_calibration(seasons: Sequence[dict]) -> Dict[str, Dict[str, float]]:
+    """Game-weighted pooled log loss / Brier / sharpness per referee over all seasons."""
+    acc: Dict[str, Dict[str, float]] = {}
+    for s in seasons:
+        for r, m in s.get("referee_calibration", {}).items():
+            a = acc.setdefault(r, {"log_loss": 0.0, "brier": 0.0, "sharpness": 0.0, "n_games": 0, "n_seasons": 0})
+            k = m["n_games"]
+            a["log_loss"] += m["log_loss"] * k
+            a["brier"] += m["brier"] * k
+            a["sharpness"] += m["sharpness"] * k
+            a["n_games"] += k
+            a["n_seasons"] += 1
+    return {
+        r: {"log_loss": a["log_loss"] / a["n_games"], "brier": a["brier"] / a["n_games"], "sharpness": a["sharpness"] / a["n_games"],
+            "n_games": a["n_games"], "n_seasons": a["n_seasons"]}
+        for r, a in acc.items() if a["n_games"]
+    }
 
 
 def evaluate_criteria(table_p1: Mapping[str, Mapping[str, dict]], premium: Mapping[str, dict], loro: Mapping[str, dict]) -> Dict[str, object]:

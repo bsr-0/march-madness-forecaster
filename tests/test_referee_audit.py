@@ -200,6 +200,23 @@ def test_self_referee_premium_reports_reversal():
     assert "torvik" in prem[ra.PRODUCTION_STRATEGY]["reversal_under"]
 
 
+def test_referee_game_scores_pool_by_game_and_skip_play_ins():
+    games = [
+        {"round_name": "R64", "team1_id": "a", "team2_id": "b", "team1_won": True},
+        {"round_name": "R64", "team1_id": "c", "team2_id": "d", "team1_won": False},
+        {"round_name": "FF", "team1_id": "a", "team2_id": "b", "team1_won": True},
+    ]
+    idx = {"a": 0, "b": 1, "c": 2, "d": 3}
+    refs = {"sharp": {("a", "b"): 0.9, ("c", "d"): 0.1}, "flat": {("a", "b"): 0.5, ("c", "d"): 0.5}}
+    out = ra.referee_game_scores(refs, games, idx)
+    assert out["sharp"]["n_games"] == 2 and out["flat"]["n_games"] == 2
+    assert out["sharp"]["log_loss"] == pytest.approx(-np.log(0.9))
+    assert out["flat"]["log_loss"] == pytest.approx(np.log(2))
+    assert out["sharp"]["sharpness"] == pytest.approx(0.4) and out["flat"]["sharpness"] == 0.0
+    pooled = ra.pooled_calibration([{"referee_calibration": out}, {"referee_calibration": out}])
+    assert pooled["sharp"]["n_games"] == 4 and pooled["sharp"]["log_loss"] == pytest.approx(-np.log(0.9))
+
+
 def test_fte_pairwise_is_symmetric_and_monotone(monkeypatch, tmp_path):
     doc = {"columns": ["year", "team_no", "team", "seed", "round", "power_rating", "power_rating_rank"],
            "data": [[2024, 1, "Alpha", 1, 1, 95.0, 1], [2024, 2, "Beta", 2, 1, 90.0, 2], [2024, 3, "Gamma", 3, 1, 80.0, 3]]}
