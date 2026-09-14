@@ -68,8 +68,19 @@ def test_live_system_has_not_drifted_from_the_freeze():
 
 
 def test_prospective_document_records_the_freeze():
-    """The operative prospective doc must carry this version, date and hash."""
-    doc = (REPO / PROSPECTIVE_DOC).read_text()
+    """The operative prospective doc must carry this version, date and hash.
+
+    The document is gitignored (2026-09-13, at the maintainer's direction), so
+    it exists in a working checkout and not on a CI runner. Skipping there is
+    the honest outcome -- but note what it costs: the tie between the frozen
+    hash and the prose that explains it is now checked only where someone
+    happens to have the file. The JSON spec and its hash remain tracked, so the
+    machine-readable half of the pre-registration is intact.
+    """
+    doc_path = REPO / PROSPECTIVE_DOC
+    if not doc_path.exists():
+        pytest.skip(f"{PROSPECTIVE_DOC} is gitignored; freeze-vs-prose agreement unchecked here")
+    doc = doc_path.read_text()
     frozen = load_frozen_spec(REPO / FROZEN_SPEC_PATH)
     for token in (SPEC_VERSION, FREEZE_DATE, frozen["spec_hash"]):
         assert token in doc, f"PROSPECTIVE_2027.md does not record {token!r}"
@@ -144,7 +155,12 @@ def test_v1_specification_is_immutable():
         "historical record -- create a new version instead of editing it."
     )
     assert v1["spec_version"] == SUPERSEDED["version"]
-    assert (REPO / SUPERSEDED["doc"]).exists(), "PROSPECTIVE_2027.md has been deleted"
+    # v1's DOCUMENT is gitignored (2026-09-13) so this can no longer assert its
+    # presence. The immutability guarantee now rests on the JSON above, which is
+    # still tracked and still hash-pinned; the prose record of why v1 was
+    # superseded is local-only.
+    if (REPO / SUPERSEDED["doc"]).exists():
+        assert (REPO / SUPERSEDED["doc"]).read_text().strip(), "v1's document exists but is empty"
 
 
 def test_v2_records_why_it_supersedes_v1():
