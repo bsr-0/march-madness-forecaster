@@ -98,3 +98,7 @@ AGENT_NOTES.md
 # Prospective pre-registration documents — kept locally, out of the repo.
 PROSPECTIVE_2027.md
 PROSPECTIVE_2027_v2.md
+
+# Claude Code project-instruction files: ignore any new ones anywhere in the tree.
+# (Already-tracked ones under .claude/agents/ are unaffected by this rule.)
+CLAUDE.md
