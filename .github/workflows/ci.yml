@@ -177,6 +177,18 @@ jobs:
         # indices, printing "undefined" for all 63 picks without throwing.
         run: node tests/test_picks_export.js
 
+      - name: Round-advancement probabilities
+        # Recursive real-bracket survival (fit.js bracketAdvancementProbs):
+        # hand-worked 4-team case, per-round mass sums to the survivor count,
+        # monotone per team. Wrong here means every "chance of reaching the
+        # Sweet 16" in the team drawer is wrong with nothing else noticing.
+        run: node tests/test_advancement.js
+
+      - name: Collinearity marking
+        # pairwiseCorrelations over the walk-forward rows: the check the
+        # sign-flip marker cannot make (Overall rating vs National rank, r~0.99).
+        run: node tests/test_collinearity.js
+
       - name: Point-in-time boundary audit
         uses: ./.github/actions/setup-python-env
 
