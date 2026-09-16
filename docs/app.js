@@ -1145,6 +1145,12 @@ function sensitivity() {
   if (state.sens && state.sens.year === state.year && state.sens.fitId === state.fit) return state.sens;
   const f = state.fit, src = state.training;
   const models = exclusionModels(src.games, f.cols, src.years, state.year, 2014);
+  // The baseline is solved HERE, by the same walk, not taken from whatever
+  // render() last put in state.rounds. Both brackets in every "picks
+  // changed" count come from solveBracket() in this function, on the same
+  // first_round, the same z, the same tie rule, with only the probability
+  // function differing -- and nothing random anywhere in that walk.
+  const base = solveBracket(winProb);
   const byKey = {};
   models.forEach((m, j) => {
     const key = f.keys[j];
@@ -1160,21 +1166,21 @@ function sensitivity() {
       return winProbFromMargin(t, m.fit.sigma, cal);
     };
     let changed = null;
-    if (m.fit.ok && state.rounds) {
+    if (m.fit.ok) {
       const alt = solveBracket(pFn);
       changed = 0;
-      state.rounds.forEach((games, r) => games.forEach((g, i) => { if (alt[r][i].win !== g.win) changed++; }));
+      base.forEach((games, r) => games.forEach((g, i) => { if (alt[r][i].win !== g.win) changed++; }));
     }
     byKey[key] = { key, ok: m.fit.ok, oos: m.oos, pFn, changed };
   });
-  state.sens = { year: state.year, fitId: f, byKey };
+  state.sens = { year: state.year, fitId: f, base, byKey };
   return state.sens;
 }
 
 /* SENSITIVITY-COPY-START -- a test forbids causal/importance wording here. */
 function sensitivityHTML(meta) {
   const f = state.fit, full = f.oos;
-  if (!full || !state.rounds) return '';
+  if (!full) return '';
   const sens = sensitivity();
   const me = sens.byKey[meta.key];
   if (!me || !me.ok || !me.oos) return `<p class="ex-line muted">Not enough history to refit without ${meta.label}.</p>`;
@@ -1201,7 +1207,7 @@ function sensitivityHTML(meta) {
   // Local: the fitted bracket's games, largest |Δp| first.
   const teams = state.season.teams;
   const local = [];
-  state.rounds.forEach((games, r) => games.forEach(g => {
+  sens.base.forEach((games, r) => games.forEach(g => {
     const pe = me.pFn(g.a, g.b);
     local.push({ r, g, pe, d: Math.abs(pe - g.p) });
   }));
