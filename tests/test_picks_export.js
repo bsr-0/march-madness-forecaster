@@ -540,15 +540,28 @@ check('a picks list naming both teams of a game throws instead of guessing', () 
  * app.js; this scans them. */
 console.log('\nmodel sensitivity wording');
 
-check('no causal or importance words in the sensitivity panel', () => {
+check('no causal or importance words anywhere in the Fitted Model surface', () => {
+  // Terminology audit (2026-09-16): the equation, reliability table,
+  // Explore panel and sensitivity panel describe observed relationships,
+  // refit differences and pick sensitivity -- never contribution, importance,
+  // impact, cause, drive, improve, explain, optimal, predictive power,
+  // overrule, or effect. Scans the user-facing renderers with comments
+  // stripped; `value` is allowed ("pre-tournament value of this variable").
   const src = fs.readFileSync(path.join(__dirname, '..', 'docs', 'app.js'), 'utf8');
-  const a = src.indexOf('/* SENSITIVITY-COPY-START'), b = src.indexOf('/* SENSITIVITY-COPY-END');
-  assert.ok(a > 0 && b > a, 'markers missing');
-  const block = src.slice(a, b)
+  const body = name => {
+    const i = src.indexOf('function ' + name + '(');
+    assert.ok(i >= 0, name + ' missing');
+    const rest = src.slice(i + 9);
+    const end = rest.search(/\n(function |\/\* ----------|const [A-Z_]+ = )/);
+    return end < 0 ? rest : rest.slice(0, end);
+  };
+  const block = ['equationHTML', 'reliabilityHTML', 'renderExplore', 'sensitivityHTML', 'advancementHTML', 'probTitle']
+    .map(body).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '')        // block comments
-    .replace(/^\s*\/\/.*$/gm, '');           // line comments
-  for (const bad of ['contribut', 'causal', 'cause of', 'importance', 'important variable', 'explains', 'accounts for', 'percentage points from', 'effect of']) {
-    assert.ok(!block.toLowerCase().includes(bad), `forbidden wording "${bad}" in the sensitivity panel`);
+    .replace(/^\s*\/\/.*$/gm, '')            // line comments
+    .replace(/causalWalkForward/g, '');      // a function name, not copy
+  for (const bad of ['contribut', 'importan', 'impact', 'causal', ' cause', 'drives', 'improve', 'explain', 'optimal', 'predictive power', 'overrul', 'effect', 'better variable', 'accounts for']) {
+    assert.ok(!block.toLowerCase().includes(bad), `forbidden wording "${bad}" in the Fitted Model surface`);
   }
   assert.ok(block.includes('refit excluding'), 'the required phrasing is missing');
 });

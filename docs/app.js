@@ -1233,10 +1233,10 @@ function sensitivityHTML(meta) {
   // carries alone. "Absorbed" would be false there.
   const ABSORB_LL = 0.01;
   const absorb = (partner && dll !== null && Math.abs(dll) < ABSORB_LL)
-    ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), and the refit without it performs about the same: what it carried was absorbed by ${partner}. A small change does not mean the information is unimportant.`
+    ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), and the refit without it performs about the same: what it carried was absorbed by ${partner}. A small change does not mean the information carries nothing.`
     : (partner && dll !== null)
-      ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), yet the refit without it does not recover the full model — together the two carry something the remaining one does not on its own. Read them as a pair, not as two separate quantities; a large change does not make either a cause.`
-      : `Excluding a variable lets the ones that move with it absorb it. A small change does not mean the information is unimportant; a large change does not make the variable a cause.`;
+      ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), yet the refit without it does not recover the full model — together the two carry something the remaining one does not on its own. Read them as a pair, not as two separate quantities; a large change says how the model uses them, not what wins games.`
+      : `Excluding a variable lets the ones that move with it absorb it. A small change does not mean the information carries nothing; a large change says how the model uses it, not what wins games.`;
 
   // Every variable, same two columns, this one highlighted.
   const table = f.keys.map(k => {
@@ -1379,7 +1379,7 @@ function renderExplore() {
       if (best >= 0 && bestAbs >= COLLINEAR_R) partner = { label: (vars.find(v => v.key === state.fit.keys[best]) || {}).label || state.fit.keys[best], r: corr[i][best], b: state.fit.beta[best] };
     }
     inm = `<p class="ex-line">Weight in the full model: <b>${b < 0 ? '−' : '+'}${Math.abs(b).toFixed(2)}</b> points of margin per standard deviation of edge.
-      ${stab && stab.signFlips ? `<span class="ex-warn">Changes sign between held-out seasons (${stab.min.toFixed(1)} to ${stab.max.toFixed(1)}): not readable as an effect on its own.</span>` : ''}
+      ${stab && stab.signFlips ? `<span class="ex-warn">Changes sign between held-out seasons (${stab.min.toFixed(1)} to ${stab.max.toFixed(1)}): not readable as a weight on its own.</span>` : ''}
       ${partner ? `<span class="ex-warn">Moves almost exactly with ${partner.label} (r=${partner.r.toFixed(2)}); read the two together: net ${(b + partner.b) < 0 ? '−' : '+'}${Math.abs(b + partner.b).toFixed(2)}.</span>` : ''}</p>`;
   }
 
@@ -1390,7 +1390,7 @@ function renderExplore() {
       <div class="ex-col">
         <p class="g-name">Historical signal, on its own</p>
         ${own}
-        <p class="g-name ex-space">Where it matters on this bracket</p>
+        <p class="g-name ex-space">Where the gap is largest on this bracket</p>
         <p class="ex-sub">The five games with the largest gap on it, and which team the full model takes.</p>
         ${hinge || '<p class="ex-sub muted">No game on this board separates two teams on it.</p>'}
         ${byRound ? `<p class="g-name ex-space">By round</p>${byRound}` : ''}
@@ -1522,10 +1522,10 @@ function equationHTML() {
     const cls = weak ? ' weak' : [shaky && ' shaky', collinear && ' collinear'].filter(Boolean).join('');
     const tips = [];
     if (weak) {
-      tips.push('Essentially no contribution');
+      tips.push('Essentially zero weight');
     } else {
       if (shaky) {
-        tips.push(`Unstable: ranged ${t.s.min.toFixed(1)} to ${t.s.max.toFixed(1)} across held-out seasons, changing sign. Do not read this number as an effect.`);
+        tips.push(`Unstable: ranged ${t.s.min.toFixed(1)} to ${t.s.max.toFixed(1)} across held-out seasons, changing sign. Do not read this number as a stable weight.`);
       }
       if (collinear) {
         const partnerLabel = label[f.keys[t.partner.j]] || f.keys[t.partner.j];
@@ -1534,7 +1534,7 @@ function equationHTML() {
         const netSign = net < 0 ? '\u2212' : '+';
         tips.push(
           `Moves almost exactly with \u0394${partnerLabel} (r=${t.partner.r.toFixed(2)}, over the seasons this fit trained on). `
-          + `Their coefficients split credit for one shared signal, not two independent effects \u2014 `
+          + `Their coefficients split credit for one shared signal, not two independent quantities \u2014 `
           + `read them together: ${sign}${mag} ${partnerB < 0 ? '\u2212' : '+'} ${Math.abs(partnerB).toFixed(2)} = ${netSign}${Math.abs(net).toFixed(2)}, not this number alone.`
         );
       }
@@ -1576,9 +1576,9 @@ function equationHTML() {
       ${nCollinear ? `<p class="eq-warn">
         <i class="warn collinear-mark">\u2020</i> ${nCollinear} of these ${terms.length} coefficients belong to a
         pair that moves together (r \u2265 ${COLLINEAR_R}) most seasons. A big number on one of a
-        collinear pair and an opposite big number on the other is not two effects
+        collinear pair and an opposite big number on the other is not two quantities
         pulling apart \u2014 it is one signal, split two ways. Hover a marked term for
-        its partner and their combined effect.
+        its partner and their combined weight.
       </p>` : ''}
       ${nShaky || nCollinear ? `<p class="eq-warn">
         The variable set is fixed because dropping the redundant ones was measured
