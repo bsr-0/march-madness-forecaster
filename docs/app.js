@@ -1167,6 +1167,7 @@ function renderExplore() {
   const f4rows = ranked.filter(r => f4.has(r.i) && !top.includes(r));
   const field = `
     <p class="g-name">The field on ${meta.label}${meta.higher_better ? '' : ' <span class="d-dir">↓ lower is better</span>'}</p>
+    <p class="ex-sub">Percentile among the ${s.teams.length} teams in the ${state.year} tournament, in the better direction — not an absolute scale.</p>
     ${top.map(rowHTML).join('')}
     ${f4rows.length ? `<p class="ex-sub">This bracket’s Final Four, where not already above</p>${f4rows.map(rowHTML).join('')}` : ''}`;
 
@@ -1179,13 +1180,16 @@ function renderExplore() {
     gaps.push({ r, g, gap: Math.abs(d), better, worse, pBetter: better === g.a ? g.p : 1 - g.p });
   }));
   gaps.sort((a, b) => b.gap - a.gap);
+  // Literal, not hierarchical: the variable has no "opinion" for the model
+  // to overrule. Each line states the gap and which team the full model
+  // takes; where that is the team worse on this variable, it says so.
   const hinge = gaps.slice(0, 5).map(h => {
-    const overruled = h.g.win !== h.better;
-    return `<div class="ex-hinge${overruled ? ' over' : ''}">
+    const other = h.g.win !== h.better;
+    return `<div class="ex-hinge${other ? ' over' : ''}">
       <span class="ex-round">${ROUNDS[h.r]}</span>
-      <span class="ex-teams"><b>${s.teams[h.better].name}</b> over ${s.teams[h.worse].name}</span>
+      <span class="ex-teams"><b>${s.teams[h.better].name}</b> ${meta.higher_better ? 'higher' : 'better'} than ${s.teams[h.worse].name}</span>
       <span class="ex-gap">${h.gap.toFixed(1)}σ apart</span>
-      <span class="ex-p">${overruled ? `model still takes ${s.teams[h.g.win].name}, ${Math.round(100 * (1 - h.pBetter))}%` : `${Math.round(100 * h.pBetter)}%`}</span>
+      <span class="ex-p">${other ? `full model takes ${s.teams[h.g.win].name}, ${Math.round(100 * (1 - h.pBetter))}%` : `full model takes ${s.teams[h.better].name}, ${Math.round(100 * h.pBetter)}%`}</span>
     </div>`;
   }).join('');
 
@@ -1193,6 +1197,7 @@ function renderExplore() {
   const src = state.training;
   const col = src.keys.indexOf(key);
   let own = `<p class="ex-sub muted">Not in the training matrix, so nothing to measure.</p>`;
+  let byRound = '';
   if (col >= 0) {
     const rec = variableRecord(src.games, col, state.year);
     const one = fitLinear(src.games, [col], state.year);
@@ -1200,16 +1205,26 @@ function renderExplore() {
     const full = state.fit.oos;
     const pct = v => `${Math.round(v * 100)}%`;
     const pm = v => `±${Math.round(v * 100)}`;
+    // Exactly what was counted: the team whose PRE-TOURNAMENT value of this
+    // variable was better (higher, or lower where lower is better).
+    const which = meta.higher_better ? `higher pre-tournament ${meta.label}` : `better (lower) pre-tournament ${meta.label}`;
+    const yrs = src.years.filter(y => y < state.year);
+    const sample = `<p class="ex-method">Sample: <b>${rec ? rec.n.toLocaleString() : 0}</b> bracket games, ${yrs[0]}–${yrs[yrs.length - 1]} — seasons before ${state.year} only, each measured with information available before that tournament.${oneOos ? ` Held-out evaluation: ${oneOos.seasons} seasons, ${oneOos.n} games.` : ''}</p>`;
     own = rec ? `
-      <p class="ex-line">In the ${rec.n.toLocaleString()} bracket games before ${state.year}, the team better on ${meta.label} won
-        <b>${pct(rec.betterWins.rate)}</b> <span class="muted">${pm(rec.betterWins.se)}</span> of the time.
-        Correlation with the final margin: <b>${rec.corr.toFixed(2)}</b>.</p>
-      <table class="rel-table ex-rounds"><thead><tr>${ROUND_KEYS.map(k => `<th class="num">${ROUND_SHORT[k]}</th>`).join('')}</tr></thead>
-        <tbody><tr>${ROUND_KEYS.map(k => { const b = rec.byRound[k]; return `<td class="num">${b ? `${pct(b.rate)} <span class="rel-se">${pm(b.se)}</span><br><span class="ex-n">n=${b.n}</span>` : '—'}</td>`; }).join('')}</tr></tbody></table>
-      ${oneOos ? `<p class="ex-line">On its own, as a one-variable model: calls <b>${pct(oneOos.accuracy)}</b> of held-out games right
+      ${sample}
+      <p class="ex-line">The team with the ${which} won <b>${pct(rec.betterWins.rate)}</b> <span class="muted">${pm(rec.betterWins.se)}</span> of those games.
+        Correlation between the gap on it and the final margin: <b>${rec.corr.toFixed(2)}</b>.</p>
+      ${oneOos ? `<p class="ex-line">As a one-variable model, alone: calls <b>${pct(oneOos.accuracy)}</b> of held-out games right
         (log loss ${oneOos.probScore ? oneOos.probScore.logLoss.toFixed(3) : '—'}) —
         the full ${state.fit.keys.length}-variable model calls <b>${pct(full.accuracy)}</b>
-        (${full.probScore ? full.probScore.logLoss.toFixed(3) : '—'}) on the same games.</p>` : ''}` : own;
+        (${full.probScore ? full.probScore.logLoss.toFixed(3) : '—'}) on the same games.</p>` : ''}` : sample + own;
+    byRound = rec ? `
+      <table class="rel-table ex-rounds"><thead><tr><th></th>${ROUND_KEYS.map(k => `<th class="num">${ROUND_SHORT[k]}</th>`).join('')}</tr></thead>
+        <tbody>
+          <tr><td class="ex-rowlab">games</td>${ROUND_KEYS.map(k => { const b = rec.byRound[k]; return `<td class="num ex-n">${b ? b.n : '—'}</td>`; }).join('')}</tr>
+          <tr><td class="ex-rowlab">won</td>${ROUND_KEYS.map(k => { const b = rec.byRound[k]; return `<td class="num">${b ? `${pct(b.rate)} <span class="rel-se">${pm(b.se)}</span>` : '—'}</td>`; }).join('')}</tr>
+        </tbody></table>
+      <p class="ex-sub">Descriptive, not a finding: the later rounds are a handful of games a season, and the ± says how little they pin down.</p>` : '';
   }
 
   // --- in the model ---
@@ -1235,11 +1250,13 @@ function renderExplore() {
     <div class="ex-grid">
       <div class="ex-col">${field}</div>
       <div class="ex-col">
-        <p class="g-name">Where this bracket hinges on it</p>
-        ${hinge || '<p class="ex-sub muted">No game on this board separates two teams on it.</p>'}
-        <p class="g-name ex-space">What it predicts on its own</p>
+        <p class="g-name">Historical signal, on its own</p>
         ${own}
-        <p class="g-name ex-space">In the model</p>
+        <p class="g-name ex-space">Where it matters on this bracket</p>
+        <p class="ex-sub">The five games with the largest gap on it, and which team the full model takes.</p>
+        ${hinge || '<p class="ex-sub muted">No game on this board separates two teams on it.</p>'}
+        ${byRound ? `<p class="g-name ex-space">By round</p>${byRound}` : ''}
+        <p class="g-name ex-space">In the full model</p>
         ${inm}
       </div>
     </div>
