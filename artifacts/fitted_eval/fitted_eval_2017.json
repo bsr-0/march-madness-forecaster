@@ -222,12 +222,12 @@
   },
   "inputs": {
     "fit_inputs_hash": "3dd7c019583e4b0e6407a3f1ba6b9621e8f51d8151194f504ac7009cfe3033a5",
-    "training_sha256": "e3ad2e6fb1b4faa7fb5b61851170fb4d0117aaf434e7866ae4a3d9bc1c49471f",
-    "fit_js_sha256": "ccb12b9f64a46e5aa80100bed538b0c3bbba7aefbd300cd6a16bd5d52b6e2c0d",
-    "app_js_sha256": "b3742e43dc897b0b6d8c992baa02dfc02aa6908a2d0dba2be96e39b25bcf5989",
+    "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
+    "fit_js_sha256": "ee39dd862d13eb7f08837f4abb8e9af7fa732eab4ac74baa53cb12073a7ceaa3",
+    "app_js_sha256": "0f6ce560614aa4427c325f8fe77bf554edbfd917c53d97b26b70ea54c907b6df",
     "candidates_artifact": "artifacts/candidates/candidates_2017.json",
     "candidates_generated_at": "2026-09-16T04:03:24.659098+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-16T14:55:27.218299+00:00"
+  "generated_at": "2026-09-16T23:18:21.295568+00:00"
 }

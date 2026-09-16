@@ -125,6 +125,7 @@ const state = {
   // round is visible regardless -- so there is nothing to gate on screen
   // width here, only to reset when the board underneath it changes shape.
   mobileRound: 0,
+  explore: 'adj_defensive_efficiency',   // variable key the Explore panel is showing
   training: null,
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
@@ -147,7 +148,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 20;
+const DATA_V = 21;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -783,6 +784,7 @@ function render() {
     { const nav = document.getElementById('board-nav'); if (nav) nav.hidden = true; }
     { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
     { for (const id of ['headline', 'compare', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
+    { const ex = document.getElementById('explore'); if (ex) ex.hidden = true; }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -873,6 +875,7 @@ function render() {
   { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
   renderHeadline(rounds);
   renderCompare();
+  renderExplore();
   { const why = document.getElementById('why'); if (why) why.hidden = false; }
   // `active`/`data-r` matter only under the narrow-viewport CSS (see
   // app.css's @media (max-width: 720px)), which shows one .round at a time
@@ -1010,7 +1013,7 @@ function renderHeadline(rounds) {
   // Evidence, stated narrowly. No figures here that could go stale: the
   // audit's numbers live in artifacts/methodology_audit/step18.
   const evidence = !st
-    ? `Walk-forward: fitted only on tournaments before ${state.year}.`
+    ? `Fitted only on tournaments before ${state.year} — never on this one.`
     : st.id === CUSTOM ? ''
     : st.id === 'ev'
       ? `The exact expected-points maximum on this bracket; not a pool backtest.`
@@ -1090,6 +1093,157 @@ function renderCompare() {
     ${played ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
       Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
       One season is one draw.</p>` : ''}`;
+}
+
+
+/* ---------- explore a variable ----------
+ *
+ * EXPLAIN, NOT EDIT. Everything here reads the model and the data; nothing
+ * writes to either. The four panels:
+ *
+ *   Field        percentile rank of every team on the variable (the same
+ *                percentileInField() the drawer uses), top of the field and
+ *                this bracket's Final Four highlighted
+ *   Hinges       the games on THIS board with the largest gap on the
+ *                variable, with the model's probability for each -- where
+ *                the variable is doing the most, or being overruled
+ *   On its own   what the variable predicts by itself, walk-forward: how
+ *                often the better-value team won (overall and by round,
+ *                with SE), correlation with margin, and a one-variable
+ *                fitted model scored on the same held-out seasons as the
+ *                full model so the two accuracies are comparable
+ *   In the model the variable's coefficient in the full fit with the same
+ *                stability and collinearity marks the equation shows
+ *
+ * Only the Fitted strategy shows the panel, because "in the model" and the
+ * per-game probabilities are that model's; the precomputed brackets are not
+ * a regression and have no coefficient to explain.
+ */
+const ROUND_KEYS = ['R64', 'R32', 'S16', 'E8', 'F4', 'NCG'];
+const ROUND_SHORT = { R64: 'R64', R32: 'R32', S16: 'S16', E8: 'E8', F4: 'F4', NCG: 'Final' };
+
+function setExplore(key) {
+  state.explore = key;
+  renderExplore();
+}
+
+function renderExplore() {
+  const host = document.getElementById('explore');
+  const body = document.getElementById('explore-body');
+  if (!host || !body) return;
+  const s = state.season;
+  if (usingOptimized() || !fitReady() || !s || !state.rounds) { host.hidden = true; return; }
+  host.hidden = false;
+
+  const vars = s.variables;
+  const meta = vars.find(v => v.key === state.explore) || vars[0];
+  const key = meta.key;
+  const inModel = CANONICAL_KEYS.indexOf(key) >= 0;
+
+  // --- picker: every variable, grouped, the model's eleven marked ---
+  const groups = {};
+  for (const v of vars) (groups[v.group] ||= []).push(v);
+  const picker = Object.entries(groups).map(([g, vs]) => `
+    <div class="ex-group"><span class="ex-gname">${g}</span>
+      ${vs.map(v => `<button class="chip${v.key === key ? ' on' : ''}" onclick="setExplore('${v.key}')">
+        <span class="chip-name">${v.label}</span>${CANONICAL_KEYS.indexOf(v.key) >= 0 ? '<span class="chip-stat">in model</span>' : ''}
+      </button>`).join('')}
+    </div>`).join('');
+
+  // --- field ---
+  const z = s.z[key] || [], raw = s.raw[key] || [];
+  const ranked = s.teams.map((t, i) => ({ i, t, pct: percentileInField(z, raw, i), raw: raw[i] }))
+    .filter(r => r.pct !== null).sort((a, b) => b.pct - a.pct);
+  const f4 = new Set(state.rounds[3].map(g => g.win));
+  const champ = state.rounds[5][0].win;
+  const rowHTML = r => `
+    <div class="d-row${f4.has(r.i) ? ' lit' : ''}">
+      <span class="d-lab"><span class="cmp-seed">${r.t.seed}</span> ${r.t.name}${r.i === champ ? ' <span class="ex-mark">champion</span>' : f4.has(r.i) ? ' <span class="ex-mark">Final Four</span>' : ''}</span>
+      <span class="d-track"><i style="left:${Math.max(2, Math.min(98, r.pct))}%"></i></span>
+      <span class="d-val">${fmt(r.raw)}</span>
+      <span class="d-pct">${ordinal(Math.round(r.pct))}</span>
+    </div>`;
+  const top = ranked.slice(0, 6);
+  const f4rows = ranked.filter(r => f4.has(r.i) && !top.includes(r));
+  const field = `
+    <p class="g-name">The field on ${meta.label}${meta.higher_better ? '' : ' <span class="d-dir">↓ lower is better</span>'}</p>
+    ${top.map(rowHTML).join('')}
+    ${f4rows.length ? `<p class="ex-sub">This bracket’s Final Four, where not already above</p>${f4rows.map(rowHTML).join('')}` : ''}`;
+
+  // --- hinges: largest gaps on THIS board ---
+  const gaps = [];
+  state.rounds.forEach((games, r) => games.forEach(g => {
+    if (raw[g.a] == null || raw[g.b] == null) return;
+    const d = z[g.a] - z[g.b];
+    const better = d >= 0 ? g.a : g.b, worse = d >= 0 ? g.b : g.a;
+    gaps.push({ r, g, gap: Math.abs(d), better, worse, pBetter: better === g.a ? g.p : 1 - g.p });
+  }));
+  gaps.sort((a, b) => b.gap - a.gap);
+  const hinge = gaps.slice(0, 5).map(h => {
+    const overruled = h.g.win !== h.better;
+    return `<div class="ex-hinge${overruled ? ' over' : ''}">
+      <span class="ex-round">${ROUNDS[h.r]}</span>
+      <span class="ex-teams"><b>${s.teams[h.better].name}</b> over ${s.teams[h.worse].name}</span>
+      <span class="ex-gap">${h.gap.toFixed(1)}σ apart</span>
+      <span class="ex-p">${overruled ? `model still takes ${s.teams[h.g.win].name}, ${Math.round(100 * (1 - h.pBetter))}%` : `${Math.round(100 * h.pBetter)}%`}</span>
+    </div>`;
+  }).join('');
+
+  // --- on its own ---
+  const src = state.training;
+  const col = src.keys.indexOf(key);
+  let own = `<p class="ex-sub muted">Not in the training matrix, so nothing to measure.</p>`;
+  if (col >= 0) {
+    const rec = variableRecord(src.games, col, state.year);
+    const one = fitLinear(src.games, [col], state.year);
+    const oneOos = one.ok ? causalWalkForward(src.games, [col], src.years, state.year, 2014) : null;
+    const full = state.fit.oos;
+    const pct = v => `${Math.round(v * 100)}%`;
+    const pm = v => `±${Math.round(v * 100)}`;
+    own = rec ? `
+      <p class="ex-line">In the ${rec.n.toLocaleString()} bracket games before ${state.year}, the team better on ${meta.label} won
+        <b>${pct(rec.betterWins.rate)}</b> <span class="muted">${pm(rec.betterWins.se)}</span> of the time.
+        Correlation with the final margin: <b>${rec.corr.toFixed(2)}</b>.</p>
+      <table class="rel-table ex-rounds"><thead><tr>${ROUND_KEYS.map(k => `<th class="num">${ROUND_SHORT[k]}</th>`).join('')}</tr></thead>
+        <tbody><tr>${ROUND_KEYS.map(k => { const b = rec.byRound[k]; return `<td class="num">${b ? `${pct(b.rate)} <span class="rel-se">${pm(b.se)}</span><br><span class="ex-n">n=${b.n}</span>` : '—'}</td>`; }).join('')}</tr></tbody></table>
+      ${oneOos ? `<p class="ex-line">On its own, as a one-variable model: calls <b>${pct(oneOos.accuracy)}</b> of held-out games right
+        (log loss ${oneOos.probScore ? oneOos.probScore.logLoss.toFixed(3) : '—'}) —
+        the full ${state.fit.keys.length}-variable model calls <b>${pct(full.accuracy)}</b>
+        (${full.probScore ? full.probScore.logLoss.toFixed(3) : '—'}) on the same games.</p>` : ''}` : own;
+  }
+
+  // --- in the model ---
+  let inm = `<p class="ex-line muted">Not one of the ${CANONICAL_KEYS.length} variables the fitted model uses. Every variable was measured; this one did not earn a place (see the equation’s note).</p>`;
+  if (inModel) {
+    const i = state.fit.keys.indexOf(key);
+    const b = state.fit.beta[i];
+    const stab = state.fit.oos && state.fit.oos.stability ? state.fit.oos.stability[i] : null;
+    const corr = state.fit.corr;
+    let partner = null;
+    if (corr) {
+      let best = -1, bestAbs = 0;
+      for (let j = 0; j < corr[i].length; j++) { if (j === i) continue; const a = Math.abs(corr[i][j]); if (a > bestAbs) { bestAbs = a; best = j; } }
+      if (best >= 0 && bestAbs >= COLLINEAR_R) partner = { label: (vars.find(v => v.key === state.fit.keys[best]) || {}).label || state.fit.keys[best], r: corr[i][best], b: state.fit.beta[best] };
+    }
+    inm = `<p class="ex-line">Weight in the full model: <b>${b < 0 ? '−' : '+'}${Math.abs(b).toFixed(2)}</b> points of margin per standard deviation of edge.
+      ${stab && stab.signFlips ? `<span class="ex-warn">Changes sign between held-out seasons (${stab.min.toFixed(1)} to ${stab.max.toFixed(1)}): not readable as an effect on its own.</span>` : ''}
+      ${partner ? `<span class="ex-warn">Moves almost exactly with ${partner.label} (r=${partner.r.toFixed(2)}); read the two together: net ${(b + partner.b) < 0 ? '−' : '+'}${Math.abs(b + partner.b).toFixed(2)}.</span>` : ''}</p>`;
+  }
+
+  body.innerHTML = `
+    <div class="ex-picker">${picker}</div>
+    <div class="ex-grid">
+      <div class="ex-col">${field}</div>
+      <div class="ex-col">
+        <p class="g-name">Where this bracket hinges on it</p>
+        ${hinge || '<p class="ex-sub muted">No game on this board separates two teams on it.</p>'}
+        <p class="g-name ex-space">What it predicts on its own</p>
+        ${own}
+        <p class="g-name ex-space">In the model</p>
+        ${inm}
+      </div>
+    </div>
+    <p class="ex-foot">Looking, not editing: the bracket, the probabilities and every number above are the validated model’s and do not change with what is chosen here. The per-variable on/off toggle this replaces was removed because measurement showed choosing the variables bought nothing.</p>`;
 }
 
 /* ---------- narrow-viewport round navigation ----------

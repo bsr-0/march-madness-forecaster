@@ -256,7 +256,7 @@
         ]
       ],
       "source": "artifacts/fitted_eval/fitted_eval_2014.json",
-      "fitted_eval_generated_at": "2026-09-16T14:54:56.363896+00:00",
+      "fitted_eval_generated_at": "2026-09-16T23:17:16.004767+00:00",
       "points": 810,
       "won_share": 0.7223,
       "median_rank": 1,
@@ -362,7 +362,7 @@
     "outcome_sha256": "c3207885e492f4fb5be145c294237744a8006520322d621a6cd14b274c5b2781",
     "candidates_artifact": "artifacts/candidates/candidates_2014.json",
     "candidates_generated_at": "2026-09-16T04:03:21.991376+00:00",
-    "training_sha256": "e3ad2e6fb1b4faa7fb5b61851170fb4d0117aaf434e7866ae4a3d9bc1c49471f"
+    "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44"
   },
-  "generated_at": "2026-09-16T22:56:38.864744+00:00"
+  "generated_at": "2026-09-16T23:17:27.281023+00:00"
 }

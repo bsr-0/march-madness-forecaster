@@ -94,4 +94,40 @@ check('no training rows yields null rather than a divide-by-zero', () => {
   assert.strictEqual(corr, null);
 });
 
+
+console.log('\nvariable record (what one variable predicts, walk-forward)');
+
+check('better-value team win rate, overall and by round, with SE', () => {
+  const rows = [
+    { y: 2010, x: [1.0], m: 5, r: 'R64' },    // better team won
+    { y: 2010, x: [-2.0], m: -3, r: 'R64' },  // better team (team2) won
+    { y: 2010, x: [0.5], m: -1, r: 'R32' },   // better team lost
+    { y: 2010, x: [0.0], m: 4, r: 'R32' },    // no edge: excluded
+    { y: 2026, x: [3.0], m: 20, r: 'NCG' },   // not before asOf: excluded
+  ];
+  const v = F.variableRecord(rows, 0, 2026);
+  assert.strictEqual(v.n, 3);
+  assert.strictEqual(v.betterWins.n, 3);
+  close(v.betterWins.rate, 2 / 3, 1e-12);
+  close(v.betterWins.se, Math.sqrt((2 / 3) * (1 / 3) / 3), 1e-12);
+  assert.strictEqual(v.byRound.R64.n, 2);
+  close(v.byRound.R64.rate, 1, 1e-12);
+  assert.strictEqual(v.byRound.R32.n, 1);
+  close(v.byRound.R32.rate, 0, 1e-12);
+  assert.ok(!('NCG' in v.byRound), 'the displayed season must not be counted');
+});
+
+check('correlation with margin is Pearson over the same rows', () => {
+  const rows = [1, 2, 3, 4].map(i => ({ y: 2000, x: [i], m: 2 * i + 1, r: 'R64' }));
+  const v = F.variableRecord(rows, 0, 2026);
+  close(v.corr, 1, 1e-12);
+  const anti = [1, 2, 3, 4].map(i => ({ y: 2000, x: [i], m: -i, r: 'R64' }));
+  close(F.variableRecord(anti, 0, 2026).corr, -1, 1e-12);
+});
+
+check('no usable rows yields null', () => {
+  assert.strictEqual(F.variableRecord([{ y: 2026, x: [1], m: 1, r: 'R64' }], 0, 2026), null);
+  assert.strictEqual(F.variableRecord([{ y: 2000, x: [0], m: 1, r: 'R64' }], 0, 2026), null);
+});
+
 console.log(`\n${passed} checks passed`);

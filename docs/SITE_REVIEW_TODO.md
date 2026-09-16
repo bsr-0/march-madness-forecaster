@@ -16,7 +16,9 @@ Manual review of the rendered site (`docs/index.html` + `app.js`/`fit.js`/data f
 3. **Pool settings.** Pool size is fixed at 30, scoring is ESPN-only — no upset bonuses, seed multipliers, or payout structure.
 4. **Lock a single game, then re-optimize.** Currently can only back a champion or apply shape filters.
 5. **Multiple-entry support** for people entering several brackets.
-6. **Backtest results.** For past seasons, show each strategy's real ESPN points and finish, not just red/green picks.
+6. ~~**Backtest results.** For past seasons, show each strategy's real ESPN points and finish, not just red/green picks.~~
+   **Done 2026-09-16.** `scripts/build_track_record.py`: the P(1st) construction with the actual outcome substituted for the simulated one — same opponent draws, same scorer, exact parity first. Shown as Scored/Finish columns and a "How it went" line on played seasons, labelled as realisation beside expectation ("one season is one draw"). `tests/test_track_record.py`.
+8. **Explore a variable (added 2026-09-16, Phase A of the variable-lens design).** Fitted model only: field percentiles, where this bracket hinges on the variable, what it predicts on its own (better-value win rate overall and by round with SE, correlation with margin, one-variable model vs the full model on the same held-out games), and its weight/stability/collinearity in the model. Explain only — nothing edits the model. Training rows now carry `r` (round). Phases B (Diagnose: leave-one-variable-out refit, grouped per-game contributions) and C (Experiment: fenced, unvalidated) not built.
 7. **Data date and First Four handling.** Show when ratings were pulled. The 64-team payload needs a plan for play-in slots (undecided between Selection Sunday and the First Four).
 
 ## Problems
