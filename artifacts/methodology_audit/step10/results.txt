@@ -1,0 +1,31 @@
+== gate definitions (frozen; see PREREGISTRATION_RECENT_REGIME.md) ==
+dLL = LL(variant) - LL(M0) per season (mean per-game LL); negative = variant better
+gate1 tuning 2014-2022: mean dLL <= 0 and 2.5th pct of paired season bootstrap <= 0
+gate2 recent 2023-2025: mean dLL < 0 and 97.5th pct < 0 (n=3 seasons, 5000 resamples, seed 42)
+gate3 subsets: mean dLL_upset <= +0.01 and dLL_chalk <= +0.01, ABSOLUTE log-loss units; upset/chalk by Selection Sunday seed; First Four excluded from subsets
+gate4 calibration slope b in w ~ a + b*logit(p), MLE on pooled 2023-2025 games incl. First Four, in [0.8, 1.2]
+MU weight: training rows where the LOWER dated-barthag team won get weight w (favourite by snapshot, not result)
+selection: lowest tuning mean dLL among gate-1 passers, ties -> simpler; frozen to disk before recent regime is scored
+
+eval rows 970; seed lookup failures 0; First Four 41
+subset sizes: upset 273, chalk 639, same-seed/FF excluded 58
+== tuning window 2014-2022 (walk-forward) ==
+M0 (production pit) mean LL over 8 seasons: 0.4814
+  M1        LL 0.5617  dLL +0.0803 [+0.0523, +0.1103]  gate1 FAIL
+  M2(0.85)  LL 0.5623  dLL +0.0809 [+0.0529, +0.1111]  gate1 FAIL
+  M2(0.70)  LL 0.5631  dLL +0.0817 [+0.0535, +0.1122]  gate1 FAIL
+  M3        LL 0.5640  dLL +0.0826 [+0.0550, +0.1136]  gate1 FAIL
+  MU(2)     LL 0.5671  dLL +0.0857 [+0.0577, +0.1163]  gate1 FAIL
+  MU(4)     LL 0.5829  dLL +0.1015 [+0.0724, +0.1341]  gate1 FAIL
+FROZEN variant choice (written before any recent-regime number): None
+
+== recent regime 2023-2025 ==
+M0: LL 0.4468  upset-subset LL 0.9363  chalk-subset LL 0.2636  slope 1.113
+  M1        LL 0.5660  dLL +0.1192 [+0.0737, +0.1823] g2 F | upset +0.0949 chalk +0.1020 g3 F | slope 1.035 g4 P
+  M2(0.85)  LL 0.5677  dLL +0.1209 [+0.0743, +0.1819] g2 F | upset +0.0898 chalk +0.1065 g3 F | slope 1.040 g4 P
+  M2(0.70)  LL 0.5696  dLL +0.1228 [+0.0758, +0.1809] g2 F | upset +0.0830 chalk +0.1122 g3 F | slope 1.050 g4 P
+  M3        LL 0.5731  dLL +0.1262 [+0.0772, +0.1801] g2 F | upset +0.0732 chalk +0.1212 g3 F | slope 1.054 g4 P
+  MU(2)     LL 0.5663  dLL +0.1195 [+0.0704, +0.1820] g2 F | upset +0.0605 chalk +0.1141 g3 F | slope 1.063 g4 P
+  MU(4)     LL 0.5750  dLL +0.1281 [+0.0720, +0.1824] g2 F | upset -0.0101 chalk +0.1522 g3 F | slope 1.133 g4 P
+
+VERDICT for the frozen choice None: NO VARIANT PASSED GATE 1 -> negative result

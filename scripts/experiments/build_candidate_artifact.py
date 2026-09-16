@@ -16,9 +16,10 @@ So the sampler uses explicit quotas rather than a ranking cut:
      expected-score deciles. This is what preserves the low-EV / high-P(1st)
      region -- the region where the two objectives disagree, and therefore the
      entire reason the product has more than one strategy.
-  3. CONSTRAINT TOP-UP. Every supported preference is checked for survivor
-     coverage afterwards and topped up if thin, so no UI control can silently
-     return nothing.
+  3. CONSTRAINT COVERAGE is COUNTED, not topped up. (An earlier version of this
+     docstring promised a top-up step; none was ever implemented -- 2026-09
+     audit, Step 5, F5-4. The counts ship in `validation.constraint_coverage`
+     and `scripts/experiments/integration_test_2026.py` asserts each > 20.)
 
 LEAKAGE BOUNDARY
 ----------------
@@ -63,7 +64,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from scripts._common import load_seeds_and_regions  # noqa: E402
+from scripts._common import load_seeds_and_regions, load_seeds_block, load_tournament_results  # noqa: E402
+from src.simulation import bracket_topology as _bt  # noqa: E402
 from scripts.experiments.conditional_bracket_engine import (  # noqa: E402
     _REACHES,
     expected_scores,
@@ -81,7 +83,7 @@ from src.prediction.pairwise import PairwiseProbabilities, simulate_bracket_outc
 from src.prediction.seed_probabilities import build_seed_probabilities  # noqa: E402
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
-DEFAULT_POOL_SIZE = 30  # opponent field assumed by every P(1st) in the artifact
+DEFAULT_POOL_SIZE = 30  # ENTRIES in the pool assumed by every P(1st) in the artifact (us + 29 opponents)
 
 
 # ---------------------------------------------------------------------------
@@ -534,8 +536,8 @@ def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
         raise RuntimeError(f"walk-forward violation: noseed model for {year} trained on {model.train_years}")
 
     stats = _load_team_stats(year)
-    seed_rp = build_seed_round_probabilities(seeds)
-    noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+    seed_rp = build_seed_round_probabilities(seeds, as_of=year)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
     # alpha=0.5 is PoolHyperparameters' default and what the backtest used to
     # produce the numbers quoted above; changing it would invalidate them.
     blend_rp = {
@@ -551,6 +553,7 @@ def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
         risk_level=risk,
         pool_size=DEFAULT_POOL_SIZE,
         scoring_system=dict(ESPN_SCORING),
+        region_order=_bt.region_order_from_first_round(first_round, regions),
     )
 
     winners: List[List[str]] = [[] for _ in range(6)]
@@ -647,20 +650,11 @@ def _ev_optimal_bracket(first_round, marg) -> List[List[str]]:
 
 
 def _encode_rows(winners, first_round):
-    """Bracket -> the (1, 63) boolean shape encoding the pool scorer expects."""
-    row = np.zeros((1, 63), dtype=bool)
-    picked = [set(r) for r in winners]
-    current, game = list(first_round), 0
-    for r in range(6):
-        nxt = []
-        for g in range(0, len(current), 2):
-            t1, t2 = current[g], current[g + 1]
-            first_wins = t1 in picked[r]
-            row[0, game] = first_wins
-            nxt.append(t1 if first_wins else t2)
-            game += 1
-        current = nxt
-    return row
+    """Bracket -> the (1, 63) boolean shape encoding the pool scorer expects.
+
+    Strict: the winner sets must describe exactly one bracket on ``first_round``
+    (see bracket_topology.winner_sets_to_bool_vector)."""
+    return _bt.winner_sets_to_bool_vector(winners, first_round).reshape(1, 63)
 
 
 def _champ_equity_rounds(first_round, marg):
@@ -815,6 +809,7 @@ def _constructed_candidates(year, seeds, regions, first_round, bases):
                     mode="region_top_n", seeds=seeds, regions=regions, round_probs=rp,
                     public_picks=pub, risk_level=risk, pool_size=DEFAULT_POOL_SIZE,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=_bt.region_order_from_first_round(first_round, regions),
                 )
             except Exception:  # noqa: BLE001 - one grid cell failing is not fatal
                 continue
@@ -905,7 +900,9 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
     prov["field"] = resolve_field(year, seeds, regions)
-    first_round = build_bracket_order(seeds, regions)
+    region_order = _bt.resolve_region_order(year, games=load_tournament_results(year), regions=regions, seeds_block=load_seeds_block(year))
+    prov["f4_pairing"] = list(region_order)
+    first_round = build_bracket_order(seeds, regions, region_order=region_order)
     sources = _rating_sources(year, seeds)
     barthag = sources[0][1]
     rng = np.random.default_rng(seed)
@@ -926,6 +923,14 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         origin.extend([sname] * len(r))
     bank = np.vstack(banks)
     rounds = all_rounds
+    # The simulated tournaments alone. Every "true" frequency below must be
+    # counted over these, not over `rounds` after the constructed and shipped
+    # brackets are appended to it: those are deterministic picks, not draws
+    # from the outcome model, and counting them as tournaments biased the
+    # shipped constraint / Final Four / round frequencies by ~21 rows in
+    # 150,000 (2026-09 audit, Step 2 P2-1 -- small, but a probability that is
+    # not what it says it is).
+    sim_rounds = list(all_rounds)
 
     # Torvik stays the marginal reference: expected score must be measured
     # against ONE distribution or the numbers are not comparable across
@@ -972,11 +977,11 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         print(f"      + {len(extra_rounds)} constructed (region_top_n) candidates")
 
     print(f"[4/5] P(1st) for {len(sel):,} candidates, {trials:,} shared trials ...")
-    seed_pw = build_seed_probabilities(seeds)
+    seed_pw = build_seed_probabilities(seeds, as_of=year)
     pick_dist = build_espn_pick_distribution(year, seeds)
     p1_trials = draw_selection_trials(
         trials,
-        n_opponents=DEFAULT_POOL_SIZE,
+        n_opponents=DEFAULT_POOL_SIZE - 1,  # 30-entry pool = 29 opponents (audit F4-8; was 30 -> a 31-entry pool)
         first_round=first_round,
         pick_dist=pick_dist,
         matchup_probs=seed_pw,
@@ -989,8 +994,8 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
 
     print("[5/5] validating ...")
     checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg)
-    true_probs = true_constraint_probabilities(rounds, seeds)
-    team_f4 = true_team_f4_probabilities(rounds, seeds)
+    true_probs = true_constraint_probabilities(sim_rounds, seeds)
+    team_f4 = true_team_f4_probabilities(sim_rounds, seeds)
 
     # The artifact is deliberately not a probability sample -- verify the
     # difference is real so the warning below is not decorative.
@@ -1035,7 +1040,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
             "the browser would have to guess names from"
         )
 
-    team_round_probs = true_team_round_probabilities(rounds, team_ids)
+    team_round_probs = true_team_round_probabilities(sim_rounds, team_ids)
 
     n = len(team_ids)
     pairwise_flat = [
@@ -1076,8 +1081,10 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
             "p1_trials": trials,
             "p1_pool_size": DEFAULT_POOL_SIZE,
             "p1_assumption": (
-                f"P(1st) assumes a {DEFAULT_POOL_SIZE}-opponent pool with ESPN public "
-                f"pick behaviour. It is NOT a universal probability of winning any pool."
+                f"P(1st) is the expected share of first place (a tie for the top score is "
+                f"split among the tied entries) in a {DEFAULT_POOL_SIZE}-entry pool "
+                f"(you plus {DEFAULT_POOL_SIZE - 1} opponents) with ESPN public pick "
+                f"behaviour. It is NOT a universal probability of winning any pool."
             ),
             "p1_se_estimate": round(float(np.sqrt(0.05 * 0.95 / trials)), 5),
             "candidates_are_not_a_probability_sample": (

@@ -84,19 +84,22 @@ from src.simulation.pool_competition import (  # noqa: E402
 
 
 def pool_p_first(candidates: np.ndarray, trials, first_round) -> np.ndarray:
-    """P(1st) for every candidate against a shared trial set.
+    """P(1st) for every candidate against a shared trial set: expected
+    first-place SHARE (ties split), the project's one definition since the
+    2026-09 audit (Step 4, F4-1).
 
     The opponent field is identical across candidates by construction, so the
-    per-trial opponent maximum is computed once and reused. That turns
-    ``P x T x (1 + n_opponents)`` bracket-scorings into ``P x T``.
+    per-trial opponent scores are computed once and reused.
     """
+    from src.optimization.payout import first_place_shares
+
     n = len(candidates)
-    wins = np.zeros(n, dtype=np.int64)
+    total = np.zeros(n, dtype=float)
     for opp, sim_winners in trials:
-        opp_max = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING).max()
+        opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, ESPN_SCORING)
         cand = score_brackets_team_identity(candidates, sim_winners, first_round, ESPN_SCORING)
-        wins += cand >= opp_max
-    return wins / max(len(trials), 1)
+        total += first_place_shares(cand, opp_scores)
+    return total / max(len(trials), 1)
 
 
 # ---------------------------------------------------------------------------

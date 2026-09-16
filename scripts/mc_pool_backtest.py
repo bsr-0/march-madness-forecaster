@@ -29,6 +29,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 from scripts._common import _load_torvik_ff, load_tournament_results  # noqa: F401
+from src.simulation import bracket_topology as _bt  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ from src.optimization.bracket_construction import POOL_FACTOR_THRESHOLD
 from src.optimization.payout import (
     VALID_PAYOUT_STRUCTURES,
     describe as describe_payout,
+    first_place_share_from_counts,
     payout_shares,
     resolve_pool_size,
 )
@@ -200,6 +202,19 @@ N_OPPONENTS = CANONICAL_N_OPPONENTS  # 30-person pool (29 opponents + the model'
 # Refitting it means first fixing _load_team_strengths against whatever
 # tournament_context team_metrics actually contains today, which is a
 # separate investigation from this constant's honesty.
+#
+# WHAT IT ACTUALLY DOES (2026-09 audit, Step 2 item 15). The noise is drawn
+# independently per game per trial and the outcome is then a Bernoulli draw
+# on the perturbed probability. A mixture of Bernoullis is a Bernoulli, so
+# the referee's outcome distribution is Bernoulli(E[sigmoid(logit p + eps)]):
+# the noise adds NO variance beyond the game's own p(1-p), and it is NOT a
+# model of parameter uncertainty either (that would need one draw shared
+# across games or trials, inducing correlation). Its only effect is Jensen's
+# shrink of the mean toward 0.5 -- at most 0.13pp for p in [0.5, 0.98]
+# (measured: 0.800 -> 0.79875, 0.900 -> 0.89908) -- i.e. a very mild
+# tempering. That is why the noise sweep in pool_rdof_audit is flat. It is
+# left in place because it is harmless and removing it would move every
+# CRN stream; it must not be described as a variance component.
 REFEREE_NOISE_STD = 0.16
 
 # Entry count above which bracket_construction._make_ev_scorer applies
@@ -725,52 +740,16 @@ def _log5(barthag_a, barthag_b):
     return _canonical_log5(barthag_a, barthag_b)
 
 
-def build_bracket_order(seeds, regions):
-    """Return the 64 team_ids in bracket order (game g is [2g], [2g+1]).
+def build_bracket_order(seeds, regions, *, region_order):
+    """The 64 team_ids in positional bracket order. See src/simulation/bracket_topology.
 
-    Extracted from ``build_torvik_round_probabilities`` so the pairwise
-    builders and the marginalizer provably walk the same bracket.
+    ``region_order`` is REQUIRED: the Final Four pairing is per season and the
+    old hardcoded default was wrong in 9 of 15 seasons (2026-09 audit, F3-2).
     """
-    region_teams = {r: {} for r in REGION_ORDER}
-    contested = {}
-    for tid, seed in seeds.items():
-        r = regions.get(tid, "")
-        if r not in region_teams:
-            continue
-        if seed in region_teams[r]:
-            contested.setdefault((r, seed), [region_teams[r][seed]]).append(tid)
-        region_teams[r][seed] = tid
-
-    # A (region, seed) slot holding two teams is an UNRESOLVED PLAY-IN GAME, and
-    # this used to resolve it by dict insertion order -- i.e. by the order of
-    # lines in the seeds file. It was silent, and it was wrong: the 2026
-    # artifact shipped with lehigh in the South 16 slot when prairie_view won
-    # that game and played the Round of 64.
-    #
-    # Call resolve_first_four() with the play-in results before building an
-    # order. Play-in games finish before brackets lock, so their winners are
-    # legitimately known to anyone filling in a bracket -- this is not
-    # look-ahead. The 2027 expansion to 76 teams makes 12 such slots instead of
-    # 4, which is why guessing them by file order stops being survivable.
-    if contested:
-        detail = "; ".join(f"{r} {seed}: {sorted(t)}" for (r, seed), t in sorted(contested.items()))
-        raise ValueError(
-            f"{len(contested)} bracket slot(s) still hold more than one team, so the "
-            f"draw is not determined: {detail}. Resolve the play-in games first "
-            f"(resolve_first_four), or wait until they have been played."
-        )
-
-    bracket_order = []
-    for region in REGION_ORDER:
-        rt = region_teams[region]
-        for high, low in SEED_MATCHUP_ORDER:
-            t1 = rt.get(high, f"unknown_{region}_{high}")
-            t2 = rt.get(low, f"unknown_{region}_{low}")
-            bracket_order.extend([t1, t2])
-    return bracket_order
+    return _bt.build_bracket_order(seeds, regions, region_order=region_order)
 
 
-def build_base_from_ratings(name, seeds, regions, barthag, n_sims=10000):
+def build_base_from_ratings(name, seeds, regions, barthag, n_sims=10000, *, region_order):
     """Build a :class:`ProbabilityBase` from barthag-equivalent ratings.
 
     The pairwise table is primary (log5 over the ratings); the marginals are
@@ -783,11 +762,11 @@ def build_base_from_ratings(name, seeds, regions, barthag, n_sims=10000):
     if barthag is None:
         return None
     pw = PairwiseProbabilities.from_ratings(barthag, source=f"log5({name}_barthag)")
-    rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
+    rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims, region_order=region_order)
     return ProbabilityBase(name, rp, pw)
 
 
-def build_pit_base(year, seeds, regions, n_sims=10000):
+def build_pit_base(year, seeds, regions, n_sims=10000, *, region_order):
     """Build a :class:`ProbabilityBase` from the model the browser actually ships.
 
     WHY THIS BASE EXISTS. Every other base here is either a rating system
@@ -834,7 +813,7 @@ def build_pit_base(year, seeds, regions, n_sims=10000):
     """
     from src.prediction.pit_production_model import pairwise_for_year
 
-    bracket_order = build_bracket_order(seeds, regions)
+    bracket_order = build_bracket_order(seeds, regions, region_order=region_order)
     team_ids = [t for t in bracket_order if not t.startswith("unknown_")]
     if len(team_ids) < 64:
         logger.warning("pit base %s: only %d teams resolved, skipping", year, len(team_ids))
@@ -849,7 +828,7 @@ def build_pit_base(year, seeds, regions, n_sims=10000):
     return ProbabilityBase("pit", rp, pairwise)
 
 
-def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
+def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000, *, region_order):
     """Build round advancement probabilities via Torvik barthag + Monte Carlo.
 
     Simulates the full bracket n_sims times using Log5 pairwise
@@ -867,7 +846,7 @@ def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
     round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 
     # Build the bracket structure (same ordering as the backtest)
-    bracket_order = build_bracket_order(seeds, regions)
+    bracket_order = build_bracket_order(seeds, regions, region_order=region_order)
 
     # Count round advances
     advance_counts = {tid: {rnd: 0 for rnd in round_names} for tid in seeds}
@@ -940,91 +919,19 @@ def resolve_first_four(games, seeds, regions) -> int:
 
 
 def derive_f4_region_pairing(games, regions) -> Tuple[str, str, str, str]:
-    """Return a 4-region ordering whose synthetic tree produces real F4 matchups.
+    """Re-export of src.simulation.bracket_topology.derive_f4_region_pairing."""
+    return _bt.derive_f4_region_pairing(games, regions)
 
-    The NCAA rotates which regions pair in the Final Four year-over-year,
-    so a single hardcoded ``REGION_ORDER`` cannot be right for every season.
-    Before this helper existed, ``build_first_round_matchups`` always laid
-    out the bracket as ``[East, West, South, Midwest]``, which meant the
-    tree walker in ``build_actual_outcome`` projected F4 games as
-    ``(East_survivor, West_survivor)`` and ``(South_survivor, Midwest_survivor)``.
-    For every season where the real bracket paired, say, East with Midwest,
-    the walker's F4 lookups missed, the silent fallback kicked in, and the
-    ground-truth vector decoded to a fictitious champion — corrupting every
-    per-year score in the backtest.
 
-    This helper reads the actual F4 games and returns a region order that,
-    when passed to ``build_first_round_matchups``, produces a flat 64-team
-    list whose E8 winners pair correctly at F4. The first two regions in
-    the returned tuple are the two that played in the first F4 game; the
-    last two are the other F4 game.
+def build_first_round_matchups(seeds, regions, *, region_order):
+    """Alias of :func:`build_bracket_order` -- one bracket builder, one tree.
 
-    Args:
-        games: Tournament results as loaded by ``load_tournament_results``.
-            Must contain at least two ``round_name == "F4"`` games.
-        regions: Dict mapping team_id to normalized region name (aliases
-            like Southeast/Southwest already resolved to South/Midwest).
-
-    Returns:
-        4-tuple ``(semi1_a, semi1_b, semi2_a, semi2_b)`` of region names.
-
-    Raises:
-        ValueError: If fewer than two F4 games are present, if any F4 team
-            has no resolved region, if an F4 game has both teams from the
-            same region, or if the two pairs don't cover exactly 4 distinct
-            regions.
+    There used to be two (this one filled unknown slots and defaulted the
+    region order; ``build_bracket_order`` raised on contested slots). Every
+    production caller runs ``resolve_first_four`` first, so the strict builder
+    is the right one, and ``region_order`` is required for both.
     """
-    f4_games = [g for g in games if g.get("round_name") == "F4"]
-    if len(f4_games) < 2:
-        raise ValueError(f"expected 2 F4 games to derive region pairing, got {len(f4_games)}")
-
-    pairs = []
-    for g in f4_games[:2]:
-        t1, t2 = g["team1_id"], g["team2_id"]
-        r1 = regions.get(t1)
-        r2 = regions.get(t2)
-        if not r1 or not r2:
-            raise ValueError(f"could not resolve regions for F4 game {t1} vs {t2}: {r1!r} vs {r2!r}")
-        if r1 == r2:
-            raise ValueError(f"F4 game has two teams from the same region ({r1}): {t1} vs {t2}")
-        pairs.append((r1, r2))
-
-    all_regions = {r for pair in pairs for r in pair}
-    if len(all_regions) != 4:
-        raise ValueError(f"F4 pairs do not cover 4 distinct regions: pairs={pairs}")
-
-    return (pairs[0][0], pairs[0][1], pairs[1][0], pairs[1][1])
-
-
-def build_first_round_matchups(seeds, regions, region_order: Sequence[str] = REGION_ORDER):
-    """Build ordered 64-team first-round matchup list from seeds and regions.
-
-    Args:
-        seeds: Dict of team_id -> seed (1-16).
-        regions: Dict of team_id -> normalized region name.
-        region_order: 4-tuple of region names determining the F4 pairing
-            in the synthetic bracket tree. For ground-truth construction
-            this MUST be derived from the actual F4 games via
-            ``derive_f4_region_pairing``, otherwise the tree's F4 lookups
-            will miss and ``build_actual_outcome`` will raise. The
-            default ``REGION_ORDER`` is retained for backwards compatibility
-            with call sites that do not have game data (e.g., live prediction
-            before the tournament starts).
-    """
-    matchups = []
-    teams_by_region = defaultdict(dict)
-    for tid, seed in seeds.items():
-        region = regions.get(tid, "")
-        teams_by_region[region][seed] = tid
-
-    for region in region_order:
-        region_teams = teams_by_region.get(region, {})
-        for high_seed, low_seed in SEED_MATCHUP_ORDER:
-            t_high = region_teams.get(high_seed, f"unknown_{region}_{high_seed}")
-            t_low = region_teams.get(low_seed, f"unknown_{region}_{low_seed}")
-            matchups.extend([t_high, t_low])
-
-    return matchups
+    return _bt.build_bracket_order(seeds, regions, region_order=region_order)
 
 
 def build_model_bracket_argmax(first_round_matchups, round_probs):
@@ -1265,6 +1172,7 @@ def sample_fixed_region_risk(first_round, round_probs, n_brackets, rng, seeds, r
         risk_level=risk,
         pool_size=pool_size,
         scoring_system=dict(ESPN_SCORING),
+        region_order=_bt.region_order_from_first_round(first_round, regions),
     )
     row = _picks_dict_to_bool_array(picks, first_round).reshape(1, 63)
     return np.repeat(row, max(1, n_brackets), axis=0)
@@ -2286,6 +2194,7 @@ def _deterministic_bracket_sampler(
                 risk_level=risk,
                 pool_size=pool_size,
                 scoring_system=scoring,
+                region_order=_bt.region_order_from_first_round(first_round, regions),
             )
             # Convert picks dict to bool array
             key = tuple(sorted(picks.items()))
@@ -2308,35 +2217,13 @@ def _deterministic_bracket_sampler(
 def _picks_dict_to_bool_array(picks, first_round_matchups):
     """Convert a construct_bracket() picks dict to a (63,) boolean vector.
 
-    Same walk order as sample_model_brackets: R64→R32→S16→E8→F4→CHAMP.
+    STRICT since the 2026-09 audit (F3-1): at every game exactly one of the
+    two teams must be that round's picked winner, else TopologyMismatch. The
+    old set-membership walk fell back to ``t2`` and, whenever construction's
+    hardcoded F4 pairing differed from the real one, scored a bracket whose
+    champion construction never chose (2015 Kentucky -> Virginia).
     """
-    round_winners = defaultdict(set)
-    for key, winner in picks.items():
-        round_name = key.split("_")[0]
-        round_winners[round_name].add(winner)
-
-    result = np.zeros(63, dtype=bool)
-    current_teams = list(first_round_matchups)
-    game_idx = 0
-
-    for round_idx in range(6):
-        round_name = ROUND_NAMES[round_idx]
-        next_round = []
-        for g in range(0, len(current_teams), 2):
-            if g + 1 >= len(current_teams):
-                next_round.append(current_teams[g])
-                continue
-            t1, t2 = current_teams[g], current_teams[g + 1]
-            if t1 in round_winners[round_name]:
-                result[game_idx] = True
-                next_round.append(t1)
-            else:
-                result[game_idx] = False
-                next_round.append(t2)
-            game_idx += 1
-        current_teams = next_round
-
-    return result
+    return _bt.picks_to_bool_vector(picks, first_round_matchups)
 
 
 def build_seed_pick_distribution(seeds):
@@ -2462,21 +2349,23 @@ def _record_prize(all_prizes, m, rep, better, tied, share_vector):
 def score_candidate_p1(bracket_vec, trials, first_round, scoring_system):
     """P(1st) for one candidate against a pre-drawn trial set.
 
-    The scoring itself is unchanged from the inline loops this replaces: the
-    same ``score_brackets_team_identity`` calls and the same ``>=`` tie
-    convention (a tie counts as a win, matching a shared-first-place payout).
-    Only where the trials come from has changed — see
-    :func:`draw_selection_trials`.
+    Expected first-place SHARE: a tie for the top score is split among the
+    tied entries (payout.first_place_share). Until the 2026-09 audit (Step 4,
+    F4-1) this used ``>=`` -- a shared first counted as a full win -- while the
+    backtest's reported P(1st) counted it as a loss and the prize column split
+    it. One quantity now, everywhere. See :func:`draw_selection_trials` for
+    where the trials come from.
     """
+    from src.optimization.payout import first_place_share
+
     if not trials:
         return 0.0
-    wins = 0
+    total = 0.0
     for opp, sim_winners in trials:
         c_score = score_brackets_team_identity(bracket_vec.reshape(1, 63), sim_winners, first_round, scoring_system)[0]
         opp_scores = score_brackets_team_identity(opp, sim_winners, first_round, scoring_system)
-        if c_score >= opp_scores.max():
-            wins += 1
-    return wins / len(trials)
+        total += first_place_share(c_score, opp_scores)
+    return total / len(trials)
 
 
 def bracket_config_to_bool_array(bracket_config, first_round_matchups):
@@ -2734,14 +2623,17 @@ def resolve_opponent_pick_distribution(year, seeds, n_opponents, opponent_source
                 pick_dist = build_espn_pick_distribution(year, seeds)
                 year_n_opponents = n_opponents
             except FileNotFoundError:
-                # No ESPN data either — use cross-year behavioral model.
-                try:
-                    pick_dist, pool_chalk_noise_std = build_pool_behavioral_model(
-                        POOL_HIST_PATH, seeds, exclude_year=year
-                    )
-                    year_n_opponents = n_opponents
-                except Exception as exc:
-                    raise _OpponentResolutionFailed(f"no opponent data: {exc}") from exc
+                # No ESPN archive for this season (2012). Until the 2026-09 audit
+                # (Step 4, F4-6) this fell back to a behavioural model fitted on
+                # the 2023-2026 pool brackets -- crowd behaviour from the
+                # FUTURE of the season being evaluated, with a chalk-noise
+                # parameter the evaluation stage then ignored. The static
+                # seed-based pick rates are a generic prior with no
+                # season-specific information; they are what the harness
+                # already uses for teams missing from an ESPN archive.
+                logger.warning("no ESPN picks for %d; opponents drawn from static seed pick rates", year)
+                pick_dist = build_seed_pick_distribution(seeds)
+                year_n_opponents = n_opponents
     elif opponent_source == "pool_calibrated":
         # Phase 1: pool behavioral model blended with ESPN for all years.
         espn = _try_load_espn(year, seeds)
@@ -2857,8 +2749,14 @@ def _run_one_year(
     # Team-identity scoring needs per-round winner sets (not the bool vector).
     winners_by_rnd = actual_winners_by_round(games) if team_identity else None
 
-    # Build pairwise probs for opponent bracket generation
-    seed_pw = build_seed_probabilities(seeds)
+    # Build pairwise probs for opponent bracket generation AND for the referee
+    # that draws the "true" tournament. WALK-FORWARD: seasons >= `year` are
+    # excluded from the seed-vs-seed table. Until the 2026-09 audit (Step 2,
+    # item 14) this was one 2010-2025 table for every test year, so each
+    # backtested season was scored against a referee that had seen its own
+    # results -- the noseed model below was already walk-forward and asserted;
+    # the seed table was not.
+    seed_pw = build_seed_probabilities(seeds, as_of=year)
 
     # Train noseed model on train_years only, then assert walk-forward.
     # The assertion catches any regression where train_noseed_model
@@ -2870,8 +2768,8 @@ def _run_one_year(
 
     # Build round probs for each mode. blend_alpha comes from the
     # walked-forward hparams, not a hardcoded magic number.
-    seed_rp = build_seed_round_probabilities(seeds)
-    noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+    seed_rp = build_seed_round_probabilities(seeds, as_of=year)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
     blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=hparams.blend_alpha)
 
     # Pairwise counterparts. Each base's head-to-head table comes from that
@@ -2895,10 +2793,10 @@ def _run_one_year(
 
     # Torvik barthag-based round probabilities (Log5 + MC simulation)
     barthag = _load_torvik_barthag(year, seeds)
-    torvik_base = build_base_from_ratings("torvik", seeds, regions, barthag)
+    torvik_base = build_base_from_ratings("torvik", seeds, regions, barthag, region_order=region_order)
 
     # The shipped browser model, fitted on seasons strictly before `year`.
-    pit_base = build_pit_base(year, seeds, regions)
+    pit_base = build_pit_base(year, seeds, regions, region_order=region_order)
     # Alias, not a copy: ProbabilityBase is a Mapping over the marginals, so
     # every `torvik_rp[tid][rnd]` read below is unchanged, while modes that need
     # head-to-head probabilities (simulated_annealing) can reach .pairwise.
@@ -2969,15 +2867,15 @@ def _run_one_year(
 
     # --- Market-implied probability bases (A3, A7) ---
     from src.prediction.market_probabilities import (
-        load_market_ratings,
+        load_market_ratings_v2,
         load_spread_power_ratings,
     )
 
-    market_barthag = load_market_ratings(year, seeds)
-    odds_base = build_base_from_ratings("odds", seeds, regions, market_barthag)
+    market_barthag = load_market_ratings_v2(year, seeds)  # v1 is defective (audit Step 7, D7-1)
+    odds_base = build_base_from_ratings("odds", seeds, regions, market_barthag, region_order=region_order)
 
     spread_barthag = load_spread_power_ratings(year, seeds)
-    spread_base = build_base_from_ratings("spread_power", seeds, regions, spread_barthag)
+    spread_base = build_base_from_ratings("spread_power", seeds, regions, spread_barthag, region_order=region_order)
 
     # --- Elo base (A4) ---
     # Self-contained K=38 Elo from historical_games, bridged via the
@@ -2986,7 +2884,7 @@ def _run_one_year(
     from src.prediction.elo_probabilities import load_elo_barthag
 
     elo_barthag = load_elo_barthag(year, seeds, Path("data"))
-    elo_base = build_base_from_ratings("elo", seeds, regions, elo_barthag)
+    elo_base = build_base_from_ratings("elo", seeds, regions, elo_barthag, region_order=region_order)
 
     # --- Massey composite base (A5) ---
     # Aggregated rating across ~150 ranking systems, bridged to canonical
@@ -2995,7 +2893,7 @@ def _run_one_year(
     from src.prediction.massey_probabilities import load_massey_avg_barthag
 
     massey_barthag = load_massey_avg_barthag(year, seeds, Path("data"))
-    massey_avg_base = build_base_from_ratings("massey_avg", seeds, regions, massey_barthag)
+    massey_avg_base = build_base_from_ratings("massey_avg", seeds, regions, massey_barthag, region_order=region_order)
 
     # Massey-best (A6): walk-forward Brier selection over 56+ per-system
     # rankers (POM, SAG, MOR, BAR, etc.), picking the system with lowest
@@ -3006,7 +2904,7 @@ def _run_one_year(
         build_massey_best_round_probabilities,
     )
 
-    massey_best_base = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+    massey_best_base = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"), region_order=region_order)
 
     # AP-strength (A8): final-pre-tournament AP poll → barthag, MC via the
     # shared torvik round-probs builder. Falls back to None if the year is
@@ -3014,7 +2912,7 @@ def _run_one_year(
     from src.prediction.ap_probabilities import load_ap_strength_barthag
 
     ap_barthag = load_ap_strength_barthag(year, seeds, seeds.keys(), Path("data"))
-    ap_strength_base = build_base_from_ratings("ap_strength", seeds, regions, ap_barthag)
+    ap_strength_base = build_base_from_ratings("ap_strength", seeds, regions, ap_barthag, region_order=region_order)
 
     # Stacked meta-learner (B5): Ridge regression over all Category-A
     # bases. Walk-forward: fits on game-level barthag diffs from years
@@ -3023,13 +2921,13 @@ def _run_one_year(
     # or if any Category-A source is missing for the test year.
     from src.prediction.stacked_probabilities import build_stacked_round_probabilities
 
-    stacked_base = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+    stacked_base = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"), region_order=region_order)
 
     # --- KNN matchup similarity base (B8) ---
     from src.prediction.knn_probabilities import load_knn_barthag
 
     knn_barthag = load_knn_barthag(year, seeds, Path("data"))
-    knn_base = build_base_from_ratings("knn", seeds, regions, knn_barthag)
+    knn_base = build_base_from_ratings("knn", seeds, regions, knn_barthag, region_order=region_order)
 
     # Probability base registry: base_name → ProbabilityBase.
     #
@@ -3498,6 +3396,7 @@ def _run_one_year(
                 "model_brackets": model_brackets,
                 "model_scores_actual": model_scores_actual,
                 "all_ranks": np.zeros((n_model, n_repeats)),
+                "all_first_share": np.zeros((n_model, n_repeats)),
                 "all_prizes": np.zeros((n_model, n_repeats)),
                 "is_portfolio": False,
             }
@@ -3927,6 +3826,7 @@ def _run_one_year(
                     risk_level=_risk,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 if meta_mode == "meta_sa_chalk":
@@ -3974,9 +3874,20 @@ def _run_one_year(
                     _meta_models[_mn_model_key],
                 )
             elif meta_mode == "meta_region_4champ":
-                # Pool-optimized champion: build 4 region brackets (one per 1-seed),
-                # simulate each against opponents, pick highest P(1st).
-                from src.optimization.bracket_construction import construct_bracket
+                # INVALID SINCE THE 2026-09 AUDIT (Step 5, F5-1). This mode was
+                # "build 4 region_top_n brackets, one per forced 1-seed champion,
+                # pick the best P(1st)" -- but region_top_n never honoured
+                # forced_champion, so all four were the same bracket and every
+                # number this mode ever produced was the plain
+                # tv_region_risk=0.5 bracket under a misleading label.
+                # construct_bracket now raises on that call. The mode is kept
+                # in the registry so old logs can be read, and fails here so it
+                # cannot be re-run as if it measured something.
+                raise RuntimeError(
+                    "meta_region_4champ is invalid: its four candidates were identical "
+                    "(region_top_n ignores forced_champion); see audit Step 5 F5-1"
+                )
+                from src.optimization.bracket_construction import construct_bracket  # noqa: F401 - unreachable, kept for reading
 
                 one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
                 cand_brackets = []
@@ -3993,6 +3904,7 @@ def _run_one_year(
                             pool_size=pool_size,
                             scoring_system=dict(ESPN_SCORING),
                             forced_champion=forced,
+                            region_order=region_order,
                         )
                         cand_brackets.append(_picks_dict_to_bool_array(picks_c, first_round))
                         cand_champs.append(forced)
@@ -4010,6 +3922,7 @@ def _run_one_year(
                         risk_level=0.5,
                         pool_size=pool_size,
                         scoring_system=dict(ESPN_SCORING),
+                        region_order=region_order,
                     )
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
                 else:
@@ -4047,15 +3960,21 @@ def _run_one_year(
                 # pick highest P(1st).  Target: 15-25 unique candidates.
                 from src.optimization.bracket_construction import construct_bracket
 
-                one_seed_teams = [tid for tid, s in seeds.items() if s == 1]
                 _pa_rng = np.random.default_rng(77777 + year)
 
                 _pa_candidates: list[tuple[np.ndarray, str]] = []  # (bracket, label)
                 _pa_pub = pick_dist if pick_dist else {}
                 _pa_scoring = dict(ESPN_SCORING)
 
+                _pa_failed: list[str] = []
+
                 def _pa_try_add(label: str, **kwargs) -> None:
-                    """Build a bracket and append to candidates; swallow errors."""
+                    """Build a bracket and append to candidates.
+
+                    A construction that fails is RECORDED, not swallowed: the
+                    candidate set the selector chooses from is part of the
+                    measurement, so a silent shrink would be a silent change of
+                    method (2026-09 audit, Step 4, F4-9)."""
                     try:
                         p, _ch, _, _, _ = construct_bracket(
                             seeds=seeds,
@@ -4065,10 +3984,12 @@ def _run_one_year(
                             scoring_system=_pa_scoring,
                             pool_factor_mode=pool_factor_mode,
                             **kwargs,
+                            region_order=region_order,
                         )
                         _pa_candidates.append((_picks_dict_to_bool_array(p, first_round), label))
-                    except Exception:
-                        pass
+                    except Exception as exc:  # noqa: BLE001 - reported below
+                        _pa_failed.append(f"{label}: {type(exc).__name__}: {exc}")
+                        logger.warning("%d meta_region_poolaware candidate %s failed: %s", year, label, exc)
 
                 # --- Probability bases to sweep ---
                 # Shared with scripts/generate_poolaware_bracket.py, which
@@ -4097,15 +4018,13 @@ def _run_one_year(
                     POOLAWARE_RISK_LEVELS if poolaware_risk_levels is None else tuple(poolaware_risk_levels)
                 )
 
-                # (a) Forced 1-seed champions × region_top_n (torvik, risk=0.5)
-                for forced in one_seed_teams:
-                    _pa_try_add(
-                        f"tv_champ={forced}",
-                        mode="region_top_n",
-                        round_probs=torvik_rp,
-                        risk_level=0.5,
-                        forced_champion=forced,
-                    )
+                # (a) REMOVED 2026-09-15 (audit Step 5, F5-1): "forced 1-seed
+                # champions x region_top_n" produced four copies of the unforced
+                # tv_region_risk=0.5 bracket because region_top_n ignores
+                # forced_champion; dedup collapsed them to one, labelled
+                # tv_champ=<first 1-seed in file order>. The candidate SET is
+                # unchanged by this removal (the survivor was already present as
+                # tv_region_risk=0.5); only the misleading label is gone.
 
                 # (b) Risk sweeps × prob bases × region_top_n (no forced champ)
                 for _risk in _pa_risk_levels:
@@ -4166,6 +4085,7 @@ def _run_one_year(
                         risk_level=0.5,
                         pool_size=pool_size,
                         scoring_system=_pa_scoring,
+                        region_order=region_order,
                     )
                     meta_bracket = _picks_dict_to_bool_array(picks_fb, first_round)
                     print(f"  {year}   {meta_mode:<24} FALLBACK (no candidates)")
@@ -4276,7 +4196,9 @@ def _run_one_year(
                         print(
                             f"  {year}   {meta_mode:<24} "
                             f"selected={_pa_candidates[best_pa_idx][1]} "
-                            f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f})"
+                            f"(best of {len(_pa_candidates)}, P1={best_pa_p1:.3f}"
+                            + (f", {len(_pa_failed)} construction(s) FAILED" if _pa_failed else "")
+                            + ")"
                         )
                     else:
                         best_pa_idx, _pa_prize = select_best_single(_pa_scores, _pa_shares, tie_policy=_pa_tie)
@@ -4331,6 +4253,7 @@ def _run_one_year(
                     risk_level=0.5,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 print(f"  {year}   {meta_mode:<24} champ={_champ}")
@@ -4352,6 +4275,7 @@ def _run_one_year(
                     risk_level=0.5,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 print(f"  {year}   {meta_mode:<24} champ={_champ}")
@@ -4393,6 +4317,7 @@ def _run_one_year(
                     risk_level=0.5,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 print(f"  {year}   {meta_mode:<24} champ={_champ}")
@@ -4447,6 +4372,7 @@ def _run_one_year(
                     risk_level=0.5,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
                 print(f"  {year}   {meta_mode:<24} champ={_champ}")
@@ -4470,6 +4396,7 @@ def _run_one_year(
                     risk_level=0.5,
                     pool_size=pool_size,
                     scoring_system=dict(ESPN_SCORING),
+                    region_order=region_order,
                 )
                 meta_bracket = _picks_dict_to_bool_array(picks, first_round)
 
@@ -4527,6 +4454,7 @@ def _run_one_year(
                     "model_brackets": meta_brackets,
                     "model_scores_actual": meta_scores,
                     "all_ranks": np.zeros((meta_brackets.shape[0], n_repeats)),
+                    "all_first_share": np.zeros((meta_brackets.shape[0], n_repeats)),
                     "all_prizes": np.zeros((meta_brackets.shape[0], n_repeats)),
                     # A portfolio's entries are jointly ours: P(1st) means
                     # P(ANY entry finishes first), and prize is the SUM over
@@ -4557,6 +4485,7 @@ def _run_one_year(
                 pick_dist,
                 seeds,
                 year_rng,
+                chalk_noise_std=pool_chalk_noise_std,   # same opponent model as selection (audit F4-5)
             )
             if team_identity:
                 sim_outcomes, sim_by_round = simulate_tournament_outcomes(
@@ -4593,6 +4522,7 @@ def _run_one_year(
                     better = np.sum(opp_scores > model_scores_sim[m])
                     tied = np.sum(opp_scores == model_scores_sim[m])
                     all_ranks[m, rep] = better + 1 + tied / 2.0
+                    payload["all_first_share"][m, rep] = first_place_share_from_counts(better, tied)
                     _record_prize(all_prizes, m, rep, better, tied, payout_share_vector)
     else:
         # opponent_strategy == "per_mode": spawn a deterministic rng
@@ -4616,6 +4546,7 @@ def _run_one_year(
                     pick_dist,
                     seeds,
                     mode_opp_rng,
+                    chalk_noise_std=pool_chalk_noise_std,
                 )
                 if team_identity:
                     sim_outcomes, sim_by_round = simulate_tournament_outcomes(
@@ -4644,6 +4575,7 @@ def _run_one_year(
                     better = np.sum(opp_scores > model_scores_sim[m])
                     tied = np.sum(opp_scores == model_scores_sim[m])
                     all_ranks[m, rep] = better + 1 + tied / 2.0
+                    payload["all_first_share"][m, rep] = first_place_share_from_counts(better, tied)
                     _record_prize(all_prizes, m, rep, better, tied, payout_share_vector)
 
     # Pass C: per-mode aggregation, reporting, and --save-brackets
@@ -4669,11 +4601,16 @@ def _run_one_year(
         # report the typical entry's result and understate a portfolio whose
         # whole point is that one entry covering a different outcome pays off.
         all_prizes = payload["all_prizes"]
+        # P(1st) is the expected first-place SHARE (ties split) -- the same
+        # quantity the selector maximises and the winner-take-all prize pays.
+        # It used to be (all_ranks == 1.0).mean(), which scored a shared first
+        # as a loss (2026-09 audit, Step 4, F4-1).
+        all_first_share = payload["all_first_share"]
         if payload.get("is_portfolio"):
-            p_first = (all_ranks.min(axis=0) == 1.0).mean()
+            p_first = float(all_first_share.sum(axis=0).mean())
             expected_prize = float(all_prizes.sum(axis=0).mean())
         else:
-            p_first = (all_ranks == 1.0).mean()
+            p_first = float(all_first_share.mean())
             expected_prize = float(all_prizes.mean())
         p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
         p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
@@ -4979,7 +4916,7 @@ def run_backtest(
     opponent_source="pool",
     hparam_fitter: HparamFitter = default_pool_hyperparameters,
     save_brackets=False,
-    team_identity=False,
+    team_identity=True,
     use_cache: bool = False,
     write_cache: bool = False,
     workers: int = 1,
@@ -5236,8 +5173,16 @@ def main():
     parser.add_argument(
         "--team-identity",
         action="store_true",
-        help="Use team-identity scoring (real ESPN) instead of shape-encoded scoring. "
-        "Slower but matches actual pool payouts. See §2 O26/O27.",
+        default=True,
+        help="Team-identity scoring (what the ESPN pool pays on). This is the default "
+        "since the 2026-09 audit (Step 4, F4-2); the flag is kept so documented "
+        "commands keep working.",
+    )
+    parser.add_argument(
+        "--shape-encoded",
+        action="store_true",
+        help="LEGACY: positional slot-match scoring, which can credit a bracket for a team "
+        "that never won. Opt-in only, for reproducing pre-audit numbers.",
     )
     parser.add_argument(
         "--no-log",
@@ -5416,7 +5361,7 @@ def main():
             opponent_source=args.opponent,
             hparam_fitter=fitter,
             save_brackets=args.save_brackets,
-            team_identity=args.team_identity,
+            team_identity=not args.shape_encoded,
             opponent_strategy=args.opponent_strategy,
             eval_start_year=args.eval_start_year,
             pool_blend_weight=args.pool_blend_weight,

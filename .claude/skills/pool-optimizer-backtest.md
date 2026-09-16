@@ -20,9 +20,9 @@ pytest tests/test_pool_strategy.py -v           # Strategy validation
 
 ### Run the Full MC Pool Backtest
 ```bash
-python scripts/mc_pool_backtest.py              # All modes, 2011-2025
-python scripts/mc_pool_backtest.py --modes seed noseed blend  # Specific modes
-python scripts/mc_pool_backtest.py --save-brackets --years 2023 2024 2025 2026  # Save pick-level brackets
+python -m scripts.mc_pool_backtest              # All modes, 2011-2025
+python -m scripts.mc_pool_backtest --modes seed noseed blend  # Specific modes
+python -m scripts.mc_pool_backtest --save-brackets --years 2023 2024 2025 2026  # Save pick-level brackets
 ```
 Results auto-log to `artifacts/backtest_runs/mc_pool_backtest_<ts>.txt`.
 `--save-brackets` writes per-year JSON to `artifacts/backtest_brackets/backtest_brackets_{year}.json`

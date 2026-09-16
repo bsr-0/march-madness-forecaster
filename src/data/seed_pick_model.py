@@ -137,7 +137,10 @@ RECENT_FIRST_SEASON = 2010
 _RECENT_PRIOR_STRENGTH = 8
 _RECENT_MIN_GAMES = 8
 
-_recent_cache: Optional[Dict[Tuple[int, int], float]] = None
+# Keyed by the as_of cutoff (None = every season in the files). One global
+# table was the 2026-09 audit's item-14 finding: the referee for a backtested
+# season Y was fit on Y's own results.
+_recent_cache: Dict[Optional[int], Dict[Tuple[int, int], float]] = {}
 
 
 def _logistic_rate(seed_a: int, seed_b: int) -> float:
@@ -149,8 +152,14 @@ def _logistic_rate(seed_a: int, seed_b: int) -> float:
     return 1.0 / (1.0 + math.exp(-0.175 * (seed_b - seed_a)))
 
 
-def _recent_win_rates() -> Dict[Tuple[int, int], float]:
+def _recent_win_rates(as_of: Optional[int] = None) -> Dict[Tuple[int, int], float]:
     """Seed-vs-seed win rates since RECENT_FIRST_SEASON, from Kaggle results.
+
+    ``as_of``: if given, only seasons STRICTLY BEFORE it are tallied. A referee
+    or construction for season Y must pass ``as_of=Y`` so that Y's own
+    tournament cannot inform the probabilities it is scored against. None
+    keeps every season, which is correct only for a genuinely prospective
+    season (one the Kaggle files do not yet contain).
 
     Computed rather than hardcoded so the window is a constant to change rather
     than a table to re-derive by hand. Cells thinner than _RECENT_MIN_GAMES are
@@ -161,9 +170,8 @@ def _recent_win_rates() -> Dict[Tuple[int, int], float]:
     window="recent" degrade to the logistic fallback rather than raise. Callers
     get a coarser referee, not a broken one.
     """
-    global _recent_cache
-    if _recent_cache is not None:
-        return _recent_cache
+    if as_of in _recent_cache:
+        return _recent_cache[as_of]
 
     import csv
     from pathlib import Path
@@ -173,8 +181,8 @@ def _recent_win_rates() -> Dict[Tuple[int, int], float]:
     results_path = kaggle / "MNCAATourneyCompactResults.csv"
     if not seeds_path.exists() or not results_path.exists():
         logger.warning("Kaggle tournament files missing; recent seed rates unavailable")
-        _recent_cache = {}
-        return _recent_cache
+        _recent_cache[as_of] = {}
+        return _recent_cache[as_of]
 
     seeds: Dict[Tuple[int, int], int] = {}
     with open(seeds_path) as fh:
@@ -188,6 +196,8 @@ def _recent_win_rates() -> Dict[Tuple[int, int], float]:
             # DayNum < 136 is the First Four: same seed line, so "favourite"
             # is undefined and these games would only add noise.
             if season < RECENT_FIRST_SEASON or int(row["DayNum"]) < 136:
+                continue
+            if as_of is not None and season >= as_of:
                 continue
             sw = seeds.get((season, int(row["WTeamID"])))
             sl = seeds.get((season, int(row["LTeamID"])))
@@ -204,16 +214,22 @@ def _recent_win_rates() -> Dict[Tuple[int, int], float]:
             continue
         w = n / (n + _RECENT_PRIOR_STRENGTH)
         out[(lo, hi)] = w * (wins / n) + (1 - w) * _logistic_rate(lo, hi)
-    _recent_cache = out
+    _recent_cache[as_of] = out
     return out
 
 
-def _win_rate(seed_a: int, seed_b: int, window: str = "full") -> float:
+def _win_rate(seed_a: int, seed_b: int, window: str = "full", as_of: Optional[int] = None) -> float:
     """P(seed_a beats seed_b) from historical data.
 
     ``window`` selects which question is being asked -- see the block above.
     It defaults to "full" so every existing caller keeps its current behaviour
     and only the outcome path opts in.
+
+    ``as_of`` applies to the "recent" window only: seasons >= as_of are
+    excluded from the tally. The "full" table is a hardcoded 1985-2025
+    aggregate used for the CROWD model, where the target season's own results
+    are a ~2.5% share of any cell; it is not an outcome referee and is left
+    as is (recorded in the 2026-09 audit as an accepted approximation).
     """
     if seed_a == seed_b:
         return 0.500
@@ -221,7 +237,7 @@ def _win_rate(seed_a: int, seed_b: int, window: str = "full") -> float:
         raise ValueError(f"unknown window {window!r}; expected 'full' or 'recent'")
 
     lower, higher = min(seed_a, seed_b), max(seed_a, seed_b)
-    table = _recent_win_rates() if window == "recent" else _HISTORICAL_WIN_RATES
+    table = _recent_win_rates(as_of) if window == "recent" else _HISTORICAL_WIN_RATES
     rate = table.get((lower, higher))
     if rate is not None:
         return rate if seed_a == lower else 1.0 - rate
@@ -248,12 +264,13 @@ def _r64_opponent(seed: int) -> int:
     return 17 - seed
 
 
-def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, float]]:
+def _compute_advancement_rates(window: str = "full", as_of: Optional[int] = None) -> Dict[int, Dict[str, float]]:
     """Compute P(seed s reaches round R) for all seeds and rounds.
 
-    ``window`` is forwarded to :func:`_win_rate`. The outcome path passes
-    "recent"; the public-pick path leaves it at "full". See the window block
-    above for why those must not be the same.
+    ``window`` and ``as_of`` are forwarded to :func:`_win_rate`. The outcome
+    path passes "recent" and the season being predicted; the public-pick path
+    leaves both at their defaults. See the window block above for why those
+    must not be the same.
 
     Uses the bracket structure and historical win rates to compute
     cumulative advancement probabilities.  These represent the TRUE
@@ -271,7 +288,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
     r64 = {}
     for seed in range(1, 17):
         opp = _r64_opponent(seed)
-        r64[seed] = _win_rate(seed, opp, window)
+        r64[seed] = _win_rate(seed, opp, window, as_of)
 
     # Step 2: R32 advancement.
     # After R64, the bracket pairs up:
@@ -306,7 +323,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
             weighted_win = 0.0
             for opp_seed in opp_group:
                 opp_weight = r64[opp_seed]
-                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window, as_of)
 
             # P(reach S16) = P(reach R32) × P(win R32)
             r32[seed] = r64[seed] * weighted_win
@@ -337,7 +354,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
             weighted_win = 0.0
             for opp_seed in opp_seeds:
                 opp_weight = r32[opp_seed] / total_opp_weight
-                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window, as_of)
 
             s16[seed] = r32[seed] * weighted_win
 
@@ -362,7 +379,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
         weighted_win = 0.0
         for opp_seed in opp_seeds:
             opp_weight = s16[opp_seed] / total_opp_weight
-            weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
+            weighted_win += opp_weight * _win_rate(seed, opp_seed, window, as_of)
 
         e8[seed] = s16[seed] * weighted_win
 
@@ -382,7 +399,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
                 weighted_win += opp_weight * 0.50
             else:
                 opp_weight = e8[opp_seed] / total_e8
-                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window, as_of)
 
         f4[seed] = e8[seed] * weighted_win
 
@@ -398,7 +415,7 @@ def _compute_advancement_rates(window: str = "full") -> Dict[int, Dict[str, floa
                 weighted_win += opp_weight * 0.50
             else:
                 opp_weight = f4[opp_seed] / total_f4
-                weighted_win += opp_weight * _win_rate(seed, opp_seed, window)
+                weighted_win += opp_weight * _win_rate(seed, opp_seed, window, as_of)
 
         champ[seed] = f4[seed] * weighted_win
 

@@ -47,6 +47,9 @@ per-season records so they can be unit-tested on synthetic input.
 
 from __future__ import annotations
 
+from src.simulation import bracket_topology as _bt
+from src.optimization.payout import first_place_shares
+
 import json
 import math
 import re
@@ -54,7 +57,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -88,6 +95,14 @@ INDEPENDENT_REFEREE = "market"
 #: ratings into win probabilities. Fixed before running; the ordinary
 #: college-basketball figure.
 FTE_MARGIN_SIGMA = 11.0
+# The FiveThirtyEight file (data/kaggle/fivethirtyeight_ratings.json, from the
+# nishaanamin Kaggle bundle) carries a `round`-reached column beside
+# `power_rating`, i.e. it is a post-tournament table, and nothing in the
+# repository establishes whether `power_rating` is the pre-tournament number
+# or a later update. There is no data_type guard like Torvik's. The referee
+# is SUPPLEMENTARY only; it must not be promoted to a criterion referee until
+# its point-in-time status is established (2026-09 audit, Step 7, D7-2).
+FTE_PROVENANCE = "UNVERIFIED_POINT_IN_TIME"
 
 #: The season-level baseline every delta is taken against: the harness's
 #: stochastic seed mode, the comparator behind the published headline.
@@ -390,25 +405,25 @@ def build_season_context(year: int, n_opponents_default: Optional[int] = None) -
     pool_size = resolve_pool_size(n_opponents, 1)
 
     stats = _load_team_stats(year)
-    seed_pw = build_seed_probabilities(seeds)
-    seed_rp = build_seed_round_probabilities(seeds)
+    seed_pw = build_seed_probabilities(seeds, as_of=year)
+    seed_rp = build_seed_round_probabilities(seeds, as_of=year)
     model = train_noseed_model(max_year=year)
     assert all(y < year for y in model.train_years), f"walk-forward violation for {year}"
-    noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
     blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
     noseed_pw = build_noseed_probabilities(model, seeds, stats)
     blend_pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=0.5)
 
     seed_base = ProbabilityBase("seed", seed_rp, PairwiseProbabilities.from_dict(seed_pw, "historical_seed_h2h"))
     blend_base = ProbabilityBase("blend", blend_rp, PairwiseProbabilities.from_dict(blend_pw, "blend(seed,noseed,alpha=0.5)"))
-    torvik_base = build_base_from_ratings("torvik", seeds, regions, _load_torvik_barthag(year, seeds))
-    pit_base = build_pit_base(year, seeds, regions)
-    market_base = build_base_from_ratings("market", seeds, regions, load_market_ratings(year, seeds))
+    torvik_base = build_base_from_ratings("torvik", seeds, regions, _load_torvik_barthag(year, seeds), region_order=region_order)
+    pit_base = build_pit_base(year, seeds, regions, region_order=region_order)
+    market_base = build_base_from_ratings("market", seeds, regions, load_market_ratings(year, seeds), region_order=region_order)
     mv2_diag: Dict[str, object] = {}
-    market_v2_base = build_base_from_ratings("market_v2", seeds, regions, load_market_ratings_v2(year, seeds, diagnostics=mv2_diag))
-    odds_api_base = build_base_from_ratings("odds_api", seeds, regions, load_odds_api_market_ratings(year, seeds))
-    massey_avg = build_base_from_ratings("massey_avg", seeds, regions, load_massey_avg_barthag(year, seeds, Path("data")))
-    massey_best = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"))
+    market_v2_base = build_base_from_ratings("market_v2", seeds, regions, load_market_ratings_v2(year, seeds, diagnostics=mv2_diag), region_order=region_order)
+    odds_api_base = build_base_from_ratings("odds_api", seeds, regions, load_odds_api_market_ratings(year, seeds), region_order=region_order)
+    massey_avg = build_base_from_ratings("massey_avg", seeds, regions, load_massey_avg_barthag(year, seeds, Path("data")), region_order=region_order)
+    massey_best = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=Path("data"), region_order=region_order)
 
     bases = {"seed": seed_base, "torvik": torvik_base, "blend": blend_base}
     if pit_base is not None:
@@ -483,17 +498,17 @@ def build_production_candidates(ctx: SeasonContext) -> List[Tuple[np.ndarray, st
                 scoring_system=scoring,
                 pool_factor_mode="threshold",
                 **kwargs,
+                region_order=_bt.region_order_from_first_round(ctx.first_round, ctx.regions),
             )
             candidates.append((_picks_dict_to_bool_array(p, ctx.first_round), label))
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - reported, not swallowed (audit F4-9)
+            logger.warning("%d referee-audit candidate %s failed: %s", ctx.year, label, exc)
 
     prob_bases = build_poolaware_prob_bases(
         ctx.torvik_rp, massey_avg=ctx.massey_avg, massey_best=ctx.massey_best, blend=ctx.blend_rp
     )
-    one_seeds = [tid for tid, s in ctx.seeds.items() if s == 1]
-    for forced in one_seeds:
-        try_add(f"tv_champ={forced}", mode="region_top_n", round_probs=ctx.torvik_rp, risk_level=0.5, forced_champion=forced)
+    # The former "tv_champ=<1-seed>" family is gone (audit Step 5, F5-1): region_top_n
+    # ignores forced_champion, so it only ever duplicated tv_region_risk=0.5.
     for risk in POOLAWARE_RISK_LEVELS:
         for name, rp in prob_bases:
             try_add(f"{name}_region_risk={risk}", mode="region_top_n", round_probs=rp, risk_level=risk)
@@ -656,6 +671,7 @@ def build_strategies(
             risk_level=risk,
             pool_size=ctx.pool_size,
             scoring_system=dict(ESPN_SCORING),
+            region_order=_bt.region_order_from_first_round(ctx.first_round, ctx.regions),
         )
         strategies[name] = _picks_dict_to_bool_array(picks, ctx.first_round).reshape(1, 63)
 
@@ -713,6 +729,7 @@ def evaluate_season(ctx: SeasonContext, strategies: Mapping[str, np.ndarray], cf
     referee_names = list(ctx.referees) + ["actual"]
     T = cfg.n_eval_trials
     ranks = {r: np.zeros((U.shape[0], T)) for r in referee_names}
+    shares = {r: np.zeros((U.shape[0], T)) for r in referee_names}  # first-place share, ties split
     scores = {r: np.zeros((U.shape[0], T)) for r in referee_names}
     w_actual = winners_vector(ctx.actual_winners, ctx.team_index)
 
@@ -739,6 +756,7 @@ def evaluate_season(ctx: SeasonContext, strategies: Mapping[str, np.ndarray], cf
             s_u = score_membership(membership, w, points)
             s_o = score_membership(opp_m, w, points)
             ranks[name][:, t] = ranks_against(s_o, s_u)
+            shares[name][:, t] = first_place_shares(s_u, s_o)
             scores[name][:, t] = s_u
 
     out: Dict[str, Dict[str, Dict[str, float]]] = {}
@@ -748,7 +766,7 @@ def evaluate_season(ctx: SeasonContext, strategies: Mapping[str, np.ndarray], cf
             rk = ranks[name][ids]
             sc = scores[name][ids]
             out[name][strat] = {
-                "p_first": float((rk == 1.0).mean()),
+                "p_first": float(shares[name][ids].mean()),
                 "mean_rank": float(rk.mean()),
                 "top3": float((rk <= 3.0).mean()),
                 "top10": float((rk <= 10.0).mean()),
@@ -1063,6 +1081,41 @@ def evaluate_criteria(
 # ---------------------------------------------------------------------------
 
 
+def seed_table_diagnostics(year: int, games: Sequence[dict], seeds: Mapping[str, int]) -> Dict[str, object]:
+    """How much of the walk-forward seed referee is empirical for this season.
+
+    The seed table for season Y is built from 2010..Y-1 (audit Step 2, P3-1);
+    a seed-vs-seed cell with fewer than 8 prior games falls to the logistic
+    curve. Early seasons therefore lean on the curve (2011 almost entirely).
+    Recorded so the referee's coverage is visible, never inferred
+    (audit Step 7, D7-3).
+    """
+    from src.data.seed_pick_model import _RECENT_MIN_GAMES, _recent_win_rates
+
+    table = _recent_win_rates(year)
+    empirical = logistic = same_seed = 0
+    for g in games:
+        if g.get("round_name") in (None, "FF") or g.get("team1_won") is None:
+            continue
+        s1, s2 = seeds.get(g["team1_id"]), seeds.get(g["team2_id"])
+        if s1 is None or s2 is None:
+            continue
+        if s1 == s2:
+            same_seed += 1
+        elif (min(s1, s2), max(s1, s2)) in table:
+            empirical += 1
+        else:
+            logistic += 1
+    return {
+        "as_of": year,
+        "empirical_cells": len(table),
+        "games_on_empirical_cell": empirical,
+        "games_on_logistic_curve": logistic,
+        "games_same_seed_half": same_seed,
+        "min_games_per_cell": _RECENT_MIN_GAMES,
+    }
+
+
 def calibration_rows(year: int) -> Dict[str, object]:
     """Phase-1 record: the season's referee calibration and nothing else."""
     ctx = build_season_context(year)
@@ -1070,6 +1123,7 @@ def calibration_rows(year: int) -> Dict[str, object]:
         "year": year,
         "referee_calibration": referee_game_scores(ctx.referees, ctx.games, ctx.team_index),
         "market_v2_diagnostics": ctx.market_v2_diagnostics,
+        "seed_table_diagnostics": seed_table_diagnostics(year, ctx.games, ctx.seeds),
     }
 
 

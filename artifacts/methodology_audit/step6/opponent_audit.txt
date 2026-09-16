@@ -1,0 +1,31 @@
+== 8. legality of generated opponents ==
+   2000 decoded opponents: illegal = 0; each has 32/16/8/4/2/1 winners, every later winner won the earlier round
+== 9. does the ratio heuristic reproduce the input marginal pick shares? ==
+   R64   max|realised - ESPN share| = 0.023  corr 0.9999  (ESPN sum 31.43, realised sum 32.00)
+   R32   max|realised - ESPN share| = 0.076  corr 0.9986  (ESPN sum 15.75, realised sum 16.00)
+   S16   max|realised - ESPN share| = 0.093  corr 0.9984  (ESPN sum 7.89, realised sum 8.00)
+   E8    max|realised - ESPN share| = 0.125  corr 0.9959  (ESPN sum 3.95, realised sum 4.00)
+   F4    max|realised - ESPN share| = 0.105  corr 0.9925  (ESPN sum 2.00, realised sum 2.00)
+   CHAMP max|realised - ESPN share| = 0.096  corr 0.9909  (ESPN sum 1.00, realised sum 1.00)
+   worst cell: michigan E8 ESPN 0.602 realised 0.727
+== 3. pool-size behaviour of P(1st) for the shipped bracket ==
+   n_opponents=  1: P(1st) share = 0.6780   (1/(n+1) = 0.5000)
+   n_opponents=  5: P(1st) share = 0.2610   (1/(n+1) = 0.1667)
+   n_opponents= 10: P(1st) share = 0.1783   (1/(n+1) = 0.0909)
+   n_opponents= 20: P(1st) share = 0.1015   (1/(n+1) = 0.0476)
+   n_opponents= 29: P(1st) share = 0.0468   (1/(n+1) = 0.0333)
+   n_opponents= 50: P(1st) share = 0.0367   (1/(n+1) = 0.0196)
+   n_opponents=100: P(1st) share = 0.0145   (1/(n+1) = 0.0099)
+== 5. shared vs independent tournament realisation ==
+   shared realisation P(1st) = 0.0722;  independent realisations = 0.2012  (these are DIFFERENT estimands; a pool shares one tournament)
+== 10. synthetic pools with a known answer ==
+   A all chalk (29)                     production 0.4458  independent 0.4458  diff +0.0e+00
+   B identical = candidate (29)         production 0.0333  independent 0.0333  diff +0.0e+00
+   C uniform random legal (29)          production 0.7477  independent 0.7477  diff +0.0e+00
+   D mixed 10 chalk/5 cand/14 random    production 0.0740  independent 0.0740  diff +0.0e+00
+   pool B sanity: candidate ties every opponent in every tournament -> share must be exactly 1/30 = 0.0333
+   generator with shares 1/0 by favourite: distinct opponents = 200 (R64 games between two favourites/underdogs fall to 0.5)
+== 12. ownership pathways ==
+   construction pathway: bracket differs with ownership on vs off in 6 of 63 games
+   opponent pathway, ownership-built bracket : P(1st) vs ESPN-share opponents 0.0597 | vs seed-model opponents (pick_dist={}) 0.0917
+   opponent pathway, ownership-free bracket  : P(1st) vs ESPN-share opponents 0.0209 | vs seed-model opponents (pick_dist={}) 0.0986

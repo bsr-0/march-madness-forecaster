@@ -1,0 +1,1626 @@
+{
+ "year": 2019,
+ "production_label": "mass_avg_region_risk=0.5",
+ "candidates": [
+  {
+   "label": "tv_region_risk=0.1",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.1",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.1",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "michigan_state",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.1",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "duke",
+     "virginia"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.1",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.3",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.5",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.5",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.7",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "houston",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.7",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.7",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "michigan_state",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.7",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "new_mexico_state",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "houston",
+     "louisiana_state",
+     "michigan",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.7",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "tv_region_risk=0.9",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "baylor",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "iowa",
+     "iowa_state",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "northeastern",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "vermont",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "gonzaga",
+     "houston",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "S16": [
+     "gonzaga",
+     "houston",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_avg_region_risk=0.9",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "houston",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "tennessee",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "mass_best_region_risk=0.9",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "auburn",
+     "baylor",
+     "buffalo",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "iowa",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "villanova",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "michigan_state",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_region_risk=0.9",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "baylor",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "liberty",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "nevada",
+     "new_mexico_state",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "cincinnati",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "louisiana_state",
+     "louisville",
+     "nevada",
+     "north_carolina",
+     "purdue",
+     "texas_tech",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wofford"
+    ],
+    "S16": [
+     "gonzaga",
+     "houston",
+     "louisiana_state",
+     "north_carolina",
+     "purdue",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "E8": [
+     "gonzaga",
+     "louisiana_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "tv_mass80_region_risk=0.9",
+   "champion": "virginia",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "baylor",
+     "duke",
+     "florida",
+     "gonzaga",
+     "houston",
+     "iowa",
+     "iowa_state",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "mississippi_state",
+     "north_carolina",
+     "oklahoma",
+     "purdue",
+     "saint_mary_s__ca",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "vermont",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "auburn",
+     "duke",
+     "gonzaga",
+     "houston",
+     "marquette",
+     "maryland",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "S16": [
+     "gonzaga",
+     "houston",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "E8": [
+     "gonzaga",
+     "michigan_state",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "CHAMP": [
+     "virginia"
+    ]
+   }
+  },
+  {
+   "label": "blend_exhaust_risk=0.5",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "auburn",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "kentucky",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "duke",
+     "virginia"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  },
+  {
+   "label": "blend_exhaust_risk=0.7",
+   "champion": "duke",
+   "picks": {
+    "R64": [
+     "arizona_state",
+     "belmont",
+     "cincinnati",
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "louisville",
+     "marquette",
+     "michigan",
+     "michigan_state",
+     "mississippi",
+     "mississippi_state",
+     "nevada",
+     "new_mexico_state",
+     "north_carolina",
+     "ohio_state",
+     "purdue",
+     "saint_mary_s__ca",
+     "syracuse",
+     "tennessee",
+     "texas_tech",
+     "utah_state",
+     "virginia",
+     "virginia_commonwealth",
+     "virginia_tech",
+     "wisconsin",
+     "wofford"
+    ],
+    "R32": [
+     "duke",
+     "florida_state",
+     "gonzaga",
+     "houston",
+     "kansas",
+     "kansas_state",
+     "kentucky",
+     "louisiana_state",
+     "michigan",
+     "michigan_state",
+     "north_carolina",
+     "purdue",
+     "tennessee",
+     "texas_tech",
+     "virginia",
+     "virginia_tech"
+    ],
+    "S16": [
+     "duke",
+     "gonzaga",
+     "houston",
+     "louisiana_state",
+     "michigan",
+     "north_carolina",
+     "purdue",
+     "virginia"
+    ],
+    "E8": [
+     "duke",
+     "gonzaga",
+     "north_carolina",
+     "virginia"
+    ],
+    "F4": [
+     "duke",
+     "virginia"
+    ],
+    "CHAMP": [
+     "duke"
+    ]
+   }
+  }
+ ]
+}

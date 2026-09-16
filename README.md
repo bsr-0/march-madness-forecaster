@@ -51,7 +51,7 @@ march-madness optimize-pool --year 2026 --pool-size 100 --payout top_3
 # candidate brackets. It runs through the backtest script, not the CLI:
 # --n-opponents 29 (a 30-person pool) is the default as of 2026-09-10; it is stated
 # explicitly here because it is part of the claim, and because it was 999 before then.
-python scripts/mc_pool_backtest.py --team-identity --opponent pool \
+python -m scripts.mc_pool_backtest --team-identity --opponent pool \
   --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware
 
 # If you have your pool's prior-year brackets, use them instead of ESPN aggregate
@@ -60,14 +60,47 @@ march-madness optimize-pool --year 2026 --pool-size 30 \
   --pool-history data/pool_hist_results.json
 
 # Run the full MC pool backtest (15 years, all modes — takes ~30 min)
-python scripts/mc_pool_backtest.py
+python -m scripts.mc_pool_backtest
 ```
 
 ### What the backtest number means
 
 `meta_region_poolaware` finishes first in **about 12% of simulated pools (95% CI 9–15%,
-n=14 seasons, 2011–2025 excluding 2020)**, against 4.0% for a seed-only bracket in the same
-harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quoting it:
+n=14 seasons, 2011–2025 excluding 2020)**, against 4.7% for a seed-only bracket in the same
+harness. Per-season P(1st) ranges from 4% to 20%. Read the qualifiers before quoting it:
+
+- **What "P(1st)" means (fixed 2026-09-15, methodology audit Step 4, F4-1).** The expected
+  share of first place: 1 for an outright win, 1/(1+k) when tied with k opponents for the top
+  score, 0 otherwise — exactly the winner-take-all prize. Before the audit the selector counted
+  a tie as a full win, the table counted it as a loss, and only the prize column split it
+  (ties are ~7% of the events the old selector counted as wins). Everything now uses one
+  definition; the harness scores by team identity by default (the slot-match scorer that could
+  credit a team that never won is opt-in via `--shape-encoded`); 2012, which has no ESPN pick
+  archive, draws opponents from static seed pick rates instead of a model fitted on 2023–2026
+  pool brackets. Rerun: **11.6% vs 4.7%**, 14/14 seasons on paired mean rank. Evidence:
+  `artifacts/methodology_audit/step4/`.
+
+- **Corrected 2026-09-15 (methodology audit, Step 3, F3-1/F3-2/F3-4).** Construction and the
+  marginals it consumed hardcoded the Final Four as East–West / South–Midwest; the referee and
+  ground truth used each season's real pairing, which differs in 9 of 15 seasons. The
+  projection between them silently fell back, so in five seasons the scored bracket carried a
+  champion construction never chose (2015 Kentucky scored as Virginia). Every layer now takes
+  the season's real pairing (`src/simulation/bracket_topology.py`), the projection raises on a
+  mismatch, and the noseed half of the blend is walk-forward like its seed half. Attributed
+  reruns of the same command: 10.9% (Step 2 referee fix) → 9.8% (topology only) → **10.9% vs
+  4.5%** (topology + noseed window; superseded by the Step 4 definition above). Evidence: `artifacts/methodology_audit/step3/`.
+
+- **Corrected 2026-09-15 (methodology audit, Step 2, item 14).** Until then the seed-vs-seed
+  referee that draws every simulated tournament was one table fit on 2010–2025, so each
+  backtested season was scored against probabilities that already contained its own results.
+  The referee is now walk-forward (`build_seed_probabilities(seeds, as_of=year)`); the same
+  command gives 10.9% vs 4.5% where it used to give 12.0% vs 4.0%. The edge is +6.3pp rather
+  than +8.0pp, still 14/14 seasons on paired mean rank (superseded by the Step 3 correction
+  above; the figure survives it). **Every other figure in this section
+  (the referee-suite deltas, the Romano–Wolf p, the 79-mode sweep, the fixed-rule comparison)
+  was measured under the old referee and has not yet been rerun**; they are queued for Steps
+  7–9 of `FINAL_METHODOLOGY_AUDIT_PROTOCOL.md`. Evidence:
+  `artifacts/methodology_audit/step2/path3_backtest_walkforward_seed_referee.txt`.
 
 - **Simulated tournaments, not history.** Under the canonical `--team-identity` contract
   each trial draws a tournament from the seed-model referee and scores the model bracket
@@ -77,7 +110,14 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
 - **Simulated opponents, and the pool size is an assumption.** Opponents are independent
   draws from a pick distribution: the real pool's own picks for 2023–2025 (at that pool's
   real size — 18, 25 and 32 entries), and ESPN national pick rates at an assumed 30-entry
-  pool for every earlier season. It assumes winner-take-all with ESPN scoring; it is not a
+  pool for every earlier season. **How they are drawn matters (audit Step 6, 2026-09-15):**
+  the sampler walks the bracket game by game with P(pick t1) = share(t1)/(share(t1)+share(t2))
+  over per-team round shares, which reproduces the R64 shares (max error 2 pp) but compounds
+  favourites in later rounds — the most-picked team's E8 share came out 0.73 against an
+  input of 0.60, with errors of 8–12 pp at S16–F4. So the simulated field is somewhat
+  chalkier at the deep rounds than the shares it is built from. For 2023–2026 the real pool's
+  brackets exist and are reduced to marginals before resampling, discarding their joint
+  structure. Both are recorded as optimization item R-3, not changed inside the audit. It assumes winner-take-all with ESPN scoring; it is not a
   universal probability of winning any pool. **P(1st) is mechanically pool-size dependent**
   — the same strategy scores roughly 2.5x worse in a 1000-entry field than a 30-entry one —
   so the pool size is part of the claim, not a detail. Reproduce with
@@ -96,27 +136,26 @@ harness. Per-season P(1st) ranges from 2% to 21%. Read the qualifiers before quo
   built by `scripts/experiments/build_candidate_artifact.py`, which uses different rating
   sources, a different risk grid, and no exhaustive- or forced-champion candidates. Quote
   this figure for the strategy, not for a bracket on the page.
-- **Selected and scored against the same referee — and the edge is robust to the qualified
-  referee set tested, including held-out referee selection.** The candidate is chosen by, and
-  later measured by, P(1st) under the same simulated-outcome model (`seed_pw`, fit on
-  2010–2025 — overlapping every backtested season). Audited 2026-09-13/14 with thresholds
-  fixed before each run (`artifacts/referee_audit/`): the frozen strategy and its frozen
-  candidate set were scored on common-random-number trials under every referee that passes a
-  calibration gate applied on the real games alone (seed, Torvik, the fitted `blend` model,
-  and the shipped browser model `pit`, the best-calibrated of them). Production's edge over
-  the `seed` baseline is +7.4 / +7.3 / +6.1 / +4.9pp under those four, every CI clear of zero;
-  its self-referee premium is 1.7pp with a CI spanning zero; and re-running the selection with
-  each referee held out keeps 60–101% of the in-sample edge, every held-out edge positive. So
-  the strategy is not winning merely because it is graded by its own production referee.
-  What this does **not** show: a proven real-world +7pp — the referee suite is model-based
-  and 14 seasons is few. The leave-one-referee-out result is the persuasive part, more than
-  the headline number. The one referee that had erased the edge (a Bradley–Terry fit to
-  betting lines) turned out to be half seed fallbacks and fit on a sign-filtered subsample;
-  corrected, it shows +2.9pp [+1.2, +4.6] but is still not better calibrated than the seed
-  table, so it stays out of the primary set. A genuinely strong market referee, pre-registered
-  and put through the same gate, is the open follow-up. See
-  `artifacts/referee_audit/FINDINGS.md`, `FINDINGS_QUALIFICATION.md`, the two
-  `PREREGISTRATION*.md` files, and `AUDIT_INDEPENDENT_EVALUATOR_2027.md` finding C2.
+- **Selected and scored against the same referee — and the edge survives the qualified
+  referee set, including the one built from a materially different source.** The candidate is
+  chosen by, and later measured by, P(1st) under the seed-vs-seed outcome model, which since
+  the 2026-09 audit is walk-forward (fit on seasons before the one it scores). The referee
+  audit of 2026-09-13/14 (`artifacts/referee_audit/`, preserved) is **invalidated**: its
+  incumbent had seen each season's games, its topology was wrong in 9 seasons, and its P(1st)
+  counted a shared first as a loss. Re-run 2026-09-15 with the pre-registered qualification
+  rule applied unchanged to the corrected referees (`artifacts/methodology_audit/step8/`,
+  `step9/`): qualified set = seed, Torvik, blend, `pit`, and `market_v2` (Bradley–Terry on
+  betting lines, curated IDs, home-court removed), with `market_v2` the pre-registered
+  independent referee. Production's edge over the `seed` bracket, one fixed bracket per
+  season: +7.1 / +7.5 / +6.2 / +5.6pp under seed / Torvik / blend / pit, and **+4.0pp
+  [+2.5, +5.6] under `market_v2`**, positive in 13 of 14 seasons. Self-referee premium 2.1pp
+  [−0.4, +5.2], not material. Leave-one-referee-out: every held-out edge positive with its CI
+  above zero, retaining 58–88% of the self edge; with `market_v2` held out, +6.7pp. Registered
+  verdict ROBUST. Read it narrowly: seed, Torvik, blend and `pit` are one data family, so this
+  is one independent confirmation, not five; `market_v2` qualified by a hair on a
+  point-estimate rule; under it the edge is about half the self-referee figure; and none of
+  this is real-world or future performance. The 79-mode Romano–Wolf sweep and the fixed-rule
+  comparison below were measured under the old referee and have not been re-run.
 - **Chosen as the best of 79 candidate strategies — and it survives that.** Measured
   2026-09-12: all 79 modes re-run on the 14 seasons, then a Romano–Wolf stepdown on the
   P(1st) deltas of the other 78 against the `seed` baseline, resampling every mode under one
@@ -165,7 +204,7 @@ differs, say so — the answer changes.
 
 ```bash
 # A pool that pays its top three, not just the winner
-python scripts/mc_pool_backtest.py --team-identity --opponent pool \
+python -m scripts.mc_pool_backtest --team-identity --opponent pool \
   --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware --payout top_3
 
 # Your pool's actual split, in dollars or percentages (renormalised for you)
@@ -248,7 +287,7 @@ march-madness materialize-features
 
 ```bash
 # Pool strategy backtest, canonical contract (see "What the backtest number means")
-python scripts/mc_pool_backtest.py --team-identity --opponent pool \
+python -m scripts.mc_pool_backtest --team-identity --opponent pool \
   --n-opponents 29 --n-repeats 100 --modes seed meta_region_poolaware
 
 # Real-pool placement of the selected bracket, 2023-2026

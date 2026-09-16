@@ -146,7 +146,7 @@ def test_build_massey_best_round_probabilities_2026_covers_field():
     resolve_field(2026, seeds, regions)
     assert len(seeds) == 64
 
-    rp = build_massey_best_round_probabilities(seeds, regions, test_year=2026, data_root=DATA_ROOT, n_sims=2000)
+    rp = build_massey_best_round_probabilities(seeds, regions, test_year=2026, data_root=DATA_ROOT, n_sims=2000, region_order=('East', 'West', 'South', 'Midwest'))
     assert rp is not None, "Should produce round_probs for 2026"
     # Every team in the resolved draw is present.
     assert set(rp.keys()) == set(seeds.keys())
@@ -165,7 +165,7 @@ def test_build_massey_best_returns_none_without_selection():
     """Year with no selectable system → None (resolved gracefully upstream)."""
     rp = build_massey_best_round_probabilities(
         seeds={"duke": 1}, regions={"duke": "East"}, test_year=1900, data_root=DATA_ROOT
-    )
+    , region_order=('East', 'West', 'South', 'Midwest'))
     assert rp is None
 
 

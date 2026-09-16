@@ -718,6 +718,42 @@ def compute_all_custom_ratings(
     }
 
 
+# Kaggle MTeams abbreviations whose naive slug is not the Torvik canonical id.
+# EXACT keys only -- the fuzzy resolver gets several of these wrong (TX Southern
+# -> "southern", E Washington -> "george_washington", Kent -> "northern_kentucky").
+# Every value was verified to exist in the Selection-Sunday Torvik snapshots
+# (2026-09 audit, pre-experiment matrix repair). Before this, 114 of 948
+# tournament games (42% of games involving a 16-seed, 31% of 15-seeds) were
+# missing from eval_pit_tournament.json because one team failed to map.
+KAGGLE_TEAMNAME_ALIASES: Dict[str, str] = {
+    "St Mary's CA": "saint_mary_s__ca",
+    "S Dakota St": "south_dakota_state",
+    "TX Southern": "texas_southern",
+    "St Louis": "saint_louis",
+    "SF Austin": "stephen_f_austin",
+    "WKU": "western_kentucky",
+    "SUNY Albany": "albany__ny",
+    "FGCU": "florida_gulf_coast",
+    "N Dakota St": "north_dakota_state",
+    "Mt St Mary's": "mount_st__mary_s",
+    "N Kentucky": "northern_kentucky",
+    "Col Charleston": "college_of_charleston",
+    "LIU Brooklyn": "long_island_university",
+    "Coastal Car": "coastal_carolina",
+    "St Joseph's PA": "saint_joseph_s",
+    "E Washington": "eastern_washington",
+    "MTSU": "middle_tennessee",
+    "Kent": "kent_state",
+    "CS Fullerton": "cal_state_fullerton",
+    "Abilene Chr": "abilene_christian",
+    "F Dickinson": "fairleigh_dickinson",
+    "FL Atlantic": "florida_atlantic",
+    "Ark Pine Bluff": "arkansas_pine_bluff",
+    "Boston Univ": "boston_university",
+    "N Colorado": "northern_colorado",
+}
+
+
 def ratings_to_canonical(
     ratings: Dict[int, float],
     data_root: Path = Path("data"),
@@ -742,7 +778,7 @@ def ratings_to_canonical(
     for tid, rating in ratings.items():
         name = id_to_name.get(tid)
         if name:
-            result[normalize_team_id(name)] = rating
+            result[KAGGLE_TEAMNAME_ALIASES.get(name) or normalize_team_id(name)] = rating
         else:
             result[str(tid)] = rating
     return result

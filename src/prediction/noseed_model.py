@@ -416,15 +416,26 @@ def build_noseed_round_probabilities(
     model: NoseedModel,
     seeds: Dict[str, int],
     stats: Dict[str, dict],
+    *,
+    as_of: int,
+    window: str = "recent",
 ) -> Dict[str, Dict[str, float]]:
     """Build round advancement probs adjusted by no-seed model signal.
 
     Starts from seed-based advancement rates and adjusts based on
     each team's mean advantage/disadvantage vs the field according
     to the no-seed model.
+
+    WALK-FORWARD (2026-09 audit, Step 3, F3-4). ``as_of`` is the season being
+    predicted; seasons >= as_of are excluded from the seed table. Until the
+    audit this used the hardcoded 1985-2025 "full" table with no cutoff, so
+    every backtested season's own results were in its base rates, while its
+    blend partner ``build_seed_round_probabilities`` used the "recent" window
+    with as_of=year. The two halves of the blend now read the same causal
+    table. (The compounding heuristic itself is a separate, deferred question.)
     """
     validate_stats_payload(stats, context="build_noseed_round_probabilities")
-    seed_rates = _compute_advancement_rates()
+    seed_rates = _compute_advancement_rates(window, as_of)
     round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
     result = {}
 
@@ -438,7 +449,7 @@ def build_noseed_round_probabilities(
                 continue
             opp_stats = stats.get(opp_id, {})
             noseed_p = model.predict_win_prob(team_stats, opp_stats)
-            seed_p = _win_rate(seed, opp_seed)
+            seed_p = _win_rate(seed, opp_seed, window, as_of)
             advantages.append(noseed_p - seed_p)
 
         mean_adv = np.mean(advantages) if advantages else 0.0

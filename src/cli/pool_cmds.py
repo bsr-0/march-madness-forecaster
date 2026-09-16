@@ -399,65 +399,34 @@ def run_optimize_pool(args):
     return 0
 
 
-# Standard NCAA bracket seed matchup order within each region
-_SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
-_DEFAULT_REGION_ORDER = ["East", "West", "South", "Midwest"]
+def _region_order(year: int, seeds: dict, regions: dict):
+    """The season's Final Four pairing, from data -- never a default.
+
+    Played F4 games if present, else `f4_pairing` in the seeds file (the
+    announced bracket). Raises if neither exists: a bracket built on a guessed
+    pairing has its semifinals in the wrong slots (2026-09 audit, F3-1/F3-2).
+    """
+    from ..prediction.noseed_model import _load_tournament_results
+    from ..simulation.bracket_topology import resolve_region_order
+
+    data = _find_and_read_seeds_file(year) or {}
+    seeds_block = data if isinstance(data, dict) else {}
+    return resolve_region_order(year, games=_load_tournament_results(year), regions=regions, seeds_block=seeds_block)
 
 
-def _build_first_round_matchups(seeds, regions, region_order=None):
-    """Build ordered 64-team matchup list from seeds and regions."""
-    from collections import defaultdict
+def _build_first_round_matchups(seeds, regions, region_order):
+    """Ordered 64-team matchup list on the season's real topology."""
+    from ..simulation.bracket_topology import build_bracket_order
 
-    if region_order is None:
-        region_order = _DEFAULT_REGION_ORDER
-    teams_by_region = defaultdict(dict)
-    for tid, seed in seeds.items():
-        teams_by_region[regions.get(tid, "")][seed] = tid
-
-    matchups = []
-    for region in region_order:
-        region_teams = teams_by_region.get(region, {})
-        for high_seed, low_seed in _SEED_MATCHUP_ORDER:
-            matchups.extend(
-                [
-                    region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
-                    region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
-                ]
-            )
-    return matchups
+    return build_bracket_order(seeds, regions, region_order=region_order)
 
 
-def _picks_dict_to_bool_array(picks, first_round_matchups, round_names):
-    """Convert a construct_bracket() picks dict to a (63,) boolean vector."""
-    import numpy as np
-    from collections import defaultdict
+def _picks_dict_to_bool_array(picks, first_round_matchups, round_names=None):
+    """construct_bracket() picks -> (63,) bool vector. Strict: raises on a
+    picks dict built for a different topology instead of inventing winners."""
+    from ..simulation.bracket_topology import picks_to_bool_vector
 
-    round_winners = defaultdict(set)
-    for key, winner in picks.items():
-        round_winners[key.split("_")[0]].add(winner)
-
-    result = np.zeros(63, dtype=bool)
-    current_teams = list(first_round_matchups)
-    game_idx = 0
-
-    for round_idx in range(6):
-        round_name = round_names[round_idx]
-        next_round = []
-        for g in range(0, len(current_teams), 2):
-            if g + 1 >= len(current_teams):
-                next_round.append(current_teams[g])
-                continue
-            t1, t2 = current_teams[g], current_teams[g + 1]
-            if t1 in round_winners[round_name]:
-                result[game_idx] = True
-                next_round.append(t1)
-            else:
-                result[game_idx] = False
-                next_round.append(t2)
-            game_idx += 1
-        current_teams = next_round
-
-    return result
+    return picks_to_bool_vector(picks, first_round_matchups)
 
 
 def _rerank_brackets_by_p1st(
@@ -490,7 +459,8 @@ def _rerank_brackets_by_p1st(
         compute_bracket_win_probability,
     )
 
-    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
+    region_order = _region_order(year, seeds, regions_map)
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map, region_order)
     rng = np.random.default_rng(rng_seed)
 
     for bkt in brackets:
@@ -556,7 +526,8 @@ def _run_det_construction(
     print(f"\nDirect construction mode: {bc_mode} (risk-level sweep)")
 
     # Build first_round_matchups for bracket→bool conversion and P(1st) sim
-    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
+    region_order = _region_order(year, seeds, regions_map)
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map, region_order)
 
     # Sweep risk levels to generate diverse brackets
     unique_brackets = {}
@@ -572,6 +543,7 @@ def _run_det_construction(
                 risk_level=risk,
                 pool_size=pool_size,
                 scoring_system=scoring_rules,
+                region_order=region_order,
             )
             key = tuple(sorted(picks.items()))
             if key not in unique_brackets:
@@ -682,7 +654,8 @@ def _run_auto_mode(
     if construction_modes is None:
         construction_modes = ["champ_first", "f4_first", "e8_first"]
 
-    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
+    region_order = _region_order(year, seeds, regions_map)
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map, region_order)
 
     # --- Phase 1: Build probabilities for each mode ---
     mode_probs = {}
@@ -716,6 +689,7 @@ def _run_auto_mode(
                             risk_level=risk,
                             pool_size=pool_size,
                             scoring_system=scoring_rules,
+                            region_order=region_order,
                         )
                     except Exception:
                         continue
@@ -869,7 +843,7 @@ def _build_probabilities(mode, year, seeds, data_dir, walk_forward: bool = False
 
         barthag = load_torvik_barthag(year, seeds, data_dir=data_dir)
         pairwise = build_torvik_probabilities(seeds, barthag)
-        round_probs = build_torvik_round_probabilities(seeds, regions, barthag)
+        round_probs = build_torvik_round_probabilities(seeds, regions, barthag, region_order=_region_order(year, seeds, regions))
         print(f"  {len(barthag)} teams with barthag ratings")
         print(f"  {len(pairwise)} torvik pairwise probabilities")
         print(f"  {len(round_probs)} teams with torvik round probs")
@@ -907,7 +881,7 @@ def _build_probabilities(mode, year, seeds, data_dir, walk_forward: bool = False
         model = train_noseed_model(max_year=train_max_year)
         stats = _load_team_stats(year)
         pairwise = build_noseed_probabilities(model, seeds, stats)
-        round_probs = build_noseed_round_probabilities(model, seeds, stats)
+        round_probs = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
         print(f"  {len(pairwise)} no-seed pairwise probabilities")
         print(f"  {len(round_probs)} teams with no-seed round probs")
         return pairwise, round_probs
@@ -931,7 +905,7 @@ def _build_probabilities(mode, year, seeds, data_dir, walk_forward: bool = False
         model = train_noseed_model(max_year=train_max_year)
         stats = _load_team_stats(year)
         noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
-        noseed_round = build_noseed_round_probabilities(model, seeds, stats)
+        noseed_round = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
         pairwise = build_blend_probabilities(seed_pairwise, noseed_pairwise, alpha=0.5)
         round_probs = build_blend_round_probabilities(seed_round, noseed_round, alpha=0.5)
         print(f"  {len(pairwise)} blended pairwise probabilities")

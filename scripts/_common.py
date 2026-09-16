@@ -214,6 +214,14 @@ def load_seeds_and_regions(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
     return seeds, regions
 
 
+def load_seeds_block(year: int) -> Dict:
+    """The raw `seeds` block of tournament_context_{year}.json (or the old
+    tournament_seeds file), or {} if absent. Carries `f4_pairing` for a
+    prospective season -- see src/simulation/bracket_topology.resolve_region_order."""
+    data = _load_context_subkey(year, "seeds", f"tournament_seeds_{year}.json")
+    return data if isinstance(data, dict) else {}
+
+
 def load_team_metrics(year: int) -> Dict[str, dict]:
     """Return `team_id -> metrics-dict` mapping for `year`, or {} if
     missing. Reads from the consolidated `tournament_context_{year}.json`

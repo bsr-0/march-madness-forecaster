@@ -157,4 +157,76 @@ check('ties are excluded rather than scored as a loss', () => {
   close(F.logLossFor(withTies, 1, 3) * 3, F.logLossFor(noTies, 1, 3) * 2, 1e-12);
 });
 
+
+console.log('causal calibration for a displayed season (audit 2026-09, Step 2 P1-1)');
+
+/* Synthetic matrix: 14 seasons, one variable, true margin = 8x + noise.
+ * Seasons >= asOf are then CORRUPTED (margins flipped) -- a calibration that
+ * looks at them will move; one that only sees strictly earlier seasons cannot.
+ * This is the regression test for the page fitting (a, nu) on the season it
+ * was displaying. */
+function synthMatrix(corruptFrom) {
+  const rows = [];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const gauss = () => { const u = rnd() || 1e-9, v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const years = [];
+  for (let y = 2010; y <= 2026; y++) {
+    if (y === 2020) continue;
+    years.push(y);
+    for (let i = 0; i < 63; i++) {
+      const x = gauss();
+      let m = Math.round(8 * x + 11 * gauss());
+      if (corruptFrom !== null && y >= corruptFrom) m = -m - 25;   // wildly wrong sign and scale
+      rows.push({ y, x: [x], m });
+    }
+  }
+  return { rows, years };
+}
+
+check('calibration for asOf is unchanged when seasons >= asOf are corrupted', () => {
+  const clean = synthMatrix(null);
+  const dirty = synthMatrix(2019);
+  const a = F.causalWalkForward(clean.rows, [0], clean.years, 2019, 2014);
+  const b = F.causalWalkForward(dirty.rows, [0], dirty.years, 2019, 2014);
+  assert.ok(a && b, 'both should evaluate');
+  close(a.calibration.a, b.calibration.a, 1e-12, 'scale a');
+  assert.strictEqual(a.calibration.nu, b.calibration.nu, 'tail nu');
+  assert.strictEqual(a.n, b.n, 'held-out row count');
+  assert.ok(a.n === 63 * 5, `only 2014-2018 are held out for 2019, got ${a.n} rows`);
+});
+
+check('the old global crossValidate DOES move under the same corruption (the defect)', () => {
+  // Documents why the helper exists: this is the behaviour app.js had.
+  const clean = synthMatrix(null);
+  const dirty = synthMatrix(2019);
+  const a = F.crossValidate(clean.rows, [0], clean.years, 2014);
+  const b = F.crossValidate(dirty.rows, [0], dirty.years, 2014);
+  assert.ok(Math.abs(a.calibration.a - b.calibration.a) > 0.05 || a.calibration.nu !== b.calibration.nu,
+    'global calibration should be contaminated by later seasons; if not, the fixture is too weak');
+});
+
+check('scale is shrunk toward 1 with weight n/(n+63)', () => {
+  const { rows, years } = synthMatrix(null);
+  const o = F.causalWalkForward(rows, [0], years, 2026, 2014);
+  const w = o.n / (o.n + F.CAL_PRIOR_STRENGTH);
+  close(o.calibration.a, w * o.calibrationRaw.a + (1 - w), 1e-12, 'shrunk a');
+  assert.strictEqual(o.calibration.nu, o.calibrationRaw.nu);
+});
+
+check('a season with no earlier held-out folds yields null rather than a leaked calibration', () => {
+  const { rows, years } = synthMatrix(null);
+  assert.strictEqual(F.causalWalkForward(rows, [0], years, 2014, 2014), null);
+});
+
+check('app.js refit() uses the causal helper (guards against reverting to crossValidate)', () => {
+  const fs = require('fs');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'docs', 'app.js'), 'utf8');
+  const refit = src.slice(src.indexOf('function refit()'), src.indexOf('function diffVector'));
+  assert.ok(/causalWalkForward\(state\.training\.games,\s*cols,\s*state\.training\.years,\s*state\.year/.test(refit),
+    'refit() must calibrate via causalWalkForward(..., state.year, ...)');
+  const code = refit.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  assert.ok(!/crossValidate\(/.test(code), 'refit() must not call crossValidate directly');
+});
+
 console.log(`\n${passed} checks passed`);

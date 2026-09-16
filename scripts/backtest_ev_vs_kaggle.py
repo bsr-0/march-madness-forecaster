@@ -135,7 +135,7 @@ def main():
 
             # --- Condition 2: No-seed model probabilities ---
             noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
-            noseed_round = build_noseed_round_probabilities(model, seeds, stats)
+            noseed_round = build_noseed_round_probabilities(model, seeds, stats, as_of=test_year)
             noseed_leverage = run_optimizer(noseed_pairwise, noseed_round, opponent_picks)
 
             # --- Condition 3: Blend (50/50 seed + no-seed) ---

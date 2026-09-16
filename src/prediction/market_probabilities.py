@@ -37,6 +37,17 @@ def load_market_ratings(
 ) -> Optional[Dict[str, float]]:
     """Derive barthag-equivalent ratings from season betting odds.
 
+    DEFECTIVE CONSTRUCTION -- kept only to reproduce pre-audit numbers.
+    The 2026-09 referee qualification audit found (from the inputs alone,
+    before any calibration was seen) that this loader (1) never resolves the
+    SBRO-era team spellings, so 27-33 of 68 tournament teams per season in
+    2011-2022 fall to the seed proxy, and (2) drops every |spread| > 5 game
+    whose spread sign disagrees with the implied probability, a convention
+    SBRO rows follow only 29-45% of the time, so most decisive games are
+    discarded. Since the methodology audit (Step 7, D7-1) every runtime
+    caller uses :func:`load_market_ratings_v2`; call this one only with
+    ``allow_defective=True`` semantics in mind, i.e. never for a new number.
+
     Fits a Bradley-Terry model to all regular-season games with odds data,
     using market-implied win probabilities as observations. Produces a
     per-team strength parameter that can be fed to Log5 for arbitrary

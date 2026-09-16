@@ -282,8 +282,8 @@ def test_torvik_round_probabilities_are_bit_exact() -> None:
         pytest.skip("2026 data unavailable")
     if barthag is None:
         pytest.skip("torvik barthag for 2026 unavailable")
-    a = build_torvik_round_probabilities(seeds, regions, barthag)
-    b = build_torvik_round_probabilities(seeds, regions, barthag)
+    a = build_torvik_round_probabilities(seeds, regions, barthag, region_order=('East', 'West', 'South', 'Midwest'))
+    b = build_torvik_round_probabilities(seeds, regions, barthag, region_order=('East', 'West', 'South', 'Midwest'))
     assert set(a.keys()) == set(b.keys())
     for tid in a:
         for rnd in a[tid]:
@@ -319,7 +319,7 @@ def test_seed42_bracket_sampling_is_bit_exact() -> None:
         pytest.skip("torvik barthag for 2026 unavailable")
     region_order = derive_f4_region_pairing(games, regions)
     first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
-    round_probs = build_torvik_round_probabilities(seeds, regions, barthag)
+    round_probs = build_torvik_round_probabilities(seeds, regions, barthag, region_order=('East', 'West', 'South', 'Midwest'))
 
     rng_a = np.random.default_rng(42)
     rng_b = np.random.default_rng(42)

@@ -485,6 +485,9 @@ def main() -> int:
                     {
                         "y": year,
                         "d": boundary,
+                        "t1": ca,   # canonical ids (team1 = lexicographically smaller), so a row can be
+                        "t2": cb,   # joined to any other model of the same game (audit Step 10)
+                        "gd": int(g.day),
                         "w": won,
                         "m": margin,
                         "ic": int(

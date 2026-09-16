@@ -521,7 +521,7 @@ def _load_year_data(
     first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
 
     # Build all available round_probs
-    base_round_probs = _build_base_round_probs(year, seeds, regions, data_root)
+    base_round_probs = _build_base_round_probs(year, seeds, regions, data_root, region_order=region_order)
 
     # ESPN pick distribution
     pick_dist = _load_pick_distribution(year, seeds, data_root)
@@ -537,6 +537,8 @@ def _build_base_round_probs(
     seeds: Dict[str, int],
     regions: Dict[str, str],
     data_root: Path,
+    *,
+    region_order=None,
 ) -> Dict[str, Dict[str, Dict[str, float]]]:
     """Build round_probs from all available probability bases for a year."""
     import json
@@ -577,9 +579,9 @@ def _build_base_round_probs(
 
     # Market odds
     try:
-        from src.prediction.market_probabilities import load_market_ratings
+        from src.prediction.market_probabilities import load_market_ratings_v2
 
-        market_barthag = load_market_ratings(year, seeds)
+        market_barthag = load_market_ratings_v2(year, seeds)  # v1 is defective (audit Step 7, D7-1)
         if market_barthag is not None:
             brp["odds"] = _build_mc_round_probs(seeds, regions, market_barthag)
     except (FileNotFoundError, ImportError):
@@ -609,7 +611,7 @@ def _build_base_round_probs(
     try:
         from src.prediction.massey_best_probabilities import build_massey_best_round_probabilities
 
-        massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=data_root)
+        massey_best_rp = build_massey_best_round_probabilities(seeds, regions, test_year=year, data_root=data_root, region_order=region_order)
         if massey_best_rp is not None:
             brp["massey_best"] = massey_best_rp
     except (FileNotFoundError, ImportError):
@@ -629,7 +631,7 @@ def _build_base_round_probs(
     try:
         from src.prediction.stacked_probabilities import build_stacked_round_probabilities
 
-        stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=data_root)
+        stacked_rp = build_stacked_round_probabilities(seeds, regions, test_year=year, data_root=data_root, region_order=region_order)
         if stacked_rp is not None:
             brp["stacked"] = stacked_rp
     except (FileNotFoundError, ImportError):

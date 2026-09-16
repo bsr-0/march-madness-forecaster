@@ -1,0 +1,602 @@
+[
+ {
+  "year": 2011,
+  "real_order": [
+   "West",
+   "East",
+   "South",
+   "Midwest"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "kansas",
+     "ohio_state"
+    ],
+    "construction_champ": "ohio_state",
+    "scored_f4": [
+     "kansas",
+     "ohio_state"
+    ],
+    "scored_champ": "ohio_state",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "ohio_state",
+     "pittsburgh"
+    ],
+    "construction_champ": "ohio_state",
+    "scored_f4": [
+     "ohio_state",
+     "pittsburgh"
+    ],
+    "scored_champ": "ohio_state",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2012,
+  "real_order": [
+   "South",
+   "West",
+   "Midwest",
+   "East"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0063,
+  "max_dCHAMP": 0.0022,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "construction_champ": "kentucky",
+    "scored_f4": [
+     "kentucky",
+     "ohio_state"
+    ],
+    "scored_champ": "kentucky",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "kentucky",
+     "north_carolina"
+    ],
+    "construction_champ": "north_carolina",
+    "scored_f4": [
+     "kentucky",
+     "north_carolina"
+    ],
+    "scored_champ": "north_carolina",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2013,
+  "real_order": [
+   "Midwest",
+   "West",
+   "South",
+   "East"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0491,
+  "max_dCHAMP": 0.013,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "indiana",
+     "louisville"
+    ],
+    "construction_champ": "indiana",
+    "scored_f4": [
+     "indiana",
+     "louisville"
+    ],
+    "scored_champ": "indiana",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "indiana",
+     "louisville"
+    ],
+    "construction_champ": "louisville",
+    "scored_f4": [
+     "indiana",
+     "louisville"
+    ],
+    "scored_champ": "louisville",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2014,
+  "real_order": [
+   "Midwest",
+   "West",
+   "East",
+   "South"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0407,
+  "max_dCHAMP": 0.0092,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "florida",
+     "louisville"
+    ],
+    "construction_champ": "louisville",
+    "scored_f4": [
+     "florida",
+     "louisville"
+    ],
+    "scored_champ": "louisville",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "arizona",
+     "florida"
+    ],
+    "construction_champ": "arizona",
+    "scored_f4": [
+     "arizona",
+     "florida"
+    ],
+    "scored_champ": "arizona",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2015,
+  "real_order": [
+   "West",
+   "Midwest",
+   "South",
+   "East"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0497,
+  "max_dCHAMP": 0.0136,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "kentucky",
+     "virginia"
+    ],
+    "construction_champ": "kentucky",
+    "scored_f4": [
+     "kentucky",
+     "virginia"
+    ],
+    "scored_champ": "kentucky",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "duke",
+     "kentucky"
+    ],
+    "construction_champ": "kentucky",
+    "scored_f4": [
+     "duke",
+     "kentucky"
+    ],
+    "scored_champ": "kentucky",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2016,
+  "real_order": [
+   "East",
+   "Midwest",
+   "South",
+   "West"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0265,
+  "max_dCHAMP": 0.0084,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "kansas",
+     "virginia"
+    ],
+    "construction_champ": "kansas",
+    "scored_f4": [
+     "kansas",
+     "virginia"
+    ],
+    "scored_champ": "kansas",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "kansas",
+     "north_carolina"
+    ],
+    "construction_champ": "north_carolina",
+    "scored_f4": [
+     "kansas",
+     "north_carolina"
+    ],
+    "scored_champ": "north_carolina",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2017,
+  "real_order": [
+   "West",
+   "East",
+   "South",
+   "Midwest"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "gonzaga",
+     "north_carolina"
+    ],
+    "construction_champ": "gonzaga",
+    "scored_f4": [
+     "gonzaga",
+     "north_carolina"
+    ],
+    "scored_champ": "gonzaga",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "north_carolina",
+     "villanova"
+    ],
+    "construction_champ": "north_carolina",
+    "scored_f4": [
+     "north_carolina",
+     "villanova"
+    ],
+    "scored_champ": "north_carolina",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2018,
+  "real_order": [
+   "East",
+   "Midwest",
+   "South",
+   "West"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.031,
+  "max_dCHAMP": 0.0109,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "villanova",
+     "virginia"
+    ],
+    "construction_champ": "virginia",
+    "scored_f4": [
+     "villanova",
+     "virginia"
+    ],
+    "scored_champ": "virginia",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "villanova",
+     "virginia"
+    ],
+    "construction_champ": "virginia",
+    "scored_f4": [
+     "villanova",
+     "virginia"
+    ],
+    "scored_champ": "virginia",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2019,
+  "real_order": [
+   "South",
+   "Midwest",
+   "West",
+   "East"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "construction_champ": "virginia",
+    "scored_f4": [
+     "gonzaga",
+     "virginia"
+    ],
+    "scored_champ": "virginia",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "duke",
+     "virginia"
+    ],
+    "construction_champ": "duke",
+    "scored_f4": [
+     "duke",
+     "virginia"
+    ],
+    "scored_champ": "duke",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2021,
+  "real_order": [
+   "South",
+   "Midwest",
+   "West",
+   "East"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "gonzaga",
+     "houston"
+    ],
+    "construction_champ": "gonzaga",
+    "scored_f4": [
+     "gonzaga",
+     "houston"
+    ],
+    "scored_champ": "gonzaga",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "baylor",
+     "gonzaga"
+    ],
+    "construction_champ": "gonzaga",
+    "scored_f4": [
+     "baylor",
+     "gonzaga"
+    ],
+    "scored_champ": "gonzaga",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2022,
+  "real_order": [
+   "Midwest",
+   "South",
+   "West",
+   "East"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "gonzaga",
+     "kansas"
+    ],
+    "construction_champ": "gonzaga",
+    "scored_f4": [
+     "gonzaga",
+     "kansas"
+    ],
+    "scored_champ": "gonzaga",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "baylor",
+     "kansas"
+    ],
+    "construction_champ": "baylor",
+    "scored_f4": [
+     "baylor",
+     "kansas"
+    ],
+    "scored_champ": "baylor",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2023,
+  "real_order": [
+   "West",
+   "Midwest",
+   "South",
+   "East"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0161,
+  "max_dCHAMP": 0.0028,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "alabama",
+     "houston"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "alabama",
+     "houston"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "houston",
+     "purdue"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "houston",
+     "purdue"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2024,
+  "real_order": [
+   "East",
+   "West",
+   "Midwest",
+   "South"
+  ],
+  "matches_default": true,
+  "max_dF4": 0.0,
+  "max_dCHAMP": 0.0,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "connecticut",
+     "houston"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "connecticut",
+     "houston"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "connecticut",
+     "houston"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "connecticut",
+     "houston"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2025,
+  "real_order": [
+   "West",
+   "South",
+   "Midwest",
+   "East"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.0499,
+  "max_dCHAMP": 0.0108,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "auburn",
+     "houston"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "auburn",
+     "houston"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "auburn",
+     "houston"
+    ],
+    "construction_champ": "houston",
+    "scored_f4": [
+     "auburn",
+     "houston"
+    ],
+    "scored_champ": "houston",
+    "mismatch": false
+   }
+  }
+ },
+ {
+  "year": 2026,
+  "real_order": [
+   "West",
+   "Midwest",
+   "East",
+   "South"
+  ],
+  "matches_default": false,
+  "max_dF4": 0.016,
+  "max_dCHAMP": 0.0039,
+  "bases": {
+   "torvik": {
+    "construction_f4": [
+     "duke",
+     "michigan"
+    ],
+    "construction_champ": "michigan",
+    "scored_f4": [
+     "duke",
+     "michigan"
+    ],
+    "scored_champ": "michigan",
+    "mismatch": false
+   },
+   "blend": {
+    "construction_f4": [
+     "duke",
+     "michigan"
+    ],
+    "construction_champ": "duke",
+    "scored_f4": [
+     "duke",
+     "michigan"
+    ],
+    "scored_champ": "duke",
+    "mismatch": false
+   }
+  }
+ }
+]

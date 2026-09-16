@@ -71,14 +71,14 @@ class TestAnUndeterminedDrawIsRefused:
 
         seeds, regions, _ = _field(play_in_slots)
         with pytest.raises(ValueError, match="more than one team"):
-            build_bracket_order(seeds, regions)
+            build_bracket_order(seeds, regions, region_order=('East', 'West', 'South', 'Midwest'))
 
     def test_the_error_names_the_contested_slots(self):
         from scripts.mc_pool_backtest import build_bracket_order
 
         seeds, regions, contested = _field(12)
         with pytest.raises(ValueError) as exc:
-            build_bracket_order(seeds, regions)
+            build_bracket_order(seeds, regions, region_order=('East', 'West', 'South', 'Midwest'))
         assert "12 bracket slot(s)" in str(exc.value)
         region, seed, incumbent, challenger = contested[0]
         assert incumbent in str(exc.value) and challenger in str(exc.value)
@@ -96,7 +96,7 @@ class TestTwelvePlayInGamesResolveToSixtyFour:
         assert replaced == play_in_slots
         assert len(seeds) == 64
 
-        order = build_bracket_order(seeds, regions)
+        order = build_bracket_order(seeds, regions, region_order=('East', 'West', 'South', 'Midwest'))
         assert len(order) == 64
         assert not [t for t in order if t.startswith("unknown_")], "placeholder slots in the draw"
         assert len(set(order)) == 64, "a team appears twice in the draw"
@@ -107,7 +107,7 @@ class TestTwelvePlayInGamesResolveToSixtyFour:
 
         seeds, regions, contested = _field(12)
         resolve_first_four(_play_in_games(contested, winner_is_challenger=False), seeds, regions)
-        order = set(build_bracket_order(seeds, regions))
+        order = set(build_bracket_order(seeds, regions, region_order=('East', 'West', 'South', 'Midwest')))
         for _region, _seed, incumbent, challenger in contested:
             assert incumbent in order, f"{incumbent} won its play-in game and is not in the draw"
             assert challenger not in order, f"{challenger} lost its play-in game and is in the draw"

@@ -22,8 +22,8 @@ pytest tests/test_pool_strategy.py -v                        # strategy validati
 
 ### Run the Full MC Backtest
 ```bash
-python scripts/mc_pool_backtest.py                           # all modes, 2011–2025
-python scripts/mc_pool_backtest.py --modes seed noseed blend # specific modes
+python -m scripts.mc_pool_backtest                           # all modes, 2011–2025
+python -m scripts.mc_pool_backtest --modes seed noseed blend # specific modes
 ```
 Results auto-log to `artifacts/backtest_runs/mc_pool_backtest_<ts>.txt`.
 

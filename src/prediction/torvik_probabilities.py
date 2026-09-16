@@ -95,6 +95,8 @@ def build_torvik_round_probabilities(
     regions: Dict[str, str],
     barthag: Dict[str, float],
     n_sims: int = 10000,
+    *,
+    region_order,
 ):
     """Per-round advancement probabilities via bracket Monte Carlo.
 
@@ -108,4 +110,4 @@ def build_torvik_round_probabilities(
         build_torvik_round_probabilities as _backtest_build_torvik_round_probabilities,
     )
 
-    return _backtest_build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims)
+    return _backtest_build_torvik_round_probabilities(seeds, regions, barthag, n_sims=n_sims, region_order=region_order)

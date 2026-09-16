@@ -24,7 +24,7 @@ block in src/data/seed_pick_model.py.
 from __future__ import annotations
 
 from itertools import combinations
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from src.data.seed_pick_model import _compute_advancement_rates, _win_rate
 
@@ -33,23 +33,30 @@ from src.data.seed_pick_model import _compute_advancement_rates, _win_rate
 OUTCOME_WINDOW = "recent"
 
 
-def seed_matchup_probability(seed1: int, seed2: int) -> float:
+def seed_matchup_probability(seed1: int, seed2: int, as_of: Optional[int] = None) -> float:
     """Return P(seed1 beats seed2) using historical tournament data.
 
     Delegates to the canonical _win_rate function, on the recent window,
     with a logistic seed-difference fallback for matchups too thin to
-    estimate.
+    estimate. ``as_of`` excludes seasons >= as_of from the table; pass the
+    season being predicted whenever that season's results exist on disk.
     """
-    return _win_rate(seed1, seed2, OUTCOME_WINDOW)
+    return _win_rate(seed1, seed2, OUTCOME_WINDOW, as_of)
 
 
 def build_seed_probabilities(
     teams: Dict[str, int],
+    as_of: Optional[int] = None,
 ) -> Dict[Tuple[str, str], float]:
     """Build pairwise win probabilities for all team pairs.
 
     Args:
         teams: Mapping of team_id -> seed for all tournament teams.
+        as_of: the season these probabilities are FOR. Seasons >= as_of are
+            excluded from the seed-vs-seed table, so a historical season is
+            never scored against a referee that saw its own results
+            (2026-09 audit, Step 2 item 14). None = use every season on
+            disk, which is only correct for a prospective season.
 
     Returns:
         Dict of (team1_id, team2_id) -> P(team1 wins) for every
@@ -59,7 +66,7 @@ def build_seed_probabilities(
     probs: Dict[Tuple[str, str], float] = {}
     team_ids = list(teams.keys())
     for t1, t2 in combinations(team_ids, 2):
-        p = _win_rate(teams[t1], teams[t2], OUTCOME_WINDOW)
+        p = _win_rate(teams[t1], teams[t2], OUTCOME_WINDOW, as_of)
         probs[(t1, t2)] = p
         probs[(t2, t1)] = 1.0 - p
     return probs
@@ -67,18 +74,20 @@ def build_seed_probabilities(
 
 def build_seed_round_probabilities(
     teams: Dict[str, int],
+    as_of: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Build per-round advancement probabilities for each team.
 
     Args:
         teams: Mapping of team_id -> seed for all tournament teams.
+        as_of: see :func:`build_seed_probabilities`.
 
     Returns:
         Dict of team_id -> {"R64": p, "R32": p, "S16": p, "E8": p,
         "F4": p, "CHAMP": p}. This is the ``model_round_probs``
         format consumed by PoolOptimizer and MonteCarloEngine.
     """
-    seed_rates = _compute_advancement_rates(OUTCOME_WINDOW)
+    seed_rates = _compute_advancement_rates(OUTCOME_WINDOW, as_of)
     result: Dict[str, Dict[str, float]] = {}
     for team_id, seed in teams.items():
         result[team_id] = dict(seed_rates[seed])

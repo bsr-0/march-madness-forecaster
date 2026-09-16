@@ -1,0 +1,26 @@
+== R-4 gate definitions (frozen; identical to Steps 10-12) ==
+dLL = LL(variant) - LL(M0) per season; gate1 tuning mean<=0 & 2.5th pct<=0; gate2 recent mean<0 & 97.5th pct<0; gate3 |subset| tolerance +0.01 ABSOLUTE LL; gate4 slope in [0.8,1.2]
+upset subset = games won by the lower dated-barthag team (pre-tournament sign); MU weight on training rows where the lower-barthag team won
+
+M0 reproduces production walk_forward probabilities: max abs diff = 2.2870594307278225e-14
+subsets over all rows: upset 286, chalk 722, zero-gap 0
+
+== tuning 2014-2022: M0 mean LL 0.4678
+  M2(0.85)  LL 0.4678  dLL +0.0001 [-0.0033, +0.0025]  gate1 FAIL
+  M2(0.70)  LL 0.4695  dLL +0.0017 [-0.0054, +0.0072]  gate1 FAIL
+  M3        LL 0.4736  dLL +0.0059 [-0.0063, +0.0174]  gate1 FAIL
+  MU(2)     LL 0.4776  dLL +0.0098 [-0.0005, +0.0207]  gate1 FAIL
+  MU(4)     LL 0.5202  dLL +0.0524 [+0.0261, +0.0826]  gate1 FAIL
+FROZEN choice (written before recent regime): None
+
+== recent 2023-2025: M0 LL 0.4172  upset 0.9607  chalk 0.2607  slope 1.323
+  M2(0.85)  LL 0.4212  dLL +0.0040 [+0.0014, +0.0075] g2 F | upset -0.0053 chalk +0.0068 g3 P | slope 1.333 g4 F
+  M2(0.70)  LL 0.4260  dLL +0.0088 [+0.0009, +0.0190] g2 F | upset -0.0110 chalk +0.0159 g3 F | slope 1.282 g4 F
+  M3        LL 0.4350  dLL +0.0178 [+0.0093, +0.0330] g2 F | upset -0.0459 chalk +0.0413 g3 F | slope 1.197 g4 P
+  MU(2)     LL 0.4277  dLL +0.0105 [-0.0029, +0.0253] g2 F | upset -0.1208 chalk +0.0465 g3 F | slope 1.318 g4 F
+  MU(4)     LL 0.4968  dLL +0.0796 [+0.0338, +0.1361] g2 F | upset -0.2760 chalk +0.1763 g3 F | slope 1.353 g4 F
+
+== 2026 (integration season, transparency only, no gate) ==
+  M0 LL 0.4702; M2(0.85) -0.0029  M2(0.70) -0.0023  M3 +0.0191  MU(2) +0.0104  MU(4) +0.0482
+
+VERDICT for frozen choice None: NO VARIANT PASSED GATE 1 -> negative

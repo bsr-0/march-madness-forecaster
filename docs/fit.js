@@ -493,6 +493,43 @@ function crossValidate(rows, cols, years, minYear) {
   };
 }
 
+/* Walk-forward evaluation and calibration for a DISPLAYED season, causally.
+ *
+ * crossValidate() above fits the link's (a, nu) on every held-out row it is
+ * handed. Handing it the whole matrix and then using that calibration to show
+ * season Y means two link parameters were estimated from Y's own outcomes --
+ * and from every later season's. The margins were out of sample; the
+ * calibration was not. Found in the 2026-09 methodology audit (Step 2, P1-1):
+ * the page used one global a=1.53, nu=3 for every season from 2014 to 2026.
+ *
+ * This is the caller-side discipline scripts/model_baseline.js and
+ * src/prediction/pit_production_model.py already apply, moved into fit.js so
+ * the page cannot drift from them again: only seasons strictly before `asOf`
+ * are evaluated, and `a` is shrunk toward 1 with weight n / (n + 63) because
+ * the per-year fits are noisy (one season is 63 binary outcomes). For the
+ * prospective season nothing is lost -- every prior row is still used -- and
+ * for a historical season the displayed probabilities no longer know how that
+ * tournament ended.
+ */
+const CAL_PRIOR_STRENGTH = 63;
+
+function causalWalkForward(rows, cols, years, asOf, minYear) {
+  const priorRows = rows.filter(r => r.y < asOf);
+  const priorYears = years.filter(y => y < asOf);
+  const oos = crossValidate(priorRows, cols, priorYears, minYear);
+  if (!oos) return null;
+  const n = oos.n;
+  const w = n / (n + CAL_PRIOR_STRENGTH);
+  oos.calibrationRaw = oos.calibration;
+  oos.calibration = {
+    a: w * oos.calibration.a + (1 - w) * 1,
+    nu: oos.calibration.nu,
+    priorN: n,
+    shrinkWeight: w,
+  };
+  return oos;
+}
+
 /* Per-coefficient summary across the walk-forward folds.
  *
  * `signFlips` is the one to read first: a variable whose coefficient changes
@@ -594,6 +631,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
     winProbFromMargin, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
-    solve, stability, FIT, PROB_CLIP,
+    solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
   };
 }

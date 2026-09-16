@@ -265,7 +265,7 @@ def main():
             seed_rp = build_seed_round_probabilities(seeds)
 
             noseed_pw = build_noseed_probabilities(model, seeds, stats)
-            noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+            noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=test_year)
 
             blend_pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=0.5)
             blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)

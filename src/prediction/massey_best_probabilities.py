@@ -299,6 +299,8 @@ def build_massey_best_round_probabilities(
     data_root: Path,
     n_sims: int = 10000,
     min_games: int = _DEFAULT_MIN_GAMES,
+    *,
+    region_order,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """End-to-end: select best system → load its ratings → ProbabilityBase.
 
@@ -329,4 +331,4 @@ def build_massey_best_round_probabilities(
     # which keeps the pairwise table attached to the marginals it generated.
     from scripts.mc_pool_backtest import build_base_from_ratings
 
-    return build_base_from_ratings("massey_best", seeds, regions, barthag, n_sims=n_sims)
+    return build_base_from_ratings("massey_best", seeds, regions, barthag, n_sims=n_sims, region_order=region_order)

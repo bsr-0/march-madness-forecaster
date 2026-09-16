@@ -1,0 +1,225 @@
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+No ESPN picks for 2012, cannot extrapolate pool
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Picks 2023: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['texas_southern', 'mississippi_state', 'southeast_missouri_state', 'nevada']
+Picks 2024: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['virginia', 'montana_state', 'boise_state', 'howard']
+Picks 2025: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['american', 'texas', 'san_diego_state', 'saint_francis']
+Picks 2026: 4 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['nc_state', 'lehigh', 'southern_methodist', 'maryland_baltimore_county']
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): SDSD×1
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+Pool history: 1 abbreviation(s) could not be resolved and were DROPPED (no silent fallback): ISI×1
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+No unified odds for 2005, returning None
+No unified odds for 2006, returning None
+No unified odds for 2007, returning None
+====================================================================================================
+MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]
+====================================================================================================
+  Pool size: actual per season (pool_hist_results.json) where available, else 30
+  Opponent model: pool pick rates (independent draws)
+  Payout: winner_take_all — 1 of 30 places pay (100%)
+  Model brackets per mode: 50 (stochastic, NOT argmax)
+  Repeats per year: 100 (reduces opponent sampling variance)
+  Years: 15
+  Hparam fitter: __main__.fitter
+  Scoring: team-identity (real ESPN, §2 O26/O27)
+  Opponent strategy: shared (shared = paired comparison; per_mode = independent streams)
+
+  Year   Mode        BestRnk  MeanRnk   P(1st)  P(top5)  P(top25)  BestScr  MeanScr
+  ------------------------------------------------------------------------------------------
+  2011   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 20, P1=0.056)
+  2011   meta_region_poolaware META bracket built (1 deterministic)
+  2011   seed           11.0     21.0    0.032    0.036     0.143      580      494
+  2011   meta_region_poolaware     10.1     10.1    0.020    0.030     0.430      580      580
+  2012   meta_region_poolaware    selected=tv_champ=syracuse (best of 22, P1=0.058)
+  2012   meta_region_poolaware META bracket built (1 deterministic)
+  2012   seed           15.3     20.6    0.019    0.021     0.143      760      742
+  2012   meta_region_poolaware     16.5     16.5    0.050    0.060     0.190      970      970
+  2013   meta_region_poolaware    selected=mass_avg_region_risk=0.9 (best of 22, P1=0.120)
+  2013   meta_region_poolaware META bracket built (1 deterministic)
+  2013   seed           13.6     19.7    0.039    0.039     0.172      510      530
+  2013   meta_region_poolaware     11.5     11.5    0.170    0.180     0.420      570      570
+  2014   meta_region_poolaware    selected=blend_region_risk=0.9 (best of 23, P1=0.178)
+  2014   meta_region_poolaware META bracket built (1 deterministic)
+  2014   seed           10.4     19.6    0.048    0.051     0.196      540      496
+  2014   meta_region_poolaware     12.9     12.9    0.090    0.090     0.460      480      480
+  2015   meta_region_poolaware    selected=blend_exhaust_risk=0.3 (best of 30, P1=0.136)
+  2015   meta_region_poolaware META bracket built (1 deterministic)
+  2015   seed           12.8     20.0    0.048    0.052     0.188      890      710
+  2015   meta_region_poolaware     11.1     11.1    0.160    0.160     0.460     1040     1040
+  2016   meta_region_poolaware    selected=blend_region_risk=0.1 (best of 30, P1=0.188)
+  2016   meta_region_poolaware META bracket built (1 deterministic)
+  2016   seed           10.3     17.5    0.068    0.073     0.251      810      636
+  2016   meta_region_poolaware      8.4      8.4    0.210    0.230     0.590      870      870
+  2017   meta_region_poolaware    selected=mass_avg_region_risk=0.1 (best of 26, P1=0.098)
+  2017   meta_region_poolaware META bracket built (1 deterministic)
+  2017   seed           14.1     19.8    0.024    0.026     0.164     1520      723
+  2017   meta_region_poolaware      8.8      8.8    0.110    0.110     0.480     1140     1140
+  2018   meta_region_poolaware    selected=blend_region_risk=0.1 (best of 23, P1=0.046)
+  2018   meta_region_poolaware META bracket built (1 deterministic)
+  2018   seed           13.1     19.8    0.030    0.032     0.153      620      603
+  2018   meta_region_poolaware      8.0      8.0    0.070    0.080     0.560      810      810
+  2019   meta_region_poolaware    selected=mass_avg_region_risk=0.1 (best of 24, P1=0.124)
+  2019   meta_region_poolaware META bracket built (1 deterministic)
+  2019   seed           13.5     20.8    0.032    0.034     0.132      630      659
+  2019   meta_region_poolaware     11.9     11.9    0.110    0.110     0.320     1250     1250
+  2021   meta_region_poolaware    selected=blend_region_risk=0.7 (best of 33, P1=0.082)
+  2021   meta_region_poolaware META bracket built (1 deterministic)
+  2021   seed           14.0     20.1    0.035    0.038     0.163      740      650
+  2021   meta_region_poolaware     11.3     11.3    0.070    0.080     0.470     1260     1260
+  2022   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 22, P1=0.132)
+  2022   meta_region_poolaware META bracket built (1 deterministic)
+  2022   seed           12.7     19.0    0.037    0.039     0.173      490      589
+  2022   meta_region_poolaware     10.1     10.1    0.110    0.110     0.420      780      780
+  2023   meta_region_poolaware    selected=mass_avg_region_risk=0.5 (best of 28, P1=0.190)
+  2023   meta_region_poolaware META bracket built (1 deterministic)
+  2023   seed            6.8     12.2    0.061    0.061     0.175      560      442
+  2023   meta_region_poolaware      8.3      8.3    0.170    0.170     0.290      460      460
+  2024   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 27, P1=0.148)
+  2024   meta_region_poolaware META bracket built (1 deterministic)
+  2024   seed           10.2     15.8    0.033    0.033     0.169     1410      754
+  2024   meta_region_poolaware      8.4      8.4    0.130    0.130     0.430     1120     1120
+  2025   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 26, P1=0.164)
+  2025   meta_region_poolaware META bracket built (1 deterministic)
+  2025   seed           14.4     21.0    0.051    0.054     0.175     1550      871
+  2025   meta_region_poolaware     10.0     10.0    0.210    0.220     0.480     1330     1330
+  2026   meta_region_poolaware    selected=blend_region_risk=0.5 (best of 25, P1=0.126)
+  2026   meta_region_poolaware META bracket built (1 deterministic)
+  2026   seed           14.5     20.9    0.034    0.037     0.169      960      721
+  2026   meta_region_poolaware     11.4     11.4    0.110    0.120     0.350      840      840
+
+====================================================================================================
+AGGREGATE EVALUATION YEARS (2011–2025, n=14)
+====================================================================================================
+
+  Mode      BestRnk  MeanRnk   P(1st)    ±95%   n   P(top5%)  P(top25%)  MeanScr
+  -----------------------------------------------------------------------------
+  seed         12.3     19.1   0.0399  0.0079  14     0.0421     0.1712      636
+  meta_region_poolaware     10.5     10.5   0.1200  0.0336  14     0.1257     0.4286      904
+  (±95% = half-width of the t-interval over seasons, the honest unit of independence)
+
+  Statistical Tests — Mean Rank (paired across years):
+    Bonferroni correction: 1 comparisons, α=0.0500
+    MeanRank seed vs meta_region_poolaware:   +8.6 pos, wins 14/14, t=13.167, p=0.0000, p_adj=0.0000 *
+
+  Statistical Tests — Best Bracket Rank (pool optimizer view):
+    Bonferroni correction: 1 comparisons, α=0.0500
+    BestRank seed vs meta_region_poolaware:   +1.8 pos, wins 11/14, t=2.859, p=0.0134, p_adj=0.0134 *
+
+====================================================================================================
+AGGREGATE 2021+ (recent window, n=5 — diagnostic only, low power)
+====================================================================================================
+
+  Mode      BestRnk  MeanRnk   P(1st)    ±95%   n   P(top5%)  P(top25%)  MeanScr
+  -----------------------------------------------------------------------------
+  seed         11.6     17.6   0.0436  0.0152   5     0.0450     0.1711      661
+  meta_region_poolaware      9.6      9.6   0.1380  0.0671   5     0.1420     0.4180      990
+  (±95% = half-width of the t-interval over seasons, the honest unit of independence)
+
+  Statistical Tests — Mean Rank (paired across years):
+    Bonferroni correction: 1 comparisons, α=0.0500
+    MeanRank seed vs meta_region_poolaware:   +8.0 pos, wins 5/5, t=6.722, p=0.0026, p_adj=0.0026 *
+
+  Statistical Tests — Best Bracket Rank (pool optimizer view):
+    Bonferroni correction: 1 comparisons, α=0.0500
+    BestRank seed vs meta_region_poolaware:   +2.0 pos, wins 4/5, t=2.031, p=0.1121, p_adj=0.1121 
+
+  NOTE: 2026 ran as integration season(s) only. Excluded from every aggregate and paired test above and from the returned results (contaminated for evaluation — see PROSPECTIVE_2027_v2.md).
+
+====================================================================================================

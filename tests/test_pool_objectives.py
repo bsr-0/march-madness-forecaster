@@ -55,6 +55,11 @@ def real_trials():
         pytest.skip(f"{year} data unavailable: {exc}")
 
     # The real F4 pairing, not REGION_ORDER -- see test_independent_referee_check.
+    # Play-ins resolved first: the unified builder refuses a contested slot
+    # rather than guessing by file order (2026-09 audit, Step 3).
+    from scripts.mc_pool_backtest import resolve_first_four
+
+    resolve_first_four(games, seeds, regions)
     first_round = build_first_round_matchups(seeds, regions, region_order=derive_f4_region_pairing(games, regions))
     trials = draw_selection_trials(
         60,

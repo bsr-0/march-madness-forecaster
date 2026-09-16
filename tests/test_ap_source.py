@@ -207,7 +207,7 @@ def test_load_ap_strength_barthag_smoke_e2e_with_round_probs_builder():
 
     from scripts.mc_pool_backtest import build_torvik_round_probabilities
 
-    rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=2000)
+    rp = build_torvik_round_probabilities(seeds, regions, barthag, n_sims=2000, region_order=('East', 'West', 'South', 'Midwest'))
     assert set(rp.keys()) == set(seeds.keys())
     # CHAMP sums to ~1; R64 sums to ~32 (path-consistency invariants).
     champ_sum = sum(rp[t]["CHAMP"] for t in rp)
