@@ -130,4 +130,76 @@ check('no usable rows yields null', () => {
   assert.strictEqual(F.variableRecord([{ y: 2000, x: [0], m: 1, r: 'R64' }], 0, 2026), null);
 });
 
+
+console.log('\nmodel sensitivity (exclusion refits, preregistered)');
+
+// Synthetic seasons: margin = 3*x0 + 2*x1 + noise, x2 = x0 + tiny noise (a
+// near-duplicate), x1 independent. Enough rows for folds from 2014.
+function synth(seed) {
+  let s = seed;
+  const rnd = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648 - 0.5; };
+  const rows = [];
+  for (let y = 2010; y <= 2024; y++) {
+    for (let g = 0; g < 63; g++) {
+      const x0 = rnd() * 4, x1 = rnd() * 4, x2 = x0 + rnd() * 0.05;
+      rows.push({ y, x: [x0, x1, x2], m: Math.round(3 * x0 + 2 * x1 + rnd() * 8) || 1, r: 'R64' });
+    }
+  }
+  return rows;
+}
+const YEARS = Array.from({ length: 15 }, (_, i) => 2010 + i);
+
+check('one exclusion model per column, each over the remaining columns', () => {
+  const ex = F.exclusionModels(synth(1), [0, 1, 2], YEARS, 2025, 2014);
+  assert.strictEqual(ex.length, 3);
+  assert.deepStrictEqual(ex[0].cols, [1, 2]);
+  assert.deepStrictEqual(ex[1].cols, [0, 2]);
+  assert.deepStrictEqual(ex[2].cols, [0, 1]);
+  for (const e of ex) { assert.ok(e.fit.ok); assert.strictEqual(e.fit.beta.length, 2); assert.ok(e.oos && e.oos.n > 0); }
+});
+
+check('exclusion is a REFIT: remaining coefficients move when columns are correlated', () => {
+  const rows = synth(2);
+  const full = F.fitLinear(rows, [0, 1, 2], 2025);
+  const ex = F.exclusionModels(rows, [0, 1, 2], YEARS, 2025, 2014);
+  // Without x2 (x0's near-duplicate), x0's coefficient must take up what
+  // the pair used to split. Zeroing x2 would have left it at full.beta[0].
+  const withoutX2 = ex[2].fit;
+  assert.ok(Math.abs(withoutX2.beta[0] - full.beta[0]) > 0.5,
+    `x0 coefficient did not move (${full.beta[0]} -> ${withoutX2.beta[0]}): that is zeroing, not refitting`);
+});
+
+check('absorption is real: excluding one of a duplicated pair barely changes predictions', () => {
+  const rows = synth(3);
+  const full = F.fitLinear(rows, [0, 1, 2], 2025);
+  const ex = F.exclusionModels(rows, [0, 1, 2], YEARS, 2025, 2014);
+  const withoutX2 = ex[2].fit;
+  let maxDiff = 0;
+  for (const r of rows.slice(0, 200)) {
+    const pf = F.predictMargin(full.beta, [0, 1, 2], r.x);
+    const pe = F.predictMargin(withoutX2.beta, [0, 1], r.x);
+    maxDiff = Math.max(maxDiff, Math.abs(pf - pe));
+  }
+  assert.ok(maxDiff < 0.5, `predicted margins moved by up to ${maxDiff} after removing a near-duplicate`);
+  // ...whereas removing the independent x1 changes them a lot.
+  const withoutX1 = ex[1].fit;
+  let big = 0;
+  for (const r of rows.slice(0, 200)) {
+    big = Math.max(big, Math.abs(F.predictMargin(full.beta, [0, 1, 2], r.x) - F.predictMargin(withoutX1.beta, [0, 2], r.x)));
+  }
+  assert.ok(big > 2, `removing an independent signal barely moved predictions (${big})`);
+});
+
+check('the training boundary is the full model\'s: no row at or after asOf is fitted', () => {
+  const rows = synth(4);
+  // Corrupt every row from 2020 on; a fit for asOf=2020 must be unaffected.
+  const clean = F.exclusionModels(rows, [0, 1, 2], YEARS, 2020, 2014);
+  const bad = rows.map(r => (r.y >= 2020 ? { ...r, m: -r.m * 50 } : r));
+  const dirty = F.exclusionModels(bad, [0, 1, 2], YEARS, 2020, 2014);
+  for (let j = 0; j < 3; j++) {
+    assert.deepStrictEqual(dirty[j].fit.beta, clean[j].fit.beta, `column ${j}`);
+    assert.strictEqual(dirty[j].oos.accuracy, clean[j].oos.accuracy);
+  }
+});
+
 console.log(`\n${passed} checks passed`);

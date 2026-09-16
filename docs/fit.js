@@ -876,12 +876,44 @@ function variableRecord(rows, col, asOf) {
   return { n, corr: vx > 0 && vm > 0 ? cov / Math.sqrt(vx * vm) : 0, betterWins: rate(tally.all), byRound };
 }
 
+/* Model sensitivity: the model refit WITHOUT one variable.
+ *
+ * Preregistered in artifacts/methodology_audit/ui_phase_b/
+ * PREREGISTRATION_MODEL_SENSITIVITY.md; this function is that definition.
+ *
+ *   - `cols` minus one column, refit by fitLinear on the same rows and the
+ *     same asOf boundary. Every remaining coefficient is re-estimated: the
+ *     excluded one is not zeroed, and the others are not copied over.
+ *   - The link is calibrated by the same causalWalkForward on the exclusion
+ *     model's own held-out predictions, same folds, same shrinkage.
+ *   - The held-out accuracy and log loss come back beside the column index
+ *     so a caller can put them next to the full model's on the same games.
+ *
+ * WHAT THE NUMBER IS NOT. With correlated columns, removing one lets the
+ * others absorb it, so a small change is not "this information is
+ * unimportant" and a large change is not "this variable is a cause". It is
+ * exactly what it says: the model without this column, refit.
+ *
+ * Returns an array parallel to `cols`: [{ col, cols: remaining, fit, oos }],
+ * where `fit` is fitLinear's result (beta over `remaining`) and `oos` is
+ * causalWalkForward's (null if too little history). Entries whose fit is
+ * not ok are still returned, with fit.ok false, so a caller can say so.
+ */
+function exclusionModels(rows, cols, years, asOf, minYear) {
+  return cols.map((c, j) => {
+    const remaining = cols.filter((_, k) => k !== j);
+    const fit = fitLinear(rows, remaining, asOf);
+    const oos = fit.ok ? causalWalkForward(rows, remaining, years, asOf, minYear) : null;
+    return { col: c, cols: remaining, fit, oos };
+  });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
     winProbFromMargin, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
-    reliabilityTable, RELIABILITY_EDGES, variableRecord,
+    reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
   };
 }
