@@ -533,4 +533,24 @@ check('a picks list naming both teams of a game throws instead of guessing', () 
   assert.throws(() => app.solveFromPicks(), /both picked/);
 });
 
+
+/* ---------- model sensitivity copy (Phase B, preregistered) ----------
+ * The preregistration forbids causal or importance wording for exclusion
+ * refits. The renderer's user-facing strings sit between two markers in
+ * app.js; this scans them. */
+console.log('\nmodel sensitivity wording');
+
+check('no causal or importance words in the sensitivity panel', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'docs', 'app.js'), 'utf8');
+  const a = src.indexOf('/* SENSITIVITY-COPY-START'), b = src.indexOf('/* SENSITIVITY-COPY-END');
+  assert.ok(a > 0 && b > a, 'markers missing');
+  const block = src.slice(a, b)
+    .replace(/\/\*[\s\S]*?\*\//g, '')        // block comments
+    .replace(/^\s*\/\/.*$/gm, '');           // line comments
+  for (const bad of ['contribut', 'causal', 'cause of', 'importance', 'important variable', 'explains', 'accounts for', 'percentage points from', 'effect of']) {
+    assert.ok(!block.toLowerCase().includes(bad), `forbidden wording "${bad}" in the sensitivity panel`);
+  }
+  assert.ok(block.includes('refit excluding'), 'the required phrasing is missing');
+});
+
 console.log(`\n${passed} checks passed`);

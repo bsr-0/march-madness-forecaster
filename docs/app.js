@@ -245,6 +245,7 @@ function refit() {
   // See pairwiseCorrelations() in fit.js for why this is a different check.
   f.corr = pairwiseCorrelations(src.games, cols, state.year);
   state.fit = f;
+  state.sens = null;   // exclusion refits are per fit; recomputed on demand by sensitivity()
 
   // Every team's chance of reaching every round, over the REAL bracket -- not
   // a seed-based base rate (that is a different question, answered on the
@@ -308,6 +309,13 @@ function winProb(a, b) {
 /* Play the bracket out under the fit. Exact ties go to the better seed, then
  * lower index, so the board never jitters on a coin-flip game. */
 function solveByFit() {
+  return solveBracket(winProb);
+}
+
+/* The same walk with any P(a beats b). Exists so the sensitivity panel can
+ * re-solve under an exclusion model with the SAME tie rule as the board,
+ * rather than a second, slightly different walk. */
+function solveBracket(pFn) {
   const teams = state.season.teams;
   let current = state.season.first_round.slice();
   const rounds = [];
@@ -315,7 +323,7 @@ function solveByFit() {
     const games = [], next = [];
     for (let g = 0; g < current.length; g += 2) {
       const a = current[g], b = current[g + 1];
-      const p = winProb(a, b);
+      const p = pFn(a, b);
       let win;
       if (p !== 0.5) win = p > 0.5 ? a : b;
       else if (teams[a].seed !== teams[b].seed) win = teams[a].seed < teams[b].seed ? a : b;
@@ -1122,6 +1130,130 @@ function renderCompare() {
 const ROUND_KEYS = ['R64', 'R32', 'S16', 'E8', 'F4', 'NCG'];
 const ROUND_SHORT = { R64: 'R64', R32: 'R32', S16: 'S16', E8: 'E8', F4: 'F4', NCG: 'Final' };
 
+/* ---------- model sensitivity (Phase B, preregistered) ----------
+ *
+ * artifacts/methodology_audit/ui_phase_b/PREREGISTRATION_MODEL_SENSITIVITY.md
+ * is the definition; fit.js exclusionModels() is the computation; this is
+ * the presentation. Per canonical variable: the model refit without it, its
+ * held-out accuracy and log loss on the same games as the full model, the
+ * probability it assigns to each game on the fitted bracket, and how many
+ * of the 63 slots a re-solve under it would change. Computed once per
+ * season, on demand, cached in state; consulted by nothing outside the
+ * Explore panel.
+ */
+function sensitivity() {
+  if (state.sens && state.sens.year === state.year && state.sens.fitId === state.fit) return state.sens;
+  const f = state.fit, src = state.training;
+  const models = exclusionModels(src.games, f.cols, src.years, state.year, 2014);
+  const byKey = {};
+  models.forEach((m, j) => {
+    const key = f.keys[j];
+    const keys = f.keys.filter((_, k) => k !== j);
+    const cal = m.oos && m.oos.calibration;
+    const pFn = (a, b) => {
+      const z = state.season.z;
+      let t = 0;
+      for (let k = 0; k < keys.length; k++) {
+        const col = z[keys[k]];
+        t += m.fit.beta[k] * (col ? (col[a] || 0) - (col[b] || 0) : 0);
+      }
+      return winProbFromMargin(t, m.fit.sigma, cal);
+    };
+    let changed = null;
+    if (m.fit.ok && state.rounds) {
+      const alt = solveBracket(pFn);
+      changed = 0;
+      state.rounds.forEach((games, r) => games.forEach((g, i) => { if (alt[r][i].win !== g.win) changed++; }));
+    }
+    byKey[key] = { key, ok: m.fit.ok, oos: m.oos, pFn, changed };
+  });
+  state.sens = { year: state.year, fitId: f, byKey };
+  return state.sens;
+}
+
+/* SENSITIVITY-COPY-START -- a test forbids causal/importance wording here. */
+function sensitivityHTML(meta) {
+  const f = state.fit, full = f.oos;
+  if (!full || !state.rounds) return '';
+  const sens = sensitivity();
+  const me = sens.byKey[meta.key];
+  if (!me || !me.ok || !me.oos) return `<p class="ex-line muted">Not enough history to refit without ${meta.label}.</p>`;
+  const pct = v => `${Math.round(v * 100)}%`;
+  const ll = o => (o && o.probScore ? o.probScore.logLoss : null);
+  const dll = ll(me.oos) !== null && ll(full) !== null ? ll(me.oos) - ll(full) : null;
+
+  // Collinear partner, named in the absorption sentence.
+  const i = f.keys.indexOf(meta.key);
+  let partner = null;
+  if (f.corr) {
+    let best = -1, bestAbs = 0;
+    for (let j = 0; j < f.corr[i].length; j++) { if (j === i) continue; const a = Math.abs(f.corr[i][j]); if (a > bestAbs) { bestAbs = a; best = j; } }
+    if (best >= 0 && bestAbs >= COLLINEAR_R) partner = (state.season.variables.find(v => v.key === f.keys[best]) || {}).label || f.keys[best];
+  }
+
+  // Historical: same held-out games, both models.
+  const hist = `
+    <p class="ex-line">Across the same ${full.n} held-out games (${full.seasons} seasons):
+      full model <b>${pct(full.accuracy)}</b> right, log loss ${ll(full) !== null ? ll(full).toFixed(3) : '—'};
+      refit excluding ${meta.label} <b>${pct(me.oos.accuracy)}</b> right, log loss ${ll(me.oos) !== null ? ll(me.oos).toFixed(3) : '—'}
+      ${dll !== null ? `(Δ log loss <b>${dll >= 0 ? '+' : '−'}${Math.abs(dll).toFixed(3)}</b>, ${dll > 0 ? 'worse without it' : dll < 0 ? 'better without it' : 'no change'})` : ''}.</p>`;
+
+  // Local: the fitted bracket's games, largest |Δp| first.
+  const teams = state.season.teams;
+  const local = [];
+  state.rounds.forEach((games, r) => games.forEach(g => {
+    const pe = me.pFn(g.a, g.b);
+    local.push({ r, g, pe, d: Math.abs(pe - g.p) });
+  }));
+  local.sort((x, y) => y.d - x.d);
+  const localRows = local.slice(0, 5).map(h => {
+    const fav = h.g.p >= 0.5 ? h.g.a : h.g.b;
+    const pf = fav === h.g.a ? h.g.p : 1 - h.g.p;
+    const pe = fav === h.g.a ? h.pe : 1 - h.pe;
+    const flips = (pe >= 0.5) !== (pf >= 0.5);
+    return `<div class="ex-hinge${flips ? ' over' : ''}">
+      <span class="ex-round">${ROUNDS[h.r]}</span>
+      <span class="ex-teams"><b>${teams[fav].name}</b> vs ${teams[fav === h.g.a ? h.g.b : h.g.a].name}</span>
+      <span class="ex-gap">full model ${pct(pf)}</span>
+      <span class="ex-p">refit excluding ${meta.label}: ${pct(pe)}</span>
+    </div>`;
+  }).join('');
+
+  // Say what the refit actually showed about the collinear partner, not
+  // what collinearity usually implies. Measured on the shipped matrix:
+  // Overall rating and National rank correlate at 0.99, yet excluding
+  // either costs ~+0.085 log loss and excluding both costs the same --
+  // the pair is one feature (a rating relative to its rank) that neither
+  // carries alone. "Absorbed" would be false there.
+  const ABSORB_LL = 0.01;
+  const absorb = (partner && dll !== null && Math.abs(dll) < ABSORB_LL)
+    ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), and the refit without it performs about the same: what it carried was absorbed by ${partner}. A small change does not mean the information is unimportant.`
+    : (partner && dll !== null)
+      ? `${meta.label} moves almost exactly with ${partner} (r ≥ ${COLLINEAR_R}), yet the refit without it does not recover the full model — together the two carry something the remaining one does not on its own. Read them as a pair, not as two separate quantities; a large change does not make either a cause.`
+      : `Excluding a variable lets the ones that move with it absorb it. A small change does not mean the information is unimportant; a large change does not make the variable a cause.`;
+
+  // Every variable, same two columns, this one highlighted.
+  const table = f.keys.map(k => {
+    const e = sens.byKey[k];
+    const lab = (state.season.variables.find(v => v.key === k) || {}).label || k;
+    const d = e && e.ok && e.oos && ll(e.oos) !== null && ll(full) !== null ? ll(e.oos) - ll(full) : null;
+    return `<tr class="${k === meta.key ? 'on' : ''}"><td>${lab}</td>
+      <td class="num">${e && e.oos ? pct(e.oos.accuracy) : '—'}</td>
+      <td class="num">${d !== null ? `${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(3)}` : '—'}</td>
+      <td class="num">${e && e.changed !== null ? e.changed : '—'}</td></tr>`;
+  }).join('');
+
+  return `
+    <p class="ex-sub">Each figure is the probability under a model refit without the variable — every other coefficient re-estimated, same training seasons, same held-out folds, same link. It is a refit, not a coefficient set to zero.</p>
+    ${hist}
+    <p class="ex-sub">On this bracket, the games whose probability moves most under the refit; orange where the favourite would change.</p>
+    ${localRows}
+    <p class="ex-line">Re-solving the whole bracket under the refit would change <b>${me.changed}</b> of 63 picks. A count only: that bracket is not shown, scored, or ranked.</p>
+    <table class="rel-table ex-senstab"><thead><tr><th>Refit excluding</th><th class="num">Held-out right</th><th class="num">Δ log loss</th><th class="num">Picks changed</th></tr></thead><tbody>${table}</tbody></table>
+    <p class="ex-sub">${absorb}</p>`;
+}
+/* SENSITIVITY-COPY-END */
+
 function setExplore(key) {
   state.explore = key;
   renderExplore();
@@ -1258,6 +1390,7 @@ function renderExplore() {
         ${byRound ? `<p class="g-name ex-space">By round</p>${byRound}` : ''}
         <p class="g-name ex-space">In the full model</p>
         ${inm}
+        ${inModel ? `<p class="g-name ex-space">Model sensitivity</p>${sensitivityHTML(meta)}` : ''}
       </div>
     </div>
     <p class="ex-foot">Looking, not editing: the bracket, the probabilities and every number above are the validated model’s and do not change with what is chosen here. The per-variable on/off toggle this replaces was removed because measurement showed choosing the variables bought nothing.</p>`;
