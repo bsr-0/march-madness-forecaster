@@ -1,9 +1,11 @@
 """Unit tests for A5 Massey composite source.
 
-Covers the loader, the Massey-specific ID bridge (6 edge-case aliases for
-heavily abbreviated team names), the seed-based fallback for teams not in
-the Massey composite, coverage gates, and the pipeline/backtest registry
-wiring.
+Covers the loader, the Massey-specific ID bridge (audit 2026-09, Step 18
+remediation: expanded from 6 to 45 edge-case aliases after coverage
+measurement found up to 13 of 68 tournament teams per season silently
+falling back to the seed-based barthag), the seed-based fallback for teams
+not in the Massey composite, coverage gates, and the pipeline/backtest
+registry wiring.
 
 A6 ``massey_best`` is deferred — needs a per-system Brier-selection
 harness that is its own phase of work. Not tested here.
@@ -14,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts._common import load_seeds_and_regions
 from src.prediction.massey_probabilities import (
     _MASSEY_EDGE_CASES,
     _bridge_massey_id,
@@ -23,6 +26,10 @@ from src.prediction.massey_probabilities import (
 )
 
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
+
+# 2012 and 2020 have no tournament (no field / cancelled); this is the
+# audited backtest year set (Steps 1-18).
+BACKTEST_YEARS = [2011, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025, 2026]
 
 
 def _load_2025_seeds():
@@ -94,6 +101,54 @@ def test_load_massey_avg_1_seeds_rank_high():
     assert one_seeds, "Expected 2025 to have 1-seeds"
     for tid in one_seeds:
         assert barthag[tid] > 0.8, f"1-seed {tid} has barthag {barthag[tid]:.3f}; expected > 0.8"
+
+
+def test_load_massey_avg_covers_all_teams_every_backtest_year():
+    """audit 2026-09, Step 18 remediation.
+
+    Before the alias table was expanded, coverage ranged 55-68 of 68 teams
+    per season (up to 13 teams/season on the crude seed fallback instead of
+    a real Massey rating). Every backtest year must now resolve the full
+    field via exact match or the verified alias table.
+    """
+    for year in BACKTEST_YEARS:
+        seeds, _regions = load_seeds_and_regions(year)
+        cov = massey_coverage(year, seeds.keys(), DATA_ROOT)
+        assert cov["covered"] == cov["total"] == 68, f"{year}: {cov['covered']}/{cov['total']} covered"
+
+
+def test_massey_edge_cases_do_not_collide():
+    """Two different Massey IDs must never alias to the same canonical team."""
+    from collections import Counter
+
+    counts = Counter(_MASSEY_EDGE_CASES.values())
+    dupes = {k: v for k, v in counts.items() if v > 1}
+    assert not dupes, f"multiple Massey IDs alias to the same canonical team: {dupes}"
+
+
+def test_load_massey_avg_ignores_untracked_data_raw_override(tmp_path, monkeypatch):
+    """audit 2026-09, Step 18: reproducibility regression.
+
+    ``load_massey_avg_barthag`` used to check ``data/raw/`` before
+    ``data/raw/historical/``. An untracked file at the top-level path
+    silently overrode the committed, reproducible data for every caller in
+    this working directory, and a fresh checkout (no untracked files) got
+    different candidate artifacts than the one everyone had been
+    developing against. The loader must read only the tracked path.
+    """
+    fake_root = tmp_path
+    hist_dir = fake_root / "raw" / "historical"
+    hist_dir.mkdir(parents=True)
+    tracked = {"systems": {"massey_composite": [{"team_id": "duke", "team_name": "Duke", "normalized": 0.9}]}}
+    json.dump(tracked, open(hist_dir / "external_ratings_2025.json", "w"))
+
+    # An untracked override at data/raw/ (not data/raw/historical/) with
+    # different content must NOT be read.
+    untracked = {"systems": {"massey_composite": [{"team_id": "duke", "team_name": "Duke", "normalized": 0.1}]}}
+    json.dump(untracked, open(fake_root / "raw" / "external_ratings_2025.json", "w"))
+
+    result = load_massey_avg_barthag(2025, {"duke": 1}, fake_root)
+    assert result["duke"] == pytest.approx(0.9), "loader read the untracked data/raw/ override instead of data/raw/historical/"
 
 
 def test_load_massey_avg_returns_none_for_missing_year():
