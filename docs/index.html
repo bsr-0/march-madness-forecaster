@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=99e9b479">
+<link rel="stylesheet" href="app.css?v=01dc81e3">
 </head>
 <body>
 
@@ -24,42 +24,56 @@
 
 <main id="main">
 
-  <!-- Strategy choice. Replaces the old per-variable weighting: the question a
-       bracket answers is "what am I optimising for", not "which stats do I
-       like".
+  <!-- 1. WHAT SHOULD I PICK. The one-glance summary of the bracket on screen:
+       season, objective, champion, the two numbers, and the one sentence that
+       says what kind of thing this is (a pool strategy, not a game-prediction
+       ranking). Everything a visitor needs before the bracket itself; nothing
+       they do not. Filled by renderHeadline() from the same payload fields
+       the comparison table and the board use, so the three cannot disagree. -->
+  <section class="headline" id="headline" hidden></section>
 
-       The two precomputed strategies are not the same bracket and in 2026 name
-       different champions. They are also arrived at differently, which the tags
-       say: P(1st) has no closed form, since it depends on the whole opponent
-       field, so the win-maximising card is a FIXED RULE whose evidence is
-       out-of-sample performance across 15 seasons; expected points does have a
-       closed form and is solved exactly on the bracket. The third fits a model
-       in the browser and is the only one that prints its own equation. -->
-  <section class="panel" id="strategy" hidden>
-    <div class="panel-head">
-      <p class="panel-title">What are you optimising for</p>
-    </div>
-    <div class="strat-list" id="strat-list"></div>
-    <!-- Mandatory disclosure (product.v3). It sits HERE, under the cards that
-         print "% to win", because that is the number it qualifies. It used to
-         appear only as a suffix on filter helper text, and only on one branch,
-         which meant the one sentence we are obliged to show was the one
-         sentence most users never saw. Text comes from the artifact via the
-         payload; it is not retyped here. -->
-    <p class="disclosure" id="p1-note"></p>
+  <!-- 2. WHY THIS ONE, AND WHAT ELSE IS THERE. Three rows, one per strategy,
+       same four columns each; the row you click is the bracket you get. The
+       fitted model's row is labelled for what it is: scored by the same
+       referee as the other two, never selected by it. -->
+  <section class="compare" id="compare" hidden></section>
+
+  <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
+  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
+
+  <!-- 3. THE BRACKET. Getting it OUT is the deliverable of this whole system:
+       63 picks typed into a pool site. -->
+  <section class="board-tools" id="board-tools" hidden>
+    <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
+    <button class="tool" id="print-picks" onclick="window.print()">Print</button>
+    <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
   </section>
 
-  <!-- Three filter axes over the precomputed candidate pool. Each narrows WHICH
-       brackets are eligible; the strategy cards decide what is maximised over
-       them. One-seed count and depth sound alike and are not: both of
-       "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and "Michigan
-       State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly a 3 seed,
-       and they are completely different brackets. -->
-  <!-- The answer, then the questions.
-       All five filter panels used to be expanded on load, putting ~3,800px of
-       controls above the bracket -- so the product was the seventh thing on the
-       page. They are opt-in now. <details> rather than JS: no state to keep in
-       sync, and it works before any script runs. -->
+  <!-- Narrow-viewport only (see @media (max-width: 720px) in app.css): the
+       six-column board does not fit a phone width without either scrolling
+       sideways or shrinking past readable, so under that width the board
+       shows one round at a time instead. Always in the DOM -- CSS alone
+       decides whether it is visible, so there is nothing for JS to create or
+       tear down when the viewport crosses the breakpoint. -->
+  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
+    <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
+    <span class="rnav-label" id="rnav-label"></span>
+    <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
+  </nav>
+  <div class="rnav-dots" id="rnav-dots" hidden></div>
+
+  <section class="board" id="board"></section>
+
+  <section class="empty" id="empty" hidden></section>
+
+  <!-- 4. ADJUST. Three filter axes over the precomputed candidate pool. Each
+       narrows WHICH brackets are eligible; the objective decides what is
+       maximised over them. One-seed count and depth sound alike and are not:
+       both of "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and
+       "Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly
+       a 3 seed, and they are completely different brackets. Collapsed:
+       <details> rather than JS, so there is no state to keep in sync and it
+       works before any script runs. -->
   <details class="tune" id="tune">
     <summary class="tune-head">
       <span class="tune-title">Adjust this bracket</span>
@@ -90,10 +104,10 @@
     <p class="prior-note" id="dd-note"></p>
   </section>
 
-  <!-- Provenance. The candidate pool is no longer one model's opinion: it is
+  <!-- Provenance. The candidate pool is not one model's opinion: it is
        simulated from Torvik, Elo and the Massey composite, plus region_top_n
        constructions. Those disagree about real teams, and that disagreement is
-       the point -- a bracket Torvik would never sample is now reachable. -->
+       the point -- a bracket Torvik would never sample is reachable. -->
   <section class="panel" id="sources" hidden>
     <div class="panel-head"><p class="panel-title">Which rating system</p></div>
     <div class="chips" id="src-list"></div>
@@ -115,45 +129,40 @@
 
   </details>
 
-  <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
-  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
+  <!-- 5. HOW TRUSTWORTHY IS THIS. The methodology layer, collapsed: what the
+       strategy note says about the bracket on screen, the fitted model's
+       equation and its reliability table, the three strategies described in
+       full, and the P(1st) disclosure. All of it was above the bracket until
+       2026-09-16, which made the product read as a research dashboard that
+       happened to emit a bracket. The work that earned these paragraphs is in
+       artifacts/methodology_audit/; the page's job is to state the result
+       plainly and keep the reasoning one click away, not to bury the bracket
+       under it. -->
+  <details class="why" id="why" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Why this bracket, and how it was tested</span>
+      <span class="tune-sub">The objective, the referee, and the model behind the numbers above.</span>
+    </summary>
 
-  <section class="note" id="mode-note"></section>
+    <section class="note" id="mode-note"></section>
 
-  <!-- The champion was previously only bold text buried in the sixth,
-       off-screen column of the board -- the one fact most people open this
-       page to find had no home of its own. Whichever bracket is on screen,
-       this always names the team it sends to the title. -->
-  <section class="champion-box" id="champion-box" hidden></section>
+    <!-- The fitted model, printed. Empty unless the Fitted strategy is on. -->
+    <section id="equation"></section>
 
-  <!-- The fitted model, printed. Empty unless variables are enabled. -->
-  <section id="equation"></section>
-
-  <!-- Getting the bracket OUT. The deliverable of this whole system is 63
-       picks, and until now the only way to collect them was to read a
-       six-column horizontally-scrolling board and retype it into ESPN. -->
-  <section class="board-tools" id="board-tools" hidden>
-    <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
-    <button class="tool" id="print-picks" onclick="window.print()">Print</button>
-    <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
-  </section>
-
-  <!-- Narrow-viewport only (see @media (max-width: 720px) in app.css): the
-       six-column board does not fit a phone width without either scrolling
-       sideways or shrinking past readable, so under that width the board
-       shows one round at a time instead. Always in the DOM -- CSS alone
-       decides whether it is visible, so there is nothing for JS to create or
-       tear down when the viewport crosses the breakpoint. -->
-  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
-    <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
-    <span class="rnav-label" id="rnav-label"></span>
-    <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
-  </nav>
-  <div class="rnav-dots" id="rnav-dots" hidden></div>
-
-  <section class="board" id="board"></section>
-
-  <section class="empty" id="empty" hidden></section>
+    <!-- The three strategies in full. The comparison table above is the
+         selector; these are the explanations. -->
+    <section class="panel" id="strategy" hidden>
+      <div class="panel-head">
+        <p class="panel-title">The three strategies</p>
+      </div>
+      <div class="strat-list" id="strat-list"></div>
+      <!-- Mandatory disclosure (product.v3). It sits under the cards that print
+           "% to win" because that is the number it qualifies; the headline
+           repeats its substance in one line. Text comes from the artifact via
+           the payload; it is not retyped here. -->
+      <p class="disclosure" id="p1-note"></p>
+    </section>
+  </details>
 
 </main>
 
@@ -176,6 +185,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=ccb12b9f"></script>
-<script src="app.js?v=3a1cea67"></script>
+<script src="app.js?v=7da8ab83"></script>
 </body>
 </html>

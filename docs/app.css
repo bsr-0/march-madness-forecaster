@@ -127,6 +127,42 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   white-space: nowrap;
 }
 
+/* ---------- headline ----------
+ *
+ * The one-glance summary: season, objective, champion, the two numbers, and
+ * the sentence that says what kind of thing the bracket is. Reuses the
+ * champion card. Restrained on purpose -- the audit changed the computation,
+ * not the visual language, and the page should not pretend otherwise. */
+.headline { margin: 0 0 14px; }
+.hl-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+.hl-season { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+.hl-obj { font-size: 13px; color: var(--ink-2); }
+.hl-champ { margin-bottom: 10px; }
+.hl-nums { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin: 0 0 8px; font-size: 13px; color: var(--ink-2); }
+.hl-num b { font-size: 17px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.hl-num.muted, .muted { color: var(--ink-3); }
+.hl-meta { margin-left: auto; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.hl-estimand { margin: 0 0 6px; font-size: 13.5px; line-height: 1.5; color: var(--ink); max-width: 86ch; }
+.hl-line { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); max-width: 86ch; }
+.hl-evidence { color: var(--ink-3); }
+
+/* ---------- comparison table ----------
+ *
+ * Three rows, four columns, the same numbers the cards show. The row is the
+ * selector; the cards moved into the methodology layer as explanations. */
+.compare { margin: 0 0 18px; overflow-x: auto; }
+.cmp { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cmp th { text-align: left; padding: 0 12px 6px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.cmp td { padding: 9px 12px 9px 10px; border-top: 1px solid var(--line); color: var(--ink-2); vertical-align: middle; }
+.cmp .num { text-align: right; }
+.cmp-row { cursor: pointer; transition: background .1s; }
+.cmp-row:hover td { background: var(--panel); }
+.cmp-row.on td { background: var(--panel); color: var(--ink); }
+.cmp-row.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.cmp-label { display: block; font-weight: 600; color: var(--ink); }
+.cmp-kind { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+.cmp-seed { display: inline-block; min-width: 18px; font-size: 11px; color: var(--ink-3); }
+
 /* ---------- weights ---------- */
 
 .panel {
@@ -335,6 +371,14 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .board { display: block; overflow-x: visible; }
   .round { display: none; }
   .board-nav:not([hidden]), .rnav-dots:not([hidden]) { display: flex !important; }
+
+  /* Comparison table at phone width: tighter cells, the champion column kept
+     on one line, the label column allowed to take what is left. */
+  .cmp { font-size: 12.5px; }
+  .cmp th, .cmp td { padding: 8px 6px 8px 4px; }
+  .cmp td:last-child, .cmp th:last-child { white-space: nowrap; padding-right: 0; }
+  .cmp-kind { font-size: 10.5px; }
+  .hl-meta { margin-left: 0; white-space: normal; }
 
   /* Two games per row rather than one full-width column. A single column at
      phone width stretched each game to ~360px -- wider than the two stacked
@@ -596,8 +640,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @media print {
   /* .tune wraps the filter panels; hiding only .panel left its "Adjust this
      bracket" header and its box on the printed page. */
-  .bar, .board-tools, .drawer, .scrim, .panel, .tune, #dropped-note,
+  .bar, .board-tools, .drawer, .scrim, .panel, .tune, .why, #dropped-note,
   #equation, .note { display: none !important; }
+  /* The headline and the comparison print: they are the summary a sheet
+     needs. The methodology layer does not. */
+  .cmp-row:not(.on) { display: none; }
   #main { padding: 0; }
   .board { display: block !important; }
   .round { break-inside: avoid; page-break-inside: avoid; margin: 0 0 12px; }
@@ -610,21 +657,25 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- adjust (the collapsed filter stack) ----------
    Closed by default. The bracket is the product; the filters are an
    affordance most users will never open, and they used to sit on top of it. */
-.tune {
+.tune, .why {
   margin: 0 0 18px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--panel);
 }
-.tune > summary {
+.tune > summary, .why > summary {
   cursor: pointer; padding: 14px 16px; list-style: none;
   display: flex; flex-direction: column; gap: 3px;
 }
-.tune > summary::-webkit-details-marker { display: none; }
+.tune > summary::-webkit-details-marker, .why > summary::-webkit-details-marker { display: none; }
 .tune-title { font-size: 14px; font-weight: 600; color: var(--ink); }
 .tune-title::after { content: ' ▸'; color: var(--ink-3); }
-.tune[open] .tune-title::after { content: ' ▾'; }
+.tune[open] .tune-title::after, .why[open] .tune-title::after { content: ' ▾'; }
 .tune-sub { font-size: 12px; color: var(--ink-3); }
-.tune > .panel { border: 0; background: none; margin: 0; }
+.tune > .panel, .why > .panel { border: 0; background: none; margin: 0; }
 .tune > .panel:first-of-type { padding-top: 0; }
+/* The methodology layer's loose sections (note, equation) get the panel's
+   horizontal padding so they line up with the strategy cards below them. */
+.why > .note, .why > #equation { padding: 0 18px; }
+.why > .note { margin-top: 0; }
 
 /* ---------- reasons, said out loud ----------
    These used to live in title= tooltips, which do not exist on a phone -- and
