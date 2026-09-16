@@ -22,6 +22,7 @@ import pytest
 from src.governance.frozen_spec import (
     FREEZE_DATE,
     FROZEN_SPEC_PATH,
+    V2_SCOPED_SPEC_PATH,
     PROSPECTIVE_DOC,
     SPEC_VERSION,
     SUPERSEDED,
@@ -118,7 +119,8 @@ def test_pool_size_assumption_is_disclosed():
     spec = capture_live_spec()
     assert spec["candidate_selection"]["p1_pool_size"] == 30
     disclosure = spec["product"]["p1_disclosure_required"].lower()
-    assert "30-opponent" in disclosure
+    assert "30-entry pool" in disclosure and "29 opponents" in disclosure   # was "30-opponent" (31 entries) before audit F4-8
+    assert "ties" in disclosure or "tie" in disclosure
     assert "not a universal probability" in disclosure
 
 
@@ -163,10 +165,18 @@ def test_v1_specification_is_immutable():
         assert (REPO / SUPERSEDED["doc"]).read_text().strip(), "v1's document exists but is empty"
 
 
-def test_v2_records_why_it_supersedes_v1():
+def test_v3_records_why_it_supersedes_v2_and_keeps_v1_lineage():
     """A version bump must carry its justification, not just a new number."""
     spec = capture_live_spec()
     sup = spec["supersedes"]
+    assert sup["version"] == "2027.v2"
+    r = sup["reason_superseded"].lower()
+    for token in ("final four", "p(1st)", "walk-forward", "not on the basis of any 2027 performance"):
+        assert token in r, token
+    v2 = load_frozen_spec(REPO / V2_SCOPED_SPEC_PATH)
+    assert sup["spec_hash"] == v2["spec_hash"], "v3 must pin the exact v2 file it supersedes"
+    assert canonical_hash({k: v for k, v in v2.items() if k != "spec_hash"}) == v2["spec_hash"], "v2 file must be immutable"
+    sup = spec["lineage"]["v1"]
     assert sup["version"] == "2027.v1"
     reason = sup["reason_superseded"].lower()
     assert "train_years" in reason and "2026" in reason
