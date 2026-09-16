@@ -286,6 +286,59 @@ function trainingRows(rows, asOf) {
   return asOf === null || asOf === undefined ? rows : rows.filter(r => r.y < asOf);
 }
 
+/* Pairwise Pearson correlation between the enabled variables' standardised
+ * differentials, over the same walk-forward training rows fitLinear() uses.
+ *
+ * WHY THIS IS A DIFFERENT CHECK FROM stability(). A coefficient can be
+ * perfectly sign-stable across every held-out fold and still not mean what
+ * it looks like: on the canonical set, Overall rating and National rank
+ * correlate at ~0.99 and consistently draw a large coefficient of one sign
+ * on one and the opposite sign on the other, every fold. stability() cannot
+ * see that -- it only asks whether ONE coefficient agrees with itself across
+ * folds, and both of these do. What is actually happening is that the two
+ * columns carry almost the same information, so the fit is free to draw any
+ * split between them that sums to the right net effect; the individual
+ * numbers are an artefact of that split, not two independent effects that
+ * happen to cancel. Only a correlation between the COLUMNS themselves
+ * reveals that, which is what this computes.
+ *
+ * Returns a symmetric k x k matrix (k = cols.length), 1 on the diagonal, or
+ * null if there are no training rows to measure it from.
+ */
+function pairwiseCorrelations(rows, cols, asOf) {
+  const used = trainingRows(rows, asOf);
+  const k = cols.length;
+  const n = used.length;
+  if (!n || !k) return null;
+
+  const mean = new Array(k).fill(0);
+  for (const r of used) for (let a = 0; a < k; a++) mean[a] += r.x[cols[a]];
+  for (let a = 0; a < k; a++) mean[a] /= n;
+
+  const cov = Array.from({ length: k }, () => new Array(k).fill(0));
+  const varr = new Array(k).fill(0);
+  for (const r of used) {
+    const d = cols.map((c, a) => r.x[c] - mean[a]);
+    for (let a = 0; a < k; a++) {
+      varr[a] += d[a] * d[a];
+      for (let b = a; b < k; b++) cov[a][b] += d[a] * d[b];
+    }
+  }
+
+  const corr = Array.from({ length: k }, () => new Array(k).fill(0));
+  for (let a = 0; a < k; a++) {
+    for (let b = a; b < k; b++) {
+      const denom = Math.sqrt(varr[a] * varr[b]);
+      // A variable with zero variance in this sample cannot correlate with
+      // anything; 0 rather than NaN so a caller need not special-case it.
+      const c = denom > 1e-9 ? cov[a][b] / denom : (a === b ? 1 : 0);
+      corr[a][b] = c;
+      corr[b][a] = c;
+    }
+  }
+  return corr;
+}
+
 /* Fit predicted margin by ridge least squares, solved in one step.
  *
  * rows  : [{x: number[], m: number}]  full-width differentials and margins
@@ -490,7 +543,69 @@ function crossValidate(rows, cols, years, minYear) {
     probScoreUncalibrated: scoreProb(before),
     perYear,
     stability: stability(trajectory),
+    // Kept so a caller can re-score these same held-out games under a
+    // DIFFERENT link than the one fitted here -- causalWalkForward() shrinks
+    // `a` before use, and the reliability table has to be built with the
+    // link the board actually applies, not the unshrunk one.
+    pooled,
   };
+}
+
+/* Reliability table: when the model says 70%, how often does it happen?
+ *
+ * This is the one check the accuracy figure cannot stand in for. Accuracy
+ * grades the PICK (was the favourite right); it is unchanged by any monotone
+ * reparameterisation of the link, so a model whose 70%s come true 90% of the
+ * time and one whose 70%s come true 55% of the time can have identical
+ * accuracy. The board prints the percentage, so the percentage is a separate
+ * claim and needs its own evidence -- until now the page asserted "when it
+ * says 70% it is right about 70%" with nothing behind it (2026-09 review).
+ *
+ * ORIENTED TO THE FAVOURITE. Every game is a pair (p, 1-p); binning the raw
+ * team-A probability would put the same game in two bins depending on which
+ * team the row happened to list first. Flipping to p >= 0.5 makes each game
+ * count once, in the band the model's confidence actually sits in.
+ *
+ * `se` is the binomial standard error UNDER THE MODEL'S OWN CLAIM -- sqrt(p(1-p)/n)
+ * at the bin's mean predicted p, not at the observed rate. That is the right
+ * null: "if these percentages were honest, the observed rate would land
+ * within about this much of them". At the observed rate a bin that went
+ * 30-for-30 would report zero uncertainty, which is not what 30 games tells
+ * you.
+ *
+ * READ THE BIN EDGES WITH THE WARNING IN calibrate()'s comment above: the
+ * 0.5-0.6 bin is sensitive to where its lower edge falls, because a handful
+ * of coin-flip games crossing an arbitrary line is a large fraction of a
+ * small bin. The table is evidence about the band as a whole, not a verdict
+ * on any one row of it.
+ *
+ * rows : crossValidate()'s `pooled` -- {m, p (predicted MARGIN), sigma}
+ * cal  : {a, nu}, the link to score them under
+ */
+const RELIABILITY_EDGES = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0 + 1e-9];
+
+function reliabilityTable(rows, cal, edges) {
+  const e = edges || RELIABILITY_EDGES;
+  const bins = e.slice(0, -1).map((lo, i) => ({ lo, hi: e[i + 1], n: 0, sumP: 0, wins: 0 }));
+  for (const r of rows) {
+    if (r.m === 0) continue;                       // a tie has no winner to score
+    let p = clipProb(studentTCdf(cal.a * r.p / Math.max(r.sigma, 1e-6), cal.nu));
+    let y = r.m > 0 ? 1 : 0;
+    if (p < 0.5) { p = 1 - p; y = 1 - y; }
+    const b = bins.find(b => p >= b.lo && p < b.hi);
+    if (!b) continue;
+    b.n++; b.sumP += p; b.wins += y;
+  }
+  return bins.map(b => {
+    const predicted = b.n ? b.sumP / b.n : null;
+    return {
+      lo: b.lo, hi: Math.min(b.hi, 1),
+      n: b.n,
+      predicted,
+      actual: b.n ? b.wins / b.n : null,
+      se: b.n ? Math.sqrt(predicted * (1 - predicted) / b.n) : null,
+    };
+  });
 }
 
 /* Walk-forward evaluation and calibration for a DISPLAYED season, causally.
@@ -527,6 +642,9 @@ function causalWalkForward(rows, cols, years, asOf, minYear) {
     priorN: n,
     shrinkWeight: w,
   };
+  // Under the link the board will actually use -- the shrunk one -- and over
+  // only the seasons strictly before asOf, same as everything else here.
+  oos.reliability = reliabilityTable(oos.pooled, oos.calibration);
   return oos;
 }
 
@@ -627,10 +745,89 @@ function winProbFromMargin(margin, sigma, cal) {
   return clipProb(studentTCdf(a * margin / Math.max(sigma, 1e-6), nu));
 }
 
+/* Each team's probability of reaching every round of a real bracket, from
+ * pairwise game probabilities alone.
+ *
+ * WHY THIS IS NOT JUST winProb() REPEATED. A team's chance of reaching the
+ * Sweet 16 is not its chance of winning one more game -- it depends on WHO
+ * shows up in that game, and that opponent is themselves uncertain: they
+ * still have to win their own earlier game to be there at all. The correct
+ * quantity marginalises over that: P(t survives r rounds) = P(t survived
+ * r-1) * sum over every possible round-r opponent o of P(o survives to meet
+ * t) * P(t beats o). Skipping the opponent's own survival term and just
+ * multiplying win probabilities down one column would silently assume every
+ * possible opponent is equally certain to arrive, which overstates the
+ * favourite's odds in every later round.
+ *
+ * THE MERGE IS BOTTOM-UP OVER THE REAL TREE, not a seed-based table. Two
+ * sibling subtrees of size 2^r each already carry a full round-by-round
+ * survival distribution for their own teams; merging them for round r+1
+ * needs only those distributions and the pairwise win function, so the exact
+ * matchups the real bracket produces are respected without simulating a
+ * single tournament.
+ *
+ * order   team ids/indices in real bracket order (the same order first_round
+ *         uses), length a power of two.
+ * winProb(a, b) -> P(a beats b), assumed antisymmetric: winProb(a,b) ===
+ *         1 - winProb(b,a). Nothing here enforces that; a caller whose
+ *         estimator does not have it will get a result that likewise does not
+ *         sum to 1 per round, which is the same property test that catches a
+ *         broken caller in tests/test_advancement.js.
+ *
+ * Returns { [team]: number[] }, one entry per team, each an array indexed by
+ * round: index 0 is "won the Round of 64 game" (reached the Round of 32),
+ * index 5 (for 64 teams) is "won the championship game" -- the same round
+ * numbering solveByFit() uses for its six-round board, so a caller can read
+ * probs[team][r] straight off ROUNDS[r].
+ *
+ * MONOTONE BY CONSTRUCTION, NOT BY POLICY: each round's probability is the
+ * previous round's probability times a factor in [0, 1] (a weighted average
+ * of win probabilities), so it can only fall or hold round over round, never
+ * rise. A caller seeing an increase has a bug in winProb, not in this
+ * function.
+ */
+function bracketAdvancementProbs(order, winProb) {
+  const n = order.length;
+  const rounds = Math.log2(n);
+  if (!Number.isInteger(rounds) || rounds < 1) {
+    throw new Error(`bracketAdvancementProbs: order length must be a power of two >= 2, got ${n}`);
+  }
+
+  let nodes = order.map(t => ({ teams: [t], probs: { [t]: [] } }));
+  for (let r = 0; r < rounds; r++) {
+    const next = [];
+    for (let i = 0; i < nodes.length; i += 2) {
+      const L = nodes[i], R = nodes[i + 1];
+      const priorL = t => (r === 0 ? 1 : L.probs[t][r - 1]);
+      const priorR = t => (r === 0 ? 1 : R.probs[t][r - 1]);
+
+      const probs = {};
+      for (const t of L.teams) probs[t] = L.probs[t].slice();
+      for (const t of R.teams) probs[t] = R.probs[t].slice();
+
+      for (const t of L.teams) {
+        let winThisRound = 0;
+        for (const o of R.teams) winThisRound += priorR(o) * winProb(t, o);
+        probs[t].push(priorL(t) * winThisRound);
+      }
+      for (const t of R.teams) {
+        let winThisRound = 0;
+        for (const o of L.teams) winThisRound += priorL(o) * winProb(t, o);
+        probs[t].push(priorR(t) * winThisRound);
+      }
+      next.push({ teams: [...L.teams, ...R.teams], probs });
+    }
+    nodes = next;
+  }
+  return nodes[0].probs;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
     winProbFromMargin, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
+    bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
+    reliabilityTable, RELIABILITY_EDGES,
   };
 }

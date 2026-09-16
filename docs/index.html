@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=e84a4883">
+<link rel="stylesheet" href="app.css?v=99e9b479">
 </head>
 <body>
 
@@ -34,7 +34,7 @@
        field, so the win-maximising card is a FIXED RULE whose evidence is
        out-of-sample performance across 15 seasons; expected points does have a
        closed form and is solved exactly on the bracket. The third fits a model
-       in the browser and is the only one the history slider applies to. -->
+       in the browser and is the only one that prints its own equation. -->
   <section class="panel" id="strategy" hidden>
     <div class="panel-head">
       <p class="panel-title">What are you optimising for</p>
@@ -120,6 +120,12 @@
 
   <section class="note" id="mode-note"></section>
 
+  <!-- The champion was previously only bold text buried in the sixth,
+       off-screen column of the board -- the one fact most people open this
+       page to find had no home of its own. Whichever bracket is on screen,
+       this always names the team it sends to the title. -->
+  <section class="champion-box" id="champion-box" hidden></section>
+
   <!-- The fitted model, printed. Empty unless variables are enabled. -->
   <section id="equation"></section>
 
@@ -131,6 +137,19 @@
     <button class="tool" id="print-picks" onclick="window.print()">Print</button>
     <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
   </section>
+
+  <!-- Narrow-viewport only (see @media (max-width: 720px) in app.css): the
+       six-column board does not fit a phone width without either scrolling
+       sideways or shrinking past readable, so under that width the board
+       shows one round at a time instead. Always in the DOM -- CSS alone
+       decides whether it is visible, so there is nothing for JS to create or
+       tear down when the viewport crosses the breakpoint. -->
+  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
+    <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
+    <span class="rnav-label" id="rnav-label"></span>
+    <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
+  </nav>
+  <div class="rnav-dots" id="rnav-dots" hidden></div>
 
   <section class="board" id="board"></section>
 
@@ -156,7 +175,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=50d58731"></script>
-<script src="app.js?v=ae2d0f1a"></script>
+<script src="fit.js?v=ccb12b9f"></script>
+<script src="app.js?v=3a1cea67"></script>
 </body>
 </html>

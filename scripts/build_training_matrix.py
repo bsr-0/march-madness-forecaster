@@ -2,15 +2,22 @@
 """Build the historical game matrix the UI fits its live regression on.
 
 WHAT THIS IS FOR
-The UI lets a user switch variables on and off and fits a logistic regression on
-whatever is enabled, showing the learned coefficients. That removes the guesswork
-the weight sliders required: the data decides each coefficient's sign and size,
-so nobody has to assert whether more freshman minutes is good.
+The UI fits a ridge regression, live in the browser, on a fixed 11-variable
+set (docs/app.js's CANONICAL_KEYS) and shows the learned coefficients. That
+removes the guesswork a hand-set weight would require: the data decides each
+coefficient's sign and size, so nobody has to assert whether more freshman
+minutes is good. A per-variable on/off toggle used to sit in front of this --
+removed 2026-08-29 because measurement showed choosing the subset per fold
+scored no better than this fixed set, inside the bootstrap's noise (see
+docs/app.js's CANONICAL_KEYS comment) -- but the matrix itself still ships all
+27 variables raw, not just the canonical 11, since nothing here is the place
+that decides which ones get used.
 
 WHY THE MATRIX SHIPS RAW
-There are 2^26 possible variable subsets, so coefficients cannot be precomputed.
-The browser has to fit. What it fits on is prepared here: standardised
-differentials for real tournament games, with the outcome.
+There are 2^26 possible variable subsets, so coefficients cannot be precomputed
+for all of them even if the UI still let anyone choose. The browser has to
+fit. What it fits on is prepared here: standardised differentials for real
+tournament games, with the outcome.
 
 ONE ROW PER GAME, ORIENTED CONSISTENTLY
 Each game becomes x = z(team1) - z(team2) with y = 1 if team1 won. The browser
@@ -20,12 +27,17 @@ implies B losing by the same margin, there is no free constant. Without it a
 model could learn "team1 tends to win", which is an artefact of how rows were
 written down rather than basketball.
 
-LEAVE-ONE-YEAR-OUT IS THE CALLER'S JOB, AND IT IS NOT OPTIONAL
-Every row carries its year. The UI MUST drop the season it is displaying before
-fitting, or the coefficients are fit on the very games being predicted and the
-bracket will look uncannily good. The season payloads and this matrix are
-separate files precisely so that filter is visible in the code rather than
-buried in a precomputed blob.
+WALK-FORWARD IS THE CALLER'S JOB, AND IT IS NOT OPTIONAL
+Every row carries its year. The UI MUST drop every row from the season it is
+displaying OR LATER before fitting, or the coefficients are fit on the very
+games being predicted (or on tournaments that had not been played yet), and
+the bracket will look uncannily good. Not leave-one-year-out: dropping only
+the displayed season's own rows would still let a displayed 2024 train on
+2025 and 2026, which is not a thing anyone standing on that Selection Sunday
+could have done. The season payloads and this matrix are separate files
+precisely so that filter is visible in the code (docs/fit.js's trainingRows,
+src/prediction/pit_production_model.py's walk_forward) rather than buried in
+a precomputed blob.
 """
 
 from __future__ import annotations
@@ -134,11 +146,15 @@ def main() -> int:
             "mirror_rows": True,
             "mirror_note": "fit on both (x, m) and (-x, -m); this forces intercept 0",
             "intercept": 0,
-            "leave_one_year_out": True,
-            "loyo_note": (
-                "Drop every row whose y equals the season being displayed before "
-                "fitting. Fitting on the displayed season would predict games the "
-                "coefficients were derived from."
+            "walk_forward": True,
+            "walk_forward_note": (
+                "Drop every row whose y is not STRICTLY EARLIER than the season "
+                "being displayed before fitting. Not plain leave-one-year-out: "
+                "dropping only the displayed season's own rows would still let "
+                "2024 train on 2025 and 2026, using tournaments that had not been "
+                "played yet to predict one that already had. Both docs/fit.js "
+                "(trainingRows) and src/prediction/pit_production_model.py "
+                "(walk_forward) enforce this same strictly-prior-years split."
             ),
         },
     }
