@@ -58,6 +58,7 @@ from src.product.selection import select_diverse  # noqa: E402
 STATS_PATH = REPO / "docs" / "data" / "team_stats_by_year.json"
 CANDIDATES_DIR = REPO / "artifacts" / "candidates"
 OUT_DIR = REPO / "docs" / "data"
+FITTED_EVAL_DIR = REPO / "artifacts" / "fitted_eval"
 
 def _seasons() -> List[int]:
     """Every season the UI offers, derived rather than listed.
@@ -721,11 +722,58 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+
+def _fitted_eval(year: int, payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    """The fitted-model bracket's P(1st)/EV, if an evaluation is on disk AND
+    still describes the bracket THIS payload will make the browser fit.
+
+    scripts/evaluate_fitted_bracket.py scores the browser's fitted bracket
+    with the production referee and records a hash of the payload fields
+    that determine that bracket (teams/first_round/z) plus the training
+    matrix it was fitted on. If either has changed since, the evaluation is
+    for some other bracket and is dropped here rather than shipped stale --
+    the page then shows the Fitted card as accuracy-only, exactly as before
+    the evaluation existed. Stale is reported, not silent.
+
+    Read-only with respect to everything else: this touches no strategy,
+    candidate, or filter field. It is a separate key on the payload.
+    """
+    from scripts.evaluate_fitted_bracket import KIND, fit_inputs_hash, sha256_file
+
+    path = FITTED_EVAL_DIR / f"fitted_eval_{year}.json"
+    if not path.exists():
+        return None
+    ev = json.loads(path.read_text())
+    want = {
+        "fit_inputs_hash": fit_inputs_hash(payload),
+        "training_sha256": sha256_file(OUT_DIR / "training.json"),
+    }
+    stale = {k: (ev["inputs"].get(k), v) for k, v in want.items() if ev["inputs"].get(k) != v}
+    if ev.get("kind") != KIND or stale:
+        print(f"  [warn] {path.name} is stale ({', '.join(stale) or 'kind'}); "
+              f"re-run scripts/evaluate_fitted_bracket.py --year {year}. Not embedded.")
+        return None
+    return {
+        "kind": ev["kind"],
+        "w": ev["w"],
+        "ev": ev["ev"],
+        "p1": ev["p1"],
+        "not_a_candidate": ev["not_a_candidate"],
+        "p1_meaning": ev["p1_meaning"],
+        "scorer": ev["scorer"],
+        "inputs": ev["inputs"],
+        "generated_at": ev["generated_at"],
+    }
+
 def main() -> int:
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
     index = []
     for year in _seasons():
         payload = build_season(year, stats)
+        if payload["status"] == "ready":
+            fe = _fitted_eval(year, payload)
+            if fe is not None:
+                payload["fitted_eval"] = fe
         out = OUT_DIR / f"season_{year}.json"
         out.write_text(json.dumps(payload, separators=(",", ":")))
         size = out.stat().st_size / 1024

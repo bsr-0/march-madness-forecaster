@@ -220,12 +220,28 @@ def test_every_season_has_a_full_bracket():
 
 
 def test_fitting_contract_is_declared():
-    """The payload must state the contract the browser relies on."""
+    """The payload states the contract the browser relies on.
+
+    This only checks that the field is PRESENT and says what the writer in
+    build_training_matrix.py intended -- it cannot, from Python, verify that
+    docs/fit.js actually behaves this way. That drift already happened once:
+    this field used to declare "leave_one_year_out" (train on every other
+    season, including LATER ones) for seven minutes of the codebase's history
+    before fit.js was rewritten to strict walk-forward (train on strictly
+    earlier seasons only) without the metadata or this test being updated to
+    match -- see docs/fit.js's "WALK-FORWARD, NOT PLAIN LEAVE-ONE-YEAR-OUT"
+    comment. A test that only re-asserts the payload's own claim would not
+    have caught that; catching it requires reading fit.js's actual filter
+    (trainingRows) and comparing, which tests/test_calibration.js does from
+    the JS side. This test's job is narrower: keep the two files that most
+    need to agree on the FIELD NAME (this test and the writer) from drifting
+    apart the way the old name and its behaviour did.
+    """
     d = _matrix()
     c = d["fitting_contract"]
     assert c["intercept"] == 0
     assert c["mirror_rows"] is True
-    assert c["leave_one_year_out"] is True
+    assert c["walk_forward"] is True
     assert d["target"] == "m"
 
 

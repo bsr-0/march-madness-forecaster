@@ -98,3 +98,45 @@ Once the 2027 production snapshot is built from this specification, no change to
 model selection, weighting, candidate space, referee, objective, scoring or
 opponent model may be applied to 2027 production. Any such change requires a
 separately dated pre-registration and applies only to later seasons.
+
+## 7. Closeout status (2026-09-16) — addendum, spec unchanged
+
+Recorded at retirement of the methodology audit. Nothing in sections 1-6 is
+altered by this section.
+
+- Production methodology: audited and corrected.
+- Probability mathematics: audited.
+- Tournament topology: corrected and propagated.
+- Candidate space: audited; limitation quantified, not silently optimized.
+- Opponent/ownership model: audited; known modelling limitation documented.
+- Referee construction: audited; defective market referee retired, qualified set frozen.
+- Referee robustness: independently supported under market_v2, with LORO.
+- Recent-3-season / regular-season / upset hypothesis: pre-registered and rejected.
+- Tournament-population recency/upset weighting: tested and rejected.
+- Fitted-model UI comparison: uses the common evaluation framework
+  (`scripts/evaluate_fitted_bracket.py`, exact parity against the shipped
+  artifact, browser picks re-derived by executing the browser's own code)
+  without entering production selection. Displayed EV and P(1st) reproduce the
+  existing production definitions, which use different probability tables; a
+  documented characteristic, not a unified model.
+- Artifacts: rebuilt and parity-checked (14 seasons, exact).
+- Fresh-checkout reproducibility: verified.
+- Regression: green aside from the deliberately classified non-production CLI
+  `optimize-pool --mode seed` case (`xfail`, strict).
+- Remaining CLI/research defects: explicitly isolated from production and
+  documented (`tests/test_topology_isolation.py`, `AGENT_NOTES.md`,
+  `docs/SITE_REVIEW_TODO.md`).
+
+**What PASS means.** Not that every file in the repository is defect-free. It
+means the audited production and validation methodology is sound enough to
+freeze, and that the known dead/research-path defects are proven -- by
+dependency graph and by contract tests, not by the UI looking right -- to lie
+outside the production dependency graph.
+
+**Frozen.** No R-5. No new referee. No candidate-space expansion. No
+opponent-sampler redesign. No new weighting experiment. No further
+retrospective modelling tests. The next meaningful experiment is 2027
+prospective performance under this specification: a clean out-of-sample test
+in which a poor result cannot be attributed to an unresolved topology bug, a
+stale artifact, leakage, an inconsistent scorer, a referee construction
+defect, or a moving validation target.

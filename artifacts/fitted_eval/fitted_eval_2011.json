@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "kind": "fitted_model_evaluated",
+  "year": 2011,
+  "w": [
+    [
+      10,
+      27,
+      1,
+      49,
+      7,
+      9,
+      47,
+      44,
+      36,
+      13,
+      60,
+      22,
+      25,
+      46,
+      59,
+      32,
+      39,
+      37,
+      21,
+      61,
+      16,
+      62,
+      52,
+      11,
+      20,
+      18,
+      56,
+      24,
+      58,
+      41,
+      12,
+      34
+    ],
+    [
+      10,
+      49,
+      9,
+      44,
+      36,
+      60,
+      46,
+      32,
+      39,
+      21,
+      16,
+      11,
+      20,
+      24,
+      58,
+      12
+    ],
+    [
+      49,
+      9,
+      60,
+      32,
+      21,
+      11,
+      24,
+      58
+    ],
+    [
+      9,
+      60,
+      21,
+      58
+    ],
+    [
+      9,
+      58
+    ],
+    [
+      58
+    ]
+  ],
+  "ev": 445.8,
+  "p1": 0.0105,
+  "champion": "VCU",
+  "not_a_candidate": "This bracket was SCORED by the production referee, not SELECTED by it. It is not in the candidate bank, was never eligible for selection, and no selection behaviour reads this file.",
+  "p1_meaning": "P(1st) here is the P(1st) of this bracket when evaluated in the common pool/referee framework the other displayed brackets are scored in -- not the fitted model's own belief about its chances.",
+  "scorer": {
+    "ev": "scripts.experiments.conditional_bracket_engine.expected_scores under Torvik log5 round marginals",
+    "p1": "scripts.experiments.objective_diversity_matrix.pool_p_first under seed-rate referee, ESPN-crowd opponents",
+    "note": "The displayed EV and P(1st) are reproduced using the existing production definitions, which currently use different probability tables: EV is expected ESPN points under Torvik log5 round marginals; P(1st) is the expected share of first place against ESPN-crowd opponents under the seed-rate referee. This is a known methodological characteristic of the framework, reproduced unchanged so these numbers sit on the same scale as the cards beside them. It is NOT an assertion that EV and P(1st) are derived from one unified probability model.",
+    "scoring_rules": "ESPN R64/R32/S16/E8/F4/CHAMP",
+    "pool_size": 30,
+    "n_opponents": 29,
+    "n_sims_total": 150000,
+    "torvik_sims_replayed": 50000,
+    "n_rating_sources": 3,
+    "p1_trials": 2000,
+    "seed": 20260820,
+    "trials_seed": 20260827
+  },
+  "parity": {
+    "named:champ_equity": {
+      "shipped": {
+        "ev": 866.5,
+        "p1": 0.0179
+      },
+      "replayed": {
+        "ev": 866.5,
+        "p1": 0.0179
+      }
+    },
+    "named:ev_optimal": {
+      "shipped": {
+        "ev": 866.9,
+        "p1": 0.0163
+      },
+      "replayed": {
+        "ev": 866.9,
+        "p1": 0.0163
+      }
+    },
+    "named:blend_region_35": {
+      "shipped": {
+        "ev": 844.8,
+        "p1": 0.031
+      },
+      "replayed": {
+        "ev": 844.8,
+        "p1": 0.031
+      }
+    },
+    "candidate:0": {
+      "shipped": {
+        "ev": 666.6,
+        "p1": 0.0275
+      },
+      "replayed": {
+        "ev": 666.6,
+        "p1": 0.0275
+      }
+    },
+    "candidate:1": {
+      "shipped": {
+        "ev": 626.4,
+        "p1": 0.0177
+      },
+      "replayed": {
+        "ev": 626.4,
+        "p1": 0.0177
+      }
+    },
+    "candidate:2": {
+      "shipped": {
+        "ev": 563.5,
+        "p1": 0.0413
+      },
+      "replayed": {
+        "ev": 563.5,
+        "p1": 0.0413
+      }
+    },
+    "candidate:3": {
+      "shipped": {
+        "ev": 491.3,
+        "p1": 0.0275
+      },
+      "replayed": {
+        "ev": 491.3,
+        "p1": 0.0275
+      }
+    },
+    "candidate:4": {
+      "shipped": {
+        "ev": 739.2,
+        "p1": 0.057
+      },
+      "replayed": {
+        "ev": 739.2,
+        "p1": 0.057
+      }
+    }
+  },
+  "fit": {
+    "keys": [
+      "barthag",
+      "t_rank",
+      "sos_avg_opp_barthag",
+      "adj_offensive_efficiency",
+      "adj_defensive_efficiency",
+      "adj_tempo",
+      "effective_fg_pct",
+      "three_pt_pct",
+      "three_pt_rate",
+      "offensive_reb_rate",
+      "turnover_rate"
+    ],
+    "dropped": [],
+    "beta": [
+      -40.6159501883408,
+      42.7097137161175,
+      0.5528729617833403,
+      -1.6617940174777974,
+      2.936241128986687,
+      0.9459479892220031,
+      1.0513762557070563,
+      0.8466815264890105,
+      0.7123176315089542,
+      4.686357193554416,
+      2.096445814738942
+    ],
+    "sigma": 7.498985747803535,
+    "n_training_games": 63,
+    "calibration": null,
+    "oos": null
+  },
+  "inputs": {
+    "fit_inputs_hash": "7e83ab2383fc907cb8ea5e94454477fded15ca343f4f28e4c15782d593937848",
+    "training_sha256": "e3ad2e6fb1b4faa7fb5b61851170fb4d0117aaf434e7866ae4a3d9bc1c49471f",
+    "fit_js_sha256": "ccb12b9f64a46e5aa80100bed538b0c3bbba7aefbd300cd6a16bd5d52b6e2c0d",
+    "app_js_sha256": "b3742e43dc897b0b6d8c992baa02dfc02aa6908a2d0dba2be96e39b25bcf5989",
+    "candidates_artifact": "artifacts/candidates/candidates_2011.json",
+    "candidates_generated_at": "2026-09-16T04:03:23.619323+00:00"
+  },
+  "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
+  "generated_at": "2026-09-16T14:54:35.938308+00:00"
+}

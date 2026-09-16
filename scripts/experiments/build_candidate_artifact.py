@@ -244,14 +244,22 @@ def assert_pretournament_inputs(year: int) -> Dict:
             f"— seed-vs-seed rates computed from Kaggle results, {RECENT_FIRST_SEASON}+"
         ),
         "clean_for_forward_looking": True,
+        # POINT-IN-TIME, NOT "INCLUDES THE TARGET SEASON". This caveat used to
+        # say the table includes the target season's own ~63 games. It did
+        # once; it has not since build() started passing as_of=year to
+        # build_seed_probabilities (2026-09 audit, Step 2 item 14), which
+        # tallies only seasons STRICTLY BEFORE the one being built. The text
+        # was not updated with the code, so every shipped artifact carried an
+        # over-cautious provenance claim about a leak that was not there.
+        # A test now holds this text to the implementation.
+        "point_in_time": True,
         "caveat": (
-            "For historical validation this table includes the target season's own "
-            "results (~63 of ~1000 games in this window). It is used only by the shared "
-            "P(1st) referee and applied identically to every candidate, so it is bounded "
-            "and does not favour one strategy over another. Note the recent window makes "
-            "that share LARGER than it was under the full 1985-2025 table (~63 of ~2500), "
-            "which is the price of the window: fewer games means each season, including "
-            "the one being validated, carries more weight."
+            f"Built with as_of={year}: only seasons strictly before {year} are tallied, "
+            "so a historical season is never scored against a referee that saw its own "
+            "results. It is used only by the shared P(1st) referee and applied "
+            "identically to every candidate. The recent window means each remaining "
+            "season carries more weight than under the full 1985-2025 table; that is "
+            "the price of the window, not a leak."
         ),
         "public_picks_window": (
             "The public-pick model is deliberately NOT on this window. It uses archived "

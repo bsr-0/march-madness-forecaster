@@ -61,8 +61,10 @@
  * Choosing an OBJECTIVE is a decision the data cannot make for you, and those
  * controls stayed. Choosing an ESTIMATOR is a decision it can, and those went.
  *
- * The fit excludes the displayed season (leave-one-year-out), so the
- * coefficients were never derived from the games being predicted.
+ * The fit excludes the displayed season and every later one (walk-forward,
+ * not leave-one-year-out -- see fitLinear()'s docstring in fit.js), so the
+ * coefficients were never derived from the games being predicted, or from
+ * tournaments that had not been played yet.
  */
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
@@ -114,6 +116,12 @@ const state = {
    * user had asked for. */
   objective: 'p1',      // 'p1' | 'ev'
   fit: null,            // {beta, n, converged}
+  advancement: null,    // {team: [P(reach R32), ..., P(win it all)]}, see refit()
+  // Which round the narrow-viewport board is showing (see the @media rule in
+  // app.css). Meaningless on a wide viewport, where CSS ignores it and every
+  // round is visible regardless -- so there is nothing to gate on screen
+  // width here, only to reset when the board underneath it changes shape.
+  mobileRound: 0,
   training: null,
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
@@ -136,7 +144,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 16;
+const DATA_V = 19;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -190,7 +198,7 @@ function refit() {
   // fetched.
   const wanted = CANONICAL_KEYS;
   const src = state.training;
-  if (!src || !wanted.length) { state.fit = null; return; }
+  if (!src || !wanted.length) { state.fit = null; state.advancement = null; return; }
 
   // Variables the matrix cannot supply are dropped, not zero-filled: a zero
   // differential is a claim that the two teams are equal on it.
@@ -200,21 +208,55 @@ function refit() {
     const i = src.keys.indexOf(k);
     if (i >= 0) { keys.push(k); cols.push(i); }
   }
-  if (!keys.length) { state.fit = null; return; }
+  if (!keys.length) { state.fit = null; state.advancement = null; return; }
 
   const f = fitLinear(src.games, cols, state.year);
   f.keys = keys;
   f.cols = cols;
   f.userKeys = keys;
   f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);   // e.g. t_rank has no dated snapshot
-  f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
   // The honest number: fit on prior seasons, scored on seasons never seen --
   // and CALIBRATED on seasons strictly before the one on screen. Until the
   // 2026-09 audit this called crossValidate() on the whole matrix, so the
   // link's (a, nu) for a displayed 2019 had been fitted on 2019's own results
   // and on 2020-2026's. See causalWalkForward() in fit.js.
   f.oos = causalWalkForward(state.training.games, cols, state.training.years, state.year, 2014);
+  // In-sample accuracy on the SAME games the walk-forward folds held out,
+  // so the two numbers in the note are comparable. It used to show
+  // fitQuality() -- every training row, 2010 onward -- while the folds start
+  // at 2014. Set against
+  // each other, that read as "held-out 78% beats in-sample 77.7%" -- true of
+  // the numbers, meaningless as a comparison, and an invitation to read a
+  // year-range artefact as evidence about overfitting (2026-09 site review).
+  f.qualityOnFoldYears = null;
+  if (f.oos) {
+    const foldYears = new Set(Object.keys(f.oos.perYear).map(Number));
+    const same = state.training.games.filter(r => foldYears.has(r.y));
+    f.qualityOnFoldYears = scoreSpread(same, f.beta, cols);
+  }
+  // Overall rating and National rank, on the canonical set, correlate at
+  // ~0.99 and draw large opposite-sign coefficients every season -- neither
+  // ever flips sign across a fold, so stability()'s sign-flip check cannot
+  // see it, and until this it went to screen unmarked (2026-09 site review).
+  // See pairwiseCorrelations() in fit.js for why this is a different check.
+  f.corr = pairwiseCorrelations(src.games, cols, state.year);
   state.fit = f;
+
+  // Every team's chance of reaching every round, over the REAL bracket -- not
+  // a seed-based base rate (that is a different question, answered on the
+  // Python side for a different purpose). Computed once here, from the same
+  // calibrated pairwise winProb() the board already grades games with, so the
+  // per-round numbers in the team drawer can never disagree with the per-game
+  // percentages on the board.
+  //
+  // refit() runs for every season regardless of status -- setYear() calls it
+  // before render() has had a chance to bail out on a season that has not
+  // started -- and a `not_started` season's payload carries no `first_round`
+  // at all (see docs/data/season_2027.json before Selection Sunday). Without
+  // this check that reached bracketAdvancementProbs() as `undefined.length`.
+  const hasBracket = state.season && Array.isArray(state.season.first_round);
+  state.advancement = fitReady() && hasBracket
+    ? bracketAdvancementProbs(state.season.first_round, winProb) : null;
 }
 
 /* Predicted scoring margin for team a against team b, in points.
@@ -290,6 +332,9 @@ function solveFromPicks() {
   const picks = src.map(r => new Set(r));
   let current = state.season.first_round.slice();
   const rounds = [];
+  // Computed once per solve, not per game: fit.js is not re-fitted here, only
+  // queried, so this is a flag read, not a cost.
+  const fitOk = fitReady();
   for (let r = 0; r < 6; r++) {
     const games = [], next = [];
     for (let g = 0; g < current.length; g += 2) {
@@ -302,7 +347,13 @@ function solveFromPicks() {
         throw new Error(`picks do not describe a bracket on this season's tree: round ${r}, game ${a} vs ${b}, ${ha ? 'both' : 'neither'} picked`);
       }
       const win = ha ? a : b;
-      games.push({ a, b, win, sa: null, sb: null });
+      // This game's own probability is not in the payload -- the precomputed
+      // strategies carry a whole-bracket P(1st)/EV, not a per-game figure. The
+      // live fitted model can score any pair, so it supplies the confidence
+      // number here too; see fitReady() for why that is the right source
+      // rather than leaving these boards silent.
+      const p = fitOk ? winProb(a, b) : null;
+      games.push({ a, b, win, sa: null, sb: null, p });
       next.push(win);
     }
     rounds.push(games);
@@ -655,6 +706,65 @@ function anyEnabled() {
   return !usingOptimized() && state.fit && state.fit.keys.length > 0;
 }
 
+/* Whether the live fitted model (fit.js) can score an arbitrary matchup right
+ * now, regardless of which strategy is on screen.
+ *
+ * Distinct from anyEnabled(), which additionally requires the Fitted strategy
+ * to be ACTIVE -- that gate is right for the equation and its prose, which are
+ * claims about that specific model run, but wrong for game percentages: the
+ * two precomputed strategies pick winners from a Python-side artifact that
+ * carries no per-game probability, so the calibrated live model is the only
+ * source of a confidence number for their games too. */
+function fitReady() {
+  return !!(state.fit && state.fit.ok && state.fit.keys && state.fit.keys.length > 0);
+}
+
+/* The fitted bracket's P(1st)/EV under the production referee -- IF, and only
+ * if, it is the bracket this page just solved.
+ *
+ * scripts/evaluate_fitted_bracket.py scores the fitted bracket with the same
+ * scorer, same referee tables, same 29-opponent pool and same trials the two
+ * precomputed cards were scored with (it proves that by re-scoring those
+ * cards' own brackets first and demanding exact equality). The payload
+ * builder already refuses to embed an evaluation whose inputs have changed;
+ * this is the last line: compare the 63 picks in the evaluation to the 63
+ * picks solveByFit() produces right now, and show the numbers only on an
+ * exact match. A P(1st) for a bracket that is not the one on screen is not
+ * a slightly wrong number, it is a number about something else.
+ *
+ * WHAT THE NUMBER MEANS. It is the P(1st) of this bracket when evaluated in
+ * the common pool framework the other cards are scored in -- not the fitted
+ * model's own belief about its chances. The two would only coincide if the
+ * pool referee were this model, and it is not (it is the seed-rate referee
+ * with an ESPN-crowd opponent field). The copy on the card says so.
+ *
+ * Returns the payload's fitted_eval block, or null. `stale` is true when an
+ * evaluation exists but is for a different bracket, so the UI can say that
+ * rather than silently showing nothing. */
+function fittedEval() {
+  const s = state.season;
+  const fe = s && s.fitted_eval;
+  if (!fe || fe.kind !== 'fitted_model_evaluated' || !fitReady()) return null;
+  const rounds = solveByFit();
+  const same = fe.w.length === rounds.length && fe.w.every((r, i) =>
+    r.length === rounds[i].length && r.every((t, j) => t === rounds[i][j].win));
+  return same ? fe : { stale: true };
+}
+
+function fittedEvalNote() {
+  const fe = fittedEval();
+  if (!fe) return '';
+  if (fe.stale) {
+    return ` <span class="tag alt">Not scored</span> The pool evaluation on file is for a ` +
+      `different bracket than this one, so no P(1st) or expected points are shown for it.`;
+  }
+  return ` <span class="tag alt">Evaluated, not selected</span> Scored in the same 30-entry pool ` +
+    `framework as the two cards above: <strong>${p1Pct(fe.p1)}</strong> chance of finishing first, ` +
+    `<strong>${fe.ev.toFixed(0)}</strong> expected points. That is the P(1st) of this bracket under ` +
+    `the common referee, not the model's own belief about its chances \u2014 and it was scored ` +
+    `there, not selected there: it is not one of the candidate brackets.`;
+}
+
 /* ---------- render ---------- */
 
 function render() {
@@ -667,6 +777,9 @@ function render() {
     board.innerHTML = '';
     state.rounds = null;
     { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
+    { const nav = document.getElementById('board-nav'); if (nav) nav.hidden = true; }
+    { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
+    { const cb = document.getElementById('champion-box'); if (cb) { cb.hidden = true; cb.innerHTML = ''; } }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -718,13 +831,23 @@ function render() {
       `${f.keys.length} variable${f.keys.length > 1 ? 's' : ''}, fitted on ${f.n.toLocaleString()} games from seasons before ${state.year}. ` +
       (o ? `Across ${o.seasons} held-out seasons it is off by <strong>${o.mae.toFixed(1)} points</strong> in a typical game ` +
            `and calls <strong>${(o.accuracy * 100).toFixed(0)}%</strong> of them correctly ` +
-           `— against ${(f.quality.accuracy * 100).toFixed(1)}% on the games it was fitted to.` +
+           // Same games both times, and whole points both times: with ~700
+           // games the standard error on an accuracy is about 1.5pp, so a
+           // decimal place implies a resolution the number does not have.
+           (f.qualityOnFoldYears
+             ? `— against ${(f.qualityOnFoldYears.accuracy * 100).toFixed(0)}% on those same games when they were in the training set.`
+             : '.') +
            // Accuracy grades the pick; the board also shows a percentage, and
            // that is a separate claim needing a separate number.
-           (o.probScore ? ` Its percentages are honest too, not just its winners: ` +
-             `when it says 70% it is right about 70% of the time, measured on those same ` +
-             `unseen games.` : '')
+           // Accuracy grades the pick; the percentage on the board is a
+           // separate claim. This used to assert "when it says 70% it is right
+           // about 70% of the time" with nothing on the page behind it (2026-09
+           // review). The table under the equation now IS the evidence, so the
+           // sentence points at it instead of vouching.
+           (o.reliability ? ` Its percentages are a separate claim from its picks \u2014 ` +
+             `the table under the equation checks them band by band on those same unseen games.` : '')
          : `Not enough history to test out-of-sample.`) +
+      fittedEvalNote() +
       `</span>`;
   }
 
@@ -745,11 +868,111 @@ function render() {
   // disagree about which bracket the user is looking at.
   state.rounds = rounds;
   { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
+  renderChampionBox(rounds);
+  // `active`/`data-r` matter only under the narrow-viewport CSS (see
+  // app.css's @media (max-width: 720px)), which shows one .round at a time
+  // instead of scrolling six columns sideways. They cost nothing on a wide
+  // viewport, where that rule never applies and every round is visible
+  // regardless of this class.
   board.innerHTML = rounds.map((games, r) => `
-    <div class="round" style="--n:${games.length}">
+    <div class="round${r === state.mobileRound ? ' active' : ''}" data-r="${r}" style="--n:${games.length}">
       <p class="r-label">${ROUNDS[r]}</p>
       ${games.map((g, gi) => gameHTML(g, r, truth ? truth[r][gi] : null)).join('')}
     </div>`).join('');
+  updateMobileNav();
+}
+
+/* Whichever bracket is on screen, name the one team it sends to the title.
+ *
+ * Previously the only place this appeared was bold text in the Championship
+ * column -- the sixth of six, past the horizontal scroll on first load. The
+ * champion is always `rounds[rounds.length - 1][0].win`: the single game in
+ * the last round this board solved, win-decided the same way every other
+ * game on it was (solveByFit()'s model, or solveFromPicks()'s precomputed
+ * strategy) -- so this box can never name a different champion than the one
+ * the board itself shows in that column.
+ */
+function renderChampionBox(rounds) {
+  const box = document.getElementById('champion-box');
+  if (!box) return;
+  const final = rounds[rounds.length - 1][0];
+  const t = state.season.teams[final.win];
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="champ-card">
+      <span class="champ-seed">${t.seed}</span>
+      <div class="champ-mid">
+        <p class="champ-label">Champion</p>
+        <p class="champ-name">${t.name}</p>
+      </div>
+      <span class="champ-region">${t.region}</span>
+    </div>`;
+}
+
+/* ---------- narrow-viewport round navigation ----------
+ *
+ * See the @media (max-width: 720px) rule in app.css: below that width, .board
+ * shows one .round at a time (whichever carries the `active` class) instead
+ * of scrolling six columns sideways. Every round is already built by
+ * render() regardless of viewport, so stepping between them here only
+ * toggles a class -- it never re-solves the bracket, and it is a correct
+ * no-op on a wide viewport where the CSS rule does not apply and every round
+ * is visible no matter which one is `active`.
+ */
+function updateMobileNav() {
+  const nav = document.getElementById('board-nav');
+  const dots = document.getElementById('rnav-dots');
+  const label = document.getElementById('rnav-label');
+  if (!nav || !dots || !label) return;
+  if (!state.rounds) { nav.hidden = true; dots.hidden = true; return; }
+  nav.hidden = false;
+  dots.hidden = false;
+  label.textContent = `${ROUNDS[state.mobileRound]} · ${state.mobileRound + 1}/${ROUNDS.length}`;
+  document.getElementById('rnav-prev').disabled = state.mobileRound === 0;
+  document.getElementById('rnav-next').disabled = state.mobileRound === ROUNDS.length - 1;
+  dots.innerHTML = ROUNDS.map((r, ri) => `
+    <button class="rnav-dot${ri === state.mobileRound ? ' on' : ''}" aria-label="${r}"
+            onclick="jumpMobileRound(${ri})"></button>`).join('');
+}
+
+function jumpMobileRound(r) {
+  if (!state.rounds || r < 0 || r >= ROUNDS.length || r === state.mobileRound) return;
+  state.mobileRound = r;
+  document.querySelectorAll('#board > .round').forEach(el => {
+    el.classList.toggle('active', Number(el.dataset.r) === r);
+  });
+  updateMobileNav();
+}
+
+function setMobileRound(delta) {
+  if (!state.rounds) return;
+  jumpMobileRound(Math.max(0, Math.min(ROUNDS.length - 1, state.mobileRound + delta)));
+}
+
+/* Swipe left/right on the board to step a round, on top of the arrows and
+ * dots. Bound once, unconditionally -- gated at touchend time by matchMedia
+ * rather than only attaching the listener under the breakpoint, because
+ * @media alone does not fire JS when a viewport crosses it. Checked at
+ * touchend rather than touchstart so rotating mid-gesture cannot fire a jump
+ * the layout it lands on was never meant to react to.
+ *
+ * WIDE VIEWPORTS ARE DELIBERATELY LEFT ALONE. There .board scrolls
+ * horizontally by design, and a drag across it is that scroll, not a page
+ * turn -- reinterpreting it here would fight the browser's own gesture. */
+function wireBoardSwipe() {
+  const board = document.getElementById('board');
+  if (!board) return;
+  const SWIPE_PX = 40;
+  let x0 = null;
+  board.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  board.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    x0 = null;
+    if (!window.matchMedia('(max-width: 720px)').matches) return;
+    if (dx <= -SWIPE_PX) setMobileRound(1);
+    else if (dx >= SWIPE_PX) setMobileRound(-1);
+  }, { passive: true });
 }
 
 /* The fitted model, written out.
@@ -759,6 +982,12 @@ function render() {
  * standard deviations between the two teams, which is why a coefficient reads as
  * POINTS OF MARGIN per standard deviation of edge.
  */
+// r at or above this is "the same signal, not two effects" -- see
+// pairwiseCorrelations() in fit.js. 0.8 is a conventional high-collinearity
+// line in applied regression; the canonical set's actual worst offender
+// (Overall rating vs National rank) sits at ~0.99, well past it either way.
+const COLLINEAR_R = 0.8;
+
 function equationHTML() {
   const f = state.fit;
   const label = Object.fromEntries(state.season.variables.map(v => [v.key, v.label]));
@@ -768,8 +997,27 @@ function equationHTML() {
   // showing the model and vouching for it.
   const stab = f.oos ? f.oos.stability : null;
 
+  // A coefficient can be perfectly sign-stable across every fold and STILL
+  // not mean what it looks like, if the column it belongs to is nearly a
+  // duplicate of another enabled one: stability() cannot see that, because
+  // both of a collinear pair's coefficients agree with themselves fold to
+  // fold -- they just disagree with each other about how to split one
+  // shared signal. `i` here is the position in f.keys/f.cols/f.corr, kept on
+  // each term so the lookup survives the magnitude sort below.
+  const corr = f.corr;
+  const partnerOf = i => {
+    if (!corr) return null;
+    let best = -1, bestAbs = 0;
+    for (let j = 0; j < corr[i].length; j++) {
+      if (j === i) continue;
+      const a = Math.abs(corr[i][j]);
+      if (a > bestAbs) { bestAbs = a; best = j; }
+    }
+    return best >= 0 && bestAbs >= COLLINEAR_R ? { j: best, r: corr[i][best] } : null;
+  };
+
   const terms = f.keys
-    .map((k, i) => ({ k, b: f.beta[i], label: label[k] || k, s: stab ? stab[i] : null }))
+    .map((k, i) => ({ i, k, b: f.beta[i], label: label[k] || k, s: stab ? stab[i] : null, partner: partnerOf(i) }))
     .sort((a, b) => Math.abs(b.b) - Math.abs(a.b));
 
   const body = terms.map((t, i) => {
@@ -777,17 +1025,36 @@ function equationHTML() {
     const mag = Math.abs(t.b).toFixed(2);
     const weak = Math.abs(t.b) < 0.05;
     const shaky = t.s && t.s.signFlips;
-    const cls = weak ? ' weak' : (shaky ? ' shaky' : '');
-    const tip = weak ? 'Essentially no contribution'
-      : shaky ? `Unstable: ranged ${t.s.min.toFixed(1)} to ${t.s.max.toFixed(1)} across held-out seasons, changing sign. Do not read this number as an effect.`
-      : '';
-    return `<span class="term${cls}" title="${tip}">` +
+    const collinear = t.partner !== null;
+    const cls = weak ? ' weak' : [shaky && ' shaky', collinear && ' collinear'].filter(Boolean).join('');
+    const tips = [];
+    if (weak) {
+      tips.push('Essentially no contribution');
+    } else {
+      if (shaky) {
+        tips.push(`Unstable: ranged ${t.s.min.toFixed(1)} to ${t.s.max.toFixed(1)} across held-out seasons, changing sign. Do not read this number as an effect.`);
+      }
+      if (collinear) {
+        const partnerLabel = label[f.keys[t.partner.j]] || f.keys[t.partner.j];
+        const partnerB = f.beta[t.partner.j];
+        const net = t.b + partnerB;
+        const netSign = net < 0 ? '\u2212' : '+';
+        tips.push(
+          `Moves almost exactly with \u0394${partnerLabel} (r=${t.partner.r.toFixed(2)}, over the seasons this fit trained on). `
+          + `Their coefficients split credit for one shared signal, not two independent effects \u2014 `
+          + `read them together: ${sign}${mag} ${partnerB < 0 ? '\u2212' : '+'} ${Math.abs(partnerB).toFixed(2)} = ${netSign}${Math.abs(net).toFixed(2)}, not this number alone.`
+        );
+      }
+    }
+    const marks = weak ? '' : `${shaky ? '<i class="warn" aria-label="unstable">*</i>' : ''}${collinear ? '<i class="warn collinear-mark" aria-label="collinear">\u2020</i>' : ''}`;
+    return `<span class="term${cls}" title="${tips.join(' ')}">` +
            `${i === 0 && t.b >= 0 ? '' : `<i class="op">${sign}</i>`}` +
            `<b>${mag}</b><span class="dv">\u0394${t.label}</span>` +
-           `${shaky ? '<i class="warn" aria-label="unstable">*</i>' : ''}</span>`;
+           `${marks}</span>`;
   }).join('');
 
   const nShaky = terms.filter(t => t.s && t.s.signFlips).length;
+  const nCollinear = terms.filter(t => t.partner !== null).length;
 
   return `
     <div class="eq">
@@ -799,6 +1066,9 @@ function equationHTML() {
       <p class="eq-foot">
         \u0394 is team A minus team B, in standard deviations within the season,
         so each number is points of margin per standard deviation of edge.
+        Every \u0394 points the same way: stats where a lower raw number is better
+        (Defense is points allowed, National rank is a rank) are flipped before
+        standardising, so a positive weight always means more of the good thing.
         No intercept: swapping the teams flips the sign exactly.
         A positive margin is the pick; typical error is
         \u00b1${f.oos ? f.oos.mae.toFixed(1) : f.sigma.toFixed(1)} points.
@@ -808,10 +1078,60 @@ function equationHTML() {
         between held-out seasons. The equation as a whole still predicts \u2014
         that is what the out-of-sample figure measures \u2014 but those individual
         numbers are splitting credit between variables that overlap, and are
-        not readable as "what this variable is worth". The variable set is fixed
-        because dropping the redundant ones was measured and did not predict any
-        better — it only made the coefficients easier to read.
+        not readable as "what this variable is worth".
       </p>` : ''}
+      ${nCollinear ? `<p class="eq-warn">
+        <i class="warn collinear-mark">\u2020</i> ${nCollinear} of these ${terms.length} coefficients belong to a
+        pair that moves together (r \u2265 ${COLLINEAR_R}) most seasons. A big number on one of a
+        collinear pair and an opposite big number on the other is not two effects
+        pulling apart \u2014 it is one signal, split two ways. Hover a marked term for
+        its partner and their combined effect.
+      </p>` : ''}
+      ${nShaky || nCollinear ? `<p class="eq-warn">
+        The variable set is fixed because dropping the redundant ones was measured
+        and did not predict any better \u2014 it only made the coefficients easier to read.
+      </p>` : ''}
+      ${reliabilityHTML(f.oos)}
+    </div>`;
+}
+
+/* Does "70%" come true 70% of the time? The check the accuracy figure cannot
+ * make -- see reliabilityTable() in fit.js. Rendered from the walk-forward
+ * held-out games strictly before the displayed season, under the same link
+ * the board's percentages use, so it is evidence about THESE numbers. */
+function reliabilityHTML(o) {
+  if (!o || !o.reliability) return '';
+  const bins = o.reliability.filter(b => b.n > 0);
+  if (!bins.length) return '';
+  const pct = v => `${Math.round(v * 100)}%`;
+  const rows = bins.map(b => {
+    const gap = (b.actual - b.predicted) / b.se;
+    // Two sigma is flagged, not judged: with five bins one of them sitting
+    // near two sigma is roughly what chance produces, and the 0.5-0.6 bin in
+    // particular moves with its own edge (fit.js, calibrate()'s comment).
+    const cls = Math.abs(gap) >= 2 ? ' off' : '';
+    return `<tr class="rel-row${cls}">
+      <td>${pct(b.lo)}\u2013${pct(b.hi)}</td>
+      <td class="num">${b.n}</td>
+      <td class="num">${pct(b.predicted)}</td>
+      <td class="num">${pct(b.actual)} <span class="rel-se">\u00b1${Math.round(b.se * 100)}</span></td>
+    </tr>`;
+  }).join('');
+  const n = bins.reduce((s, b) => s + b.n, 0);
+  return `
+    <div class="rel">
+      <p class="rel-head">Does the percentage mean what it says?
+        <span class="rel-sub">${n} held-out games from seasons before ${state.year}, grouped by how confident the model was in the favourite.</span></p>
+      <table class="rel-table">
+        <thead><tr><th>Model said</th><th class="num">Games</th><th class="num">Avg. said</th><th class="num">Favourite actually won</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="rel-foot">
+        \u00b1 is what chance alone would move the observed rate by if the model's
+        percentage were exactly right. The lowest band is a known weak spot in the
+        reading rather than the model: it is coin-flip games, and which side of the
+        50% line a handful of them fall on shifts it by several points.
+      </p>
     </div>`;
 }
 
@@ -836,6 +1156,17 @@ function gameHTML(g, round, actualGame) {
     </div>`;
 }
 
+/* The percentage badge always comes from the live fitted model (fit.js), even
+ * under a precomputed strategy that picked its winners a different way -- see
+ * fitReady(). The two cases need different wording: under the Fitted strategy
+ * this number IS the pick; under the others it is a second opinion that can
+ * legitimately disagree with the bracket on screen. */
+function probTitle() {
+  return usingOptimized()
+    ? "The live fitted model's estimated chance of winning this game — a separate estimate from the one that built this bracket, so it can differ from the pick shown"
+    : "The fitted model's estimated chance of winning this game";
+}
+
 function sideHTML(i, picked, p, oppI, round, actualHere) {
   const t = state.season.teams[i];
   const upset = picked && state.season.teams[oppI].seed < t.seed;
@@ -855,7 +1186,7 @@ function sideHTML(i, picked, p, oppI, round, actualHere) {
         ${should ? `<span class="should" title="Actually reached this game">${should.name}</span>` : ''}
       </span>
       ${upset ? '<span class="badge up" title="Lower seed picked">UPSET</span>' : ''}
-      ${p === null ? '' : `<span class="sc">${Math.round(p * 100)}%</span>`}
+      ${p === null ? '' : `<span class="sc" title="${probTitle()}">${Math.round(p * 100)}%</span>`}
     </button>`;
 }
 
@@ -898,14 +1229,28 @@ function renderStrategies() {
   opts.push({
     id: MODEL,
     label: 'Fitted model',
+    // Used to end "...This is the only strategy the variable weights apply
+    // to" -- a control that was removed 2026-08-29 (see the file header: it
+    // measured null). What actually still sets this card apart from the
+    // other two is the equation printed below it (equationHTML(), only
+    // rendered while this strategy is active), so the sentence now says that
+    // instead of describing a control nobody can find on the page.
     sub: 'A model fitted in your browser, right now, on tournament games from seasons '
        + 'before this one — never on the season you are looking at. It was picked by '
-       + 'testing it against the alternatives, not by preference. This is the only '
-       + 'strategy the variable weights apply to.',
+       + 'testing it against the alternatives, not by preference. Its equation is '
+       + 'printed below, coefficient by coefficient — the only strategy here that shows its work.',
     tag: 'live',
-    stat: state.fit && state.fit.oos
-      ? `${(state.fit.oos.accuracy * 100).toFixed(0)}% of games called right`
-      : '',
+    // Same two numbers as the other cards, from the same scorer, when the
+    // evaluation on file is for exactly this bracket -- see fittedEval().
+    // Otherwise the accuracy alone, which is what this card showed before an
+    // evaluation existed at all.
+    stat: (() => {
+      const fe = fittedEval();
+      if (fe && !fe.stale) return `${p1Pct(fe.p1)} to win · ${fe.ev.toFixed(0)} pts · evaluated`;
+      return state.fit && state.fit.oos
+        ? `${(state.fit.oos.accuracy * 100).toFixed(0)}% of games called right`
+        : '';
+    })(),
   });
 
   document.getElementById('strat-list').innerHTML = opts.map(o => `
@@ -1129,6 +1474,32 @@ function setAlt(i) {
  * Round-by-round winners, in bracket order, because that is the order the entry
  * form asks for them.
  */
+/* Region-scoped rounds: the bracket only crosses regions from the Final Four
+ * on, so a game in one of these four rounds always has both teams from the
+ * same region -- structurally, by construction of a balanced bracket, not
+ * something that happens to be true of one season's draw (see the review
+ * note this fixes, below). Fixed at 4 for the same reason the rest of this
+ * file hardcodes a 6-round, 4-region, 64-team bracket rather than deriving
+ * it: this codebase does not model any other size. */
+const REGION_SCOPED_ROUNDS = 4;
+
+/* 2026-09 site review: this export named a round's WINNERS under that round's
+ * label, which reads as a mismatch either way you take it -- "Round of 64"
+ * headed the 32 teams who won their way OUT of it, and "Final Four" headed
+ * only the 2 teams who beat the other two. Worse, a winner name alone does
+ * not say which game it belongs to, which is the one thing an ESPN entry
+ * form actually asks: not "who survived", but "who won THIS matchup".
+ *
+ * The fix is not a label shift -- ROUNDS[r] already names the round game g
+ * was played in correctly, because state.rounds[r] holds that round's real
+ * games (g.a, g.b, g.win), the same shape the board itself renders. Printing
+ * both sides of every game, not just the winner, makes the header and the
+ * body describe the same round and gives every line something to match
+ * against the entry form. Grouping by region for the four rounds where that
+ * is a real property of the game (not the Final Four or the Championship,
+ * which cross regions by definition) turns a flat 32-line dump into
+ * something organised the way ESPN's own bracket is.
+ */
 function picksAsText() {
   if (!state.rounds || !state.season) return '';
   const st = usingOptimized() ? currentStrategy() : null;
@@ -1141,14 +1512,32 @@ function picksAsText() {
     st && st.p1 !== undefined
       ? `${p1Pct(st.p1)} to finish first, ${st.ev.toFixed(0)} expected points`
       : '',
+    // The fitted bracket's numbers travel too, labelled for what they are.
+    (() => { const fe = !st ? fittedEval() : null;
+             return fe && !fe.stale
+               ? `${p1Pct(fe.p1)} to finish first, ${fe.ev.toFixed(0)} expected points ` +
+                 `(evaluated in the common pool framework; not a selected candidate)`
+               : ''; })(),
     // The disclosure travels with the picks. A bracket pasted into a group chat
     // outlives the page it came from, and the number goes with it.
     state.season.p1_assumption || '',
   ].filter(Boolean);
 
+  const gameLine = g => {
+    const a = team(g.a), b = team(g.b);
+    const won = g.win === g.a, w = won ? a : b, l = won ? b : a;
+    return `${w.seed} ${w.name} over ${l.seed} ${l.name}`;
+  };
+
   const body = state.rounds.map((games, r) => {
-    const winners = games.map(g => { const t = team(g.win); return `${t.seed} ${t.name}`; });
-    return `${ROUNDS[r]}\n${winners.map(w => `  ${w}`).join('\n')}`;
+    const lines = [];
+    let lastRegion;   // undefined until the first game sets it, deliberately
+    for (const g of games) {
+      const region = r < REGION_SCOPED_ROUNDS ? team(g.a).region : null;
+      if (region && region !== lastRegion) { lines.push(`  ${region}`); lastRegion = region; }
+      lines.push(`  ${gameLine(g)}`);
+    }
+    return `${ROUNDS[r]}\n${lines.join('\n')}`;
   });
 
   return `${head.join('\n')}\n\n${body.join('\n\n')}\n`;
@@ -1252,21 +1641,105 @@ function setStrategy(id) {
 
 /* ---------- team drawer ---------- */
 
+/* Each round's chance of reaching it, for the drawer.
+ *
+ * Reuses state.advancement -- the same recursive, real-bracket calculation
+ * the board's per-game percentages come from (see refit(), fitReady(),
+ * bracketAdvancementProbs() in fit.js) -- rather than approximating it from
+ * this team's own game-by-game percentages, which would silently ignore
+ * whether each future opponent is themselves likely to arrive.
+ *
+ * ROUNDS[0], the Round of 64, is the fixed starting field rather than a
+ * predicted outcome, so it has nothing to show here; probs[r-1] is "reached
+ * ROUNDS[r]" for r >= 1, matching the numbering solveByFit() already uses.
+ */
+function advancementHTML(i) {
+  const probs = state.advancement && state.advancement[i];
+  if (!probs) return '';
+  return `
+    <div class="d-group">
+      <p class="g-name">Model's chance of reaching each round</p>
+      ${ROUNDS.slice(1).map((label, ri) => {
+        const p = probs[ri];
+        const pct = Math.max(2, Math.min(98, p * 100));
+        return `
+        <div class="d-row">
+          <span class="d-lab">${label}</span>
+          <span class="d-track"><i style="left:${pct}%"></i></span>
+          <span class="d-val">${p1Pct(p)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* Where this team's value sits among the 64 in the field, 0-100, in the
+ * BETTER direction -- or null if the value is missing.
+ *
+ * Uses the payload's z column rather than raw, because z is already
+ * sign-corrected in build_ui_payload.py (higher_better=False stats are
+ * negated before standardising), so "larger z" means "better" for every
+ * variable and one comparison serves all of them. Missing values are
+ * excluded by checking RAW, not z: a missing raw is shipped as z = 0, which
+ * would otherwise count as a perfectly average team and be ranked.
+ *
+ * Ties get half credit (the usual percentile-rank convention), so two teams
+ * with identical values get the same number rather than an arbitrary order.
+ *
+ * WHY A RANK AND NOT THE OLD DOT. The drawer used to place its marker at
+ * 50 + 16 z, a linear map of z that read as a percentile and was not one:
+ * z is standardised over the whole ~360-team D1 field, so most of the 64
+ * here sit far to the right of centre and the dot said little about how a
+ * team compared to the field it actually has to beat. And a raw number
+ * alone -- "Defense 91.0", "Ball security 0.158" -- says nothing about
+ * direction at all (2026-09 site review).
+ */
+function percentileInField(zs, raws, i) {
+  if (!zs || !raws) return null;
+  const mine = raws[i];
+  if (mine === null || mine === undefined) return null;
+  const z = zs[i];
+  let below = 0, ties = 0, n = 0;
+  for (let j = 0; j < raws.length; j++) {
+    if (raws[j] === null || raws[j] === undefined) continue;
+    n++;
+    if (zs[j] < z) below++;
+    else if (zs[j] === z) ties++;   // includes j === i
+  }
+  if (!n) return null;
+  return 100 * (below + 0.5 * (ties - 1)) / Math.max(n - 1, 1);
+}
+
+function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function openTeam(i) {
   const s = state.season, t = s.teams[i];
   document.getElementById('d-name').textContent = t.name;
-  document.getElementById('d-sub').textContent = `${t.seed} seed · ${t.region}`;
+  document.getElementById('d-sub').textContent = `${t.seed} seed \u00b7 ${t.region}`;
 
   const groups = {};
   for (const v of s.variables) (groups[v.group] ||= []).push(v);
 
-  document.getElementById('d-body').innerHTML = Object.entries(groups).map(([g, vars]) => `
+  // Said once, up top, rather than in per-row title= tooltips a phone will
+  // never show: which way is "good" for each raw number, and what the
+  // percentile means. Both used to be unstated, and the raw numbers for
+  // lower-is-better stats read backwards without them.
+  const legend = `
+    <p class="d-legend">
+      Percentile is this team's rank among the ${s.teams.length} in the field, always
+      in the better direction. <span class="d-dir">\u2193</span> marks stats where a
+      lower raw number is better; the percentile already accounts for that.
+    </p>`;
+
+  document.getElementById('d-body').innerHTML = advancementHTML(i) + legend + Object.entries(groups).map(([g, vars]) => `
     <div class="d-group">
       <p class="g-name">${g}</p>
       ${vars.map(v => {
-        const z = (s.z[v.key] || [])[i] || 0;
         const raw = (s.raw[v.key] || [])[i];
-        const pct = Math.max(2, Math.min(98, 50 + z * 16));
+        const missing = raw === null || raw === undefined;
+        const pct = missing ? null : percentileInField(s.z[v.key], s.raw[v.key], i);
         // Lit means "this one is in the fitted model", which is now a fact to
         // read rather than a control to operate. Every stat is still shown,
         // because the drawer is for understanding a team, not for configuring
@@ -1274,9 +1747,10 @@ function openTeam(i) {
         const on = CANONICAL_KEYS.indexOf(v.key) >= 0;
         return `
         <div class="d-row${on ? ' lit' : ''}">
-          <span class="d-lab">${v.label}</span>
-          <span class="d-track"><i style="left:${pct}%"></i></span>
-          <span class="d-val">${raw === null || raw === undefined ? '—' : fmt(raw)}</span>
+          <span class="d-lab">${v.label}${v.higher_better ? '' : ' <span class="d-dir">\u2193</span>'}</span>
+          <span class="d-track">${pct === null ? '' : `<i style="left:${Math.max(2, Math.min(98, pct))}%"></i>`}</span>
+          <span class="d-val">${missing ? '\u2014' : fmt(raw)}</span>
+          <span class="d-pct">${pct === null ? '' : ordinal(Math.round(pct))}</span>
         </div>`;
       }).join('')}
     </div>`).join('');
@@ -1300,8 +1774,22 @@ function closeDrawer() {
 /* ---------- controls ---------- */
 
 async function setYear(year) {
+  // A team drawer is keyed by INDEX into state.season.teams, a slot that is
+  // only stable within one season's bracket -- index 5 in 2011 and index 5 in
+  // 2026 are unrelated teams. Leaving the drawer open across a year change
+  // used to keep showing the old season's name, stats, and (since this
+  // change added round-advancement numbers computed from the new season's
+  // bracket) an increasingly incoherent mix of old and new data for a team
+  // that may not even be the one on screen. There is no correct team to
+  // refresh it to, so closing it is the only choice that cannot show
+  // something wrong.
+  closeDrawer();
   state.year = year;
   state.notice = '';
+  // A new season is a new bracket top to bottom; staying on, say, round 5 of
+  // the old one would open the mobile board on the Championship of a
+  // tournament the visitor has not chosen yet.
+  state.mobileRound = 0;
   document.querySelectorAll('.yr').forEach(b => b.classList.toggle('on', Number(b.dataset.year) === year));
   try {
     state.season = await loadSeason(year);
@@ -1342,6 +1830,7 @@ async function init() {
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  wireBoardSwipe();
 
   // Pasting a link into the address bar of the page you are already on is a
   // same-document navigation: nothing reloads and, without this, nothing
@@ -1355,9 +1844,5 @@ async function init() {
   // far right of seventeen, so it would otherwise open out of view.
   document.querySelector('.yr.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
-
-// Track which team the drawer is showing so a weight change can refresh it.
-const _openTeam = openTeam;
-openTeam = function (i) { state.openIdx = i; _openTeam(i); };
 
 init();

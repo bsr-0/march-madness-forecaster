@@ -267,6 +267,10 @@ def run_optimize_pool(args):
             pairwise_probs=pairwise_probs,
             opponent_picks=opponent_picks,
             pool_size=pool_size,
+            # `year` was read inside the helper without being passed in
+            # (NameError on every call since the 2026-09-15 audit commit
+            # introduced _region_order); caught by test_optimize_pool_e2e.
+            year=year,
         )
 
     # --- Step 6: Sensitivity analysis ---
@@ -436,6 +440,7 @@ def _rerank_brackets_by_p1st(
     pairwise_probs,
     opponent_picks,
     pool_size,
+    year,
     rng_seed=2027,
     n_tournaments=5000,
 ):

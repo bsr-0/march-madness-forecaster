@@ -229,4 +229,97 @@ check('app.js refit() uses the causal helper (guards against reverting to crossV
   assert.ok(!/crossValidate\(/.test(code), 'refit() must not call crossValidate directly');
 });
 
+console.log('reliability table (2026-09 review: the "70% means 70%" claim needs evidence)');
+
+// Margin that maps to probability p under the raw normal link with sigma 1:
+// p = Phi(m) so m = Phi^-1(p). Bisection is plenty for a test fixture.
+function marginFor(p) {
+  let lo = -8, hi = 8;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (F.normalCdf(mid) < p) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+const RAW = { a: 1, nu: Infinity };
+
+check('a perfectly calibrated set reports actual == predicted in every bin', () => {
+  // In each band, wins are placed so the observed rate equals the predicted
+  // probability exactly: at p = 0.75, three of four rows are wins.
+  const rows = [];
+  const add = (p, wins, losses) => {
+    const m = marginFor(p);
+    for (let i = 0; i < wins; i++) rows.push({ m: 1, p: m, sigma: 1 });
+    for (let i = 0; i < losses; i++) rows.push({ m: -1, p: m, sigma: 1 });
+  };
+  add(0.55, 11, 9);   // 0.55 exactly
+  add(0.65, 13, 7);   // 0.65
+  add(0.75, 15, 5);   // 0.75
+  add(0.85, 17, 3);   // 0.85
+  add(0.95, 19, 1);   // 0.95
+  const t = F.reliabilityTable(rows, RAW);
+  assert.strictEqual(t.length, 5);
+  for (const b of t) {
+    assert.strictEqual(b.n, 20, `bin ${b.lo} n`);
+    close(b.actual, b.predicted, 1e-9, `bin ${b.lo}`);
+    assert.ok(b.se > 0 && b.se < 0.15, `bin ${b.lo} se ${b.se}`);
+  }
+});
+
+check('rows are oriented to the favourite: p < 0.5 flips into the mirror bin with the outcome flipped too', () => {
+  // The same game written both ways must land in the same bin and count the
+  // same way: "A at 0.3 loses" IS "B at 0.7 wins".
+  const m = marginFor(0.3);
+  const a = F.reliabilityTable([{ m: -1, p: m, sigma: 1 }], RAW);
+  const b = F.reliabilityTable([{ m: 1, p: -m, sigma: 1 }], RAW);
+  const ba = a.find(x => x.n), bb = b.find(x => x.n);
+  assert.strictEqual(ba.lo, 0.7);
+  assert.strictEqual(bb.lo, 0.7);
+  assert.strictEqual(ba.actual, 1);
+  assert.strictEqual(bb.actual, 1);
+});
+
+check('a tie is not scored', () => {
+  const t = F.reliabilityTable([{ m: 0, p: 1, sigma: 1 }], RAW);
+  assert.strictEqual(t.reduce((s, b) => s + b.n, 0), 0);
+});
+
+check('exactly 1.0 lands in the top bin rather than falling off the end', () => {
+  const t = F.reliabilityTable([{ m: 1, p: 50, sigma: 1 }], RAW);   // clipped to 1 - PROB_CLIP
+  assert.strictEqual(t[t.length - 1].n, 1);
+});
+
+check('the calibration passed in is the one applied', () => {
+  // Same margin, two links: a steeper `a` pushes the same game into a more
+  // confident bin. If reliabilityTable ignored `cal`, both would agree.
+  const m = marginFor(0.62);
+  const mild = F.reliabilityTable([{ m: 1, p: m, sigma: 1 }], { a: 1, nu: Infinity });
+  const steep = F.reliabilityTable([{ m: 1, p: m, sigma: 1 }], { a: 3, nu: Infinity });
+  assert.strictEqual(mild.find(b => b.n).lo, 0.6);
+  assert.ok(steep.find(b => b.n).lo > 0.6);
+});
+
+check('causalWalkForward attaches a reliability table built under the SHRUNK link', () => {
+  // Synthetic seasons where margin is x plus noise; enough rows for folds.
+  const rows = [];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  for (let y = 2010; y <= 2020; y++) {
+    for (let g = 0; g < 63; g++) {
+      const x = (rnd() - 0.5) * 4;
+      rows.push({ y, x: [x], m: Math.round(x * 3 + (rnd() - 0.5) * 12) || 1 });
+    }
+  }
+  const years = [...new Set(rows.map(r => r.y))];
+  const oos = F.causalWalkForward(rows, [0], years, 2021, 2014);
+  assert.ok(oos && Array.isArray(oos.reliability), 'no reliability table');
+  const total = oos.reliability.reduce((s, b) => s + b.n, 0);
+  const scored = oos.pooled.filter(r => r.m !== 0).length;
+  assert.strictEqual(total, scored, 'every scored held-out game must be in exactly one bin');
+  // Rebuilding under the shrunk calibration must reproduce it; under the raw
+  // (unshrunk) one it generally must not -- that is the whole point.
+  const again = F.reliabilityTable(oos.pooled, oos.calibration);
+  assert.deepStrictEqual(again, oos.reliability);
+});
+
 console.log(`\n${passed} checks passed`);
