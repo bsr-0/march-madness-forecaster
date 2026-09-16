@@ -125,7 +125,11 @@ def main() -> int:
             x = [round(z[a][k] - z[b][k], 4) for k in keys]
             if not any(x):
                 continue
-            games.append({"y": year, "x": x, "w": 1 if s1 > s2 else 0, "m": s1 - s2})
+            # `r` is the round the game was played in (R64..NCG), so the
+            # page can ask "how does this variable predict, by round" without
+            # a second matrix. A label, not a feature: nothing standardises
+            # or fits on it.
+            games.append({"y": year, "x": x, "w": 1 if s1 > s2 else 0, "m": s1 - s2, "r": g.get("round_name")})
             per_year[year] = per_year.get(year, 0) + 1
 
     payload = {

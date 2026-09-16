@@ -49,7 +49,8 @@ def test_rows_carry_margin_and_result():
     d = _matrix()
     assert d["games"], "no games"
     for r in d["games"]:
-        assert set(r) == {"y", "x", "w", "m"}, f"unexpected row shape: {sorted(r)}"
+        assert set(r) == {"y", "x", "w", "m", "r"}, f"unexpected row shape: {sorted(r)}"
+        assert r["r"] in {"R64", "R32", "S16", "E8", "F4", "NCG"}, r["r"]
         assert len(r["x"]) == len(d["keys"])
 
 

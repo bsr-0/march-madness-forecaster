@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=70377333">
+<link rel="stylesheet" href="app.css?v=877ff625">
 </head>
 <body>
 
@@ -65,6 +65,22 @@
   <section class="board" id="board"></section>
 
   <section class="empty" id="empty" hidden></section>
+
+  <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
+       on/off toggle was removed 2026-08-29 because measurement said choosing
+       bought nothing. This is what gives a single variable a purpose without
+       letting anyone edit the validated model: pick one and see where the
+       field ranks on it, where this bracket's games hinge on it, and what it
+       predicts on its own -- using only seasons before the one shown, from the
+       same training rows the model uses. The model, the board and every number above are untouched
+       by anything chosen here. -->
+  <details class="tune" id="explore" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Explore a variable</span>
+      <span class="tune-sub">Where the field stands on it, where this bracket hinges on it, and what it predicts on its own. Looking, not editing: the model does not change.</span>
+    </summary>
+    <div class="panel" id="explore-body"></div>
+  </details>
 
   <!-- 4. ADJUST. Three filter axes over the precomputed candidate pool. Each
        narrows WHICH brackets are eligible; the objective decides what is
@@ -184,7 +200,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=ccb12b9f"></script>
-<script src="app.js?v=e34b9a5d"></script>
+<script src="fit.js?v=ee39dd86"></script>
+<script src="app.js?v=5a47a8bc"></script>
 </body>
 </html>

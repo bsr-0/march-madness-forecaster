@@ -822,12 +822,66 @@ function bracketAdvancementProbs(order, winProb) {
   return nodes[0].probs;
 }
 
+/* What one variable predicts on its own, walk-forward.
+ *
+ * Two questions, both answered only from rows strictly before `asOf` -- the
+ * same window the model trains on, so nothing here has seen the season on
+ * screen:
+ *
+ *   betterWins  How often did the team with the better value win? x is the
+ *               standardised differential, already sign-corrected so x > 0
+ *               means team1 is better on this variable. Rows with x == 0
+ *               (no edge) are excluded; rows with m == 0 cannot exist (the
+ *               matrix asserts it). Reported overall and by round, each with
+ *               a binomial standard error, because the E8/F4/NCG cells are
+ *               small (4/2/1 games a season) and a rate without its error
+ *               invites reading noise as a trend.
+ *   corr        Pearson correlation between the differential and the margin,
+ *               the "relationship with tournament game margin".
+ *
+ * This is deliberately NOT a fit: it is the raw evidence a variable brings,
+ * before any other variable is allowed to explain it away. The single-variable
+ * model (fitLinear on one column, walk-forward) is the fitted counterpart and
+ * lives beside this in the page.
+ */
+function variableRecord(rows, col, asOf) {
+  const used = trainingRows(rows, asOf);
+  const tally = { all: { n: 0, w: 0 } };
+  let sx = 0, sm = 0, n = 0;
+  for (const r of used) {
+    const x = r.x[col];
+    if (x === 0 || r.m === 0) continue;
+    n++; sx += x; sm += r.m;
+    const win = (x > 0) === (r.m > 0);
+    tally.all.n++; tally.all.w += win ? 1 : 0;
+    if (r.r) {
+      (tally[r.r] ||= { n: 0, w: 0 });
+      tally[r.r].n++; tally[r.r].w += win ? 1 : 0;
+    }
+  }
+  if (!n) return null;
+  const mx = sx / n, mm = sm / n;
+  let cov = 0, vx = 0, vm = 0;
+  for (const r of used) {
+    const x = r.x[col];
+    if (x === 0 || r.m === 0) continue;
+    cov += (x - mx) * (r.m - mm); vx += (x - mx) ** 2; vm += (r.m - mm) ** 2;
+  }
+  const rate = t => {
+    const p = t.w / t.n;
+    return { n: t.n, rate: p, se: Math.sqrt(p * (1 - p) / t.n) };
+  };
+  const byRound = {};
+  for (const k of Object.keys(tally)) if (k !== 'all') byRound[k] = rate(tally[k]);
+  return { n, corr: vx > 0 && vm > 0 ? cov / Math.sqrt(vx * vm) : 0, betterWins: rate(tally.all), byRound };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
     winProbFromMargin, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
-    reliabilityTable, RELIABILITY_EDGES,
+    reliabilityTable, RELIABILITY_EDGES, variableRecord,
   };
 }
