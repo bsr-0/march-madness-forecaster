@@ -72,7 +72,7 @@ function loadApp(hash) {
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
-    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit };', ctx);
+    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb };', ctx);
   return ctx.__api;
 }
 
@@ -551,6 +551,83 @@ check('no causal or importance words in the sensitivity panel', () => {
     assert.ok(!block.toLowerCase().includes(bad), `forbidden wording "${bad}" in the sensitivity panel`);
   }
   assert.ok(block.includes('refit excluding'), 'the required phrasing is missing');
+});
+
+/* ---------- "picks changed" is a deterministic comparison of two solves ---------- */
+console.log('\npicks changed: two independent deterministic solves');
+
+// 64 teams, two training keys. `dup` is a copy of `barthag` in both the
+// training rows and the field, so excluding either must leave the walk
+// unchanged; `other` (third fixture) disagrees with barthag for some teams.
+function sensFixture(app, keys, zFor, mode) {
+  const teams = [];
+  for (let i = 0; i < 64; i++) teams.push({ id: 't' + i, name: 'T' + i, seed: (i % 16) + 1, region: 'R' + (i >> 4) });
+  const years = [];
+  for (let y = 2010; y <= 2024; y++) years.push(y);
+  let seed = 11;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648 - 0.5; };
+  const games = [];
+  for (const y of years) for (let g = 0; g < 63; g++) {
+    const v = rnd() * 4, w = rnd() * 4;
+    // mode 'dup': the second key is an exact copy of the first in training
+    // AND in the field (zFor decides the field). mode 'indep': the second key
+    // is an independent signal the margin also depends on.
+    const x = keys.map((k, j) => (j === 0 || mode === 'dup' ? v : w));
+    games.push({ y, x, m: Math.round(3 * v + (mode === 'indep' ? 2 * w : 0) + rnd() * 6) || 1, r: 'R64' });
+  }
+  app.state.training = { keys, years, games };
+  app.state.year = 2025;
+  app.state.strategy = app.MODEL;
+  const z = {};
+  for (const k of keys) z[k] = teams.map((_, i) => zFor(k, i));
+  app.state.season = { status: 'ready', teams, first_round: teams.map((_, i) => i), z, raw: {}, variables: keys.map(k => ({ key: k, label: k, group: 'g', higher_better: true })) };
+  app.refit();
+  return app;
+}
+
+check('the count equals a slot-by-slot diff of two solveBracket() walks', () => {
+  const app = loadApp('');
+  // Two canonical keys (refit() only fits CANONICAL_KEYS): t_rank is an
+  // independent signal in training and disagrees with barthag for some teams
+  // in the field, so the exclusion refits genuinely change picks.
+  sensFixture(app, ['barthag', 't_rank'], (k, i) => (k === 'barthag' ? (32 - i) / 16 : ((i % 7 === 0 ? -1 : 1) * (32 - i)) / 16), 'indep');
+  const sens = app.sensitivity();
+  for (const key of ['barthag', 't_rank']) {
+    const e = sens.byKey[key];
+    const base = app.solveBracket(app.winProb);
+    const alt = app.solveBracket(e.pFn);
+    let n = 0;
+    base.forEach((games, r) => games.forEach((g, i) => { if (alt[r][i].win !== g.win) n++; }));
+    assert.strictEqual(e.changed, n, key);
+  }
+});
+
+check('excluding an exact duplicate column changes zero picks', () => {
+  const app = loadApp('');
+  // t_rank made identical to barthag everywhere (training and field).
+  sensFixture(app, ['barthag', 't_rank'], (k, i) => (32 - i) / 16, 'dup');
+  const sens = app.sensitivity();
+  assert.strictEqual(sens.byKey.barthag.changed, 0);
+  assert.strictEqual(sens.byKey.t_rank.changed, 0);
+});
+
+check('the comparison is deterministic: recomputing gives identical counts and brackets', () => {
+  const app = loadApp('');
+  sensFixture(app, ['barthag', 't_rank'], (k, i) => (k === 'barthag' ? (32 - i) / 16 : ((i % 5 === 0 ? -1 : 1) * (32 - i)) / 16), 'indep');
+  const a = app.sensitivity();
+  app.state.sens = null;
+  const b = app.sensitivity();
+  for (const key of ['barthag', 't_rank']) assert.strictEqual(a.byKey[key].changed, b.byKey[key].changed, key);
+  assert.strictEqual(JSON.stringify(a.base.map(r => r.map(g => g.win))), JSON.stringify(b.base.map(r => r.map(g => g.win))));
+});
+
+check('the baseline bracket is solved inside sensitivity(), not read from state.rounds', () => {
+  const app = loadApp('');
+  sensFixture(app, ['barthag', 't_rank'], (k, i) => (32 - i) / 16, 'dup');
+  app.state.rounds = null;                      // nothing rendered
+  const sens = app.sensitivity();
+  assert.ok(Array.isArray(sens.base) && sens.base.length === 6);
+  assert.strictEqual(sens.byKey.barthag.changed, 0);
 });
 
 console.log(`\n${passed} checks passed`);
