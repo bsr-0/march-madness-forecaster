@@ -175,7 +175,7 @@ def test_builders_reject_skewed_payloads():
     with pytest.raises(FeatureSkewError):
         build_noseed_probabilities(None, seeds, payload)
     with pytest.raises(FeatureSkewError):
-        build_noseed_round_probabilities(None, seeds, payload)
+        build_noseed_round_probabilities(None, seeds, payload, as_of=2026)
 
 
 # ---------------------------------------------------------------------------

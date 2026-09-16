@@ -1,0 +1,53 @@
+== 1. frozen rule (from code; tests pin it to PREREGISTRATION_QUALIFICATION.md) ==
+{
+ "metric_primary": "log_loss",
+ "metric_secondary": "brier",
+ "coin_flip_log_loss": 0.6931471805599453,
+ "coin_flip_brier": 0.25,
+ "incumbent": "seed",
+ "bootstrap_resamples": 5000,
+ "bootstrap_seed": 42,
+ "independent_referee_order": [
+  "market_v2",
+  "pit",
+  "torvik",
+  "blend"
+ ],
+ "full_coverage_required_for_primary": true
+}
+G1: paired season-bootstrap CI of (log_loss - log2) entirely < 0.  G2: mean(log_loss - incumbent) <= 0 AND mean(brier - incumbent) <= 0.
+DISQUALIFIED: G1 fails or log-loss delta vs incumbent CI entirely > 0. PROVISIONAL: otherwise. Primary requires full coverage. seed = incumbent, QUALIFIED by construction.
+
+== 2. incumbent: walk-forward check ==
+   seed table for season Y is built with as_of=Y (excludes Y and later): True | 2011 table cells: 0
+
+== 3/4. referee inventory and coverage per season (before any qualification) ==
+   2011: games=63 referees=['blend', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 0 empirical/63 logistic | market_v2 fallback teams: 0 (3284 games)
+   2012: games=63 referees=['blend', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 32 empirical/30 logistic | market_v2 fallback teams: 0 (3370 games)
+   2013: games=63 referees=['blend', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 34 empirical/28 logistic | market_v2 fallback teams: 0 (3332 games)
+   2014: games=63 referees=['blend', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 40 empirical/23 logistic | market_v2 fallback teams: 1 (3353 games)
+   2015: games=63 referees=['blend', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 46 empirical/15 logistic | market_v2 fallback teams: 1 (3410 games)
+   2016: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 48 empirical/14 logistic | market_v2 fallback teams: 1 (3408 games)
+   2017: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 52 empirical/10 logistic | market_v2 fallback teams: 0 (3454 games)
+   2018: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 47 empirical/15 logistic | market_v2 fallback teams: 0 (3500 games)
+   2019: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'pit', 'seed', 'torvik'] | seed: 57 empirical/6 logistic | market_v2 fallback teams: 1 (4667 games)
+   2021: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'odds_api', 'pit', 'seed', 'torvik'] | seed: 49 empirical/13 logistic | market_v2 fallback teams: 0 (3296 games)
+   2022: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'odds_api', 'pit', 'seed', 'torvik'] | seed: 54 empirical/9 logistic | market_v2 fallback teams: 0 (4620 games)
+   2023: games=63 referees=['blend', 'market', 'market_v2', 'odds_api', 'pit', 'seed', 'torvik'] | seed: 51 empirical/12 logistic | market_v2 fallback teams: 1 (4962 games)
+   2024: games=63 referees=['blend', 'fte', 'market', 'market_v2', 'odds_api', 'pit', 'seed', 'torvik'] | seed: 57 empirical/5 logistic | market_v2 fallback teams: 2 (4805 games)
+   2025: games=63 referees=['blend', 'market', 'market_v2', 'odds_api', 'pit', 'seed', 'torvik'] | seed: 60 empirical/0 logistic | market_v2 fallback teams: 1 (4722 games)
+   coverage: {'seed': '14/14', 'torvik': '14/14', 'blend': '14/14', 'pit': '14/14', 'market': '14/14', 'market_v2': '14/14', 'fte': '7/14', 'odds_api': '5/14'}
+
+== 5-7. frozen gate on the corrected tables ==
+   referee    cov    logloss  brier   G1 CI(ll-log2)         G2 mean dLL G2 dLL CI              G2 mean dBr status
+   seed       14/14  0.5715   0.1940  -                      +nan     -                      +nan     QUALIFIED (primary-eligible)
+   torvik     14/14  0.5426   0.1831  -                      +nan     -                      +nan     QUALIFIED (primary-eligible)
+   blend      14/14  0.5520   0.1865  -                      +nan     -                      +nan     QUALIFIED (primary-eligible)
+   pit        14/14  0.4680   0.1532  -                      +nan     -                      +nan     QUALIFIED (primary-eligible)
+   market     14/14  0.6002   0.2061  -                      +nan     -                      +nan     DISQUALIFIED
+   market_v2  14/14  0.5697   0.1940  -                      +nan     -                      +nan     QUALIFIED (primary-eligible)
+   odds_api    5/14  0.6114   0.2108  -                      +nan     -                      +nan     PROVISIONAL
+   fte         7/14  0.5424   0.1825  -                      +nan     -                      +nan     QUALIFIED
+   independent referee by the frozen order ['market_v2', 'pit', 'torvik', 'blend'] -> market_v2
+
+wrote artifacts/methodology_audit/step8/qualification_v2.json

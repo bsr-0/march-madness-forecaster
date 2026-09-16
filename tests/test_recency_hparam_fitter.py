@@ -69,7 +69,7 @@ def test_walk_forward_bound(monkeypatch):
     def fake_build_seed_round_probabilities(seeds):
         return {}
 
-    def fake_build_noseed_round_probabilities(model, seeds, stats):
+    def fake_build_noseed_round_probabilities(model, seeds, stats, **_kw):
         return {}
 
     def fake_resolve_opponent_pick_distribution(yt, seeds, n_opponents, opponent_source, pool_blend_weight):

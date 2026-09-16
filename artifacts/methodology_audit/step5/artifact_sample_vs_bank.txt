@@ -1,0 +1,6 @@
+stratified (prod seed) n=2975 max=0.1053 p99=0.0806 p90=0.0619 mean=0.0359
+stratified (seed 2)    n=2975 max=0.0992 p99=0.0810 p90=0.0615 mean=0.0357
+uniform 3000           n=3000 max=0.1053 p99=0.0820 p90=0.0623 mean=0.0362
+uniform 6000+          n=12418 max=0.1053 p99=0.0810 p90=0.0615 mean=0.0362
+top-20 of the scored bank present in the production stratified sample: 6 / 20;  in an independent stratified sample: 3 / 20
+bank distinct champions: 44 | in stratified sample: 44

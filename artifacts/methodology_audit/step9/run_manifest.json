@@ -1,0 +1,73 @@
+{
+ "generated_at": "2026-09-15T21:14:02.399811",
+ "git_head": "0931de38fb7561370e62d81f4d6ba829f6f73e4d",
+ "working_tree_dirty": true,
+ "qualification_v2_sha256_16": "6daebdd2674efd28",
+ "referee_set": [
+  "seed",
+  "torvik",
+  "blend",
+  "pit",
+  "market_v2"
+ ],
+ "independent_referee": "market_v2",
+ "candidate_artifacts_sha256_16": {
+  "candidates_2011.json": "38477018feb51921",
+  "candidates_2013.json": "1fed6beababc3d3d",
+  "candidates_2014.json": "2e0511450a569309",
+  "candidates_2015.json": "290929ca513784ca",
+  "candidates_2016.json": "737912cab97595ee",
+  "candidates_2017.json": "6e0fa5202b7da370",
+  "candidates_2018.json": "c3c152309d785796",
+  "candidates_2019.json": "93fd6fdbea9cb30b",
+  "candidates_2021.json": "f186e75512652374",
+  "candidates_2022.json": "40f574b5b06a18fd",
+  "candidates_2023.json": "83b4c475a5d98ec5",
+  "candidates_2024.json": "210f2ae98789fc67",
+  "candidates_2025.json": "eeda3c4043a793dc",
+  "candidates_2026.json": "40e1e143ef2acd38"
+ },
+ "canonical_selection_log": "artifacts/methodology_audit/step5/path3_backtest_after_F5_1.txt",
+ "canonical_selection_log_sha256_16": "3d409fd0a3f799e7",
+ "criteria": {
+  "criterion_referees": [
+   "seed",
+   "torvik",
+   "blend",
+   "pit",
+   "market"
+  ],
+  "baseline": "seed",
+  "production": "meta_region_poolaware",
+  "independent_referee": "market",
+  "bootstrap_resamples": 5000,
+  "bootstrap_seed": 42,
+  "ci_level": 0.95,
+  "C2_material_relative_premium": 0.33,
+  "C3_min_retained_fraction_of_self_edge": 0.5,
+  "n_eval_trials": 300,
+  "n_stochastic_samples": 50,
+  "selection_trials": 500,
+  "eval_seed": 20260913,
+  "selection_seed_base": 77777,
+  "fte_margin_sigma": 11.0
+ },
+ "qualification_rule": {
+  "metric_primary": "log_loss",
+  "metric_secondary": "brier",
+  "coin_flip_log_loss": 0.6931471805599453,
+  "coin_flip_brier": 0.25,
+  "incumbent": "seed",
+  "bootstrap_resamples": 5000,
+  "bootstrap_seed": 42,
+  "independent_referee_order": [
+   "market_v2",
+   "pit",
+   "torvik",
+   "blend"
+  ],
+  "full_coverage_required_for_primary": true
+ },
+ "opponent_config": "draw_selection_trials: pool pick shares (real pool 2023-2026 else ESPN; 2012 static seed rates), n_opponents = pool size - 1, chalk_noise 0, referee noise 0.16 logit",
+ "p1_definition": "expected first-place share, ties split (Step 4 F4-1)"
+}

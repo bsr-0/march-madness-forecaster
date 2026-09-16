@@ -99,23 +99,20 @@ def precompute_trial_scores(
 
 
 def p_first_from_scores(scores: TrialScores, index: int) -> float:
-    """P(1st) for one candidate -- bit-identical to ``score_candidate_p1``.
+    """P(1st) for one candidate: expected first-place SHARE over the trials.
 
-    Keeps that function's tie convention: a tie for first counts as a full win.
-    That is not what a real pool pays (see :mod:`src.optimization.payout`), but
-    it is what the published headline means, so it is reproduced exactly rather
-    than quietly improved.
+    A tie for the top score is split among the tied entries
+    (:func:`src.optimization.payout.first_place_share`). This is the one
+    definition of P(1st) in the project since the 2026-09 audit (Step 4,
+    F4-1); it is also exactly the expected winner-take-all prize.
     """
+    from src.optimization.payout import first_place_share
+
     n = scores.n_trials
     if n == 0:
         return 0.0
-    wins = 0
     row = scores.candidate[index]
-    for t in range(n):
-        opp = scores.opponent[t]
-        if row[t] >= (opp.max() if opp.size else -np.inf):
-            wins += 1
-    return wins / n
+    return float(sum(first_place_share(row[t], scores.opponent[t]) for t in range(n)) / n)
 
 
 def expected_prize_from_scores(

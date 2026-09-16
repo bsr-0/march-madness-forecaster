@@ -79,7 +79,7 @@ class TestBracketOrderHasNoPlaceholders:
 
         seeds, regions = load_seeds_and_regions(ALIASED_SEASON)
         resolve_field(ALIASED_SEASON, seeds, regions)
-        order = build_bracket_order(seeds, regions)
+        order = build_bracket_order(seeds, regions, region_order=('East', 'West', 'South', 'Midwest'))
         placeholders = [t for t in order if t.startswith("unknown_")]
         assert not placeholders, f"2011 bracket has placeholder slots: {sorted(set(placeholders))}"
         assert len(order) == 64

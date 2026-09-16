@@ -113,8 +113,8 @@ def _build_blend_round_probs(seeds):
             f"walk-forward violation: noseed model for {YEAR} trained on {model.train_years}"
         )
         stats = _load_team_stats(YEAR)
-        noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
-        seed_rp = build_seed_round_probabilities(seeds)
+        noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=YEAR)
+        seed_rp = build_seed_round_probabilities(seeds, as_of=YEAR)
         return build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
     except Exception as exc:
         print(f"  blend base unavailable ({type(exc).__name__}: {exc}) — dropped from sweep")
@@ -157,8 +157,16 @@ def main():
     if n_resolved:
         print(f"  Resolved {n_resolved} play-in slot(s) -> {len(seeds)}-team field")
 
+    # The Final Four pairing for YEAR: from the played F4 games, else from
+    # `f4_pairing` in the seeds block (the announced bracket). Never a default.
+    from scripts._common import load_seeds_block
+    from src.simulation.bracket_topology import resolve_region_order
+
+    region_order = resolve_region_order(YEAR, games=games, regions=regions, seeds_block=load_seeds_block(YEAR))
+    print(f"  Final Four pairing: {region_order[0]}-{region_order[1]} / {region_order[2]}-{region_order[3]}")
+
     barthag = _load_torvik_barthag(YEAR, seeds)
-    torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+    torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag, region_order=region_order)
 
     # Sweep the SAME probability bases the backtest sweeps. This script used
     # to build its own two-base list (tv, mass_avg) while the backtest swept
@@ -168,13 +176,13 @@ def main():
     # including tv_mass80 for 2026. The recipe now lives in one place.
     massey_barthag = load_massey_avg_barthag(YEAR, seeds, PROJECT_ROOT / "data")
     massey_avg_rp = (
-        build_torvik_round_probabilities(seeds, regions, massey_barthag)
+        build_torvik_round_probabilities(seeds, regions, massey_barthag, region_order=region_order)
         if massey_barthag is not None
         else None
     )
     massey_best_rp = build_massey_best_round_probabilities(
         seeds, regions, test_year=YEAR, data_root=PROJECT_ROOT / "data"
-    )
+    , region_order=region_order)
     blend_rp = _build_blend_round_probs(seeds)
 
     prob_bases = build_poolaware_prob_bases(
@@ -197,8 +205,8 @@ def main():
     print(f"  Probability bases: {', '.join(poolaware_base_names(prob_bases))}")
 
     pick_dist, n_opponents, opponent_source = resolve_opponents(seeds)
-    seed_pw = build_seed_probabilities(seeds)
-    first_round = build_first_round_matchups(seeds, regions)
+    seed_pw = build_seed_probabilities(seeds, as_of=YEAR)
+    first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
     scoring = dict(ESPN_SCORING)
     rng = np.random.default_rng(77777 + YEAR)
 
@@ -218,6 +226,7 @@ def main():
                 pool_size=n_opponents + 1,
                 scoring_system=scoring,
                 **kwargs,
+                region_order=region_order,
             )
             bvec = _picks_dict_to_bool_array(picks, first_round)
             candidates.append((picks, bvec, label, rating, _display_rp or torvik_rp))
@@ -280,6 +289,7 @@ def main():
             risk_level=0.5,
             pool_size=n_opponents + 1,
             scoring_system=scoring,
+            region_order=region_order,
         )
         best_label = "fallback"
         best_rating = barthag

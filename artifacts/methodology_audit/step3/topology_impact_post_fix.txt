@@ -1,0 +1,17 @@
+2011 ('West', 'East', 'South', 'Midwest') same dF4=0.000 dCH=0.000 | torvik ok (ohio_state->ohio_state) | blend ok (ohio_state->ohio_state)
+2012 ('South', 'West', 'Midwest', 'East') DIFF dF4=0.006 dCH=0.002 | torvik ok (kentucky->kentucky) | blend ok (north_carolina->north_carolina)
+2013 ('Midwest', 'West', 'South', 'East') DIFF dF4=0.049 dCH=0.013 | torvik ok (indiana->indiana) | blend ok (louisville->louisville)
+2014 ('Midwest', 'West', 'East', 'South') DIFF dF4=0.041 dCH=0.009 | torvik ok (louisville->louisville) | blend ok (arizona->arizona)
+2015 ('West', 'Midwest', 'South', 'East') DIFF dF4=0.050 dCH=0.014 | torvik ok (kentucky->kentucky) | blend ok (kentucky->kentucky)
+2016 ('East', 'Midwest', 'South', 'West') DIFF dF4=0.026 dCH=0.008 | torvik ok (kansas->kansas) | blend ok (north_carolina->north_carolina)
+2017 ('West', 'East', 'South', 'Midwest') same dF4=0.000 dCH=0.000 | torvik ok (gonzaga->gonzaga) | blend ok (north_carolina->north_carolina)
+2018 ('East', 'Midwest', 'South', 'West') DIFF dF4=0.031 dCH=0.011 | torvik ok (virginia->virginia) | blend ok (virginia->virginia)
+2019 ('South', 'Midwest', 'West', 'East') same dF4=0.000 dCH=0.000 | torvik ok (virginia->virginia) | blend ok (duke->duke)
+2021 ('South', 'Midwest', 'West', 'East') same dF4=0.000 dCH=0.000 | torvik ok (gonzaga->gonzaga) | blend ok (gonzaga->gonzaga)
+2022 ('Midwest', 'South', 'West', 'East') same dF4=0.000 dCH=0.000 | torvik ok (gonzaga->gonzaga) | blend ok (baylor->baylor)
+2023 ('West', 'Midwest', 'South', 'East') DIFF dF4=0.016 dCH=0.003 | torvik ok (houston->houston) | blend ok (houston->houston)
+2024 ('East', 'West', 'Midwest', 'South') same dF4=0.000 dCH=0.000 | torvik ok (houston->houston) | blend ok (houston->houston)
+2025 ('West', 'South', 'Midwest', 'East') DIFF dF4=0.050 dCH=0.011 | torvik ok (houston->houston) | blend ok (houston->houston)
+2026 ('West', 'Midwest', 'East', 'South') DIFF dF4=0.016 dCH=0.004 | torvik ok (michigan->michigan) | blend ok (duke->duke)
+
+seasons with real pairing != default: 9/15; construction-vs-scored mismatches: {'torvik': 0, 'blend': 0}

@@ -45,12 +45,56 @@ import numpy as np
 
 # Tie conventions.
 #
-# TIE_SPLIT is what a real pool does and the default for every prize objective.
-# TIE_WIN reproduces the incumbent P(1st) definition exactly; it exists so the
-# headline number is bit-reproducible through the new code path, not because it
-# describes any real payout.
+# TIE_SPLIT is what a real pool does and, since the 2026-09 audit (Step 4,
+# F4-1), it is THE definition of P(1st) everywhere: selection, reporting and
+# payout. Before that the same name meant three things -- the selector counted a
+# shared first as a full win (>=), the backtest table counted it as a loss
+# (rank 1.5 != 1), and only the prize column split it. Ties are ~7% of the
+# events the >= rule called wins, so the two wrong conventions erred in
+# opposite directions. TIE_WIN is retained only so the old figures can be
+# reproduced on demand; nothing in production uses it.
 TIE_SPLIT = "split"
 TIE_WIN = "win"
+
+
+def first_place_share(our_score: float, opp_scores: np.ndarray) -> float:
+    """Canonical P(1st) contribution of one pool realisation.
+
+    1 if we outscore every opponent, 1/(1+k) if we tie with k opponents for the
+    top score, else 0. Its expectation over realisations is the expected share
+    of a winner-take-all pot, which is what "P(1st)" means in this project.
+    With no opponents the share is 1.
+    """
+    opp = np.asarray(opp_scores, dtype=float).ravel()
+    if opp.size == 0:
+        return 1.0
+    top = opp.max()
+    if our_score > top:
+        return 1.0
+    if our_score < top:
+        return 0.0
+    return 1.0 / (1.0 + float(np.count_nonzero(opp == top)))
+
+
+def first_place_shares(our_scores: np.ndarray, opp_scores: np.ndarray) -> np.ndarray:
+    """Vectorised :func:`first_place_share` for many of our brackets against
+    one opponent field (one pool realisation)."""
+    ours = np.asarray(our_scores, dtype=float)
+    opp = np.asarray(opp_scores, dtype=float).ravel()
+    if opp.size == 0:
+        return np.ones_like(ours)
+    top = opp.max()
+    n_top = float(np.count_nonzero(opp == top))
+    out = np.zeros_like(ours)
+    out[ours > top] = 1.0
+    out[ours == top] = 1.0 / (1.0 + n_top)
+    return out
+
+
+def first_place_share_from_counts(better: int, tied: int) -> float:
+    """Same quantity from the backtest's (opponents strictly better, opponents
+    tied) counts: 1/(1+tied) when nobody is better, else 0."""
+    return 0.0 if better > 0 else 1.0 / (1.0 + float(tied))
 
 # Share vectors for the named structures, as fractions of the pot.
 #
@@ -279,23 +323,25 @@ def probability_any_entry_wins(
     entry_scores_by_trial: np.ndarray,
     opp_scores_by_trial: Sequence[np.ndarray],
 ) -> float:
-    """P(at least one of our entries finishes first), ties counting as a win.
+    """Expected first-place share of a portfolio: the sum over our entries of
+    their :func:`first_place_share` in each realisation (our own entries tie
+    with each other like anyone else), averaged over trials.
 
-    The multi-entry generalisation of the headline P(1st), reported alongside
-    expected prize because it is the number a user asks for ("what are my
-    chances of winning the pool?") even when the pool pays several places.
+    The multi-entry generalisation of P(1st). For one entry it is exactly
+    P(1st) under the canonical tie rule.
     """
     n_trials = len(opp_scores_by_trial)
     if n_trials == 0:
         return 0.0
     scores = np.atleast_2d(entry_scores_by_trial)
-    wins = 0
+    total = 0.0
     for t in range(n_trials):
         opp = opp_scores_by_trial[t]
-        best_opp = opp.max() if opp.size else -np.inf
-        if scores[t].max() >= best_opp:
-            wins += 1
-    return wins / n_trials
+        ours = scores[t]
+        field_top = max(ours.max(), opp.max() if opp.size else -np.inf)
+        n_top = float(np.count_nonzero(ours == field_top) + (np.count_nonzero(opp == field_top) if opp.size else 0))
+        total += float(np.count_nonzero(ours == field_top)) / n_top
+    return total / n_trials
 
 
 def describe(structure: str, pool_size: int, custom_shares: Optional[Sequence[float]] = None) -> str:

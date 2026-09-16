@@ -57,7 +57,7 @@ import numpy as np
 # Category-A source loaders (all must return Optional[Dict[str, float]])
 from src.prediction.ap_probabilities import load_ap_strength_barthag
 from src.prediction.elo_probabilities import load_elo_barthag
-from src.prediction.market_probabilities import load_market_ratings, load_spread_power_ratings
+from src.prediction.market_probabilities import load_market_ratings_v2, load_spread_power_ratings
 from src.prediction.massey_best_probabilities import load_massey_best_barthag
 from src.prediction.massey_probabilities import load_massey_avg_barthag
 
@@ -148,7 +148,7 @@ def _load_all_base_barthag(
     result["torvik"] = torvik
 
     # A3: odds (Bradley-Terry from unified_odds)
-    odds = load_market_ratings(year, seeds)
+    odds = load_market_ratings_v2(year, seeds)  # v1 is defective (audit Step 7, D7-1)
     if odds is None:
         return None
     result["odds"] = odds
@@ -370,6 +370,8 @@ def build_stacked_round_probabilities(
     n_sims: int = 10000,
     min_prior_years: int = _DEFAULT_MIN_PRIOR_YEARS,
     ridge_alpha: float = _DEFAULT_RIDGE_ALPHA,
+    *,
+    region_order,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """End-to-end: fit Ridge weights → blend barthag → ProbabilityBase.
 
@@ -391,4 +393,4 @@ def build_stacked_round_probabilities(
 
     from scripts.mc_pool_backtest import build_base_from_ratings
 
-    return build_base_from_ratings("stacked", seeds, regions, barthag, n_sims=n_sims)
+    return build_base_from_ratings("stacked", seeds, regions, barthag, n_sims=n_sims, region_order=region_order)

@@ -1,116 +1,78 @@
-"""Three tie conventions in one pipeline (found building audit recommendation 13).
+"""One tie convention in the whole pipeline (2026-09 audit, Step 4, F4-1).
 
-Adding a prize column made a pre-existing inconsistency visible. The same
-event -- our bracket tied with one opponent for first place -- is worth three
-different things depending on which part of the pipeline is asked:
-
-    selecting   `score_candidate_p1`: `c_score >= opp_scores.max()`   -> 1.0
-    reporting   `p_first = (all_ranks == 1.0).mean()`, where
-                `all_ranks = better + 1 + tied/2` so a tie gives 1.5   -> 0.0
-    paying      `_record_prize`, splitting the tied places             -> 0.5
-
-Only the third is what a pool actually pays. The first two are both wrong and
-wrong in opposite directions: selection over-rewards brackets that tie, and the
-published P(1st) under-reports by discarding ties entirely.
-
-Neither is changed here. `score_candidate_p1` defines the published ~12%
-headline and `all_ranks` defines every number in the backtest's output tables;
-silently re-defining either would move published figures as a side effect of
-adding a feature. These tests pin the discrepancy so it is documented behaviour
-rather than a latent surprise, and so anyone who later unifies the conventions
-has to do it deliberately and re-run the headline.
+There used to be three. The same event -- our bracket tied with one opponent
+for first -- was worth 1.0 to the selector (`>=`), 0.0 to the backtest table
+(rank 1.5 != 1) and 0.5 to the prize column. Ties are ~7% of the events the
+`>=` rule called wins, so the published P(1st) and the reported P(1st) erred
+in opposite directions. The canonical quantity is now the expected
+first-place SHARE (`payout.first_place_share`): 1 for an outright win,
+1/(1+k) tied with k opponents, 0 otherwise. Selection, reporting, the CLI,
+the referee audit and the artifact all use it; this file pins that.
 """
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
-np = pytest.importorskip("numpy")
+from scripts.experiments.objective_diversity_matrix import pool_p_first
+from scripts.mc_pool_backtest import ESPN_SCORING, score_candidate_p1
+from src.optimization.payout import (
+    TIE_SPLIT,
+    first_place_share,
+    first_place_share_from_counts,
+    first_place_shares,
+    payout_shares,
+    prize_for_scores,
+    probability_any_entry_wins,
+)
+from src.optimization.pool_objectives import TrialScores, p_first_from_scores
 
-from src.optimization.payout import TIE_SPLIT, TIE_WIN, payout_shares, prize_for_scores  # noqa: E402
-
-
-def _selection_value(our: float, opp: np.ndarray) -> float:
-    """`score_candidate_p1`'s inner test, isolated."""
-    return 1.0 if our >= opp.max() else 0.0
-
-
-def _evaluation_value(better: int, tied: int) -> float:
-    """The backtest's `p_first` criterion, isolated."""
-    all_ranks = better + 1 + tied / 2.0
-    return 1.0 if all_ranks == 1.0 else 0.0
-
-
-def _prize_value(better: int, tied: int, shares: np.ndarray) -> float:
-    from scripts.mc_pool_backtest import _record_prize
-
-    out = np.zeros((1, 1))
-    _record_prize(out, 0, 0, better, tied, shares)
-    return float(out[0, 0])
+pytestmark = pytest.mark.unit
 
 
-def test_the_three_conventions_disagree_on_a_shared_first():
-    """The finding, pinned. If this ever passes by agreeing, say so loudly."""
+def test_share_definition():
+    assert first_place_share(100, np.array([90, 80])) == 1.0
+    assert first_place_share(100, np.array([100, 80])) == 0.5
+    assert first_place_share(100, np.array([100, 100, 100])) == 0.25
+    assert first_place_share(100, np.array([110, 100])) == 0.0
+    assert first_place_share(100, np.array([])) == 1.0
+    assert first_place_share_from_counts(0, 0) == 1.0
+    assert first_place_share_from_counts(0, 1) == 0.5
+    assert first_place_share_from_counts(2, 0) == 0.0
+    np.testing.assert_allclose(first_place_shares(np.array([100, 100, 90, 110]), np.array([100, 80])), [0.5, 0.5, 0.0, 1.0])
+
+
+def test_share_equals_winner_take_all_prize():
     shares = payout_shares("winner_take_all", 3)
-    our, opp = 100.0, np.array([100.0, 50.0])
-    better, tied = 0, 1
-
-    assert _selection_value(our, opp) == 1.0, "selection counts a tie as a full win"
-    assert _evaluation_value(better, tied) == 0.0, "reporting counts a tie as no win at all"
-    assert _prize_value(better, tied, shares) == pytest.approx(0.5), "a real pool splits it"
+    for our, opp in [(100, [90, 80]), (100, [100, 80]), (100, [100, 100]), (90, [100, 80])]:
+        assert first_place_share(our, np.array(opp)) == pytest.approx(
+            float(prize_for_scores(np.array([our]), np.array(opp, dtype=float), shares, tie_policy=TIE_SPLIT)[0])
+        )
 
 
-def test_all_three_agree_on_an_outright_win():
-    """The inconsistency is confined to ties, which is why it went unnoticed."""
-    shares = payout_shares("winner_take_all", 3)
-    our, opp = 100.0, np.array([90.0, 50.0])
-    better, tied = 0, 0
-
-    assert _selection_value(our, opp) == 1.0
-    assert _evaluation_value(better, tied) == 1.0
-    assert _prize_value(better, tied, shares) == pytest.approx(1.0)
-
-
-def test_all_three_agree_on_an_outright_loss():
-    shares = payout_shares("winner_take_all", 3)
-    our, opp = 10.0, np.array([90.0, 50.0])
-    better, tied = 2, 0
-
-    assert _selection_value(our, opp) == 0.0
-    assert _evaluation_value(better, tied) == 0.0
-    assert _prize_value(better, tied, shares) == pytest.approx(0.0)
+def test_selector_and_selection_scorer_agree_on_a_tie():
+    # One trial where the candidate ties one opponent for the top score.
+    teams = [f"t{i:02d}" for i in range(64)]
+    cand = np.ones(63, dtype=bool)
+    opp = np.stack([np.ones(63, dtype=bool), np.zeros(63, dtype=bool)])   # opponent 0 identical -> tie
+    cur = list(teams)
+    winners = {}
+    for R in ("R64", "R32", "S16", "E8", "F4", "CHAMP"):
+        nxt = [cur[g] for g in range(0, len(cur), 2)]
+        winners[R] = set(nxt)
+        cur = nxt
+    trials = [(opp, winners)]
+    assert score_candidate_p1(cand, trials, teams, ESPN_SCORING) == pytest.approx(0.5)
+    assert pool_p_first(cand.reshape(1, 63), trials, teams)[0] == pytest.approx(0.5)
+    ts = TrialScores(candidate=np.array([[1920.0]]), opponent=[np.array([1920.0, 0.0])])
+    assert p_first_from_scores(ts, 0) == pytest.approx(0.5)
+    assert probability_any_entry_wins(np.array([[1920.0]]), [np.array([1920.0, 0.0])]) == pytest.approx(0.5)
 
 
-@pytest.mark.parametrize("n_tied_opponents", [1, 2, 3, 5])
-def test_prize_splits_evenly_however_many_are_tied(n_tied_opponents):
-    """k+1 entrants sharing first each take 1/(k+1) of a winner-take-all pot."""
-    shares = payout_shares("winner_take_all", n_tied_opponents + 2)
-    value = _prize_value(0, n_tied_opponents, shares)
-    assert value == pytest.approx(1.0 / (n_tied_opponents + 1))
-
-
-def test_prize_split_across_paying_places_uses_their_mean():
-    """A tie straddling the pay line splits what those places jointly pay.
-
-    Two entrants tied for 3rd under top_3 share 3rd place's 10% and 4th
-    place's nothing -- 5% each, not 10% each.
-    """
-    shares = payout_shares("top_3", 8)
-    value = _prize_value(2, 1, shares)  # 2 opponents above, 1 tied with us
-    assert value == pytest.approx((0.10 + 0.0) / 2)
-
-
-def test_tie_win_and_tie_split_bracket_the_evaluation_convention():
-    """Reporting is the most conservative of the three; selection the least.
-
-    Useful framing for anyone reading the headline: the published P(1st)
-    is a lower bound on "how often does this bracket share or take first".
-    """
-    shares = payout_shares("winner_take_all", 4)
-    our, opp = 100.0, np.array([100.0, 80.0, 70.0])
-
-    as_win = prize_for_scores(np.array([our]), opp, shares, TIE_WIN)[0]
-    as_split = prize_for_scores(np.array([our]), opp, shares, TIE_SPLIT)[0]
-    as_reported = _evaluation_value(0, 1)
-
-    assert as_reported <= as_split <= as_win
+def test_portfolio_share_splits_among_our_own_entries_too():
+    # Two of our entries tie each other for first with no opponent tied: the
+    # portfolio collects the whole first place (0.5 + 0.5).
+    assert probability_any_entry_wins(np.array([[100.0, 100.0]]), [np.array([90.0])]) == pytest.approx(1.0)
+    # ...and only 2/3 of it if one opponent is tied with both.
+    assert probability_any_entry_wins(np.array([[100.0, 100.0]]), [np.array([100.0])]) == pytest.approx(2 / 3)

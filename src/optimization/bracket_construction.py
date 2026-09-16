@@ -57,7 +57,7 @@ helper.
 from __future__ import annotations
 
 import math
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 # Entry count above which `_make_ev_scorer` applies its duplicate discount and
 # construction genuinely changes with pool size. At or below it, in the default
@@ -101,6 +101,8 @@ _DEFAULT_SCORING: Dict[str, int] = {
 }
 
 # Supported construction modes.
+_MODES_IGNORING_FORCED_CHAMPION: Tuple[str, ...] = ("simulated_annealing", "exhaustive_champion", "region_top_n")
+
 CONSTRUCTION_MODES: Tuple[str, ...] = (
     "champ_first",
     "f4_first",
@@ -121,6 +123,7 @@ CONSTRUCTION_MODES: Tuple[str, ...] = (
 def _build_seed_map(
     seeds: Dict[str, int],
     regions: Dict[str, str],
+    region_order: Optional[Sequence[str]] = None,
 ) -> Dict[str, Dict[int, str]]:
     """Normalize a resolved 64-team seeds/regions input to a 16-per-region map.
 
@@ -144,7 +147,11 @@ def _build_seed_map(
         ValueError: if a (region, seed) slot holds more than one team, or if
             any region is missing a seed 1-16 after normalization.
     """
-    by_region: Dict[str, Dict[int, str]] = {r: {} for r in _REGION_ORDER}
+    # The dict's insertion order IS the bracket topology: positions 0/1 meet in
+    # one semifinal, 2/3 in the other. Every helper below iterates by_region
+    # rather than a module constant for exactly this reason (2026-09 audit, F3-1).
+    order = tuple(region_order) if region_order else _REGION_ORDER
+    by_region: Dict[str, Dict[int, str]] = {r: {} for r in order}
     for tid in seeds:
         raw_region = regions.get(tid, "")
         region = _REGION_ALIASES.get(raw_region, raw_region)
@@ -162,7 +169,7 @@ def _build_seed_map(
         by_region[region][seed] = tid
 
     # Verify every region has all seeds 1-16
-    for region in _REGION_ORDER:
+    for region in order:
         for seed in range(1, 17):
             if seed not in by_region[region]:
                 raise ValueError(
@@ -371,7 +378,7 @@ def _walk_bracket(
 
     # R64: 8 games per region in standard seed-pairing order
     r64_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners_in_region: List[str] = []
         for high_seed, low_seed in _SEED_MATCHUP_ORDER:
             t1 = by_region[region][high_seed]
@@ -391,7 +398,7 @@ def _walk_bracket(
 
     # R32: 4 games per region, pairing adjacent R64 winners (0-1, 2-3, 4-5, 6-7)
     r32_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners_in_region = []
         region_r64 = r64_winners[region]
         for idx in range(0, 8, 2):
@@ -412,7 +419,7 @@ def _walk_bracket(
 
     # S16: 2 games per region, pairing adjacent R32 winners
     s16_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners_in_region = []
         region_r32 = r32_winners[region]
         for idx in range(0, 4, 2):
@@ -433,7 +440,7 @@ def _walk_bracket(
 
     # E8: 1 game per region — the 2 S16 winners
     e8_winners: Dict[str, str] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         t1, t2 = s16_winners[region]
         winner = _decide_winner(
             t1,
@@ -447,10 +454,12 @@ def _walk_bracket(
         picks[f"E8_{region}"] = winner
         e8_winners[region] = winner
 
-    # F4: East vs West, South vs Midwest
+    # F4: the pairing is whatever order by_region was built in (real per-season
+    # topology), never a hardcoded East-West / South-Midwest.
+    r0, r1, r2, r3 = list(by_region)
     semi_east_west = _decide_winner(
-        e8_winners["East"],
-        e8_winners["West"],
+        e8_winners[r0],
+        e8_winners[r1],
         "F4",
         locked_teams,
         lock_through_round,
@@ -458,16 +467,16 @@ def _walk_bracket(
         forced_champion,
     )
     semi_south_midwest = _decide_winner(
-        e8_winners["South"],
-        e8_winners["Midwest"],
+        e8_winners[r2],
+        e8_winners[r3],
         "F4",
         locked_teams,
         lock_through_round,
         scorer,
         forced_champion,
     )
-    picks["F4_East_West"] = semi_east_west
-    picks["F4_South_Midwest"] = semi_south_midwest
+    picks[f"F4_{r0}_{r1}"] = semi_east_west
+    picks[f"F4_{r2}_{r3}"] = semi_south_midwest
 
     # CHAMP: the two F4 winners
     champion = _decide_winner(
@@ -482,7 +491,7 @@ def _walk_bracket(
     picks["CHAMP"] = champion
 
     # F4 list matches the existing convention: the 4 regional champions
-    final_four = [e8_winners[r] for r in _REGION_ORDER]
+    final_four = [e8_winners[r] for r in by_region]
 
     return picks, champion, final_four
 
@@ -571,7 +580,7 @@ def _pick_f4_teams(
     """
     # Build reverse lookup: team_id -> seed
     team_seed: Dict[str, int] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         for seed, tid in by_region[region].items():
             team_seed[tid] = seed
 
@@ -579,13 +588,13 @@ def _pick_f4_teams(
     picks: Dict[str, Tuple[str, float]] = {}  # region -> (team, score)
     forced_region = None
     if forced_champion is not None:
-        for region in _REGION_ORDER:
+        for region in by_region:
             if forced_champion in by_region[region].values():
                 forced_region = region
                 picks[region] = (forced_champion, scorer(forced_champion, "F4"))
                 break
 
-    for region in _REGION_ORDER:
+    for region in by_region:
         if region == forced_region:
             continue
         region_teams = list(by_region[region].values())
@@ -649,7 +658,7 @@ def _pick_s16_teams(
     s16_teams: Set[str] = set()
     forced_quadrant: Optional[Tuple[str, str]] = None  # (region, quadrant_label)
     if forced_champion is not None:
-        for region in _REGION_ORDER:
+        for region in by_region:
             for seed, tid in by_region[region].items():
                 if tid == forced_champion:
                     quadrant = "top" if seed in top_quadrant_seeds else "bottom"
@@ -659,7 +668,7 @@ def _pick_s16_teams(
             if forced_quadrant is not None:
                 break
 
-    for region in _REGION_ORDER:
+    for region in by_region:
         for quadrant_label, quadrant_seeds in (("top", top_quadrant_seeds), ("bottom", bottom_quadrant_seeds)):
             if forced_quadrant == (region, quadrant_label):
                 continue
@@ -719,7 +728,7 @@ def _build_chalk_search_bracket(
 
     # R64
     r64_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners = []
         for high_seed, low_seed in _SEED_MATCHUP_ORDER:
             t1 = by_region[region][high_seed]
@@ -741,7 +750,7 @@ def _build_chalk_search_bracket(
 
     # R32
     r32_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners = []
         rw = r64_winners[region]
         for idx in range(0, 8, 2):
@@ -763,7 +772,7 @@ def _build_chalk_search_bracket(
 
     # S16
     s16_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners = []
         rw = r32_winners[region]
         for idx in range(0, 4, 2):
@@ -785,7 +794,7 @@ def _build_chalk_search_bracket(
 
     # E8
     e8_winners: Dict[str, str] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         t1, t2 = s16_winners[region]
         winner = _chalk_winner(t1, t2)
         loser = t2 if winner == t1 else t1
@@ -802,7 +811,8 @@ def _build_chalk_search_bracket(
         game_counter += 1
 
     # F4
-    for r1, r2 in [("East", "West"), ("South", "Midwest")]:
+    _regs = list(by_region)
+    for r1, r2 in [(_regs[0], _regs[1]), (_regs[2], _regs[3])]:
         t1, t2 = e8_winners[r1], e8_winners[r2]
         winner = _chalk_winner(t1, t2)
         loser = t2 if winner == t1 else t1
@@ -855,7 +865,7 @@ def _sa_bracket_to_picks(
 
     # R64
     r64_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners = []
         for high_seed, low_seed in _SEED_MATCHUP_ORDER:
             bp = next(pick_iter)
@@ -865,7 +875,7 @@ def _sa_bracket_to_picks(
 
     # R32
     r32_winners: Dict[str, List[str]] = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         winners = []
         for idx in range(0, 8, 2):
             bp = next(pick_iter)
@@ -874,29 +884,30 @@ def _sa_bracket_to_picks(
         r32_winners[region] = winners
 
     # S16
-    for region in _REGION_ORDER:
+    for region in by_region:
         for idx in range(0, 4, 2):
             bp = next(pick_iter)
             picks_dict[f"S16_{region}_{idx // 2 + 1}"] = bp.winner_id
 
     # E8
     e8_winners = {}
-    for region in _REGION_ORDER:
+    for region in by_region:
         bp = next(pick_iter)
         picks_dict[f"E8_{region}"] = bp.winner_id
         e8_winners[region] = bp.winner_id
 
-    # F4
+    # F4 (keys follow by_region's order = the real topology)
+    r0, r1, r2, r3 = list(by_region)
     bp_ew = next(pick_iter)
-    picks_dict["F4_East_West"] = bp_ew.winner_id
+    picks_dict[f"F4_{r0}_{r1}"] = bp_ew.winner_id
     bp_sm = next(pick_iter)
-    picks_dict["F4_South_Midwest"] = bp_sm.winner_id
+    picks_dict[f"F4_{r2}_{r3}"] = bp_sm.winner_id
 
     # CHAMP
     bp_champ = next(pick_iter)
     picks_dict["CHAMP"] = bp_champ.winner_id
 
-    final_four = [e8_winners[r] for r in _REGION_ORDER]
+    final_four = [e8_winners[r] for r in by_region]
     return picks_dict, bp_champ.winner_id, final_four
 
 
@@ -1088,6 +1099,15 @@ def _region_top_n_construction(
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Pick the highest-EV complete-region outcome per region, then walk F4+CHAMP.
 
+    WHAT THIS IS (2026-09 audit, Step 5, F5-3): a per-region BEAM search
+    (beam = 5 * max_outcomes, ranked by additive EV score) of which only the
+    single best outcome per region is used -- the "top N" is never consulted
+    beyond outcomes[0]. It is not exhaustive (2^15 outcomes per region), it
+    cannot force a champion (construct_bracket now raises), and its champion is
+    always one of the four per-region EV-argmax survivors. Across the production
+    candidate grid (5 bases x 5 risks) this yields 2-5 distinct champions and
+    4-6 distinct Final Fours per season.
+
     For each region: enumerate top N region outcomes, pick the one with
     highest EV score. Then assemble the 4 regional champions and walk
     F4 + CHAMP with greedy EV-score.
@@ -1099,7 +1119,7 @@ def _region_top_n_construction(
     all_picks: Dict[str, str] = {}
     e8_winners: Dict[str, str] = {}
 
-    for region in _REGION_ORDER:
+    for region in by_region:
         outcomes = _enumerate_region_outcomes(region, by_region[region], round_probs, scorer, max_outcomes)
         if not outcomes:
             continue
@@ -1107,30 +1127,31 @@ def _region_top_n_construction(
         all_picks.update(best_picks)
         e8_winners[region] = best_champ
 
-    # F4 + CHAMP via greedy
+    # F4 + CHAMP via greedy, on by_region's order (the real topology)
+    r0, r1, r2, r3 = list(by_region)
     semi_ew = _decide_winner(
-        e8_winners.get("East", ""),
-        e8_winners.get("West", ""),
+        e8_winners.get(r0, ""),
+        e8_winners.get(r1, ""),
         "F4",
         set(),
         None,
         scorer,
     )
     semi_sm = _decide_winner(
-        e8_winners.get("South", ""),
-        e8_winners.get("Midwest", ""),
+        e8_winners.get(r2, ""),
+        e8_winners.get(r3, ""),
         "F4",
         set(),
         None,
         scorer,
     )
-    all_picks["F4_East_West"] = semi_ew
-    all_picks["F4_South_Midwest"] = semi_sm
+    all_picks[f"F4_{r0}_{r1}"] = semi_ew
+    all_picks[f"F4_{r2}_{r3}"] = semi_sm
 
     champion = _decide_winner(semi_ew, semi_sm, "CHAMP", set(), None, scorer)
     all_picks["CHAMP"] = champion
 
-    final_four = [e8_winners.get(r, "") for r in _REGION_ORDER]
+    final_four = [e8_winners.get(r, "") for r in by_region]
     ev, var = _compute_expected_points(all_picks, round_probs, scoring_system)
     return all_picks, champion, final_four, ev, var
 
@@ -1161,7 +1182,7 @@ def _exhaustive_champion_search(
 
     64 bracket constructions × ~1ms each = ~64ms total.
     """
-    all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
+    all_teams: List[str] = [tid for region in by_region for tid in by_region[region].values()]
 
     scorer = _make_ev_scorer(
         round_probs, public_picks, risk_level, pool_size, scoring_system, confidence_threshold, pool_factor_mode
@@ -1228,8 +1249,16 @@ def construct_bracket(
     chalk_bias_table: Optional[Dict[int, Dict[str, float]]] = None,
     confidence_threshold: Optional[float] = None,
     pool_factor_mode: str = "threshold",
+    region_order: Optional[Sequence[str]] = None,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Construct a complete 63-game bracket using the specified mode.
+
+    ``region_order`` is the season's Final Four pairing (positions 0/1 meet in
+    one semifinal, 2/3 in the other) and every production caller must pass
+    it; see src/simulation/bracket_topology. ``None`` falls back to the
+    legacy East-West / South-Midwest layout ONLY so that diagnostic callers
+    keep running -- the strict picks projection in the backtest raises if a
+    bracket built that way is scored on a different tree.
 
     Returns ``(picks, champion, final_four, expected_points, variance)``
     where ``picks`` is a dict mapping 63 game keys to winner team_ids.
@@ -1266,9 +1295,15 @@ def construct_bracket(
 
     if forced_champion is not None and forced_champion not in seeds:
         raise ValueError(f"forced_champion={forced_champion!r} not in seeds")
+    if forced_champion is not None and mode in _MODES_IGNORING_FORCED_CHAMPION:
+        # Until the 2026-09 audit (Step 5, F5-1) these modes silently ignored
+        # the argument. The backtest's "forced 1-seed champion" candidate family
+        # was four copies of the unforced region_top_n bracket, labelled
+        # tv_champ=<team> after champions that were never forced.
+        raise ValueError(f"mode {mode!r} does not honor forced_champion; it picks its own champion")
 
-    by_region = _build_seed_map(seeds, regions)
-    all_teams: List[str] = [tid for region in _REGION_ORDER for tid in by_region[region].values()]
+    by_region = _build_seed_map(seeds, regions, region_order)
+    all_teams: List[str] = [tid for region in by_region for tid in by_region[region].values()]
 
     # Simulated annealing has its own optimization loop — short-circuit here.
     if mode == "simulated_annealing":

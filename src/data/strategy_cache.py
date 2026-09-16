@@ -43,7 +43,12 @@ N_GAMES = 63  # 32 R64 + 16 R32 + 8 S16 + 4 E8 + 2 F4 + 1 CHAMP
 #   - make_mode_rng derivation below changes
 # Pre-existing migration entries (rng_seed='frozen-2026-04-18') were
 # hashed with a one-time git SHA; they remain loadable independently.
-STRATEGY_CACHE_VERSION = 1
+#
+# v2 (2026-09-15, audit Step 3 F3-2): build_torvik_round_probabilities now
+# marginalises the season's REAL Final Four pairing (region_order) instead of
+# the hardcoded East-West / South-Midwest tree. Every v1 entry for a season
+# whose real pairing differed (9 of 15) was drawn on the wrong tree.
+STRATEGY_CACHE_VERSION = 2
 
 # Shared data/model version strings for the production torvik bracket
 # cache. Both the offline builder (scripts/build_bracket_cache.py) and

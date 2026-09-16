@@ -1,0 +1,18 @@
+Monte Carlo error: same selection, evaluation trials redrawn with eval_seed 777 instead of 20260913 (300 trials each)
+year  referee   delta(seed 20260913)  delta(seed 777)  |diff| pp
+2013  seed          +5.88               +3.78       2.10
+2013  torvik        +5.30               +4.73       0.57
+2013  blend         +5.63               +4.18       1.45
+2013  pit           +1.68               +2.47       0.79
+2013  market_v2     +2.27               +2.63       0.36
+2019  seed          +5.12               +7.68       2.56
+2019  torvik       +13.82              +15.40       1.58
+2019  blend         +6.13               +5.12       1.01
+2019  pit          +10.19              +10.02       0.17
+2019  market_v2     +6.91               +8.72       1.81
+2025  seed         +11.41               +9.17       2.23
+2025  torvik       +22.64              +23.45       0.81
+2025  blend        +13.97              +13.02       0.95
+2025  pit          +18.42              +15.40       3.02
+2025  market_v2     +6.92               +4.90       2.02
+mean |diff| = 1.43 pp, max = 3.02 pp  (per-season MC SE of a delta ~ sqrt(2*0.1*0.9/300) ~ 2.4 pp; season-bootstrap CI half-widths above are 1.6-3.4 pp on the 14-season mean, i.e. MC noise per season is comparable to season-to-season spread but averages down by sqrt(14) in the mean)

@@ -1,0 +1,26 @@
+2026 real F4 order ('West', 'Midwest', 'East', 'South'); default ('East', 'West', 'South', 'Midwest'); N=200,000; post_fix=True
+[torvik] analytic invariants ok (sums 32/16/8/4/2/1, monotone, bounded)
+  torvik: simulate_tournament_outcomes n=0 (vs clipped table) cells=384 max|z|=2.67 frac|z|>2=0.034 min Bonferroni p=1.000 -> PASS
+  torvik: same, vs UNclipped table       cells=384 max|z|=2.67 frac|z|>2=0.034 min Bonferroni p=1.000 -> PASS
+  torvik: referee cap [0.01,0.99] binds on 10 ordered pairs; max|p - clip| = 0.0037
+  torvik: marginals_from_pairwise 10k    cells=384 max|z|=3.19 frac|z|>2=0.047 min Bonferroni p=0.553 -> PASS
+  torvik: noise 0.16 per-round L1 shift vs analytic: [0.096, 0.072, 0.057, 0.041, 0.03, 0.017]  (24s)
+[seed] analytic invariants ok (sums 32/16/8/4/2/1, monotone, bounded)
+  seed: simulate_tournament_outcomes n=0 (vs clipped table) cells=384 max|z|=2.61 frac|z|>2=0.039 min Bonferroni p=1.000 -> PASS
+  seed: marginals_from_pairwise 10k      cells=384 max|z|=2.92 frac|z|>2=0.055 min Bonferroni p=1.000 -> PASS
+  seed: noise 0.16 per-round L1 shift vs analytic: [0.115, 0.099, 0.069, 0.048, 0.034, 0.02]  (24s)
+[pit] analytic invariants ok (sums 32/16/8/4/2/1, monotone, bounded)
+  pit: simulate_tournament_outcomes n=0 (vs clipped table) cells=384 max|z|=2.96 frac|z|>2=0.044 min Bonferroni p=1.000 -> PASS
+  pit: same, vs UNclipped table          cells=384 max|z|=32.00 frac|z|>2=0.073 min Bonferroni p=0.000 -> FAIL
+  pit: referee cap [0.01,0.99] binds on 86 ordered pairs; max|p - clip| = 0.0052
+  pit: marginals_from_pairwise 10k       cells=384 max|z|=7.81 frac|z|>2=0.042 min Bonferroni p=0.921 -> PASS
+  pit: noise 0.16 per-round L1 shift vs analytic: [0.093, 0.067, 0.047, 0.042, 0.028, 0.011]  (23s)
+[blend] analytic invariants ok (sums 32/16/8/4/2/1, monotone, bounded)
+  blend: simulate_tournament_outcomes n=0 (vs clipped table) cells=384 max|z|=3.15 frac|z|>2=0.029 min Bonferroni p=1.000 -> PASS
+  blend: marginals_from_pairwise 10k     cells=384 max|z|=2.94 frac|z|>2=0.047 min Bonferroni p=1.000 -> PASS
+  blend: noise 0.16 per-round L1 shift vs analytic: [0.104, 0.093, 0.067, 0.05, 0.041, 0.023]  (24s)
+build_torvik_round_probabilities (region_order=real):
+    vs analytic on REAL tree (floored cells skipped) cells=285 max|z|=2.76 frac|z|>2=0.063 min Bonferroni p=1.000 -> PASS
+    vs analytic on DEFAULT tree (floored cells skipped) cells=285 max|z|=11.40 frac|z|>2=0.140 min Bonferroni p=0.000 -> FAIL
+_compute_advancement_rates('recent', as_of=2026) vs positional recursion on real tree: max abs gap = 1.94e-16
+noseed heuristic marginals vs propagated noseed pairwise: max abs diff by round [0.305, 0.263, 0.148, 0.109, 0.081, 0.056]; CHAMP mass 1.067

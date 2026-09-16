@@ -32,6 +32,9 @@ is structurally unaffected by ``blend_alpha`` regardless of anything here.
 
 from __future__ import annotations
 
+from src.simulation import bracket_topology as _bt
+from src.optimization.payout import first_place_share
+
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -200,7 +203,7 @@ class RecencyAlphaFitter:
         )
 
         seed_rp = build_seed_round_probabilities(seeds)
-        noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
+        noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=yt)
 
         try:
             pick_dist, year_n_opponents, pool_chalk_noise_std = resolve_opponent_pick_distribution(
@@ -241,6 +244,7 @@ class RecencyAlphaFitter:
                     risk_level=risk,
                     pool_size=ctx.n_opponents,
                     scoring_system=scoring,
+                    region_order=_bt.region_order_from_first_round(ctx.first_round, ctx.regions),
                 )
                 candidates.append(_picks_dict_to_bool_array(picks, ctx.first_round))
             except Exception:
@@ -256,6 +260,7 @@ class RecencyAlphaFitter:
                     risk_level=risk,
                     pool_size=ctx.n_opponents,
                     scoring_system=scoring,
+                    region_order=_bt.region_order_from_first_round(ctx.first_round, ctx.regions),
                 )
                 candidates.append(_picks_dict_to_bool_array(picks, ctx.first_round))
             except Exception:
@@ -301,8 +306,7 @@ class RecencyAlphaFitter:
                 opp_scores = score_brackets_team_identity(
                     opp, sim_winners, ctx.first_round, ESPN_SCORING
                 )
-                if c_score >= opp_scores.max():
-                    wins += 1
+                wins += first_place_share(c_score, opp_scores)   # ties split (audit F4-1)
             p1 = wins / self.pa_trials_fit
             if p1 > best_p1:
                 best_p1 = p1

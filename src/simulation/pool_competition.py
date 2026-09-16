@@ -452,6 +452,10 @@ def simulate_tournament_outcomes(
         - List of per-tournament winner lists by round, for upset bonus
           scoring: outcomes_by_round[sim][round_idx] = [winner_ids].
     """
+    if len(first_round_matchups) != 64:
+        raise ValueError(
+            f"simulate_tournament_outcomes walks a 64-team bracket (63 games); got {len(first_round_matchups)} teams"
+        )
     n_games = 63
     outcomes = np.zeros((n_tournaments, n_games), dtype=bool)
     outcomes_by_round: List[List[List[str]]] = []
@@ -471,7 +475,15 @@ def simulate_tournament_outcomes(
                     continue
 
                 t1, t2 = current_teams[g], current_teams[g + 1]
-                base_prob = matchup_probs.get((t1, t2), 0.5)
+                base_prob = matchup_probs.get((t1, t2))
+                if base_prob is None:
+                    rev = matchup_probs.get((t2, t1))
+                    if rev is None:
+                        # Until the 2026-09 audit (Step 3, F3-3) this defaulted to
+                        # 0.5 -- a coin flip silently standing in for a missing
+                        # matchup. A referee that cannot find a game must say so.
+                        raise KeyError(f"no matchup probability for ({t1}, {t2}) in either orientation")
+                    base_prob = 1.0 - rev
 
                 # Logit-space noise (matches main MC engine)
                 safe_p = max(0.001, min(0.999, base_prob))
@@ -1217,7 +1229,7 @@ def compute_bracket_win_probability(
       2. Score ``n_opponents`` opponent brackets against the same outcome.
       3. Record whether the model bracket's score is strictly the highest.
 
-    Returns the fraction of tournaments where the model bracket wins.
+    Returns the expected first-place share (ties split) over the simulated tournaments.
     This is the core metric for winner-take-all pool optimization.
 
     Args:
@@ -1226,6 +1238,8 @@ def compute_bracket_win_probability(
             Default 0.4 produces moderate correlation matching observed
             real-pool behavior.
     """
+    from src.optimization.payout import first_place_share
+
     if rng is None:
         rng = np.random.default_rng(42)
 
@@ -1268,7 +1282,7 @@ def compute_bracket_win_probability(
             first_round_matchups,
             scoring_system,
         )
-        if scores[0] >= scores[1:].max():
-            wins += 1
+        # Expected first-place share, ties split (2026-09 audit, Step 4, F4-1).
+        wins += first_place_share(scores[0], scores[1:])
 
     return wins / n_tournaments

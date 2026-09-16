@@ -474,3 +474,24 @@ def test_region_top_n_runs_quickly():
     )
     elapsed = time.time() - start
     assert elapsed < 3.0, f"region_top_n took {elapsed:.1f}s, expected < 3s"
+
+
+def test_modes_that_cannot_force_a_champion_refuse_one():
+    """2026-09 audit, Step 5, F5-1: region_top_n (and SA, exhaustive) silently
+    ignored forced_champion, so the backtest's 'forced 1-seed champion'
+    candidates were four copies of one bracket. Now it is an error."""
+    import pytest
+    from src.optimization.bracket_construction import construct_bracket, _MODES_IGNORING_FORCED_CHAMPION
+
+    seeds, regions = {}, {}
+    for r in ("East", "West", "South", "Midwest"):
+        for s in range(1, 17):
+            seeds[f"{r.lower()}{s}"] = s
+            regions[f"{r.lower()}{s}"] = r
+    rp = {t: {R: max(0.001, 0.9 ** (s * (i + 1))) for i, R in enumerate(("R64", "R32", "S16", "E8", "F4", "CHAMP"))} for t, s in seeds.items()}
+    for mode in _MODES_IGNORING_FORCED_CHAMPION:
+        with pytest.raises(ValueError, match="does not honor forced_champion"):
+            construct_bracket(mode=mode, seeds=seeds, regions=regions, round_probs=rp, public_picks={}, risk_level=0.5, forced_champion="east1")
+    # champ_first honours it
+    picks, champ, _, _, _ = construct_bracket(mode="champ_first", seeds=seeds, regions=regions, round_probs=rp, public_picks={}, risk_level=0.5, forced_champion="west3")
+    assert champ == "west3"

@@ -65,7 +65,7 @@ function loadApp(hash) {
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
-    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, '
+    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct };', ctx);
   return ctx.__api;
 }
@@ -271,6 +271,52 @@ check('an unlikely bracket is not printed as impossible', () => {
 check('a genuine zero still prints as zero', () => {
   const app = loadApp('');
   assert.strictEqual(app.p1Pct(0), '0%');
+});
+
+
+console.log('strict picks expansion (audit 2026-09, Step 4, F4-7)');
+
+/* The 64-team walk in solveFromPicks: the picks list must name exactly one
+ * team of every game. The old `has(a) ? a : b` silently produced a bracket
+ * from any list at all. */
+function season64(app) {
+  const teams = [];
+  for (let i = 0; i < 64; i++) teams.push({ id: 't' + i, name: 'T' + i, seed: (i % 16) + 1 });
+  const first_round = teams.map((_, i) => i);
+  // chalk picks: index 2g wins every game
+  const picks = [];
+  let cur = first_round.slice();
+  for (let r = 0; r < 6; r++) {
+    const next = [];
+    for (let g = 0; g < cur.length; g += 2) next.push(cur[g]);
+    picks.push(next);
+    cur = next;
+  }
+  app.state.season = { teams, first_round, strategies: [], pool_optimized: picks };
+  app.state.strategy = 'p1';
+  return { picks };
+}
+
+check('a well-formed picks list expands to the bracket it describes', () => {
+  const app = loadApp();
+  season64(app);
+  const rounds = app.solveFromPicks();
+  assert.strictEqual(rounds.length, 6);
+  assert.strictEqual(rounds[5][0].win, 0);
+});
+
+check('a picks list naming neither team of a game throws instead of guessing', () => {
+  const app = loadApp();
+  const { picks } = season64(app);
+  picks[0][0] = 63;               // game 0 is t0 vs t1; neither is picked now
+  assert.throws(() => app.solveFromPicks(), /neither picked/);
+});
+
+check('a picks list naming both teams of a game throws instead of guessing', () => {
+  const app = loadApp();
+  const { picks } = season64(app);
+  picks[0].push(1);               // game 0 now has both t0 and t1 as R64 winners
+  assert.throws(() => app.solveFromPicks(), /both picked/);
 });
 
 console.log(`\n${passed} checks passed`);

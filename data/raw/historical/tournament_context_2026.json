@@ -1,6 +1,16 @@
 {
   "seeds": {
     "season": 2026,
+    "f4_pairing": [
+      [
+        "West",
+        "Midwest"
+      ],
+      [
+        "East",
+        "South"
+      ]
+    ],
     "teams": [
       {
         "season": 2026,

@@ -9,6 +9,10 @@ Checks three invariants that a single-elimination bracket cannot violate:
   A. Every team except the champion has exactly one recorded loss.
   B. Every round-R winner appears again in round R+1 (the champion excepted).
   C. Round sizes are 32/16/8/4/2/1.
+  D. Every First Four winner plays in the Round of 64, and no First Four
+     loser does. (Added 2026-09 after the audit found the 2025 file naming
+     San Diego State, the play-in loser, in North Carolina's R64 game --
+     invisible to A-C because SDSU then had exactly one loss and UNC none.)
 
 A and B are independent views of the same underlying defect, so when they
 agree on a game the diagnosis is solid. Where a game log
@@ -126,6 +130,16 @@ def audit_year(year: int) -> list[str]:
     if sizes != EXPECTED_SIZES:
         issues.append(f"C  round sizes {sizes}, expected {EXPECTED_SIZES}")
 
+    # D — play-in games decide who is in the R64, and the R64 must agree.
+    ff = [g for g in load_tournament_results(year) if g.get("round_name") == "FF" and g.get("team1_won") is not None]
+    for g in ff:
+        winner = g["team1_id"] if g["team1_won"] else g["team2_id"]
+        loser = g["team2_id"] if g["team1_won"] else g["team1_id"]
+        if winner not in plays["R64"]:
+            issues.append(f"D  {winner}: won the First Four but never appears in R64")
+        if loser in plays["R64"]:
+            issues.append(f"D  {loser}: lost the First Four but appears in R64")
+
     return issues
 
 
@@ -139,7 +153,7 @@ def main() -> int:
     for year in years:
         issues = audit_year(year)
         if issues:
-            total += sum(1 for i in issues if i[:1] in "ABC")
+            total += sum(1 for i in issues if i[:1] in "ABCD")
             print(f"\n{year}:")
             for i in issues:
                 print(f"  {i}")

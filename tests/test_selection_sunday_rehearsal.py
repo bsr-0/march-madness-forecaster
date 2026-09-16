@@ -42,7 +42,10 @@ REHEARSAL = 2027
 # (also used by test_material_difference.py and generate_parity_fixture.py):
 # same schema, same required meta fields, just older and missing
 # named_strategies -- which degrades to a printed warning and a fallback
-# build, not a failure. See audit recommendation 9.
+# build, not a failure. See audit recommendation 9. NOTE (audit 2026-09-15,
+# Step 1 S-1): this fixture predates the Final Four topology correction and is
+# NOT read by the page; it is test data only. test_material_difference pins
+# candidate indices from it, so it is deliberately left unchanged.
 DONOR_ARTIFACT = REPO / "docs" / "data" / f"candidates_{DONOR}.json"
 
 

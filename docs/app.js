@@ -75,7 +75,7 @@ const MODEL = 'model';
  *
  * FIXED, NOT CHOSEN. This is the key set the frozen baseline in
  * artifacts/model_baseline.json is defined over, and it is what the shipped
- * accuracy number (log loss 0.45296 on held-out tournament games) describes.
+ * accuracy number (log loss 0.45391 on held-out tournament games; 0.45296 before the 2026-09 correction of one 2025 results row) describes.
  * The UI used to let each variable be switched on and off, which meant the
  * board could be filled by a model no one had ever validated -- and measurement
  * said the choosing bought nothing: selecting features per fold scored 0.46651
@@ -208,8 +208,12 @@ function refit() {
   f.userKeys = keys;
   f.dropped = wanted.filter(k => src.keys.indexOf(k) < 0);   // e.g. t_rank has no dated snapshot
   f.quality = fitQuality(state.training.games, cols, state.year, f.beta);
-  // The honest number: fit on prior seasons, scored on seasons never seen.
-  f.oos = crossValidate(state.training.games, cols, state.training.years, 2014);
+  // The honest number: fit on prior seasons, scored on seasons never seen --
+  // and CALIBRATED on seasons strictly before the one on screen. Until the
+  // 2026-09 audit this called crossValidate() on the whole matrix, so the
+  // link's (a, nu) for a displayed 2019 had been fitted on 2019's own results
+  // and on 2020-2026's. See causalWalkForward() in fit.js.
+  f.oos = causalWalkForward(state.training.games, cols, state.training.years, state.year, 2014);
   state.fit = f;
 }
 
@@ -290,7 +294,14 @@ function solveFromPicks() {
     const games = [], next = [];
     for (let g = 0; g < current.length; g += 2) {
       const a = current[g], b = current[g + 1];
-      const win = picks[r].has(a) ? a : b;
+      const ha = picks[r].has(a), hb = picks[r].has(b);
+      // Exactly one of the two teams must be this round's winner. The old
+      // `has(a) ? a : b` silently invented a winner whenever the picks did not
+      // describe a bracket on this tree (2026-09 audit, Step 4, F4-7).
+      if (ha === hb) {
+        throw new Error(`picks do not describe a bracket on this season's tree: round ${r}, game ${a} vs ${b}, ${ha ? 'both' : 'neither'} picked`);
+      }
+      const win = ha ? a : b;
       games.push({ a, b, win, sa: null, sb: null });
       next.push(win);
     }
