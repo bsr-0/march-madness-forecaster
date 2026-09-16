@@ -1,7 +1,7 @@
 """Massey source (catalog A5 ``massey_avg``).
 
 Loads the already-aggregated Massey composite rating
-(``data/raw/external_ratings_{year}.json``'s ``systems.massey_composite``
+(``data/raw/historical/external_ratings_{year}.json``'s ``systems.massey_composite``
 entry — consolidated 2026-08-16 from the former standalone
 ``external_massey_composite_{year}.json`` file) and exposes it as a
 barthag-shaped probability source that slots into the same
@@ -46,6 +46,50 @@ _MASSEY_EDGE_CASES: Dict[str, str] = {
     "st_francis_pa": "saint_francis",
     "st_mary_s_ca": "saint_mary_s__ca",
     "siue": "siu_edwardsville",
+    # 2026-09 audit (Step 18 remediation): the alias table above covered 6
+    # cases and left up to 13 of 68 tournament teams per season (2011-2026)
+    # unbridged, each silently falling back to the crude seed-based barthag
+    # instead of a real Massey rating. Every entry below was verified by
+    # team_name against the Massey composite, not by ID pattern alone.
+    "southern_miss": "southern_mississippi",  # composite spells it without "issippi" in most years
+    "abilene_chr": "abilene_christian",
+    "suny_albany": "albany__ny",
+    "boston_univ": "boston_university",
+    "cs_bakersfield": "cal_state_bakersfield",
+    "cs_fullerton": "cal_state_fullerton",
+    "coastal_car": "coastal_carolina",
+    "col_charleston": "college_of_charleston",  # NOT charleston_so (Charleston Southern, a different school)
+    "e_kentucky": "eastern_kentucky",
+    "e_washington": "eastern_washington",  # NOT g_washington (George Washington)
+    "f_dickinson": "fairleigh_dickinson",
+    "fl_atlantic": "florida_atlantic",
+    "fgcu": "florida_gulf_coast",
+    "g_washington": "george_washington",
+    "wi_green_bay": "green_bay",
+    "kennesaw": "kennesaw_state",
+    "kent": "kent_state",
+    "ark_little_rock": "little_rock",
+    "liu_brooklyn": "long_island_university",
+    "mtsu": "middle_tennessee",
+    "wi_milwaukee": "milwaukee",
+    "nc_a_t": "north_carolina_a_t",
+    "nc_central": "north_carolina_central",
+    "n_dakota_state": "north_dakota_state",
+    "n_colorado": "northern_colorado",
+    "n_kentucky": "northern_kentucky",
+    "northwestern_la": "northwestern_state",  # NOT northwestern (Northwestern University, IL)
+    "st_joseph_s_pa": "saint_joseph_s",
+    "st_louis": "saint_louis",
+    "s_dakota_state": "south_dakota_state",
+    "se_missouri_state": "southeast_missouri_state",
+    "southern_univ": "southern",  # NOT ga_southern / tx_southern / southern_miss
+    "sf_austin": "stephen_f_austin",
+    "tam_c_christi": "texas_a_m_corpus_christi",
+    "tx_southern": "texas_southern",
+    "massachusetts": "umass",
+    "ut_san_antonio": "utsa",
+    "wku": "western_kentucky",
+    "w_michigan": "western_michigan",
 }
 
 # Barthag clip range — matches the catalog spec for massey_avg.
@@ -97,9 +141,7 @@ def load_massey_avg_barthag(
     if data_root is None:
         data_root = Path(__file__).resolve().parent.parent.parent / "data"
 
-    path = Path(data_root) / "raw" / f"external_ratings_{year}.json"
-    if not path.exists():
-        path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
+    path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
     if not path.exists():
         return None
 
@@ -145,9 +187,7 @@ def massey_coverage(year: int, canonical_ids: Iterable[str], data_root: Optional
     """
     if data_root is None:
         data_root = Path(__file__).resolve().parent.parent.parent / "data"
-    path = Path(data_root) / "raw" / f"external_ratings_{year}.json"
-    if not path.exists():
-        path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
+    path = Path(data_root) / "raw" / "historical" / f"external_ratings_{year}.json"
     if not path.exists():
         return {"covered": 0, "total": len(list(canonical_ids)), "file_exists": 0}
     consolidated = json.load(open(path))
