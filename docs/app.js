@@ -16,13 +16,16 @@
  *                                Phi(margin / sigma); see fit.js. It is not a
  *                                classifier and a coefficient is not a log-odds.
  *
- * THE FIRST TWO ARE NOT THE SAME BRACKET AND THE DIFFERENCE IS THE POINT. In
- * 2026 they name different champions: the win-maximising bracket gives up 69
- * expected points (872 against 941) to roughly two-and-a-half times its win
- * probability (9.9% against 3.9%). In a winner-take-all pool the points number
- * is worth nothing and the trade is free; in a pool paying second and third it
- * is a real decision. Both scores are shown for whichever strategy is selected,
- * so the cost is visible rather than implied.
+ * THE FIRST TWO ARE NOT THE SAME BRACKET AND THE DIFFERENCE IS THE POINT.
+ * On the current 2026 artifact both name Michigan, but the win-maximiser
+ * gives up about 40 expected points (902 against 943) to nearly double its
+ * chance of finishing first (7% against 4%) by taking upsets the field will
+ * not. (This comment used to cite 872/941 and 9.9%/3.9% with different
+ * champions -- figures from an earlier artifact; the numbers on the page come
+ * from the payload, never from here.) In a winner-take-all pool the points
+ * number is worth nothing and the trade is free; in a pool paying second and
+ * third it is a real decision. Both scores are shown for whichever strategy is
+ * selected, so the cost is visible rather than implied.
  *
  * WHY THE FIRST IS A FIXED RULE. It used to be the best of ~3,000 candidates
  * scored by a P(1st) referee. That route had never been backtested, and its
@@ -779,7 +782,7 @@ function render() {
     { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
     { const nav = document.getElementById('board-nav'); if (nav) nav.hidden = true; }
     { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
-    { const cb = document.getElementById('champion-box'); if (cb) { cb.hidden = true; cb.innerHTML = ''; } }
+    { for (const id of ['headline', 'compare', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -868,7 +871,9 @@ function render() {
   // disagree about which bracket the user is looking at.
   state.rounds = rounds;
   { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
-  renderChampionBox(rounds);
+  renderHeadline(rounds);
+  renderCompare();
+  { const why = document.getElementById('why'); if (why) why.hidden = false; }
   // `active`/`data-r` matter only under the narrow-viewport CSS (see
   // app.css's @media (max-width: 720px)), which shows one .round at a time
   // instead of scrolling six columns sideways. They cost nothing on a wide
@@ -882,31 +887,170 @@ function render() {
   updateMobileNav();
 }
 
-/* Whichever bracket is on screen, name the one team it sends to the title.
+/* ---------- headline and comparison ----------
  *
- * Previously the only place this appeared was bold text in the Championship
- * column -- the sixth of six, past the horizontal scroll on first load. The
- * champion is always `rounds[rounds.length - 1][0].win`: the single game in
- * the last round this board solved, win-decided the same way every other
- * game on it was (solveByFit()'s model, or solveFromPicks()'s precomputed
- * strategy) -- so this box can never name a different champion than the one
- * the board itself shows in that column.
+ * The page used to open on three explanatory cards, a disclosure, the filter
+ * stack, a strategy note, an equation and only then the bracket: a research
+ * dashboard that happened to emit a bracket. The methodology audit
+ * (artifacts/methodology_audit/) made the numbers on this page much stronger
+ * and changed almost nothing a visitor could see, which was the right
+ * outcome for an audit and the wrong state for a product. The structure is
+ * now: what should I pick (headline) -> why this one and what else is there
+ * (comparison table) -> the bracket -> adjust -> how it was tested
+ * (collapsed). Nothing here computes anything new: every number is the same
+ * payload field the strategy cards already show, read through strategyRows()
+ * so the headline, the table, the cards and the board cannot disagree.
  */
-function renderChampionBox(rounds) {
-  const box = document.getElementById('champion-box');
+
+/* One row per selectable bracket, from the same fields the cards use.
+ *
+ * With filters active the two precomputed rows show the FILTERED best for
+ * their objective (the same `by` values the cards show, see filteredEntry()),
+ * because the row a click returns is that filtered bracket. The fitted row's
+ * champion is always the live fit's; its P(1st)/EV exist only when the
+ * evaluation on file is for exactly that bracket (fittedEval()). */
+function strategyRows() {
+  const s = state.season;
+  const teams = s.teams;
+  const filt = state.strategy === MODEL ? null : filteredEntry().entry;
+  const rows = (s.strategies || []).map(st => {
+    const v = (filt && filt.by && filt.by[st.id]) || st;
+    const champIdx = filt && filt.by && filt.by[st.id] ? decodeBracket(v.b)[5][0] : st.picks[5][0];
+    return {
+      id: st.id,
+      label: st.id === 'ev' ? 'Most expected points' : 'Win the pool',
+      kind: st.id === 'ev' ? 'Exact optimum' : 'Backtested rule',
+      p1: v.p1, ev: v.ev, champion: teams[champIdx],
+      filtered: !!(filt && filt.by && filt.by[st.id]),
+      active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
+    };
+  });
+  const fe = fittedEval();
+  const live = fitReady() ? solveByFit() : null;
+  rows.push({
+    id: MODEL,
+    label: 'Fitted model',
+    kind: 'Evaluated, not selected',
+    p1: fe && !fe.stale ? fe.p1 : null,
+    ev: fe && !fe.stale ? fe.ev : null,
+    scored: !!(fe && !fe.stale),
+    stale: !!(fe && fe.stale),
+    champion: live ? teams[live[5][0].win] : null,
+    filtered: false,
+    active: state.strategy === MODEL,
+  });
+  return rows;
+}
+
+/* Winners the bracket sends through against the seed line, in bracket order,
+ * deduplicated: the short answer to "where does this bracket take a stand". */
+function chalkDeviations(rounds) {
+  const teams = state.season.teams;
+  const seen = new Set(), out = [];
+  for (const games of rounds) {
+    for (const g of games) {
+      const w = teams[g.win], l = teams[g.win === g.a ? g.b : g.a];
+      if (w.seed > l.seed && !seen.has(g.win)) { seen.add(g.win); out.push(w); }
+    }
+  }
+  return out;
+}
+
+function renderHeadline(rounds) {
+  const box = document.getElementById('headline');
   if (!box) return;
-  const final = rounds[rounds.length - 1][0];
-  const t = state.season.teams[final.win];
+  const s = state.season;
+  const teams = s.teams;
+  const champ = teams[rounds[rounds.length - 1][0].win];
+  const st = usingOptimized() ? currentStrategy() : null;
+  const fe = !st ? fittedEval() : null;
+  const nOpp = (s.p1_pool_size || 30) - 1;
+
+  const objective = !st ? 'Fitted model'
+    : st.id === CUSTOM ? (state.objective === 'ev' ? 'Most expected points, with your filters' : 'Win the pool, with your filters')
+    : st.id === 'ev' ? 'Most expected points'
+    : 'Win the pool';
+  const kind = !st ? 'Evaluated, not selected'
+    : st.id === CUSTOM ? 'Your pick'
+    : st.id === 'ev' ? 'Exact optimum'
+    : 'Backtested rule';
+
+  // The estimand, in one sentence, per objective. This is the sentence the
+  // page most needed and did not have: what kind of thing the bracket IS.
+  const estimand = !st
+    ? `The fitted model’s own game-by-game picks. Scored by the same pool referee as the other rows — evaluated, never selected.`
+    : st.id === CUSTOM
+      ? `The best bracket in the candidate pool under your filters, ranked by ${state.objective === 'ev' ? 'expected points' : 'chance of finishing first'}. A belief you supplied, not a validated recommendation.`
+    : st.id === 'ev'
+      ? `Chosen for the most expected points under the model’s own probabilities — a different objective from winning the pool, and usually a chalkier bracket.`
+      : `Pool strategy, not a game-prediction ranking: chosen to maximise the estimated chance of finishing first in a ${nOpp + 1}-entry pool — not the bracket with the most expected points.`;
+
+  // Evidence, stated narrowly. No figures here that could go stale: the
+  // audit's numbers live in artifacts/methodology_audit/step18.
+  const evidence = !st
+    ? `Walk-forward: fitted only on tournaments before ${state.year}.`
+    : st.id === CUSTOM ? ''
+    : st.id === 'ev'
+      ? `The exact expected-points maximum on this bracket; not a pool backtest.`
+      : `Backtested on 15 tournaments (2011–2026, no 2020); the edge over a seed bracket held under an independent market referee.`;
+
+  const nums = st
+    ? `<span class="hl-num"><b>${p1Pct(st.p1)}</b> chance of finishing first</span>` +
+      `<span class="hl-num"><b>${st.ev.toFixed(0)}</b> expected points</span>`
+    : fe && !fe.stale
+      ? `<span class="hl-num"><b>${p1Pct(fe.p1)}</b> chance of finishing first</span>` +
+        `<span class="hl-num"><b>${fe.ev.toFixed(0)}</b> expected points</span>`
+      : `<span class="hl-num muted">${fe && fe.stale ? 'Not scored: the evaluation on file is for a different bracket' : 'Not scored against the pool'}</span>`;
+
+  const dev = chalkDeviations(rounds);
+  const devText = dev.length
+    ? `Against the seeds: ${dev.slice(0, 4).map(t => `${t.seed} ${t.name}`).join(', ')}${dev.length > 4 ? ` +${dev.length - 4} more` : ''}.`
+    : 'Straight chalk: no lower seed advances.';
+
   box.hidden = false;
   box.innerHTML = `
-    <div class="champ-card">
-      <span class="champ-seed">${t.seed}</span>
+    <div class="hl-top">
+      <span class="hl-season">${state.year} bracket</span>
+      <span class="hl-obj">${objective}</span>
+      <span class="tag${st && st.id !== CUSTOM ? '' : ' alt'}">${kind}</span>
+    </div>
+    <div class="champ-card hl-champ">
+      <span class="champ-seed">${champ.seed}</span>
       <div class="champ-mid">
         <p class="champ-label">Champion</p>
-        <p class="champ-name">${t.name}</p>
+        <p class="champ-name">${champ.name}</p>
       </div>
-      <span class="champ-region">${t.region}</span>
-    </div>`;
+      <span class="champ-region">${champ.region}</span>
+    </div>
+    <div class="hl-nums">${nums}
+      <span class="hl-meta">63 picks · simulated against ${nOpp} modelled opponents</span>
+    </div>
+    <p class="hl-estimand">${estimand}</p>
+    <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>`;
+}
+
+function renderCompare() {
+  const box = document.getElementById('compare');
+  if (!box) return;
+  const rows = strategyRows();
+  const cell = (v, f) => (v === null || v === undefined ? '<span class="muted">—</span>' : f(v));
+  box.hidden = false;
+  box.innerHTML = `
+    <table class="cmp">
+      <thead><tr>
+        <th>Strategy</th><th class="num">Chance of 1st</th><th class="num">Exp. points</th><th>Champion</th>
+      </tr></thead>
+      <tbody>${rows.map(r => `
+        <tr class="cmp-row${r.active ? ' on' : ''}" onclick="setStrategy('${r.id}')" role="button" tabindex="0"
+            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }">
+          <td><span class="cmp-label">${r.label}</span>
+              <span class="cmp-kind">${r.kind}${r.filtered ? ' · filtered' : ''}${r.stale ? ' · not scored' : ''}</span></td>
+          <td class="num">${cell(r.p1, p1Pct)}</td>
+          <td class="num">${cell(r.ev, v => v.toFixed(0))}</td>
+          <td>${r.champion ? `<span class="cmp-seed">${r.champion.seed}</span> ${r.champion.name}` : '<span class="muted">—</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 /* ---------- narrow-viewport round navigation ----------
