@@ -103,6 +103,12 @@ FTE_MARGIN_SIGMA = 11.0
 # is SUPPLEMENTARY only; it must not be promoted to a criterion referee until
 # its point-in-time status is established (2026-09 audit, Step 7, D7-2).
 FTE_PROVENANCE = "UNVERIFIED_POINT_IN_TIME"
+# What the 0.16 referee noise does, in one sentence (audit Step 2 item 15), so the
+# frozen spec records the measured effect rather than the old description.
+REFEREE_NOISE_STD_DOC = (
+    "independent per-game logit noise integrates out to a Bernoulli with the mean shrunk toward 0.5 by "
+    "at most 0.13 pp; it adds no variance and models no parameter uncertainty (a mild tempering)"
+)
 
 #: The season-level baseline every delta is taken against: the harness's
 #: stochastic seed mode, the comparator behind the published headline.

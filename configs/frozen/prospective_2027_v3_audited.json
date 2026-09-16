@@ -1,0 +1,241 @@
+{
+  "audit": {
+    "commit": "75b97e4",
+    "evidence": "artifacts/methodology_audit/ (Steps 1-12, R-4)",
+    "validation_result": "Step 9: production strategy edge over the seed bracket, one fixed bracket per season, +7.1/+7.5/+6.2/+5.6 pp under seed/torvik/blend/pit and +4.0 pp [+2.5, +5.6] under market_v2 (the pre-registered independent referee); LORO all positive; registered verdict ROBUST. Historical validation only; not evidence of future or real-world performance; seed, torvik, blend and pit are one data family, so this is one independent confirmation, not five."
+  },
+  "candidate_selection": {
+    "common_random_numbers": true,
+    "ev_definition": "sum_R pts_R * sum_{t in picked_R} P(t wins R), marginals from the unconditional bank",
+    "ev_strata": 10,
+    "min_per_champion": 8,
+    "objectives": [
+      "ev",
+      "p1"
+    ],
+    "p1_definition": "expected first-place share over shared trials (ties split); was 'score >= max opponent' before 2026-09-15",
+    "p1_opponent_model": "ESPN public pick distribution + seed pairwise referee",
+    "p1_pool_semantics": "entries in the pool (us + DEFAULT_POOL_SIZE-1 opponents); was 31 entries before 2026-09-15",
+    "p1_pool_size": 30,
+    "p1_trials": 2000,
+    "sampler": "champion quotas (proportional with floor) then EV strata within champion",
+    "scoring_mode": "team_identity (never shape-encoded)",
+    "scoring_system": {
+      "CHAMP": 320,
+      "E8": 80,
+      "F4": 160,
+      "R32": 20,
+      "R64": 10,
+      "S16": 40
+    },
+    "target_candidates": 3000
+  },
+  "freeze_date": "2026-09-15",
+  "future_research_not_in_production": {
+    "R-1": "noseed advancement marginals are a compounding heuristic, not propagated from pairwise",
+    "R-2": "candidate-space expansion",
+    "R-3": "opponent sampler joint structure / real-entry resampling",
+    "R-4": "CLOSED negative: recency/upset training weights fail the frozen gates on both populations",
+    "R-5": "production calibration slope 1.33 on 2023-25 (observation only)",
+    "rule": "any change to model selection, weighting, candidate space, referee or objective after this freeze requires a separately dated pre-registration; none may be applied to 2027 production"
+  },
+  "holdout": {
+    "contaminated_for_evaluation_only": true,
+    "contaminated_seasons": [
+      2026
+    ],
+    "contamination_reason": "2026 is inside BACKTEST_YEARS, the production strategy was selected on a window containing it, and a documented modelling conclusion was drawn from its outcome. It is an integration/regression season, not a benchmark.",
+    "outcomes_available_at_freeze": false,
+    "prospective_season": 2027
+  },
+  "lineage": {
+    "scope_correction_v2": {
+      "date": "2026-08-21",
+      "fields_moved": [
+        "candidate_selection.diversity_algorithm",
+        "candidate_selection.k_returned",
+        "product.strategies"
+      ],
+      "methodology_unchanged": true,
+      "moved_to": "configs/frozen/product_v3.json",
+      "reason": "The moved fields describe how candidates become the displayed brackets, not how candidates were produced. They were hardcoded literals on both sides of the comparison, so the drift gate could not detect a change in them. The 2027.v2 methodology itself is untouched; the hash changed only because the specification boundary was corrected.",
+      "supersedes_scope_of": "configs/frozen/prospective_2027_v2.json"
+    },
+    "v1": {
+      "commit": "10c8a66223c9b77a22e92aa8ec059379cb20812c",
+      "doc": "PROSPECTIVE_2027.md",
+      "reason_superseded": "TRAIN_YEARS extended through 2026. The 2026 season concluded in April 2026, so it is ordinary historical data for a 2027 prediction. Decided ex ante on 2026-08-20, before any 2027 information existed, and NOT on the basis of any 2026 performance comparison. 2026 remains permanently barred as an evaluation season; this concerns training data only.",
+      "spec_hash": "557d5fd54a198933b0bf3e5466c9cc874956b07087b650a8822ea6d0fab1dcf6",
+      "spec_path": "configs/frozen/prospective_2027.json",
+      "version": "2027.v1"
+    }
+  },
+  "model": {
+    "blend_alpha_default": 0.5,
+    "feature_count": 12,
+    "feature_keys": [
+      "adj_defensive_efficiency",
+      "adj_offensive_efficiency",
+      "adj_tempo",
+      "barthag",
+      "defensive_reb_rate",
+      "effective_fg_pct",
+      "free_throw_rate",
+      "offensive_reb_rate",
+      "opp_effective_fg_pct",
+      "opp_free_throw_rate",
+      "opp_turnover_rate",
+      "turnover_rate"
+    ],
+    "noseed_architecture": "logistic + GBM ensemble, 50/50, symmetric augmentation",
+    "train_years": [
+      2008,
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "training_cutoff_season": 2026
+  },
+  "objective": {
+    "ev": "sum_R pts_R * P(picked team wins R), Torvik marginals",
+    "p1": "expected first-place share: 1 if strictly top, 1/(1+k) if tied with k opponents at the top score, else 0; mean over shared CRN trials; equals the winner-take-all prize",
+    "scoring_default": "team_identity; shape-encoded only via --shape-encoded",
+    "ties": "split, everywhere (selection, reporting, payout)"
+  },
+  "opponents": {
+    "known_limitation_R3": "the per-game ratio rule does not reproduce deep-round shares (up to 12 pp at E8 in 2026)",
+    "n_opponents": "pool size - 1 (real pool size for seasons with pool history, else 29)",
+    "per_game_rule": "P(pick t1) = share(t1)/(share(t1)+share(t2)); path-consistent walk; independent opponents; chalk noise 0",
+    "pick_model": "per-team round pick shares: the real pool's entries where available, else ESPN archive, else static seed pick rates"
+  },
+  "preferences": {
+    "frequencies_source": "full scenario bank, never the candidate artifact",
+    "predicates": [
+      "f4_at_least_1_two_three",
+      "f4_at_least_2_two_three",
+      "f4_mostly_favorites",
+      "s16_at_least_1_double_digit",
+      "s16_at_least_2_double_digit",
+      "s16_no_double_digit",
+      "team_reaches_final_four"
+    ]
+  },
+  "product": {
+    "excluded_from_v1": [
+      "balanced blend",
+      "contrarian ownership penalty",
+      "configurable pool size"
+    ],
+    "p1_disclosure_required": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool."
+  },
+  "production_candidates": {
+    "exhaustive_risks": [
+      0.3,
+      0.5,
+      0.7
+    ],
+    "families": "region_top_n x prob bases x risk grid; exhaustive_champion x prob bases x exhaustive risks; byte-dedup, first label kept",
+    "forced_champion_family": "removed 2026-09-15 (was inert: region_top_n ignores forced_champion)",
+    "known_limitation_R2": "a wider legal candidate bank scored +1.2 pp out-of-sample (4/15 seasons > 2 SE)",
+    "prob_bases": [
+      "tv",
+      "mass_avg",
+      "mass_best",
+      "blend",
+      "tv_mass80"
+    ],
+    "risk_levels": [
+      0.1,
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ],
+    "selection": "first argmax of P(1st) on 500 CRN selection trials (seed 77777+year)",
+    "strategy": "meta_region_poolaware"
+  },
+  "referee": {
+    "independent_referee_step8": "market_v2",
+    "logit_noise_effect": "independent per-game logit noise integrates out to a Bernoulli with the mean shrunk toward 0.5 by at most 0.13 pp; it adds no variance and models no parameter uncertainty (a mild tempering)",
+    "logit_noise_std": 0.16,
+    "outcome_table": "seed-vs-seed win rates, Kaggle 2010..Y-1 (as_of=Y), cells < 8 games -> logistic(0.175*dseed)",
+    "probability_cap": [
+      0.01,
+      0.99
+    ],
+    "qualification_rule": {
+      "bootstrap_resamples": 5000,
+      "bootstrap_seed": 42,
+      "coin_flip_brier": 0.25,
+      "coin_flip_log_loss": 0.6931471805599453,
+      "full_coverage_required_for_primary": true,
+      "incumbent": "seed",
+      "independent_referee_order": [
+        "market_v2",
+        "pit",
+        "torvik",
+        "blend"
+      ],
+      "metric_primary": "log_loss",
+      "metric_secondary": "brier"
+    },
+    "qualified_set_step8": [
+      "seed",
+      "torvik",
+      "blend",
+      "pit",
+      "market_v2"
+    ],
+    "simulator": "src.simulation.pool_competition.simulate_tournament_outcomes (raises on missing pair / non-64 tree)",
+    "walk_forward": true
+  },
+  "scope_correction": {
+    "date": "2026-08-21",
+    "fields_moved": [
+      "candidate_selection.diversity_algorithm",
+      "candidate_selection.k_returned",
+      "product.strategies"
+    ],
+    "methodology_unchanged": true,
+    "moved_to": "configs/frozen/product_v3.json",
+    "reason": "The moved fields describe how candidates become the displayed brackets, not how candidates were produced. They were hardcoded literals on both sides of the comparison, so the drift gate could not detect a change in them. The 2027.v2 methodology itself is untouched; the hash changed only because the specification boundary was corrected.",
+    "supersedes_scope_of": "configs/frozen/prospective_2027_v2.json"
+  },
+  "spec_hash": "183f90796d527f0f254cc087c349bd72852c43865676d5d175d79a122e89974a",
+  "spec_version": "2027.v3",
+  "supersedes": {
+    "reason_superseded": "Methodology audit 2026-09-15 (artifacts/methodology_audit/, Steps 1-12, R-4): construction and scoring walked different Final Four pairings (hardcoded East-West/South-Midwest vs the real per-season pairing, wrong in 9 of 15 seasons); P(1st) meant three different quantities (>= in selection, rank==1 in reporting, split in payout) and is now the expected first-place share with ties split; the seed table and the noseed marginals were not walk-forward; the shape-encoded scorer was the harness default; 2012 opponents came from 2023-26 pool data; the artifact's P(1st) pool had 31 entries. All corrected, regression-tested, artifacts rebuilt. Decided after the corrections and before any 2027 information existed; NOT on the basis of any 2027 performance.",
+    "spec_hash": "c7d1c67663601bd4b28758ca368d3de70a18daaa15d60d18b74fa500d3109018",
+    "spec_path": "configs/frozen/prospective_2027_v2_scoped.json",
+    "version": "2027.v2"
+  },
+  "topology": {
+    "play_ins": "resolve_first_four removes First Four losers before the 64-team draw is built",
+    "projection": "strict: a picks dict must name exactly one team of every game, else TopologyMismatch",
+    "prospective_requirement": "tournament_context_2027.json seeds block MUST carry f4_pairing = [[A,B],[C,D]]",
+    "rule": "played F4 games if present, else seeds.f4_pairing from the announced bracket; never a default",
+    "source": "src.simulation.bracket_topology.resolve_region_order"
+  },
+  "tournament_engine": {
+    "log5_probe_0.9_vs_0.5": 0.9,
+    "marginals_direction": "pairwise -> simulator -> marginals (never reversed)",
+    "pairwise_construction": "log5 over barthag-equivalent ratings",
+    "propagation": "src.prediction.pairwise.simulate_bracket_outcomes",
+    "scenario_bank_noise_std": 0.0,
+    "scenario_bank_size": 150000
+  }
+}
