@@ -1,0 +1,368 @@
+{
+  "schema": 1,
+  "kind": "track_record",
+  "year": 2025,
+  "strategies": {
+    "p1": {
+      "w": [
+        [
+          15,
+          42,
+          31,
+          29,
+          13,
+          52,
+          23,
+          49,
+          5,
+          27,
+          32,
+          51,
+          41,
+          22,
+          28,
+          33,
+          20,
+          16,
+          9,
+          45,
+          62,
+          24,
+          55,
+          50,
+          14,
+          35,
+          44,
+          3,
+          59,
+          60,
+          47,
+          1
+        ],
+        [
+          15,
+          29,
+          52,
+          49,
+          5,
+          51,
+          22,
+          33,
+          20,
+          45,
+          24,
+          50,
+          14,
+          3,
+          60,
+          1
+        ],
+        [
+          15,
+          49,
+          5,
+          33,
+          20,
+          50,
+          14,
+          1
+        ],
+        [
+          15,
+          5,
+          20,
+          14
+        ],
+        [
+          5,
+          20
+        ],
+        [
+          20
+        ]
+      ],
+      "source": "named_strategies.blend_region_35",
+      "points": 1270,
+      "won_share": 0.0,
+      "median_rank": 9,
+      "mean_rank": 8.63,
+      "pool_median_points": 1040,
+      "pool_best_points": 1630,
+      "n_trials": 2000
+    },
+    "ev": {
+      "w": [
+        [
+          20,
+          17,
+          45,
+          9,
+          50,
+          55,
+          24,
+          21,
+          14,
+          6,
+          3,
+          44,
+          1,
+          47,
+          60,
+          7,
+          5,
+          27,
+          51,
+          32,
+          22,
+          34,
+          33,
+          28,
+          15,
+          11,
+          29,
+          10,
+          52,
+          36,
+          49,
+          23
+        ],
+        [
+          20,
+          45,
+          50,
+          24,
+          14,
+          3,
+          1,
+          60,
+          5,
+          51,
+          22,
+          33,
+          15,
+          29,
+          52,
+          49
+        ],
+        [
+          20,
+          50,
+          14,
+          1,
+          5,
+          22,
+          15,
+          52
+        ],
+        [
+          20,
+          14,
+          5,
+          15
+        ],
+        [
+          20,
+          5
+        ],
+        [
+          20
+        ]
+      ],
+      "source": "named_strategies.ev_optimal",
+      "points": 1330,
+      "won_share": 0.0008,
+      "median_rank": 7,
+      "mean_rank": 7.27,
+      "pool_median_points": 1040,
+      "pool_best_points": 1630,
+      "n_trials": 2000
+    },
+    "model": {
+      "w": [
+        [
+          15,
+          11,
+          10,
+          29,
+          36,
+          52,
+          4,
+          49,
+          5,
+          27,
+          32,
+          51,
+          41,
+          22,
+          28,
+          33,
+          20,
+          17,
+          9,
+          45,
+          21,
+          24,
+          55,
+          50,
+          14,
+          6,
+          44,
+          3,
+          7,
+          60,
+          47,
+          1
+        ],
+        [
+          15,
+          29,
+          52,
+          49,
+          5,
+          51,
+          22,
+          33,
+          20,
+          45,
+          21,
+          50,
+          14,
+          3,
+          60,
+          1
+        ],
+        [
+          15,
+          52,
+          5,
+          33,
+          20,
+          50,
+          14,
+          1
+        ],
+        [
+          15,
+          5,
+          20,
+          14
+        ],
+        [
+          5,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "source": "artifacts/fitted_eval/fitted_eval_2025.json",
+      "fitted_eval_generated_at": "2026-09-16T14:56:42.022936+00:00",
+      "points": 1190,
+      "won_share": 0.0,
+      "median_rank": 11,
+      "mean_rank": 10.56,
+      "pool_median_points": 1040,
+      "pool_best_points": 1630,
+      "n_trials": 2000
+    }
+  },
+  "meaning": "points: ESPN points this bracket scored against the real outcome (10/20/40/80/160/320). won_share: across the same simulated 30-entry opponent fields P(1st) is measured against, the fraction in which this bracket took (a share of) first place given the real outcome. median_rank: median competition rank in those fields (1 = won). One season is one draw; this is the realisation, P(1st) is the expectation.",
+  "scorer": {
+    "field": "draw_selection_trials, same seed and count as the candidate artifact's P(1st)",
+    "scoring": "score_brackets_team_identity under ESPN scoring; first_place_shares for ties",
+    "pool_size": 30,
+    "n_opponents": 29,
+    "p1_trials": 2000,
+    "seed": 20260820,
+    "trials_seed": 20260827
+  },
+  "parity": {
+    "named:champ_equity": {
+      "shipped": {
+        "ev": 955.5,
+        "p1": 0.083
+      },
+      "replayed": {
+        "ev": 955.5,
+        "p1": 0.083
+      }
+    },
+    "named:ev_optimal": {
+      "shipped": {
+        "ev": 955.5,
+        "p1": 0.083
+      },
+      "replayed": {
+        "ev": 955.5,
+        "p1": 0.083
+      }
+    },
+    "named:blend_region_35": {
+      "shipped": {
+        "ev": 929.8,
+        "p1": 0.0879
+      },
+      "replayed": {
+        "ev": 929.8,
+        "p1": 0.0879
+      }
+    },
+    "candidate:0": {
+      "shipped": {
+        "ev": 783.2,
+        "p1": 0.0094
+      },
+      "replayed": {
+        "ev": 783.2,
+        "p1": 0.0094
+      }
+    },
+    "candidate:1": {
+      "shipped": {
+        "ev": 773.1,
+        "p1": 0.0414
+      },
+      "replayed": {
+        "ev": 773.1,
+        "p1": 0.0414
+      }
+    },
+    "candidate:2": {
+      "shipped": {
+        "ev": 510.1,
+        "p1": 0.0187
+      },
+      "replayed": {
+        "ev": 510.1,
+        "p1": 0.0187
+      }
+    },
+    "candidate:3": {
+      "shipped": {
+        "ev": 633.4,
+        "p1": 0.0187
+      },
+      "replayed": {
+        "ev": 633.4,
+        "p1": 0.0187
+      }
+    },
+    "candidate:4": {
+      "shipped": {
+        "ev": 548.9,
+        "p1": 0.0365
+      },
+      "replayed": {
+        "ev": 548.9,
+        "p1": 0.0365
+      }
+    }
+  },
+  "inputs": {
+    "outcome_sha256": "bcc9b4000108c198d0920064c1611d5edb9ce130195d1a2a95ee76d32199e3f9",
+    "candidates_artifact": "artifacts/candidates/candidates_2025.json",
+    "candidates_generated_at": "2026-09-16T04:03:24.693866+00:00",
+    "training_sha256": "e3ad2e6fb1b4faa7fb5b61851170fb4d0117aaf434e7866ae4a3d9bc1c49471f"
+  },
+  "generated_at": "2026-09-16T22:58:32.515994+00:00"
+}

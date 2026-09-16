@@ -147,7 +147,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 19;
+const DATA_V = 20;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -916,12 +916,16 @@ function strategyRows() {
   const rows = (s.strategies || []).map(st => {
     const v = (filt && filt.by && filt.by[st.id]) || st;
     const champIdx = filt && filt.by && filt.by[st.id] ? decodeBracket(v.b)[5][0] : st.picks[5][0];
+    const filtered = !!(filt && filt.by && filt.by[st.id]);
     return {
       id: st.id,
       label: st.id === 'ev' ? 'Most expected points' : 'Win the pool',
       kind: st.id === 'ev' ? 'Exact optimum' : 'Backtested rule',
       p1: v.p1, ev: v.ev, champion: teams[champIdx],
-      filtered: !!(filt && filt.by && filt.by[st.id]),
+      filtered,
+      // The realised result is for the STRATEGY's bracket; a filtered row is
+      // a different bracket, so it carries none.
+      record: filtered ? null : trackRecord(st.id),
       active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     };
   });
@@ -937,9 +941,27 @@ function strategyRows() {
     stale: !!(fe && fe.stale),
     champion: live ? teams[live[5][0].win] : null,
     filtered: false,
+    // Only meaningful for the bracket the evaluation scored, which fittedEval()
+    // has just confirmed is the live one.
+    record: fe && !fe.stale ? trackRecord(MODEL) : null,
     active: state.strategy === MODEL,
   });
   return rows;
+}
+
+/* What the bracket actually did, for a played season: ESPN points against the
+ * real outcome, and where that would have finished in the same simulated
+ * 30-entry fields P(1st) is measured against (scripts/build_track_record.py).
+ * The payload builder embeds it only for exactly the picks this payload
+ * carries. Null for a season not yet played or a bracket without a record. */
+function trackRecord(id) {
+  const tr = state.season && state.season.track_record;
+  return tr && tr.strategies && tr.strategies[id] ? tr.strategies[id] : null;
+}
+
+function finishText(r) {
+  const pool = (state.season.track_record && state.season.track_record.pool_size) || 30;
+  return `won ${Math.round(r.won_share * 100)}% of pools · median ${ordinal(r.median_rank)} of ${pool}`;
 }
 
 /* Winners the bracket sends through against the seed line, in bracket order,
@@ -1007,6 +1029,13 @@ function renderHeadline(rounds) {
     ? `Against the seeds: ${dev.slice(0, 4).map(t => `${t.seed} ${t.name}`).join(', ')}${dev.length > 4 ? ` +${dev.length - 4} more` : ''}.`
     : 'Straight chalk: no lower seed advances.';
 
+  const rec = !st ? (fe && !fe.stale ? trackRecord(MODEL) : null)
+            : st.id === CUSTOM ? null : trackRecord(st.id);
+  const went = rec
+    ? `<p class="hl-line hl-went"><b>How it went:</b> ${rec.points.toLocaleString()} points; ${finishText(rec)}
+        <span class="hl-evidence">(field median ${rec.pool_median_points.toLocaleString()}, best ${rec.pool_best_points.toLocaleString()}).</span></p>`
+    : '';
+
   box.hidden = false;
   box.innerHTML = `
     <div class="hl-top">
@@ -1026,7 +1055,8 @@ function renderHeadline(rounds) {
       <span class="hl-meta">63 picks · simulated against ${nOpp} modelled opponents</span>
     </div>
     <p class="hl-estimand">${estimand}</p>
-    <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>`;
+    <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>
+    ${went}`;
 }
 
 function renderCompare() {
@@ -1034,11 +1064,15 @@ function renderCompare() {
   if (!box) return;
   const rows = strategyRows();
   const cell = (v, f) => (v === null || v === undefined ? '<span class="muted">—</span>' : f(v));
+  // Played seasons get two more columns: the expectation on the left, the
+  // realisation on the right, and the header says which is which.
+  const played = rows.some(r => r.record);
   box.hidden = false;
   box.innerHTML = `
     <table class="cmp">
       <thead><tr>
         <th>Strategy</th><th class="num">Chance of 1st</th><th class="num">Exp. points</th><th>Champion</th>
+        ${played ? `<th class="num cmp-real">Scored</th><th class="cmp-real">Finish</th>` : ''}
       </tr></thead>
       <tbody>${rows.map(r => `
         <tr class="cmp-row${r.active ? ' on' : ''}" onclick="setStrategy('${r.id}')" role="button" tabindex="0"
@@ -1048,9 +1082,14 @@ function renderCompare() {
           <td class="num">${cell(r.p1, p1Pct)}</td>
           <td class="num">${cell(r.ev, v => v.toFixed(0))}</td>
           <td>${r.champion ? `<span class="cmp-seed">${r.champion.seed}</span> ${r.champion.name}` : '<span class="muted">—</span>'}</td>
+          ${played ? `<td class="num cmp-real">${r.record ? r.record.points.toLocaleString() : '<span class="muted">—</span>'}</td>
+          <td class="cmp-real cmp-finish">${r.record ? finishText(r.record) : '<span class="muted">—</span>'}</td>` : ''}
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table>
+    ${played ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
+      Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
+      One season is one draw.</p>` : ''}`;
 }
 
 /* ---------- narrow-viewport round navigation ----------

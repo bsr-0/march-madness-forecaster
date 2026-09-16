@@ -59,6 +59,7 @@ STATS_PATH = REPO / "docs" / "data" / "team_stats_by_year.json"
 CANDIDATES_DIR = REPO / "artifacts" / "candidates"
 OUT_DIR = REPO / "docs" / "data"
 FITTED_EVAL_DIR = REPO / "artifacts" / "fitted_eval"
+TRACK_RECORD_DIR = REPO / "artifacts" / "track_record"
 
 def _seasons() -> List[int]:
     """Every season the UI offers, derived rather than listed.
@@ -239,10 +240,19 @@ RESULT_ROUNDS = ["R64", "R32", "S16", "E8", "F4", "NCG"]
 def actual_winners(year: int, team_ids: List[str]) -> Any:
     """Who actually won, per round, as indices into the team table.
 
-    Returned so the board can show what happened next to what was picked. This
-    is a factual record of the tournament, not a score: no total is derived from
-    it anywhere, because for 2026 the model was trained on that season and a
-    tally would read as performance.
+    Returned so the board can show what happened next to what was picked.
+
+    This docstring said, from 2026-08-21, that no total is derived from it
+    anywhere "because for 2026 the model was trained on that season and a
+    tally would read as performance". That stopped being true with the
+    2026-09 audit: every displayed bracket's inputs are now walk-forward for
+    their season (noseed model max_year=year, seed referee as_of=year,
+    pre-tournament Torvik, archived picks, fitted model on strictly earlier
+    seasons), and 2026 is one of the 15 out-of-sample seasons the shipped
+    backtest claim rests on. A tally IS derived now -- by
+    scripts/build_track_record.py, against the same opponent field P(1st) is
+    measured on -- and embedded as `track_record` only when it describes
+    exactly the brackets in this payload (see _track_record below).
     """
     for prefix in (Path("data/raw/historical"), Path("data/raw")):
         path = prefix / f"tournament_context_{year}.json"
@@ -765,6 +775,50 @@ def _fitted_eval(year: int, payload: Dict[str, Any]) -> Dict[str, Any] | None:
         "generated_at": ev["generated_at"],
     }
 
+
+def _track_record(year: int, payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Realised points and pool finish per displayed bracket, if on disk AND
+    about exactly the brackets this payload carries.
+
+    scripts/build_track_record.py records the picks it scored. Each is held to
+    the payload: the two precomputed strategies' `picks`, and the fitted
+    bracket's `w` from the embedded fitted_eval (if the evaluation was dropped
+    as stale, the fitted row is dropped here too rather than shown for a
+    bracket the page no longer fits). The outcome it scored against is held
+    to the payload's `actual`. Anything that fails is reported and omitted.
+    """
+    from scripts.build_track_record import KIND, outcome_hash
+
+    path = TRACK_RECORD_DIR / f"track_record_{year}.json"
+    if not path.exists() or not payload.get("actual"):
+        return None
+    tr = json.loads(path.read_text())
+    if tr.get("kind") != KIND:
+        return None
+    ids = [t["id"] for t in payload["teams"]]
+    from src.simulation.pool_competition import ROUND_NAMES
+    actual = {r: {ids[i] for i in idxs} for r, idxs in zip(ROUND_NAMES, payload["actual"])}
+    if tr["inputs"]["outcome_sha256"] != outcome_hash(actual):
+        print(f"  [warn] {path.name}: outcome differs from this payload's actual results; not embedded")
+        return None
+    out: Dict[str, Any] = {}
+    for st in payload["strategies"]:
+        rec = tr["strategies"].get(st["id"])
+        if rec is None:
+            continue
+        if rec["w"] != st["picks"]:
+            print(f"  [warn] {path.name}: {st['id']} picks differ from this payload; row dropped")
+            continue
+        out[st["id"]] = {k: rec[k] for k in ("points", "won_share", "median_rank", "pool_median_points", "pool_best_points")}
+    fe = payload.get("fitted_eval")
+    rec = tr["strategies"].get("model")
+    if fe is not None and rec is not None and rec["w"] == fe["w"]:
+        out["model"] = {k: rec[k] for k in ("points", "won_share", "median_rank", "pool_median_points", "pool_best_points")}
+    if not out:
+        return None
+    return {"kind": KIND, "strategies": out, "meaning": tr["meaning"], "n_trials": tr["scorer"]["p1_trials"],
+            "pool_size": tr["scorer"]["pool_size"], "generated_at": tr["generated_at"]}
+
 def main() -> int:
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
     index = []
@@ -774,6 +828,9 @@ def main() -> int:
             fe = _fitted_eval(year, payload)
             if fe is not None:
                 payload["fitted_eval"] = fe
+            tr = _track_record(year, payload)
+            if tr is not None:
+                payload["track_record"] = tr
         out = OUT_DIR / f"season_{year}.json"
         out.write_text(json.dumps(payload, separators=(",", ":")))
         size = out.stat().st_size / 1024
