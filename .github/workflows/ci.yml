@@ -195,6 +195,26 @@ jobs:
       - name: Run boundary audit
         run: python3 scripts/audit_snapshot_boundary.py
 
+      # The invariants below run on the point-in-time training matrix,
+      # docs/data/training_pit.json -- untracked since d98425b (13 MB,
+      # regenerable), which left this gate with no input and failing on every
+      # push. Built here from its tracked inputs (Kaggle CSVs, Torvik
+      # snapshots, the builder and the feature code); ~7 min locally, so it is
+      # cached on a key made of exactly those inputs and rebuilt only when one
+      # of them changes. The build is deterministic (byte-identical on
+      # rebuild), so a cached matrix is the matrix.
+      - name: Restore the point-in-time training matrix
+        id: pit-cache
+        uses: actions/cache@v4
+        with:
+          path: docs/data/training_pit.json
+          key: pit-matrix-${{ hashFiles('scripts/build_pit_training_matrix.py', 'scripts/build_ui_payload.py', 'src/data/**', 'data/kaggle/**', 'data/raw/historical/torvik_*.json') }}
+
+      - name: Build the point-in-time training matrix
+        if: steps.pit-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 45
+        run: python3 scripts/build_pit_training_matrix.py
+
       # Antisymmetry of the LINK is already asserted in test_calibration.js.
       # This asserts it of the FEATURES, which is a separate property: the link
       # can be perfectly antisymmetric while the feature vector is not, and the
