@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bracket Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=56aa9935">
+</head>
+<body>
+
+<!-- One destination. The board is the product: pick a season, choose what you
+     are optimising for, and read the bracket that falls out. Per-variable
+     selection was removed 2026-08-29 (it measured null), and the Diagnostics
+     workbench beside it went on 2026-08-27. -->
+<header class="bar">
+  <div class="bar-l">
+    <span class="mark">Bracket Lab</span>
+    <nav class="years" id="years" aria-label="Season"></nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- 1. WHAT SHOULD I PICK. The one-glance summary of the bracket on screen:
+       season, objective, champion, the two numbers, and the one sentence that
+       says what kind of thing this is (a pool strategy, not a game-prediction
+       ranking). Everything a visitor needs before the bracket itself; nothing
+       they do not. Filled by renderHeadline() from the same payload fields
+       the comparison table and the board use, so the three cannot disagree. -->
+  <section class="headline" id="headline" hidden></section>
+
+  <!-- 2. WHY THIS ONE, AND WHAT ELSE IS THERE. Three rows, one per strategy,
+       same four columns each; the row you click is the bracket you get. The
+       fitted model's row is labelled for what it is: scored by the same
+       referee as the other two, never selected by it. -->
+  <section class="compare" id="compare" hidden></section>
+
+  <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
+  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
+
+  <!-- 3. THE BRACKET. Getting it OUT is the deliverable of this whole system:
+       63 picks typed into a pool site. -->
+  <section class="board-tools" id="board-tools" hidden>
+    <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
+    <button class="tool" id="print-picks" onclick="window.print()">Print</button>
+    <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
+  </section>
+
+  <!-- Narrow-viewport only (see @media (max-width: 720px) in app.css): the
+       six-column board does not fit a phone width without either scrolling
+       sideways or shrinking past readable, so under that width the board
+       shows one round at a time instead. Always in the DOM -- CSS alone
+       decides whether it is visible, so there is nothing for JS to create or
+       tear down when the viewport crosses the breakpoint. -->
+  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
+    <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
+    <span class="rnav-label" id="rnav-label"></span>
+    <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
+  </nav>
+  <div class="rnav-dots" id="rnav-dots" hidden></div>
+
+  <section class="board" id="board"></section>
+
+  <section class="empty" id="empty" hidden></section>
+
+  <!-- 3a. RULE SEARCH (experimental strategy only). Fenced: its own panel,
+       orange, opened only while that strategy is selected. Finds the
+       per-round single-variable rules that reproduce chosen checkpoints over
+       a chosen range of played seasons before this one (from chosen eligible
+       criteria) and offers the brackets they give this season, ranked
+       simplest first or by seasons outside the range also reproduced; or
+       lets the user compose one rule by hand and see which past seasons it
+       reproduces. The criterion deciding each round is printed under the
+       board's round headers. Never scored, never fed to anything else; the
+       panel says so, and shows how quickly such rules stop working. -->
+  <details class="tune lab" id="rulepanel" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Rule search — experimental</span>
+      <span class="tune-sub">Not part of the validated methodology. No chance of finishing first, no expected points, no claim of anything.</span>
+    </summary>
+    <div class="panel" id="rule-body"></div>
+  </details>
+
+  <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
+       on/off toggle was removed 2026-08-29 because measurement said choosing
+       bought nothing. This is what gives a single variable a purpose without
+       letting anyone edit the validated model: pick one and see where the
+       field ranks on it, where this bracket's games hinge on it, and what it
+       predicts on its own -- using only seasons before the one shown, from the
+       same training rows the model uses. The model, the board and every number above are untouched
+       by anything chosen here. -->
+  <details class="tune" id="explore" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Explore a variable</span>
+      <span class="tune-sub">Where the field stands on it, where this bracket hinges on it, and what it predicts on its own. Looking, not editing: the model does not change.</span>
+    </summary>
+    <div class="panel" id="explore-body"></div>
+  </details>
+
+  <!-- 4. ADJUST. Three filter axes over the precomputed candidate pool. Each
+       narrows WHICH brackets are eligible; the objective decides what is
+       maximised over them. One-seed count and depth sound alike and are not:
+       both of "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and
+       "Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly
+       a 3 seed, and they are completely different brackets. Collapsed:
+       <details> rather than JS, so there is no state to keep in sync and it
+       works before any script runs. -->
+  <details class="tune" id="tune">
+    <summary class="tune-head">
+      <span class="tune-title">Adjust this bracket</span>
+      <span class="tune-sub">Back a team, or force a shape. The recommendation above already assumes none of it.</span>
+    </summary>
+
+  <section class="panel" id="champions" hidden>
+    <div class="panel-head"><p class="panel-title">Back a champion</p></div>
+    <div class="chips" id="champ-list"></div>
+    <p class="prior-note" id="champ-note"></p>
+  </section>
+
+  <section class="panel" id="ones" hidden>
+    <div class="panel-head"><p class="panel-title">How many 1 seeds reach the Final Four</p></div>
+    <div class="chips" id="ones-list"></div>
+    <p class="prior-note" id="ones-note"></p>
+  </section>
+
+  <section class="panel" id="shapes" hidden>
+    <div class="panel-head"><p class="panel-title">The biggest upset in your Final Four</p></div>
+    <div class="chips" id="shape-list"></div>
+    <p class="prior-note" id="shape-note"></p>
+  </section>
+
+  <section class="panel" id="dd16" hidden>
+    <div class="panel-head"><p class="panel-title">Well-known bracket patterns</p></div>
+    <div class="chips" id="dd-list"></div>
+    <p class="prior-note" id="dd-note"></p>
+  </section>
+
+  <!-- Provenance. The candidate pool is not one model's opinion: it is
+       simulated from Torvik, Elo and the Massey composite, plus region_top_n
+       constructions. Those disagree about real teams, and that disagreement is
+       the point -- a bracket Torvik would never sample is reachable. -->
+  <section class="panel" id="sources" hidden>
+    <div class="panel-head"><p class="panel-title">Which rating system</p></div>
+    <div class="chips" id="src-list"></div>
+    <p class="prior-note" id="src-note"></p>
+  </section>
+
+  <!-- Near-tied alternates. The referee's standard error is about half a point,
+       so the top few in any filtered set are not meaningfully ranked. Offering
+       only the argmax would present a coin flip as a verdict. -->
+  <section class="panel" id="alts" hidden>
+    <div class="panel-head"><p class="panel-title">Near-tied alternatives</p></div>
+    <div class="chips" id="alt-list"></div>
+    <p class="prior-note">
+      These score too close together for us to tell apart — the difference
+      between them is smaller than our own margin of error. Pick on something
+      the numbers cannot see: a team you believe in, or one you refuse to pick.
+    </p>
+  </section>
+
+  </details>
+
+  <!-- 5. HOW TRUSTWORTHY IS THIS. The methodology layer, collapsed: what the
+       strategy note says about the bracket on screen, the fitted model's
+       equation and its reliability table, the three strategies described in
+       full, and the P(1st) disclosure. All of it was above the bracket until
+       2026-09-16, which made the product read as a research dashboard that
+       happened to emit a bracket. The work that earned these paragraphs is in
+       artifacts/methodology_audit/; the page's job is to state the result
+       plainly and keep the reasoning one click away, not to bury the bracket
+       under it. -->
+  <details class="why" id="why" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Why this bracket, and how it was tested</span>
+      <span class="tune-sub">The objective, the referee, and the model behind the numbers above.</span>
+    </summary>
+
+    <section class="note" id="mode-note"></section>
+
+    <!-- The fitted model, printed. Empty unless the Fitted strategy is on. -->
+    <section id="equation"></section>
+
+    <!-- The three strategies in full. The comparison table above is the
+         selector; these are the explanations. -->
+    <section class="panel" id="strategy" hidden>
+      <div class="panel-head">
+        <p class="panel-title">The three strategies</p>
+      </div>
+      <div class="strat-list" id="strat-list"></div>
+      <!-- Mandatory disclosure (product.v3). It sits under the cards that print
+           "% to win" because that is the number it qualifies; the headline
+           repeats its substance in one line. Text comes from the artifact via
+           the payload; it is not retyped here. -->
+      <p class="disclosure" id="p1-note"></p>
+    </section>
+  </details>
+
+</main>
+
+<!-- Team inspector. Opens from any team on the board. -->
+<aside class="drawer" id="drawer" hidden aria-label="Team detail">
+  <div class="drawer-head">
+    <div>
+      <p class="d-name" id="d-name"></p>
+      <p class="d-sub" id="d-sub"></p>
+    </div>
+    <button class="x" id="d-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="d-body" id="d-body"></div>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- BUMP ?v= ON EVERY CHANGE TO THESE FILES. It is the only cache-busting
+     mechanism on the page and it fails silently: the deploy succeeds, the new
+     file sits on the server, and returning browsers keep running the old one
+     against the new data. v=23 shipped the strategy picker without a bump, so
+     anyone with a warm cache kept seeing the removed variable-selection UI. -->
+<script src="fit.js?v=2ce082e5"></script>
+<script src="app.js?v=6b0e73b4"></script>
+</body>
+</html>
