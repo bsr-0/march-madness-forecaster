@@ -79,7 +79,7 @@ function loadApp(hash, opts = {}) {
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleKey, setRuleKeysAll, setRuleChosen, renders: () => globalThis.__renders };', ctx);
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, renders: () => globalThis.__renders };', ctx);
   return ctx.__api;
 }
 
@@ -287,14 +287,19 @@ console.log('\ndefault season');
 
 const app0 = loadApp('');
 
-check('opens on the newest READY season, not the newest listed', () => {
-  // The 2027 shape exactly: listed, but not yet played.
+check('opens on the newest listed season once it can show something', () => {
+  // The 2027 shape exactly: listed, not yet played, with played seasons
+  // before it -- the rule search runs over those, so it is the front door.
   const seasons = [
     { year: 2025, status: 'ready' },
     { year: 2026, status: 'ready' },
     { year: 2027, status: 'not_started' },
   ];
-  assert.strictEqual(app0.pickDefaultSeason(seasons), 2026);
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2027);
+  // Any played season before it will do for the search.
+  assert.strictEqual(app0.pickDefaultSeason([{ year: 2026, status: 'not_started' }, { year: 2025, status: 'unavailable' }, { year: 2024, status: 'ready' }]), 2026);
+  // Nothing played before it: nothing to search; the newest listed season explains itself.
+  assert.strictEqual(app0.pickDefaultSeason([{ year: 2026, status: 'not_started' }, { year: 2025, status: 'unavailable' }]), 2026);
 });
 
 check('opens on 2027 the moment it is built', () => {
@@ -714,19 +719,19 @@ check('a result for other inputs -- another season, other checkpoints -- is not 
 });
 
 check('the rule configuration round-trips through the URL and defaults add nothing', () => {
-  const app = loadApp('#y=2026&s=rule&rc=1345&rf=2023&rt=2024&rn=8&rk=b,zz&rr=outside&rx=2&ri=3');
+  const app = loadApp('#y=2026&s=rule&rc=1345&rf=2023&rt=2024&rn=8&rk=b,zz&rr=outside&rx=2&rq=b,a,a,a,a,a');
   app.readHash();
   const r = app.state.rule;
   assert.strictEqual(app.state.strategy, app.RULE);
   assert.deepStrictEqual([...r.checkpoints], [1, 3, 4, 5]);
   assert.strictEqual(r.from, 2023); assert.strictEqual(r.to, 2024);
   assert.strictEqual(r.n, 8); assert.deepStrictEqual([...r.keys], ['b', 'zz']);
-  assert.strictEqual(r.rank, 'outside'); assert.strictEqual(r.maxCriteria, 2); assert.strictEqual(r.chosen, 3);
+  assert.strictEqual(r.rank, 'outside'); assert.strictEqual(r.maxCriteria, 2); assert.deepStrictEqual([...r.want], ['b', 'a', 'a', 'a', 'a', 'a']);
   // Restored keys are checked against the season: `zz` is unknown and drops, `b` stays.
   app.state.season = { status: 'ready', teams: [], strategies: [], first_round: [], z: { a: [], b: [] }, variables: [{ key: 'a', label: 'A', group: 'G' }] };
   assert.deepStrictEqual([...app.ruleKeys()], ['b']);
   app.writeHash();
-  for (const part of ['s=rule', 'rc=1345', 'rf=2023', 'rt=2024', 'rn=8', 'rk=b%2Czz', 'rr=outside', 'rx=2', 'ri=3']) assert.ok(ctxHash.value.includes(part), part + ' missing from ' + ctxHash.value);
+  for (const part of ['s=rule', 'rc=1345', 'rf=2023', 'rt=2024', 'rn=8', 'rk=b%2Czz', 'rr=outside', 'rx=2', 'rq=b%2Ca%2Ca%2Ca%2Ca%2Ca']) assert.ok(ctxHash.value.includes(part), part + ' missing from ' + ctxHash.value);
   // The untouched panel writes only the checkpoints.
   const plain = loadApp('#y=2026&s=rule');
   plain.readHash();
@@ -745,11 +750,11 @@ check('the rule configuration round-trips through the URL and defaults add nothi
 });
 
 check('a link without an early checkpoint, or with junk, keeps the defaults', () => {
-  const app = loadApp('#s=rule&rc=45&rn=999&rx=0&ri=-2&rh=a,b');
+  const app = loadApp('#s=rule&rc=45&rn=999&rx=0&rq=a,b,c,d,e,f,g&rh=a,b');
   app.readHash();
   const r = app.state.rule;
   assert.deepStrictEqual([...r.checkpoints], [3, 4, 5], 'finalists + champion alone cannot prune: refused');
-  assert.strictEqual(r.n, 20); assert.strictEqual(r.maxCriteria, 1); assert.strictEqual(r.chosen, 0);
+  assert.strictEqual(r.n, 20); assert.strictEqual(r.maxCriteria, 1); assert.strictEqual(r.want, null, 'a rule longer than the rounds is dropped');
   assert.strictEqual(r.hand, null, 'a hand rule must name all six rounds');
   const bad = loadApp('#s=rule&rc=9x');
   bad.readHash();
@@ -944,17 +949,91 @@ checkAsync('the criteria cap drops rules with more distinct criteria, and says s
   assert.strictEqual(r.nRules, 0); assert.strictEqual(r.overCap, false); assert.strictEqual(r.brackets.length, 0);
 });
 
-checkAsync('the chosen bracket survives the first search of a link, and resets on later changes', async () => {
+checkAsync('the chosen rule is a criterion sequence: resolved against the survivors, kept across seasons, reset by a control', async () => {
+  // `seed` and `a` are interchangeable in the fixture, so all-seed survives
+  // and gives the same bracket as all-a; the offered list holds that one
+  // bracket, and the link's rule resolves to it by picks.
   const app = ruleApp();
-  app.state.rule.chosen = 1;                                          // as readHash() would leave it
+  app.state.rule.want = ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'];  // as readHash() would leave it
   await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.chosen, 1, 'the first search keeps the link\'s choice');
-  assert.strictEqual(app.ruleStrategy().picks[5][0], 0, 'clamped to the one bracket offered');
+  assert.strictEqual(app.state.rule.result.brackets.length, 1);
+  assert.strictEqual(app.state.rule.chosen, 0);
+  assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
+  assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'kept: the rule survived');
+  // Choosing from the list records the sequence and writes it to the URL.
+  app.setRuleChosen(0);
+  assert.deepStrictEqual([...app.state.rule.want], ['a', 'a', 'a', 'a', 'a', 'a']);
+  assert.ok(ctxHash.value.includes('rq=a%2Ca%2Ca%2Ca%2Ca%2Ca'), ctxHash.value);
+  // A season change keeps it (2025 displayed: fit 2023-2024, back-off to 2024).
+  app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
+  assert.deepStrictEqual([...app.state.rule.want], ['a', 'a', 'a', 'a', 'a', 'a']);
+  assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
+  // A control change starts over.
   app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.chosen, 0, 'a change from the panel starts the new list at its first bracket');
-  app.setRuleChosen(4);
-  assert.strictEqual(app.state.rule.chosen, 4);
-  assert.ok(ctxHash.value.includes('ri=4'), ctxHash.value);
+  assert.strictEqual(app.state.rule.want, null);
+  assert.strictEqual(app.state.rule.chosen, 0);
+  assert.ok(!ctxHash.value.includes('rq='), ctxHash.value);
+});
+
+/* ---------- a season whose field is not out: the rule search runs, the bracket waits ---------- */
+function pendingApp() {
+  const app = ruleApp();                                              // its index already lists 2027 as not_started
+  app.state.year = 2027;
+  app.state.season = { year: 2027, status: 'not_started', message: 'The 2027 season hasn\'t started yet.' };
+  app.state.rule.ref = ruleSeasonPayload('a');                         // as setYear() loads it: the latest played season
+  return app;
+}
+
+check('a listed season with played seasons before it is pending, not empty; the table lists what will be', () => {
+  const app = pendingApp();
+  assert.strictEqual(app.fieldPending(), true);
+  assert.strictEqual(app.fieldPending({ year: 2022, status: 'unavailable' }), false);
+  app.state.seasonsIndex = [{ year: 2027, status: 'not_started' }];
+  assert.strictEqual(app.fieldPending(), false, 'nothing played before it: nothing to search');
+  app.state.seasonsIndex = pendingApp().state.seasonsIndex;
+  const rows = app.strategyRows();
+  assert.strictEqual(JSON.stringify(rows.map(r => [r.id, !!r.pending, r.active])), JSON.stringify([['p1', true, false], ['ev', true, false], ['rule', false, true], ['model', true, false]]));
+  assert.ok(rows.every(r => r.p1 === null && r.ev === null && r.champion === null));
+  app.setStrategy('p1');
+  assert.strictEqual(app.state.strategy, app.RULE, 'the pool strategies are not selectable without a field');
+  assert.deepStrictEqual([...app.ruleKeys()], ['a', 'b', 'seed'], 'keys come from the latest played season');
+});
+
+checkAsync('under a pending field the search lists rules without picks, and the choice carries to the field', async () => {
+  const app = pendingApp();
+  app.setRuleN(2);                                                      // 2025-2026 by default: both `a`
+  await app.ensureRuleSearch();
+  const r = app.state.rule.result;
+  assert.deepStrictEqual([...r.requested], [2025, 2026], '2026 is a prior season from 2027, so it is in the fit');
+  assert.strictEqual(r.nRules, 64);
+  assert.strictEqual(r.brackets.length, 2, 'distinct rules, not distinct brackets: there is no bracket to deduplicate by');
+  assert.strictEqual(JSON.stringify(r.brackets.map(b => b.seq.join(' '))), JSON.stringify(['a a a a a a', 'seed seed seed seed seed seed']), 'simplest first: one criterion, no switches');
+  assert.ok(r.brackets.every(b => b.picks === null && b.rounds === null));
+  assert.strictEqual(app.ruleStrategy(), null, 'a rule is not a bracket yet');
+  assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · A', 'but the board headers show its criteria');
+  assert.strictEqual(app.renders(), 1);
+  // Choose the second rule; a rule not among the offered two but surviving is listed as one more.
+  app.setRuleChosen(1);
+  assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
+  app.state.rule.want = ['a', 'a', 'a', 'a', 'a', 'seed'];             // survives, but is not among the two simplest
+  app.state.rule.result = null; await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.result.brackets.length, 3);
+  assert.strictEqual(app.state.rule.chosen, 2);
+  // Hand mode: the rule is checked against past seasons, and gives no picks.
+  app.setRuleMode('hand'); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.result.brackets[0].picks, null);
+  assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, true, true, true]);
+  assert.strictEqual(app.ruleStrategy(), null);
+  // The field arrives (2027 becomes a ready season): the same link's rule fills it.
+  app.setRuleMode('search');
+  app.state.rule.want = ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'];
+  app.state.seasonsIndex = app.state.seasonsIndex.map(x => (x.year === 2027 ? { year: 2027, status: 'ready' } : x));
+  app.state.season = ruleSeasonPayload('a');
+  await app.ensureRuleSearch();
+  assert.strictEqual(app.fieldPending(), false);
+  assert.strictEqual(app.state.rule.result.brackets.length, 1, 'with a field, one distinct bracket');
+  assert.strictEqual(app.state.rule.chosen, 0, 'the all-seed rule gives that bracket, so it is the one chosen');
+  assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
 });
 
 checkAsync('an overlapping earlier call abandons; the result matches the latest controls', async () => {
