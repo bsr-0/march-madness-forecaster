@@ -1104,6 +1104,84 @@ function ruleGeneralisation(rules, seasons, checkpoints) {
   return { n, checked, any, best };
 }
 
+/* The whole search-mode job, pure, so it can run in a worker (app.js
+ * runRuleSearchJob) or inline where there is none -- the same function
+ * either way, never a second implementation. ruleSearch over the fit
+ * seasons; the offered entries (distinct by the bracket they give when a
+ * field exists, by sequence when it does not); the generalisation of every
+ * survivor; the ranking; and the resolution of the rule a link names.
+ *
+ *   fit          rule-shaped seasons in the fit range (complete)
+ *   played       every complete played season (fit is a subset); the ones
+ *                the search did not select on are "outside"
+ *   here         the displayed season, or null while its field is pending
+ *   keys         the eligible criteria, sorted
+ *   checkpoints  rounds whose winners a rule must reproduce (array)
+ *   n            entries to offer;  rank 'simple' | 'outside';
+ *   maxCriteria  distinct criteria a rule may use, or null
+ *   want         a criterion sequence to find among the offered, or null
+ */
+const RULE_RANK_POOL = 500;   // distinct brackets scored when ranking by outside-range hits
+function ruleSearchJob({ fit, played, here, keys, checkpoints, n, rank, maxCriteria, want }) {
+  const cps = new Set(checkpoints);
+  const res = fit.length ? ruleSearch(fit, keys, cps) : { rules: [], usedSeasons: [], lastRound: -1, backedOff: true };
+  // "Outside" means outside the seasons the rule was actually selected on:
+  // after a back-off the dropped seasons count too, and count as misses.
+  const outside = played.filter(p => !res.usedSeasons.includes(p.year));
+  const apply = seq => {
+    if (!here) return { rounds: null, picks: null };
+    const rounds = ruleBracket(here, seq);
+    return { rounds, picks: rounds.map(g => g.map(x => x.win)) };
+  };
+  const brackets = [], seen = new Set();
+  const cap = rank === 'outside' ? Math.max(RULE_RANK_POOL, n) : n;
+  // With a field, distinct BRACKETS are offered (many rules give the same
+  // picks); without one, distinct rules.
+  const sigOf = (seq, b) => (here ? b.picks.map(g => g.join(',')).join('|') : seq.join(','));
+  const entry = seq => {
+    const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
+    return { seq, ...apply(seq), complexity: ruleComplexity(seq), outside: { k: hits.length, m: outside.length, years: hits } };
+  };
+  // ruleSearch() orders by distinct criteria first, so the first rule over
+  // the criteria cap means every later one is too: stop there.
+  let overCap = false;
+  for (const seq of res.rules) {
+    const complexity = ruleComplexity(seq);
+    if (maxCriteria !== null && complexity[0] > maxCriteria) { overCap = true; break; }
+    const b = entry(seq);
+    const sig = sigOf(seq, b);
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    brackets.push(b);
+    if (brackets.length >= cap) break;
+  }
+  const scored = brackets.length;
+  // Every survivor against every season outside the range: the one
+  // statement the inputs cannot tune (see ruleGeneralisation).
+  const gen = ruleGeneralisation(res.rules, outside, cps);
+  if (rank === 'outside') brackets.sort((a, b) => b.outside.k - a.outside.k || a.complexity[0] - b.complexity[0] || a.complexity[1] - b.complexity[1]);
+  const offered = brackets.slice(0, n);
+  // The rule a link names (or the one chosen before the season changed):
+  // find it among the offered entries by sequence, then -- with a field --
+  // by the bracket it gives, since the offered list is deduplicated by
+  // picks; the entry then becomes the named rule itself, so the panel row
+  // and the round labels carry the sequence the link names, not the
+  // simpler rule that happened to be listed first for the same picks.
+  // Failing that, if it survived at all, list it as one more.
+  let chosen = 0;
+  if (want) {
+    const same = seq => seq.length === want.length && seq.every((k, i) => k === want[i]);
+    let i = offered.findIndex(b => same(b.seq));
+    if (i < 0 && res.rules.some(same)) {
+      const b = entry(want);
+      if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); if (i >= 0) offered[i] = b; }
+      if (i < 0) { offered.push(b); i = offered.length - 1; }
+    }
+    chosen = Math.max(0, i);
+  }
+  return { brackets: offered, scored, usedSeasons: res.usedSeasons, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen, chosen };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
@@ -1111,6 +1189,6 @@ if (typeof module !== 'undefined' && module.exports) {
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
-    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT,
+    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_RANK_POOL,
   };
 }

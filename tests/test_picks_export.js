@@ -45,6 +45,22 @@ function loadApp(hash, opts = {}) {
   const fitSrc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'fit.js'), 'utf8');
   const src = fs.readFileSync(path.join(__dirname, '..', 'docs', 'app.js'), 'utf8');
   const noop = () => {};
+  // opts.worker: a Worker/Blob/URL the page can build a search worker from,
+  // answering through the vm's own ruleSearchJob so the protocol is tested
+  // without a browser. Records the blob source and each worker's fate.
+  const wk = { src: null, workers: [], fail: null };
+  class StubWorker {
+    constructor() { this.dead = false; this.delivered = false; wk.workers.push(this); }
+    postMessage(input) {
+      setTimeout(() => {
+        if (this.dead) return;
+        this.delivered = true;
+        const data = wk.fail ? { ok: false, error: wk.fail } : { ok: true, out: ctx.ruleSearchJob(input) };
+        if (this.onmessage) this.onmessage({ data });
+      }, 5);
+    }
+    terminate() { this.dead = true; }
+  }
   const ctx = {
     console,
     setTimeout,
@@ -54,7 +70,7 @@ function loadApp(hash, opts = {}) {
     fetch: opts.fetch || (() => new Promise(() => {})),
     document: {
       getElementById: () => null,
-      querySelector: () => null,
+      querySelector: sel => (opts.worker && sel === 'script[src*="fit.js"]' ? { src: 'http://h/madness/fit.js?v=abc' } : null),
       querySelectorAll: () => [],
       addEventListener: noop,
     },
@@ -66,6 +82,11 @@ function loadApp(hash, opts = {}) {
     module: undefined,  // fit.js only attaches to module.exports if this exists
   };
   if (hash) ctx.location.hash = hash;
+  if (opts.worker) {
+    ctx.Worker = StubWorker;
+    ctx.Blob = class { constructor(parts) { this.parts = parts; } };
+    ctx.URL = { createObjectURL: b => { wk.src = b.parts.join(''); return 'blob:x'; }, revokeObjectURL: noop };
+  }
   vm.createContext(ctx);
   vm.runInContext(fitSrc, ctx);
   vm.runInContext(src, ctx);
@@ -80,6 +101,7 @@ function loadApp(hash, opts = {}) {
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
     + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, ruleChosen, pendingBoardHTML, renders: () => globalThis.__renders };', ctx);
+  ctx.__api.__worker = wk;
   return ctx.__api;
 }
 
@@ -793,8 +815,8 @@ function ruleFetch(delayFor = () => 0) {
   });
 }
 
-function ruleApp(delayFor) {
-  const app = loadApp('', { fetch: ruleFetch(delayFor), noRender: true });
+function ruleApp(delayFor, extra = {}) {
+  const app = loadApp('', { fetch: ruleFetch(delayFor), noRender: true, ...extra });
   app.state.seasonsIndex = [2022, 2023, 2024, 2025, 2026, 2027].map(y => ({ year: y, status: y === 2022 ? 'unavailable' : y === 2027 ? 'not_started' : 'ready' }));
   app.state.year = 2026;
   app.state.season = ruleSeasonPayload('a');
@@ -950,6 +972,46 @@ checkAsync('one variable in every round is scored on every prior played season, 
   // A new season recomputes it over that season's prior seasons.
   app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.table.year, 2025); assert.strictEqual(app.state.rule.table.n, 2);
+});
+
+checkAsync('with a Worker the search runs through it, from the same job, on fit.js by its stamped URL', async () => {
+  const inline = ruleApp(); await inline.ensureRuleSearch();
+  const app = ruleApp(undefined, { worker: true }); await app.ensureRuleSearch();
+  assert.strictEqual(JSON.stringify(app.state.rule.result.brackets), JSON.stringify(inline.state.rule.result.brackets));
+  assert.strictEqual(JSON.stringify(app.state.rule.result.gen), JSON.stringify(inline.state.rule.result.gen));
+  assert.ok(app.__worker.src.includes('importScripts("http://h/madness/fit.js?v=abc")'), app.__worker.src);
+  assert.strictEqual(app.__worker.workers.length, 1);
+  assert.ok(app.__worker.workers[0].delivered && app.__worker.workers[0].dead, 'answered, then terminated');
+  assert.strictEqual(app.state.rule.job, null); assert.strictEqual(app.state.rule.busy, false);
+});
+
+checkAsync('a control change terminates the running worker and the latest result wins', async () => {
+  const app = ruleApp(undefined, { worker: true });
+  const first = app.ensureRuleSearch();
+  while (!app.state.rule.job) await new Promise(r => setTimeout(r, 1));   // past the payload fetches, into the worker
+  app.setRuleRange(2023, 2023);                                       // supersedes: terminates worker 1, starts worker 2
+  await first;
+  while (app.state.rule.busy) await new Promise(r => setTimeout(r, 5));
+  const [w1, w2] = app.__worker.workers;
+  assert.strictEqual(app.__worker.workers.length, 2);
+  assert.ok(w1.dead && !w1.delivered, 'the first worker was terminated before it could answer');
+  assert.ok(w2.delivered, 'the second answered');
+  assert.strictEqual(app.state.rule.result.key, app.ruleKey());
+  assert.deepStrictEqual([...app.state.rule.result.usedSeasons], [2023]);
+  assert.strictEqual(app.state.rule.job, null);
+});
+
+checkAsync('a worker error is said on the panel and rejects, not swallowed', async () => {
+  const app = ruleApp(undefined, { worker: true });
+  app.__worker.fail = 'boom';
+  await assert.rejects(app.ensureRuleSearch(), /boom/);
+  assert.strictEqual(app.state.rule.error, 'boom');
+  assert.strictEqual(app.state.rule.busy, false); assert.strictEqual(app.state.rule.job, null);
+  app.__worker.fail = null;
+  app.setRuleRange(2023, 2023);
+  assert.strictEqual(app.state.rule.error, null, 'cleared by the next change');
+  while (app.state.rule.busy) await new Promise(r => setTimeout(r, 5));
+  assert.ok(app.state.rule.result && app.state.rule.result.brackets.length);
 });
 
 checkAsync('both modes redraw the page once their result is in', async () => {

@@ -158,6 +158,8 @@ const state = {
     want: null,                    // the chosen rule as a criterion sequence, so the choice survives a new field (see rq in the URL)
     table: null,                   // one variable in every round, scored on the played seasons before the displayed one (oneVariableTable)
     refused: false,                // the last checkpoint click was refused (no early checkpoint left); shown once, cleared by any change
+    job: null,                     // the live search worker { worker, settle }, terminated by the next request (runRuleSearchJob)
+    error: null,                   // why the last search did not finish, shown on the panel; cleared by any change
     ref: null,                     // under a pending field: the latest played season's payload, for variable keys and labels
     chosen: 0, result: null, busy: false,
     token: 0,                      // the latest ensureRuleSearch() call; earlier ones abandon when superseded
@@ -1757,9 +1759,58 @@ function ruleSettingsKey() {
   return JSON.stringify([r.mode, r.checkpoints, r.from, r.to, r.n, r.keys, r.rank, r.maxCriteria, r.hand]);
 }
 
+/* Where fit.js came from, with its ?v=, so the worker runs the same file
+ * the page does. Absolute, because importScripts in a blob worker needs
+ * one -- and the hub serves this site under /madness/, so never /fit.js. */
+function fitScriptURL() {
+  const tag = document.querySelector('script[src*="fit.js"]');
+  if (!tag || !tag.src) throw new Error('fit.js script tag not found');
+  return tag.src;
+}
+
+/* Stop the search in flight, if any: its promise settles null, which the
+ * caller's token check discards. */
+function cancelRuleJob() {
+  const j = state.rule.job;
+  if (!j) return;
+  state.rule.job = null;
+  j.worker.terminate();
+  j.settle(null);
+}
+
+/* Run ruleSearchJob() (fit.js): in a Web Worker where there is one, so the
+ * page keeps painting and scrolling through a search that takes seconds;
+ * otherwise -- the node harness, a browser without workers -- the same
+ * function inline. One worker per request, built from a blob that imports
+ * fit.js by the page's own stamped URL, terminated when it answers or when
+ * the next request supersedes it. Errors inside it reject; nothing is
+ * swallowed. */
+function runRuleSearchJob(input) {
+  if (typeof Worker !== 'function' || typeof Blob !== 'function' || typeof URL === 'undefined' || !URL.createObjectURL) {
+    return Promise.resolve(ruleSearchJob(input));
+  }
+  cancelRuleJob();
+  const src = `importScripts(${JSON.stringify(fitScriptURL())});\n` +
+    `onmessage = e => { try { postMessage({ ok: true, out: ruleSearchJob(e.data) }); } catch (err) { postMessage({ ok: false, error: String((err && err.stack) || err) }); } };`;
+  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  const worker = new Worker(url);
+  return new Promise((resolve, reject) => {
+    // The blob URL is revoked on settle, not right after new Worker(): the
+    // script fetch is asynchronous.
+    const settle = v => { URL.revokeObjectURL(url); resolve(v); };
+    const fail = msg => { state.rule.job = null; worker.terminate(); URL.revokeObjectURL(url); reject(new Error(msg)); };
+    state.rule.job = { worker, settle };
+    worker.onmessage = e => {
+      state.rule.job = null; worker.terminate();
+      if (e.data && e.data.ok) settle(e.data.out); else fail((e.data && e.data.error) || 'rule search worker failed');
+    };
+    worker.onerror = e => fail((e && e.message) || 'rule search worker failed');
+    worker.postMessage(input);
+  });
+}
+
 /* Fetch what the search needs, run it, keep the offered brackets with their
  * outside-the-range hit rate. Cached on state.rule.result by every input. */
-const RULE_RANK_POOL = 500;   // distinct brackets scored when ranking by outside-range hits
 
 async function ensureRuleSearch() {
   const s = state.season;
@@ -1776,6 +1827,8 @@ async function ensureRuleSearch() {
   // here. Only the latest call may write a result: an earlier one finishing
   // last would leave a result for inputs no longer on the panel.
   const token = ++state.rule.token;
+  cancelRuleJob();                 // a stale search stops now, not when the next one starts
+  state.rule.error = null;
   state.rule.busy = true; renderRulePanel();
   try {
     const payloads = {};
@@ -1799,63 +1852,23 @@ async function ensureRuleSearch() {
       // skip the redraw below, so hand mode sat on "Searching…" with its
       // result held in state and the board empty.
     } else {
-      const fit = fitYears.filter(complete).map(y => payloads[y]);
-      const keys = ruleKeys();
-      const res = fit.length ? ruleSearch(fit, keys, new Set(cps)) : { rules: [], usedSeasons: [], backedOff: true };
-      // "Outside" means outside the seasons the rule was actually selected on:
-      // after a back-off the dropped seasons count too, and count as misses.
-      const outside = played.filter(y => complete(y) && !res.usedSeasons.includes(y)).map(y => payloads[y]);
-      const brackets = [], seen = new Set();
-      const cap = state.rule.rank === 'outside' ? Math.max(RULE_RANK_POOL, state.rule.n) : state.rule.n;
-      // ruleSearch() orders by distinct criteria first, so the first rule over
-      // the criteria cap means every later one is too: stop there.
-      const maxCx = state.rule.maxCriteria;
-      let overCap = false;
-      // With a field, distinct BRACKETS are offered (many rules give the
-      // same picks); without one, distinct rules.
-      const sigOf = (seq, b) => (here ? b.picks.map(g => g.join(',')).join('|') : seq.join(','));
-      const entry = seq => {
-        const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
-        return { seq, ...apply(seq), complexity: ruleComplexity(seq), outside: { k: hits.length, m: outside.length, years: hits } };
-      };
-      for (const seq of res.rules) {
-        const complexity = ruleComplexity(seq);
-        if (maxCx !== null && complexity[0] > maxCx) { overCap = true; break; }
-        const b = entry(seq);
-        const sig = sigOf(seq, b);
-        if (seen.has(sig)) continue;
-        seen.add(sig);
-        brackets.push(b);
-        if (brackets.length >= cap) break;
-      }
-      const scored = brackets.length;
-      // Every survivor against every season outside the range: the one
-      // statement here the inputs cannot tune (see ruleGeneralisation).
-      const gen = ruleGeneralisation(res.rules, outside, cps);
-      if (state.rule.rank === 'outside') brackets.sort((a, b) => b.outside.k - a.outside.k || a.complexity[0] - b.complexity[0] || a.complexity[1] - b.complexity[1]);
-      const offered = brackets.slice(0, state.rule.n);
-      // The rule a link names (or the one chosen before the season changed):
-      // find it among the offered entries by sequence, then -- with a field --
-      // by the bracket it gives, since the offered list is deduplicated by
-      // picks; the entry then becomes the named rule itself, so the panel row
-      // and the round labels carry the sequence the link names, not the
-      // simpler rule that happened to be listed first for the same picks.
-      // Failing that, if it survived at all, list it as one more.
-      const want = state.rule.want;
-      let chosen = 0;
-      if (want) {
-        const same = seq => seq.length === want.length && seq.every((k, i) => k === want[i]);
-        let i = offered.findIndex(b => same(b.seq));
-        if (i < 0 && res.rules.some(same)) {
-          const b = entry(want);
-          if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); if (i >= 0) offered[i] = b; }
-          if (i < 0) { offered.push(b); i = offered.length - 1; }
-        }
-        chosen = Math.max(0, i);
-      }
-      state.rule.result = { key, settings, mode: 'search', brackets: offered, scored, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen };
+      const out = await runRuleSearchJob({
+        fit: fitYears.filter(complete).map(y => payloads[y]),
+        played: played.filter(complete).map(y => payloads[y]),
+        here, keys: ruleKeys(), checkpoints: cps,
+        n: state.rule.n, rank: state.rule.rank, maxCriteria: state.rule.maxCriteria, want: state.rule.want,
+      });
+      if (token !== state.rule.token || out === null) return;
+      const { chosen, ...rest } = out;
+      state.rule.result = { key, settings, mode: 'search', requested: fitYears, ...rest };
       state.rule.chosen = chosen;
     }
+  } catch (e) {
+    // Said on the panel and rethrown: a search that did not finish must not
+    // look like one that found nothing.
+    state.rule.error = String((e && e.message) || e);
+    if (token === state.rule.token) renderRulePanel();
+    throw e;
   } finally {
     if (token === state.rule.token) state.rule.busy = false;
   }
@@ -1927,7 +1940,7 @@ const RULE_ONE_SHOWN = 6;   // rows of the one-variable table shown before "all"
 /* Every control ends here: the inputs go into the URL (they are part of the
  * selection a link carries, see writeRuleHash) and the search runs if they
  * changed. */
-function ruleChanged() { state.rule.refused = false; writeHash(); ensureRuleSearch(); }
+function ruleChanged() { state.rule.refused = false; state.rule.error = null; writeHash(); ensureRuleSearch(); }
 function setRuleMode(m) { state.rule.mode = m; if (m === 'hand') state.rule.hand = ruleHand(); ruleChanged(); }
 function setRuleCheckpoint(r, on) {
   const cps = new Set(state.rule.checkpoints);
@@ -2063,7 +2076,8 @@ function renderRulePanel() {
     </details>`;
 
   let results = '';
-  if (state.rule.busy) results = `<p class="ex-line">Searching…</p>`;
+  if (state.rule.error) results = `<p class="ex-line"><b>The search did not finish:</b> ${state.rule.error}</p>`;
+  else if (state.rule.busy) results = `<p class="ex-line">Searching…</p>`;
   else if (!r) results = '';
   else if (r.mode === 'hand') {
     const b = r.brackets[0];
