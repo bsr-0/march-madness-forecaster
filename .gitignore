@@ -105,4 +105,8 @@ CLAUDE.md
 
 # Large regenerable training data artifact.
 docs/data/training_pit.json
+
+# docs/ is untracked: the site is built in the parent prediction_models repo.
+# scripts/build_season.py still writes docs/data here and the JS tests read
+# docs/app.js and docs/fit.js from the working tree.
 docs/
