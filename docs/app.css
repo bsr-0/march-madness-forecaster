@@ -350,10 +350,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* PICKED = advanced by this bracket. Weight, not colour, so it never competes
    with the correctness signal. */
 .side.picked { font-weight: 600; }
-/* Blank board (field pending): the game slots without teams. */
-.game.blank .side { cursor: default; min-height: 30px; }
-.game.blank .side:hover { background: var(--panel); }
-.game.blank .tname { color: var(--line-2); }
 .side.picked .tname { color: var(--ink); }
 
 /* RIGHT / WRONG = did the model put this team in this game.
@@ -474,13 +470,18 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .scrim { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.5); }
 
-/* Field pending (see render()): the rules come before the blank bracket
-   they will fill, on every viewport. Negative orders so the phone block's
-   explicit orders below still place everything else. */
+/* Field pending (see render()): the orientation line first, then the
+   strategy table, then the rules, then the bracket's shape they will fill,
+   on every viewport. Negative orders so the phone block's explicit orders
+   below still place everything else; these three outrank that block's
+   single-id rules. */
 #main.pending { display: flex; flex-direction: column; }
+#main.pending #empty { order: -4; }
 #main.pending #compare { order: -3; }
 #main.pending #rulepanel { order: -2; }
-#main.pending #empty { order: -1; }
+/* The placeholder board: header and count only, one row tall. */
+#main.pending .round { grid-template-rows: auto auto; align-content: start; }
+.r-count { margin: 0; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 /* ---------- small screens ---------- */
 
@@ -503,7 +504,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   #rnav-dots { order: 9; }
   #board { order: 10; }
   #empty { order: 11; }
-  #empty.wait { order: 9; }
+  /* Under #main.pending three of these are overridden (see that block). */
+  #main.pending .round.active { grid-template-columns: 1fr; }
   #tune, #why, #explore, #rulepanel { margin-bottom: 12px; }
   .bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
   .bar-l { justify-content: space-between; }

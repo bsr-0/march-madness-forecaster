@@ -913,11 +913,14 @@ function render() {
     state.notice = '';
     renderCompare();
     renderRulePanel();
-    // The wait note in the empty-state slot, in its light form, above the board.
+    // The orientation line in the empty-state slot, in its light form; CSS
+    // (#main.pending) puts it first on every viewport. Composed here from
+    // what the page knows -- the year and how many seasons are played -- so
+    // it cannot go stale against the payload's own message.
     empty.className = 'empty wait';
     empty.hidden = false;
-    empty.innerHTML = `<p class="e-sub">${s.message || `The ${s.year} field is not out yet.`} It is announced on Selection Sunday ${s.year}; the rule chosen above fills this bracket then.</p>`;
-    board.innerHTML = blankBoardHTML();
+    empty.innerHTML = `<p class="e-sub">The ${s.year} field is announced on Selection Sunday ${s.year}. Until then Win the pool, Most expected points and the fitted model are listed for what they will be; Rule search is live over the ${playedSeasonsBefore(s.year).length} played seasons, and the rule you choose fills the bracket when the field lands.</p>`;
+    board.innerHTML = pendingBoardHTML();
     return;
   }
   empty.className = 'empty';
@@ -2354,19 +2357,16 @@ function gameHTML(g, round, actualGame) {
     </div>`;
 }
 
-/* Sixty-three empty games under the round headers (with the chosen rule's
- * criterion under each, as on a filled board), for a season whose field is
- * not out. Every round carries `active`: on a phone that shows them all,
- * stacked, since there is no round navigator without state.rounds. */
-function blankBoardHTML() {
+/* The bracket's shape for a season whose field is not out: six round
+ * headers with the chosen rule's criterion under each (as on a filled
+ * board) and the game count, no game boxes -- 63 empty slots said nothing
+ * the headers do not. Every round carries `active`: on a phone that shows
+ * them all, stacked, since there is no round navigator without
+ * state.rounds. */
+function pendingBoardHTML() {
   return ROUNDS.map((name, r) => {
     const n = 32 >> r;
-    const games = Array.from({ length: n }, () => `
-      <div class="game blank">
-        <div class="side"><span class="seed"></span><span class="tcol"><span class="tname">—</span></span></div>
-        <div class="side"><span class="seed"></span><span class="tcol"><span class="tname">—</span></span></div>
-      </div>`).join('');
-    return `<div class="round active" data-r="${r}" style="--n:${n}"><p class="r-label">${name}${ruleRoundLabel(r)}</p>${games}</div>`;
+    return `<div class="round active" data-r="${r}" style="--n:1"><p class="r-label">${name}${ruleRoundLabel(r)}</p><p class="r-count">${n} ${n === 1 ? 'game' : 'games'}</p></div>`;
   }).join('');
 }
 
