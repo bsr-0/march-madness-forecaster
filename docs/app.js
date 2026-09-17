@@ -2106,6 +2106,11 @@ function renderRulePanel() {
     const g = r.gen;
     const genText = !g || !r.nOutside ? ''
       : ` <b>${g.checked < g.n ? `Of the ${g.checked.toLocaleString()} simplest, ` : 'Of those, '}${g.any === 0 ? 'none' : g.any.toLocaleString()} reproduce${g.any === 1 ? 's' : ''} ${ruleTargetText()} in any of the ${r.nOutside} other played seasons${g.best > 1 ? ` (at most ${g.best})` : ''}.</b>`;
+    // The rule the link (or the previous season's choice) names, when it is
+    // not a survivor here: said, and the first entry shown in its place.
+    const missed = r.wantMissed && state.rule.want
+      ? `<p class="ex-line"><b>The rule this link names — ${state.rule.want.map(ruleLabel).join(' → ')} — does not reproduce ${ruleTargetText()} in ${ruleYearsText(r.usedSeasons) || 'these seasons'}, so it is not offered here;</b> the first of the offered rules is shown instead. It stays in the link: another season may have it.</p>`
+      : '';
     const head = r.backedOff
       ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules.${genText} ${offer[0].toUpperCase() + offer.slice(1)}</p>`
       : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}.${genText} ${offer[0].toUpperCase() + offer.slice(1)}</p>`;
@@ -2115,7 +2120,7 @@ function renderRulePanel() {
         <span class="rule-meta">${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'}${b.picks ? ` · champion ${state.season.teams[b.picks[5][0]].name}` : ''}
           · outside the range: ${b.outside.m ? `${b.outside.k} of ${b.outside.m} seasons${b.outside.k ? ` (${b.outside.years.join(', ')})` : ''}` : 'no other seasons to check'}</span>
       </button>`).join('');
-    results = head + list;
+    results = missed + head + list;
   }
   body.innerHTML = one + `<div class="rule-controls">${rounds}${seasons}${criteria}${handRows}${more}</div>` + results + `
     <p class="ex-foot">Experimental. Searched rules were found by looking for what reproduces past results, which is why they reproduce them. ${state.rule.mode === 'search' && state.rule.rank === 'outside'

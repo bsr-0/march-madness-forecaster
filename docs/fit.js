@@ -1168,7 +1168,10 @@ function ruleSearchJob({ fit, played, here, keys, checkpoints, n, rank, maxCrite
   // and the round labels carry the sequence the link names, not the
   // simpler rule that happened to be listed first for the same picks.
   // Failing that, if it survived at all, list it as one more.
-  let chosen = 0;
+  // A named rule that did not survive is reported (wantMissed), not quietly
+  // replaced: the first entry is shown, and the panel says the link's rule
+  // is not among the survivors here.
+  let chosen = 0, wantMissed = false;
   if (want) {
     const same = seq => seq.length === want.length && seq.every((k, i) => k === want[i]);
     let i = offered.findIndex(b => same(b.seq));
@@ -1177,9 +1180,10 @@ function ruleSearchJob({ fit, played, here, keys, checkpoints, n, rank, maxCrite
       if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); if (i >= 0) offered[i] = b; }
       if (i < 0) { offered.push(b); i = offered.length - 1; }
     }
+    wantMissed = i < 0;
     chosen = Math.max(0, i);
   }
-  return { brackets: offered, scored, usedSeasons: res.usedSeasons, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen, chosen };
+  return { brackets: offered, scored, usedSeasons: res.usedSeasons, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen, chosen, wantMissed };
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -1079,6 +1079,13 @@ checkAsync('the chosen rule is a criterion sequence: resolved against the surviv
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
+  // A season where the named rule does not survive: the first entry shows, the result says the rule was missed, and the link keeps it.
+  app.state.year = 2024; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();   // fit 2023 only: the mirror season, rule `b`
+  assert.strictEqual(app.state.rule.result.wantMissed, true);
+  assert.deepStrictEqual([...app.ruleChosen().seq], ['b', 'b', 'b', 'b', 'b', 'b']);
+  assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'kept for a season that has it');
+  app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.result.wantMissed, false);
   // A control change starts over.
   app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.want, null);
