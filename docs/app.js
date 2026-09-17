@@ -71,6 +71,7 @@
  */
 
 const ROUNDS = ['Round of 64', 'Round of 32', 'Sweet 16', 'Elite 8', 'Final Four', 'Championship'];
+const MOBILE_ROUND_DEFAULT = ROUNDS.indexOf('Final Four');
 
 /* The browser-fitted strategy. Anything else is a precomputed bracket read out
  * of the season payload by id. */
@@ -124,7 +125,10 @@ const state = {
   // app.css). Meaningless on a wide viewport, where CSS ignores it and every
   // round is visible regardless -- so there is nothing to gate on screen
   // width here, only to reset when the board underneath it changes shape.
-  mobileRound: 0,
+  // Opens on the Final Four: on a phone the Round of 64 is 32 games of
+  // scrolling before anything a visitor came for, and the champion, the
+  // finalists and the semifinals are the end of the story, not the start.
+  mobileRound: MOBILE_ROUND_DEFAULT,
   explore: 'adj_defensive_efficiency',   // variable key the Explore panel is showing
   training: null,
   season: null,
@@ -2279,10 +2283,9 @@ async function setYear(year) {
   closeDrawer();
   state.year = year;
   state.notice = '';
-  // A new season is a new bracket top to bottom; staying on, say, round 5 of
-  // the old one would open the mobile board on the Championship of a
-  // tournament the visitor has not chosen yet.
-  state.mobileRound = 0;
+  // A new season is a new bracket top to bottom; the mobile board goes back
+  // to its default round rather than wherever the old season left it.
+  state.mobileRound = MOBILE_ROUND_DEFAULT;
   document.querySelectorAll('.yr').forEach(b => b.classList.toggle('on', Number(b.dataset.year) === year));
   try {
     state.season = await loadSeason(year);
