@@ -925,7 +925,8 @@ function exclusionModels(rows, cols, years, asOf, minYear) {
  *           actual: number[][] (winners per round, as team indices) }
  * keys:   the criterion keys, in a fixed order shared by all seasons
  * checkpoints: set of round indices whose WINNERS must match `actual`
- *           (2 = Elite Eight teams, 3 = Final Four, 4 = finalists, 5 = champion)
+ *           (0 = Round of 32 teams, 1 = Sweet 16, 2 = Elite Eight, 3 = Final
+ *           Four, 4 = finalists, 5 = champion)
  *
  * Sequences are encoded as integers base keys.length, most significant digit
  * = round 0, so sets of them intersect cheaply across seasons.
