@@ -79,7 +79,7 @@ function loadApp(hash, opts = {}) {
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, renders: () => globalThis.__renders };', ctx);
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, ruleChosen, renders: () => globalThis.__renders };', ctx);
   return ctx.__api;
 }
 
@@ -989,13 +989,19 @@ checkAsync('the chosen rule is a criterion sequence: resolved against the surviv
   assert.strictEqual(app.state.rule.chosen, 0);
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'kept: the rule survived');
+  // Matched by picks, the entry IS the named rule: its sequence is what the
+  // row and the round labels show, not the simpler all-`a` listed first.
+  assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
+  assert.deepStrictEqual([...app.ruleChosen().complexity], [1, 0]);
+  assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · Seed (chalk)');
   // Choosing from the list records the sequence and writes it to the URL.
   app.setRuleChosen(0);
-  assert.deepStrictEqual([...app.state.rule.want], ['a', 'a', 'a', 'a', 'a', 'a']);
-  assert.ok(ctxHash.value.includes('rq=a%2Ca%2Ca%2Ca%2Ca%2Ca'), ctxHash.value);
+  assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
+  assert.ok(ctxHash.value.includes('rq=seed%2Cseed%2Cseed%2Cseed%2Cseed%2Cseed'), ctxHash.value);
   // A season change keeps it (2025 displayed: fit 2023-2024, back-off to 2024).
   app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
-  assert.deepStrictEqual([...app.state.rule.want], ['a', 'a', 'a', 'a', 'a', 'a']);
+  assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
+  assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
   // A control change starts over.
   app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
@@ -1054,7 +1060,8 @@ checkAsync('under a pending field the search lists rules without picks, and the 
   assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, true, true, true]);
   assert.strictEqual(app.ruleStrategy(), null);
   // The field arrives (2027 becomes a ready season): the same link's rule fills it.
-  app.setRuleMode('search');
+  // (Settle the mode change first: a control change resets the choice; a season change keeps it.)
+  app.setRuleMode('search'); await app.ensureRuleSearch();
   app.state.rule.want = ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'];
   app.state.seasonsIndex = app.state.seasonsIndex.map(x => (x.year === 2027 ? { year: 2027, status: 'ready' } : x));
   app.state.season = ruleSeasonPayload('a');
@@ -1063,6 +1070,8 @@ checkAsync('under a pending field the search lists rules without picks, and the 
   assert.strictEqual(app.state.rule.result.brackets.length, 1, 'with a field, one distinct bracket');
   assert.strictEqual(app.state.rule.chosen, 0, 'the all-seed rule gives that bracket, so it is the one chosen');
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
+  assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'and the entry carries the named rule');
+  assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · Seed (chalk)');
 });
 
 checkAsync('an overlapping earlier call abandons; the result matches the latest controls', async () => {
