@@ -60,6 +60,7 @@ def pytest_collection_modifyitems(items):
             "production",
             "calibration",
             "live_protocol",
+            "e2e",
             "integration",
         }
         item_markers = {m.name for m in item.iter_markers()}

@@ -155,7 +155,11 @@ a surviving rule not among the offered `n` is listed as one more). A
 season change keeps the chosen rule; a control change resets it. The year
 row lists the newest season first and the played seasons after a "past
 seasons" label: they are the history every backtest claim is checked
-against.
+against. The orientation line is the first thing on the page under a
+pending field, and the board is six round headers with the chosen rule's
+criterion and the game count rather than 63 empty games (review item 6).
+A rule matched by the bracket it gives becomes the offered entry itself,
+so the round labels name the rule the link names (item 9).
 
 ## Walk-forward
 Fit seasons are strictly before the displayed season. A 2026 bracket from a
@@ -175,4 +179,10 @@ outside-range counting, the criteria cap, compose-by-hand with its
 per-season marks, the chosen bracket surviving a link's first search and
 resetting after, and the overlapping-call token; plus the rule
 configuration's URL round-trip with junk and missing-key handling, and the
-regression that a result for another season or other inputs is not shown).
+regression that a result for another season or other inputs is not shown;
+the search job on an 8-team fixture and the worker protocol through a
+stub); `tests/e2e/test_site_smoke.py` (the rendered page in Chromium: the
+pending landing on desktop and phone, a chosen rule carrying to 2026, hand
+mode's result line, filter gating per strategy, the checkpoint guard's
+message, the search off the main thread with the latest controls winning;
+job `site-smoke` in CI).

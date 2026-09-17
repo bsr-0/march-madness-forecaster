@@ -111,7 +111,10 @@ on the shipped data and the live site.
    then the fenced experimental panel, then 63 empty boxes; the one-line
    orientation ("field announced Selection Sunday; the validated strategies
    appear then") is fourth. Should be first, and the blank bracket should be
-   a compact placeholder. — Open (#2 in the fix order).
+   a compact placeholder. — **Fixed 2026-09-17:** the orientation line is
+   first on every viewport (`#main.pending`), composed from the year and the
+   played-season count; the board is six round headers with the chosen
+   rule's criterion and the game count (`pendingBoardHTML()`).
 7. **Silent refusal.** The "at least one early checkpoint" hint was removed
    in the compact pass; unchecking the last one now just does not toggle. —
    **Fixed:** an inline message appears on refusal.
@@ -120,16 +123,28 @@ on the shipped data and the live site.
    have no tooltips. — **Fixed:** visible text.
 9. **A choice can resolve to a different rule than the one chosen.** `rq`
    resolution by picks keeps the first-listed rule's sequence, so the board
-   labels rounds with a different variable than the URL names. — Open (#3).
+   labels rounds with a different variable than the URL names. — **Fixed:**
+   a match by picks makes the entry the named rule (its sequence, complexity
+   and outside hits); `ruleKey()` also carries the season's status so a
+   field-less result is not taken as current once the field exists.
 10. **Landing cost.** Live: 0.8 s to first paint, 2.4 s to rules, 15 fetches
     / 643 KB on desktop; the search is synchronous and freezes the tab for
-    its duration, unmeasured on phones. Web Worker. — Open (#4).
+    its duration, unmeasured on phones. Web Worker. — **Fixed:** the whole
+    search job is `ruleSearchJob()` in fit.js, run in a blob Web Worker
+    (`runRuleSearchJob()`), terminated by the next request, inline where
+    there is no Worker; 120 requestAnimationFrame ticks/s measured during a
+    search.
 
 ### Process
 11. The two rendering bugs found in this session (hand mode never redrawing;
     pending table rows losing their cells) were invisible to the test suite,
     which drives state through DOM stubs; both were caught by hand in
-    Chromium. A Playwright smoke test in CI would have covered both. — Open.
+    Chromium. A Playwright smoke test in CI would have covered both. —
+    **Fixed:** `tests/e2e/test_site_smoke.py` (pending landing on two
+    viewports, rule choice carrying to 2026, hand mode's result line, filter
+    gating per strategy, the checkpoint guard's message, the search off the
+    main thread with the latest controls winning), job `site-smoke` in
+    ci.yml, non-blocking until it has been green for a few runs.
 12. What held: walk-forward discipline throughout (2026 never in its own fit;
     2027 reads 2025–2026; the table excludes the displayed season), the
     request-token and key-matching fixes, `rq` by sequence, and two
