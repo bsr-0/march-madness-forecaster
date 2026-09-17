@@ -1695,7 +1695,9 @@ function ruleKeys() {
  * computed for a season the page has since moved off. */
 function ruleKey() {
   const r = state.rule;
-  return JSON.stringify([state.year, r.mode, r.checkpoints, ruleRange().fit, r.n, ruleKeys(), r.rank, r.maxCriteria, r.mode === 'hand' ? ruleHand() : null]);
+  // The season's status is part of it: a field-less result for a pending
+  // season is not the result for that season once its field exists.
+  return JSON.stringify([state.year, state.season ? state.season.status : null, r.mode, r.checkpoints, ruleRange().fit, r.n, ruleKeys(), r.rank, r.maxCriteria, r.mode === 'hand' ? ruleHand() : null]);
 }
 
 /* The fit range: [from, to] over played seasons strictly before the
@@ -1832,7 +1834,10 @@ async function ensureRuleSearch() {
       // The rule a link names (or the one chosen before the season changed):
       // find it among the offered entries by sequence, then -- with a field --
       // by the bracket it gives, since the offered list is deduplicated by
-      // picks; failing that, if it survived at all, list it as one more.
+      // picks; the entry then becomes the named rule itself, so the panel row
+      // and the round labels carry the sequence the link names, not the
+      // simpler rule that happened to be listed first for the same picks.
+      // Failing that, if it survived at all, list it as one more.
       const want = state.rule.want;
       let chosen = 0;
       if (want) {
@@ -1840,7 +1845,7 @@ async function ensureRuleSearch() {
         let i = offered.findIndex(b => same(b.seq));
         if (i < 0 && res.rules.some(same)) {
           const b = entry(want);
-          if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); }
+          if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); if (i >= 0) offered[i] = b; }
           if (i < 0) { offered.push(b); i = offered.length - 1; }
         }
         chosen = Math.max(0, i);
