@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=20ee0c4b">
+<link rel="stylesheet" href="app.css?v=162ff4af">
 </head>
 <body>
 
@@ -69,9 +69,9 @@
 
   <!-- Season unavailable / not started. With played seasons before it a
        not-started season is PENDING instead (fieldPending() in app.js): this
-       slot carries a one-line wait note and the board below shows 63 blank
-       games under the chosen rule's criteria. The two never show together
-       otherwise, so the note sits above the board in the source. -->
+       slot carries the one-line orientation, ordered first on the page by
+       CSS (#main.pending), and the board shows six round headers with game
+       counts under the chosen rule's criteria (pendingBoardHTML()). -->
   <section class="empty" id="empty" hidden></section>
 
   <section class="board" id="board"></section>
@@ -233,6 +233,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=01301cd0"></script>
-<script src="app.js?v=66ffa254"></script>
+<script src="app.js?v=20dad882"></script>
 </body>
 </html>

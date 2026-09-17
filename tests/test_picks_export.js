@@ -79,7 +79,7 @@ function loadApp(hash, opts = {}) {
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, ruleChosen, renders: () => globalThis.__renders };', ctx);
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, ruleChosen, pendingBoardHTML, renders: () => globalThis.__renders };', ctx);
   return ctx.__api;
 }
 
@@ -911,6 +911,20 @@ checkAsync('composing by hand applies the rule and reports every played season i
   app.setRuleHand(5, 'b'); await app.ensureRuleSearch();
   assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, false, false], 'a b final flips the champion everywhere');
   assert.strictEqual(app.ruleRoundLabel(5, ' · '), ' · B');
+});
+
+checkAsync('the pending board is six round headers with game counts under the chosen rule, and no game boxes', async () => {
+  const app = pendingApp();
+  app.state.rule.result = null;
+  let html = app.pendingBoardHTML();
+  assert.strictEqual((html.match(/class="r-label"/g) || []).length, 6);
+  assert.strictEqual((html.match(/class="r-sub"/g) || []).length, 0, 'no rule chosen yet: no criteria');
+  assert.ok(!/class="game/.test(html), 'no game boxes');
+  const counts = [...html.matchAll(/<p class="r-count">([^<]+)<\/p>/g)].map(m => m[1]);
+  assert.deepStrictEqual(counts, ['32 games', '16 games', '8 games', '4 games', '2 games', '1 game']);
+  await app.ensureRuleSearch();
+  html = app.pendingBoardHTML();
+  assert.strictEqual((html.match(/<span class="r-sub">A<\/span>/g) || []).length, 6, 'the chosen all-a rule under every round');
 });
 
 checkAsync('one variable in every round is scored on every prior played season, and a row composes it by hand', async () => {
