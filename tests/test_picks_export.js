@@ -79,7 +79,7 @@ function loadApp(hash, opts = {}) {
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, renders: () => globalThis.__renders };', ctx);
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, renders: () => globalThis.__renders };', ctx);
   return ctx.__api;
 }
 
@@ -907,6 +907,31 @@ checkAsync('composing by hand applies the rule and reports every played season i
   app.setRuleHand(5, 'b'); await app.ensureRuleSearch();
   assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, false, false], 'a b final flips the champion everywhere');
   assert.strictEqual(app.ruleRoundLabel(5, ' · '), ' · B');
+});
+
+checkAsync('one variable in every round is scored on every prior played season, and a row composes it by hand', async () => {
+  // Fixture: 2023 is the `b` season, 2024-2025 are `a`; seed picks like `a`.
+  const app = ruleApp();
+  await app.ensureRuleSearch();
+  const t = app.state.rule.table;
+  assert.strictEqual(t.year, 2026); assert.strictEqual(t.n, 3);
+  const by = Object.fromEntries(t.rows.map(r => [r.key, r]));
+  assert.strictEqual(JSON.stringify([by.a.f4, [...by.a.exact], by.a.champ, by.a.m]), JSON.stringify([8, [2024, 2025], 2, 3]));
+  assert.strictEqual(JSON.stringify([by.b.f4, [...by.b.exact], by.b.champ]), JSON.stringify([4, [2023], 1]));
+  assert.strictEqual(JSON.stringify([by.seed.f4, [...by.seed.exact]]), JSON.stringify([8, [2024, 2025]]));
+  assert.strictEqual(JSON.stringify(t.rows.map(r => r.key).slice(0, 2).sort()), '["a","seed"]', 'sorted by Final Four teams right');
+  assert.strictEqual(t.rows[2].key, 'b');
+  // The table is for the season, not the search inputs: a control change keeps it.
+  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.table, t);
+  // Clicking a row composes that variable in every round.
+  app.setRuleOne('b'); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.mode, 'hand');
+  assert.deepStrictEqual([...app.ruleHand()], ['b', 'b', 'b', 'b', 'b', 'b']);
+  assert.strictEqual(app.ruleStrategy().picks[5][0], 63);
+  // A new season recomputes it over that season's prior seasons.
+  app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.table.year, 2025); assert.strictEqual(app.state.rule.table.n, 2);
 });
 
 checkAsync('both modes redraw the page once their result is in', async () => {

@@ -156,6 +156,7 @@ const state = {
     maxCriteria: null,             // offer only rules using at most this many distinct criteria; null = any
     hand: null,                    // by-hand rule: one criterion per round, 6 entries
     want: null,                    // the chosen rule as a criterion sequence, so the choice survives a new field (see rq in the URL)
+    table: null,                   // one variable in every round, scored on the played seasons before the displayed one (oneVariableTable)
     ref: null,                     // under a pending field: the latest played season's payload, for variable keys and labels
     chosen: 0, result: null, busy: false,
     token: 0,                      // the latest ensureRuleSearch() call; earlier ones abandon when superseded
@@ -1775,6 +1776,7 @@ async function ensureRuleSearch() {
     for (const y of played) payloads[y] = ruleSeasonFrom(await loadSeason(y), y);
     if (token !== state.rule.token) return;
     const complete = y => payloads[y].actual && payloads[y].actual.every(r => r.length);
+    if (!state.rule.table || state.rule.table.year !== state.year) state.rule.table = oneVariableTable(played.filter(complete).map(y => payloads[y]));
     // No field yet: the search runs, the rules are listed, and picks wait.
     const here = s.status === 'ready' ? ruleSeasonFrom(s, state.year) : null;
     const cps = state.rule.checkpoints;
@@ -1879,6 +1881,37 @@ function ruleStrategy() {
   return { id: RULE, label: 'Rule search', note, picks: b.picks, rule: b.seq, prior };
 }
 
+/* One variable in every round, across the played seasons before the
+ * displayed one: Final Four teams right, seasons where the Final Four is
+ * exact, champions right. The first thing the panel shows, before any
+ * control, because it is the finding the search rests on -- measured on the
+ * shipped data no single variable reproduces the Final Four in more than
+ * one season (2025, when all four 1 seeds reached it), and the best gets
+ * under half the Final Four teams. Walk-forward like everything else here;
+ * nothing is selected on it. `seasons` are rule-shaped (ruleSeasonFrom). */
+function oneVariableTable(seasons) {
+  const rows = ruleAllKeys().map(k => {
+    const seq = Array(ROUNDS.length).fill(k);
+    let f4 = 0, champ = 0, m = 0; const exact = [];
+    for (const sn of seasons) {
+      if (!(k in sn.crit)) continue;
+      m++;
+      const r = ruleBracket(sn, seq);
+      const act = new Set(sn.actual[3]);
+      const h = r[3].filter(g => act.has(g.win)).length;
+      f4 += h; if (h === 4) exact.push(sn.year);
+      if (r[5][0].win === sn.actual[5][0]) champ++;
+    }
+    return { key: k, f4, exact, champ, m };
+  });
+  rows.sort((a, b) => b.f4 - a.f4 || b.exact.length - a.exact.length || b.champ - a.champ || (a.key < b.key ? -1 : 1));
+  return { year: state.year, n: seasons.length, rows };
+}
+/* A row of that table: compose that variable by hand in every round, so
+ * the board shows the bracket it gives this season. */
+function setRuleOne(k) { state.rule.mode = 'hand'; state.rule.hand = Array(ROUNDS.length).fill(k); ruleChanged(); }
+const RULE_ONE_SHOWN = 6;   // rows of the one-variable table shown before "all"
+
 /* Every control ends here: the inputs go into the URL (they are part of the
  * selection a link carries, see writeRuleHash) and the search runs if they
  * changed. */
@@ -1933,6 +1966,35 @@ function renderRulePanel() {
   for (const v of (ruleRef() || { variables: [] }).variables) (groups[v.group] ||= []).push(v.key);
   groups['Seed'] = ['seed'];
 
+  // First, with no control to touch: one variable in every round, scored on
+  // every played season before this one. Then the search, which is what is
+  // left once that table has shown no single variable holds up.
+  const t = state.rule.table && state.rule.table.year === state.year ? state.rule.table : null;
+  let one = '';
+  if (t && t.n) {
+    const hand = state.rule.mode === 'hand' ? ruleHand() : null;
+    const onKey = hand && hand.every(k => k === hand[0]) ? hand[0] : null;
+    const most = Math.max(...t.rows.map(x => x.exact.length));
+    const row = x => `
+      <tr class="one-row${x.key === onKey ? ' on' : ''}" onclick="setRuleOne('${x.key}')" role="button" tabindex="0"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRuleOne('${x.key}'); }">
+        <td>${ruleLabel(x.key)}</td>
+        <td class="num">${x.f4}<span class="one-of"> / ${4 * x.m}</span></td>
+        <td class="num">${x.exact.length}${x.exact.length ? `<span class="one-of"> (${x.exact.join(', ')})</span>` : ''}</td>
+        <td class="num">${x.champ}<span class="one-of"> / ${x.m}</span></td>
+      </tr>`;
+    const head = `<tr><th>One variable, every round</th><th class="num">Final Four teams right</th><th class="num">Final Four exact</th><th class="num">Champion right</th></tr>`;
+    one = `
+    <div class="rule-one">
+      <p class="ex-line">Every game to the team ahead on one variable, in every round, across the <b>${t.n}</b> played seasons before ${state.year}.
+        ${most <= 1 ? `<b>No single variable reproduces the Final Four in more than ${most === 0 ? 'zero seasons' : 'one season'}.</b>` : `The most any single variable reproduces the Final Four is <b>${most}</b> seasons.`}
+        Click one to see the bracket it gives.</p>
+      <table class="one-tbl"><thead>${head}</thead><tbody>${t.rows.slice(0, RULE_ONE_SHOWN).map(row).join('')}</tbody></table>
+      ${t.rows.length > RULE_ONE_SHOWN ? `<details class="rule-more one-more"><summary>All ${t.rows.length} variables</summary>
+        <table class="one-tbl"><tbody>${t.rows.slice(RULE_ONE_SHOWN).map(row).join('')}</tbody></table></details>` : ''}
+    </div>
+    <p class="rule-sect">Combine variables across rounds</p>`;
+  }
   // Three one-line controls: which rounds a rule must get right, which
   // played seasons it must get them right in, and which criteria it may
   // use. Everything else (composing by hand, how many brackets to offer,
@@ -2018,7 +2080,7 @@ function renderRulePanel() {
       </button>`).join('');
     results = head + list;
   }
-  body.innerHTML = `<div class="rule-controls">${rounds}${seasons}${criteria}${handRows}${more}</div>` + results + `
+  body.innerHTML = one + `<div class="rule-controls">${rounds}${seasons}${criteria}${handRows}${more}</div>` + results + `
     <p class="ex-foot">Experimental. Searched rules were found by looking for what reproduces past results, which is why they reproduce them; the seasons outside the range each rule also reproduces is the only number here it was not chosen on. Nothing on this panel is scored against the pool or used by any other part of the page.</p>`;
 }
 /* RULE-COPY-END */
