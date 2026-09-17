@@ -81,6 +81,18 @@ comparator on all 2,064,027 rules). Controls fire the search without
 awaiting; a request token makes an overlapping earlier call abandon so the
 result on screen always matches the controls.
 
+**Off the main thread (2026-09-17, review item 10).** The whole search-mode
+job is one pure function, `ruleSearchJob()` in fit.js (ruleSearch, the
+offered entries, the generalisation of every survivor, the ranking, the
+resolution of the rule a link names). The page runs it in a Web Worker
+built from a blob that imports fit.js by the page's own stamped URL
+(`runRuleSearchJob()` in app.js), so the tab keeps painting and scrolling
+and "Searching…" is actually seen; a new request terminates the worker in
+flight; where there is no `Worker` (the node harness, a browser without
+workers) the same function runs inline. A search that fails is said on the
+panel and rethrown, never shown as "nothing found". Hand mode and the
+one-variable table stay on the main thread (milliseconds).
+
 ## What it is not
 Not validated, not a model, never scored: no P(1st), no EV, no track record.
 The page labels it experimental at every surface (table row, headline tag,
