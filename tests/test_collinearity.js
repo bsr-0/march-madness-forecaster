@@ -367,9 +367,14 @@ check('the rule a link names: by sequence; by picks, becoming the entry; as one 
   // Survived but not among the offered n: listed as one more.
   out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, n: 1, want: ['c', 'c', 'a'] });
   assert.deepStrictEqual(seqs(out), ['aaa', 'cca']); assert.strictEqual(out.chosen, 1);
-  // Did not survive: the first entry.
+  // Did not survive: the first entry, and said so.
   out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, want: ['c', 'c', 'c'] });
   assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca', 'aca']); assert.strictEqual(out.chosen, 0);
+  assert.strictEqual(out.wantMissed, true);
+  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, want: ['c', 'a', 'a'] });
+  assert.strictEqual(out.wantMissed, false);
+  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null });
+  assert.strictEqual(out.wantMissed, false, 'nothing named, nothing missed');
 });
 
 check('no fit seasons is a finding, not a crash', () => {

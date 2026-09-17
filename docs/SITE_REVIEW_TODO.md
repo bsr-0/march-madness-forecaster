@@ -126,7 +126,10 @@ on the shipped data and the live site.
    labels rounds with a different variable than the URL names. — **Fixed:**
    a match by picks makes the entry the named rule (its sequence, complexity
    and outside hits); `ruleKey()` also carries the season's status so a
-   field-less result is not taken as current once the field exists.
+   field-less result is not taken as current once the field exists. A named
+   rule that does not survive the displayed season's fit is no longer
+   quietly replaced by the first entry: the panel says which rule the link
+   names and that it is not among the survivors here, and the link keeps it.
 10. **Landing cost.** Live: 0.8 s to first paint, 2.4 s to rules, 15 fetches
     / 643 KB on desktop; the search is synchronous and freezes the tab for
     its duration, unmeasured on phones. Web Worker. — **Fixed:** the whole
