@@ -38,7 +38,7 @@ function check(name, fn) {
 
 const ctxHash = { value: '' };
 
-function loadApp(hash) {
+function loadApp(hash, opts = {}) {
   // fit.js first: app.js calls fitLinear/winProb/bracketAdvancementProbs etc.
   // as bare globals, exactly as the real page loads it via a preceding
   // <script> tag (see index.html) rather than a module import.
@@ -49,8 +49,9 @@ function loadApp(hash) {
     console,
     setTimeout,
     clearTimeout,
-    // init() awaits this forever, so it never reaches the DOM.
-    fetch: () => new Promise(() => {}),
+    // init() awaits this forever, so it never reaches the DOM. Tests that
+    // drive the rule search pass a fetch that serves season payloads instead.
+    fetch: opts.fetch || (() => new Promise(() => {})),
     document: {
       getElementById: () => null,
       querySelector: () => null,
@@ -68,11 +69,17 @@ function loadApp(hash) {
   vm.createContext(ctx);
   vm.runInContext(fitSrc, ctx);
   vm.runInContext(src, ctx);
+  // The rule-search setters end by redrawing the strategy cards and the
+  // board, which need a DOM; tests of the search state replace those two
+  // renderers (function declarations, so reassignable in the script scope)
+  // and check state.rule directly.
+  if (opts.noRender) vm.runInContext('render = () => {}; renderStrategies = () => {};', ctx);
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
-    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy };', ctx);
+    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleKey, setRuleKeysAll };', ctx);
   return ctx.__api;
 }
 
@@ -660,8 +667,8 @@ check('the rule strategy carries no p1, no ev, and no record', () => {
   fitted64(app);                                   // a season with 64 teams and a fit
   app.state.strategy = app.RULE;
   app.state.rule.result = {
-    key: 'k', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3,
-    brackets: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], prior: { k: 0, m: 4, years: [] } }],
+    key: 'k', mode: 'search', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3, scored: 1, nOutside: 4,
+    brackets: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], outside: { k: 0, m: 4, years: [] } }],
   };
   const st = app.currentStrategy();
   assert.strictEqual(st.id, app.RULE);
@@ -685,4 +692,163 @@ check('with no result yet, the rule strategy resolves to nothing rather than to 
   assert.strictEqual(app.currentStrategy(), null);
 });
 
-console.log(`\n${passed} checks passed`);
+/* ---------- rule search: the panel's controls, driven end to end ---------- */
+console.log('\nrule search controls');
+
+/* Synthetic seasons for the search: 64 teams, two criteria. `a` falls with
+ * team index, so under it the lower index wins every game (champion 0);
+ * `b` is its mirror (champion 63). A season's `actual` is one of those two
+ * brackets, so the only rule that reproduces the Final Four onward is the
+ * matching criterion in every constrained round. */
+function ruleSeasonPayload(champCrit) {
+  const teams = [];
+  for (let i = 0; i < 64; i++) teams.push({ id: 't' + i, name: 'T' + i, seed: (i % 16) + 1, region: 'R' + (i >> 4) });
+  const a = teams.map((_, i) => (32 - i) / 16), b = a.slice().reverse();
+  const actual = [];
+  let cur = teams.map((_, i) => i);
+  for (let r = 0; r < 6; r++) { const n = []; for (let g = 0; g < cur.length; g += 2) n.push(champCrit === 'a' ? cur[g] : cur[g + 1]); actual.push(n); cur = n; }
+  return { status: 'ready', teams, first_round: teams.map((_, i) => i), z: { a, b }, raw: {}, actual,
+           variables: [{ key: 'a', label: 'A', group: 'G' }, { key: 'b', label: 'B', group: 'G' }], strategies: [] };
+}
+const RULE_SEASONS = { 2023: 'b', 2024: 'a', 2025: 'a', 2026: 'a' };
+
+/* A fetch serving those payloads; `delayFor(callNo)` lets a test make the
+ * first request the slowest. */
+function ruleFetch(delayFor = () => 0) {
+  let n = 0;
+  return url => new Promise(resolve => {
+    const y = Number((url.match(/season_(\d+)\.json/) || [])[1]);
+    if (!y) return;                                    // init()'s seasons.json: keep it pending, as loadApp does
+    const d = delayFor(n++);
+    setTimeout(() => resolve({ ok: true, json: async () => ruleSeasonPayload(RULE_SEASONS[y]) }), d);
+  });
+}
+
+function ruleApp(delayFor) {
+  const app = loadApp('', { fetch: ruleFetch(delayFor), noRender: true });
+  app.state.seasonsIndex = [2022, 2023, 2024, 2025, 2026, 2027].map(y => ({ year: y, status: y === 2022 ? 'unavailable' : y === 2027 ? 'not_started' : 'ready' }));
+  app.state.year = 2026;
+  app.state.season = ruleSeasonPayload('a');
+  app.state.strategy = app.RULE;
+  return app;
+}
+
+check('the fit range is clamped to played seasons before the displayed one and defaults to the last three', () => {
+  const app = ruleApp();
+  let r = app.ruleRange();
+  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2023, 2025, [2023, 2024, 2025]]);
+  app.state.rule.from = 2024; app.state.rule.to = 2026;              // 2026 is the displayed season: not selectable
+  r = app.ruleRange();
+  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2024, 2025, [2024, 2025]]);
+  app.state.rule.from = 2025; app.state.rule.to = 2023;              // reversed pickers still make a range
+  r = app.ruleRange();
+  assert.deepStrictEqual([r.from, r.to], [2023, 2025]);
+  app.state.year = 2023;                                             // nothing played before it
+  r = app.ruleRange();
+  assert.deepStrictEqual([r.from, r.to, [...r.fit], [...r.played]], [null, null, [], []]);
+});
+
+check('at least one of Elite Eight / Final Four stays a checkpoint', () => {
+  const app = ruleApp();
+  app.state.rule.checkpoints = [3, 4, 5];
+  app.setRuleCheckpoint(3, false);                                   // would leave finalists + champion only
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 4, 5]);
+  app.setRuleCheckpoint(2, true); app.setRuleCheckpoint(3, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4, 5]);
+  app.setRuleCheckpoint(5, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4]);
+});
+
+check('eligible criteria: a set never empties, "all" clears the restriction', () => {
+  const app = ruleApp();
+  assert.deepStrictEqual([...app.ruleKeys()], ['a', 'b', 'seed']);
+  app.setRuleKey('a', false);
+  assert.deepStrictEqual([...app.ruleKeys()], ['b', 'seed']);
+  app.setRuleKeysAll(false);
+  assert.deepStrictEqual([...app.ruleKeys()], ['seed']);
+  app.setRuleKey('seed', false);                                     // refused: nothing left to search over
+  assert.deepStrictEqual([...app.ruleKeys()], ['seed']);
+  app.setRuleKeysAll(true);
+  assert.strictEqual(app.state.rule.keys, null);
+});
+
+const asyncChecks = [];
+function checkAsync(name, fn) { asyncChecks.push([name, fn]); }
+
+checkAsync('the search fits the chosen range, backs off, and counts seasons outside it', async () => {
+  const app = ruleApp();
+  await app.ensureRuleSearch();
+  let r = app.state.rule.result;
+  assert.strictEqual(r.mode, 'search');
+  assert.deepStrictEqual([...r.requested], [2023, 2024, 2025]);
+  assert.deepStrictEqual([...r.usedSeasons], [2024, 2025], '2023 is the mirror: dropped by the back-off');
+  assert.strictEqual(r.backedOff, true);
+  // Seeds in the fixture pick the lower index too, so `a` and `seed` are
+  // interchangeable: 2^6 rules, all giving the one bracket, of which the
+  // all-`a` one sorts first.
+  assert.strictEqual(r.nRules, 64);
+  assert.strictEqual(r.scored, 1); assert.strictEqual(r.brackets.length, 1);
+  assert.deepStrictEqual([...r.brackets[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
+  assert.strictEqual(JSON.stringify(r.brackets[0].outside), JSON.stringify({ k: 0, m: 1, years: [] }), 'only 2023 lies outside, and it does not fit');
+  assert.strictEqual(r.brackets[0].picks[5][0], 0);
+  const st = app.ruleStrategy();
+  assert.strictEqual(JSON.stringify(st.prior), JSON.stringify({ k: 0, m: 1 }));
+  assert.ok(/2024–2025/.test(st.note) && /2023–2025 has none/.test(st.note), st.note);
+  assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · A');
+  // A range with the mirror season alone: the rule is `b`, and both other seasons lie outside it.
+  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  r = app.state.rule.result;
+  assert.strictEqual(r.backedOff, false);
+  assert.strictEqual(r.nRules, 1);
+  assert.deepStrictEqual([...r.brackets[0].seq], ['b', 'b', 'b', 'b', 'b', 'b']);
+  assert.strictEqual(JSON.stringify(r.brackets[0].outside), JSON.stringify({ k: 0, m: 2, years: [] }));
+  assert.strictEqual(r.brackets[0].picks[5][0], 63);
+  // Restricting the criteria to one that fits no season ending the range leaves no bracket, and the strategy resolves to nothing.
+  app.setRuleLast(3); app.setRuleKeysAll(false); app.setRuleKey('b', true); app.setRuleKey('seed', false);
+  assert.deepStrictEqual([...app.ruleKeys()], ['b']);
+  await app.ensureRuleSearch();
+  r = app.state.rule.result;
+  assert.strictEqual(r.brackets.length, 0);
+  assert.strictEqual(r.nRules, 0);
+  assert.strictEqual(app.ruleStrategy(), null);
+});
+
+checkAsync('composing by hand applies the rule and reports every played season it reproduces', async () => {
+  const app = ruleApp();
+  app.setRuleMode('hand');
+  assert.deepStrictEqual([...app.state.rule.hand], ['a', 'a', 'a', 'a', 'a', 'a'], 'starts from the season\'s first listed variable, not a hardcoded key');
+  for (let i = 0; i < 6; i++) app.setRuleHand(i, 'a');
+  await app.ensureRuleSearch();
+  const r = app.state.rule.result;
+  assert.strictEqual(r.mode, 'hand');
+  assert.strictEqual(r.brackets.length, 1);
+  assert.strictEqual(JSON.stringify(r.brackets[0].per.map(x => [x.year, x.ok])), JSON.stringify([[2023, false], [2024, true], [2025, true]]));
+  const st = app.ruleStrategy();
+  assert.strictEqual(JSON.stringify(st.prior), JSON.stringify({ k: 2, m: 3 }));
+  assert.ok(/composed by hand/.test(st.note) && /2 of 3 played seasons before 2026 \(2024, 2025\)/.test(st.note), st.note);
+  assert.strictEqual(st.p1, undefined); assert.strictEqual(st.ev, undefined);
+  app.setRuleHand(5, 'b'); await app.ensureRuleSearch();
+  assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, false, false], 'a b final flips the champion everywhere');
+  assert.strictEqual(app.ruleRoundLabel(5, ' · '), ' · B');
+});
+
+checkAsync('an overlapping earlier call abandons; the result matches the latest controls', async () => {
+  // The first fetch is the slowest, so the first ensureRuleSearch() resumes
+  // after the second has finished. Without the token it would then run the
+  // search and overwrite the by-hand result with one for stale inputs.
+  const app = ruleApp(n => (n === 0 ? 30 : 0));
+  const first = app.ensureRuleSearch();
+  app.setRuleMode('hand');
+  const second = app.ensureRuleSearch();
+  await Promise.all([first, second]);
+  assert.strictEqual(app.state.rule.result.mode, 'hand');
+  assert.strictEqual(app.state.rule.busy, false);
+});
+
+(async () => {
+  for (const [name, fn] of asyncChecks) {
+    try { await fn(); passed++; console.log('  ok   ' + name); }
+    catch (e) { console.error('  FAIL ' + name + '\n       ' + e.message); process.exitCode = 1; }
+  }
+  console.log(`\n${passed} checks passed`);
+})();

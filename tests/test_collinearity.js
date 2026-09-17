@@ -250,10 +250,43 @@ check('ruleSearch intersects seasons and backs off to the longest surviving rang
   assert.deepStrictEqual(same.rules.map(r => r.join('')), ['aa']);
 });
 
-check('rules are ranked simplest first: distinct criteria, then switches', () => {
-  const seqs = [['a', 'b', 'a'], ['a', 'a', 'a'], ['a', 'a', 'b'], ['b', 'b', 'b']];
-  seqs.sort((x, y) => { const cx = F.ruleComplexity(x), cy = F.ruleComplexity(y); return cx[0] - cy[0] || cx[1] - cy[1] || x.join().localeCompare(y.join()); });
-  assert.deepStrictEqual(seqs.map(q => q.join('')), ['aaa', 'bbb', 'aab', 'aba']);
+check('rules are ranked simplest first: distinct criteria, then switches, then round-by-round order', () => {
+  // A season whose checkpoint every sequence reproduces, so the ranking is
+  // the only thing ruleSearch() decides. Three keys, three rounds (8 teams);
+  // `c` is a copy of `a`. Checkpoint 0 = the round-of-8 winners, reproduced
+  // by a, b and c alike here because every criterion picks the same winners.
+  const s = { year: 2001, first_round: [0, 1, 2, 3, 4, 5, 6, 7], seed: [1, 2, 1, 2, 1, 2, 1, 2],
+              crit: { a: [8, 7, 6, 5, 4, 3, 2, 1], b: [8, 7, 6, 5, 4, 3, 2, 1], c: [8, 7, 6, 5, 4, 3, 2, 1] },
+              actual: [[0, 2, 4, 6], [0, 4], [0]] };
+  const res = F.ruleSearch([s], ['a', 'b', 'c'], new Set([0, 2]));
+  const got = res.rules.map(r => r.join(''));
+  assert.strictEqual(got.length, 27);
+  assert.deepStrictEqual(got.slice(0, 3), ['aaa', 'bbb', 'ccc'], '1 criterion first');
+  assert.deepStrictEqual(got.slice(3, 9), ['aab', 'aac', 'abb', 'acc', 'baa', 'bba'], '2 criteria, 1 switch, alphabetical per round');
+  assert.deepStrictEqual(got.slice(-6), ['acb', 'bac', 'bca', 'cab', 'cba', 'abc'].sort((x, y) => x.localeCompare(y)), '3 criteria, 2 switches last');
+  // The whole order agrees with the comparator it replaced.
+  const ref = got.slice().sort((x, y) => { const cx = F.ruleComplexity(x.split('')), cy = F.ruleComplexity(y.split('')); return cx[0] - cy[0] || cx[1] - cy[1] || x.localeCompare(y); });
+  assert.deepStrictEqual(got, ref);
+});
+
+check('ruleComplexityOfCode agrees with ruleComplexity on every 3-key, 4-round sequence', () => {
+  const keys = ['a', 'b', 'c'];
+  for (let code = 0; code < 81; code++) {
+    const seq = F.decodeRule(code, keys, 4);
+    assert.deepStrictEqual(F.ruleComplexityOfCode(code, 3, 4), F.ruleComplexity(seq), seq.join(''));
+  }
+});
+
+check('ruleComplexityOfCode is right at the 32-key edge, where the mask bit for index 31 is the sign bit', () => {
+  const B = 32, keys = Array.from({ length: B }, (_, i) => 'k' + i);
+  const enc = seq => seq.reduce((c, k) => c * B + keys.indexOf(k), 0);
+  for (const seq of [
+    ['k31', 'k31', 'k31', 'k31', 'k31', 'k31'],
+    ['k0', 'k31', 'k0', 'k31', 'k0', 'k31'],
+    ['k31', 'k30', 'k29', 'k28', 'k27', 'k26'],
+    ['k5', 'k5', 'k31', 'k31', 'k5', 'k5'],
+  ]) assert.deepStrictEqual(F.ruleComplexityOfCode(enc(seq), B, 6), F.ruleComplexity(seq), seq.join(','));
+  assert.throws(() => F.ruleSearch([], Array(33).fill('x'), new Set([2])), /33 criteria/);
 });
 
 check('ruleBracket reuses the last criterion for rounds past the rule, and ruleReproduces checks checkpoints', () => {
