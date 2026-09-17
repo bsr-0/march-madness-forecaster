@@ -8,9 +8,15 @@ evaluation or the track record reads it.
 For the displayed season Y, the user chooses checkpoints (any of Round of
 32, Sweet 16, Elite Eight, Final Four, finalists, champion — at least one of
 the first four, see below) and a fit range: any `from`–`to` span of played seasons strictly
-before Y, with "last 3" / "last 4" shortcuts (default: last 3). The
-eligible criteria default to every variable plus seed and can be narrowed
-by checkbox. `docs/fit.js ruleSearch()` enumerates every
+before Y, with "last 2" / "last 3" shortcuts (default: last 2 — 2024–2025
+while 2026 is displayed, 2025–2026 once a 2027 bracket exists; never the
+displayed season). Default checkpoints: Final Four, finalists, champion.
+The eligible criteria default to every variable plus seed and can be
+narrowed by checkbox.
+
+**Panel (2026-09-17).** Three one-line controls — Rounds (chips), Seasons
+(from–to), Criteria (count, opens the checklist) — with mode, how many to
+offer, ranking and the criteria cap under a collapsed "More". `docs/fit.js ruleSearch()` enumerates every
 one-criterion-per-round rule — in each round every game goes to the team
 better on one variable (direction-corrected z; ties to the better seed, then
 lower index, the board's own rule) — and keeps those reproducing the

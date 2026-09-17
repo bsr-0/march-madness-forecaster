@@ -82,8 +82,8 @@ const MODEL = 'model';
  * the RULE SEARCH section below. */
 const RULE = 'rule';
 const RULE_CHECKPOINTS = [
-  { r: 0, label: 'Round of 32' }, { r: 1, label: 'Sweet 16' }, { r: 2, label: 'Elite Eight' },
-  { r: 3, label: 'Final Four' }, { r: 4, label: 'Finalists' }, { r: 5, label: 'Champion' },
+  { r: 0, label: 'Round of 32', short: 'R32' }, { r: 1, label: 'Sweet 16', short: 'S16' }, { r: 2, label: 'Elite Eight', short: 'E8' },
+  { r: 3, label: 'Final Four', short: 'F4' }, { r: 4, label: 'Finalists', short: 'Finalists' }, { r: 5, label: 'Champion', short: 'Champion' },
 ];
 /* Rounds that count as an early checkpoint: at least one must stay checked
  * (see setRuleCheckpoint). Finalists and champion alone leave rounds 0-3
@@ -148,8 +148,8 @@ const state = {
   // reproduce, over how many prior played seasons, and the last result.
   rule: {
     mode: 'search',                // 'search' | 'hand'
-    checkpoints: [3, 4, 5],        // rounds whose winners a rule must reproduce
-    from: null, to: null,          // fit range (played seasons strictly before the displayed one); null = last 3
+    checkpoints: [3, 4, 5],        // rounds whose winners a rule must reproduce (Final Four, finalists, champion)
+    from: null, to: null,          // fit range (played seasons strictly before the displayed one); null = last 2
     n: 5,                          // brackets to offer
     keys: null,                    // eligible criteria; null = every variable + seed
     rank: 'simple',                // 'simple' | 'outside' (most seasons outside the range reproduced)
@@ -1630,14 +1630,15 @@ function ruleKey() {
 }
 
 /* The fit range: [from, to] over played seasons strictly before the
- * displayed one. Defaults to the last three. Clamped so it can never include
+ * displayed one. Defaults to the last two. Clamped so it can never include
  * the displayed season -- a bracket from a rule fit on its own result is not
- * something this page will build. */
+ * something this page will build: with 2026 on screen the default is
+ * 2024-2025, and it becomes 2025-2026 once a 2027 bracket exists. */
 function ruleRange() {
   const played = playedSeasonsBefore(state.year);
   if (!played.length) return { played, fit: [], from: null, to: null };
   let to = state.rule.to !== null && played.includes(state.rule.to) ? state.rule.to : played[played.length - 1];
-  let from = state.rule.from !== null && played.includes(state.rule.from) ? state.rule.from : played[Math.max(0, played.indexOf(to) - 2)];
+  let from = state.rule.from !== null && played.includes(state.rule.from) ? state.rule.from : played[Math.max(0, played.indexOf(to) - 1)];
   if (from > to) [from, to] = [to, from];
   return { played, fit: played.filter(y => y >= from && y <= to), from, to };
 }
@@ -1808,40 +1809,26 @@ function renderRulePanel() {
   for (const v of state.season.variables) (groups[v.group] ||= []).push(v.key);
   groups['Seed'] = ['seed'];
 
-  const modes = `
-    <div class="rule-group"><span class="ex-gname">Mode</span>
-      <button class="chip${state.rule.mode === 'search' ? ' on' : ''}" onclick="setRuleMode('search')"><span class="chip-name">Search past seasons</span></button>
-      <button class="chip${state.rule.mode === 'hand' ? ' on' : ''}" onclick="setRuleMode('hand')"><span class="chip-name">Compose by hand</span></button>
-    </div>`;
-  const checkpoints = `
-    <div class="rule-group"><span class="ex-gname">Must reproduce</span>
-      ${RULE_CHECKPOINTS.map(c => `<label class="rule-check"><input type="checkbox" ${cps.has(c.r) ? 'checked' : ''} onchange="setRuleCheckpoint(${c.r}, this.checked)"> ${c.label}</label>`).join('')}
-      <span class="ex-sub">at least one of Round of 32 through Final Four</span>
+  // Three one-line controls: which rounds a rule must get right, which
+  // played seasons it must get them right in, and which criteria it may
+  // use. Everything else (composing by hand, how many brackets to offer,
+  // their order, the criteria cap) sits under "More", collapsed.
+  const hand = state.rule.mode === 'hand';
+  const rounds = `
+    <div class="rule-line"><span class="ex-gname">Rounds</span>
+      ${RULE_CHECKPOINTS.map(c => `<button class="chip${cps.has(c.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${c.r}, ${!cps.has(c.r)})" title="${c.label}"><span class="chip-name">${c.short}</span></button>`).join('')}
     </div>`;
   const yearOpts = sel => played.map(y => `<option value="${y}"${y === sel ? ' selected' : ''}>${y}</option>`).join('');
-  const range = `
-    <div class="rule-group"><span class="ex-gname">Fit seasons</span>
-      <select class="rule-select" onchange="setRuleRange(Number(this.value), ${to})">${yearOpts(from)}</select>
-      <span class="ex-sub">to</span>
+  const seasons = hand ? '' : `
+    <div class="rule-line"><span class="ex-gname">Seasons</span>
+      <select class="rule-select" onchange="setRuleRange(Number(this.value), ${to})">${yearOpts(from)}</select><span class="rule-dash">–</span>
       <select class="rule-select" onchange="setRuleRange(${from}, Number(this.value))">${yearOpts(to)}</select>
+      <button class="chip" onclick="setRuleLast(2)"><span class="chip-name">last 2</span></button>
       <button class="chip" onclick="setRuleLast(3)"><span class="chip-name">last 3</span></button>
-      <button class="chip" onclick="setRuleLast(4)"><span class="chip-name">last 4</span></button>
-      <span class="ex-sub">played seasons before ${state.year} only; ${fit.length} in range, ${played.length - fit.length} outside it</span>
+      <span class="rule-hint">before ${state.year}; the other ${played.length - fit.length} played seasons are the check</span>
     </div>`;
-  const nAndRank = `
-    <div class="rule-group"><span class="ex-gname">Offer</span>
-      <input class="rule-num" type="number" min="1" max="${RULE_N_MAX}" value="${state.rule.n}" onchange="setRuleN(this.value)"> brackets,
-      <button class="chip${state.rule.rank === 'simple' ? ' on' : ''}" onclick="setRuleRank('simple')"><span class="chip-name">simplest first</span></button>
-      <button class="chip${state.rule.rank === 'outside' ? ' on' : ''}" onclick="setRuleRank('outside')"><span class="chip-name">most seasons outside the range first</span></button>
-      ${state.rule.rank === 'outside' ? `<span class="ex-sub">ranked among the ${RULE_RANK_POOL} simplest distinct brackets</span>` : ''}
-    </div>
-    <div class="rule-group"><span class="ex-gname">Criteria per rule</span>
-      <button class="chip${state.rule.maxCriteria === null ? ' on' : ''}" onclick="setRuleMax(null)"><span class="chip-name">any</span></button>
-      ${[1, 2, 3].map(m => `<button class="chip${state.rule.maxCriteria === m ? ' on' : ''}" onclick="setRuleMax(${m})"><span class="chip-name">at most ${m}</span></button>`).join('')}
-      <span class="ex-sub">distinct variables a rule may switch between across the rounds</span>
-    </div>`;
-  const vars = `
-    <details class="rule-vars"><summary>Eligible criteria: ${keysOn.size} of ${all.length}
+  const criteria = hand ? '' : `
+    <details class="rule-line rule-vars"><summary><span class="ex-gname">Criteria</span><span class="rule-vars-n">${keysOn.size} of ${all.length}</span>
       <button class="chip" onclick="event.preventDefault(); setRuleKeysAll(true)"><span class="chip-name">all</span></button>
       <button class="chip" onclick="event.preventDefault(); setRuleKeysAll(false)"><span class="chip-name">seed only</span></button></summary>
       ${Object.entries(groups).map(([g, ks]) => `<div class="rule-group"><span class="ex-gname">${g}</span>
@@ -1849,10 +1836,27 @@ function renderRulePanel() {
     </details>`;
   const handOpts = i => Object.entries(groups).map(([g, ks]) => `<optgroup label="${g}">${ks.map(k =>
     `<option value="${k}"${ruleHand()[i] === k ? ' selected' : ''}>${ruleLabel(k)}</option>`).join('')}</optgroup>`).join('');
-  const hand = `
+  const handRows = !hand ? '' : `
     <div class="rule-hand">${ROUNDS.map((rn, i) => `<label class="rule-handrow"><span class="ex-round">${rn}</span>
       <select class="rule-select" onchange="setRuleHand(${i}, this.value)">${handOpts(i)}</select></label>`).join('')}
     </div>`;
+  const more = `
+    <details class="rule-more"><summary>More</summary>
+      <div class="rule-line"><span class="ex-gname">Mode</span>
+        <button class="chip${!hand ? ' on' : ''}" onclick="setRuleMode('search')"><span class="chip-name">search past seasons</span></button>
+        <button class="chip${hand ? ' on' : ''}" onclick="setRuleMode('hand')"><span class="chip-name">compose by hand</span></button>
+      </div>
+      ${hand ? '' : `
+      <div class="rule-line"><span class="ex-gname">Offer</span>
+        <input class="rule-num" type="number" min="1" max="${RULE_N_MAX}" value="${state.rule.n}" onchange="setRuleN(this.value)">
+        <button class="chip${state.rule.rank === 'simple' ? ' on' : ''}" onclick="setRuleRank('simple')"><span class="chip-name">simplest first</span></button>
+        <button class="chip${state.rule.rank === 'outside' ? ' on' : ''}" onclick="setRuleRank('outside')" title="Ranked among the ${RULE_RANK_POOL} simplest distinct brackets"><span class="chip-name">most other seasons first</span></button>
+      </div>
+      <div class="rule-line"><span class="ex-gname">Criteria per rule</span>
+        <button class="chip${state.rule.maxCriteria === null ? ' on' : ''}" onclick="setRuleMax(null)"><span class="chip-name">any</span></button>
+        ${[1, 2, 3].map(m => `<button class="chip${state.rule.maxCriteria === m ? ' on' : ''}" onclick="setRuleMax(${m})"><span class="chip-name">≤ ${m}</span></button>`).join('')}
+      </div>`}
+    </details>`;
 
   let results = '';
   if (state.rule.busy) results = `<p class="ex-line">Searching…</p>`;
@@ -1882,7 +1886,7 @@ function renderRulePanel() {
       </button>`).join('');
     results = head + list;
   }
-  body.innerHTML = `<div class="rule-controls">${modes}${checkpoints}${state.rule.mode === 'hand' ? hand : range + nAndRank + vars}</div>` + results + `
+  body.innerHTML = `<div class="rule-controls">${rounds}${seasons}${criteria}${handRows}${more}</div>` + results + `
     <p class="ex-foot">Experimental. Searched rules were found by looking for what reproduces past results, which is why they reproduce them; the seasons outside the range each rule also reproduces is the only number here it was not chosen on. Nothing on this panel is scored against the pool or used by any other part of the page.</p>`;
 }
 /* RULE-COPY-END */

@@ -797,10 +797,11 @@ function ruleApp(delayFor) {
   return app;
 }
 
-check('the fit range is clamped to played seasons before the displayed one and defaults to the last three', () => {
+check('the fit range is clamped to played seasons before the displayed one and defaults to the last two', () => {
   const app = ruleApp();
   let r = app.ruleRange();
-  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2023, 2025, [2023, 2024, 2025]]);
+  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2024, 2025, [2024, 2025]], 'never the displayed season: 2024-2025 under 2026');
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 4, 5], 'Final Four, finalists and champion by default');
   app.state.rule.from = 2024; app.state.rule.to = 2026;              // 2026 is the displayed season: not selectable
   r = app.ruleRange();
   assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2024, 2025, [2024, 2025]]);
@@ -847,6 +848,7 @@ function checkAsync(name, fn) { asyncChecks.push([name, fn]); }
 
 checkAsync('the search fits the chosen range, backs off, and counts seasons outside it', async () => {
   const app = ruleApp();
+  app.setRuleLast(3);                                                // the default is the last two; back-off needs the mirror season in range
   await app.ensureRuleSearch();
   let r = app.state.rule.result;
   assert.strictEqual(r.mode, 'search');
