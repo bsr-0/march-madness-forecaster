@@ -157,6 +157,7 @@ const state = {
     hand: null,                    // by-hand rule: one criterion per round, 6 entries
     want: null,                    // the chosen rule as a criterion sequence, so the choice survives a new field (see rq in the URL)
     table: null,                   // one variable in every round, scored on the played seasons before the displayed one (oneVariableTable)
+    refused: false,                // the last checkpoint click was refused (no early checkpoint left); shown once, cleared by any change
     ref: null,                     // under a pending field: the latest played season's payload, for variable keys and labels
     chosen: 0, result: null, busy: false,
     token: 0,                      // the latest ensureRuleSearch() call; earlier ones abandon when superseded
@@ -1823,6 +1824,9 @@ async function ensureRuleSearch() {
         if (brackets.length >= cap) break;
       }
       const scored = brackets.length;
+      // Every survivor against every season outside the range: the one
+      // statement here the inputs cannot tune (see ruleGeneralisation).
+      const gen = ruleGeneralisation(res.rules, outside, cps);
       if (state.rule.rank === 'outside') brackets.sort((a, b) => b.outside.k - a.outside.k || a.complexity[0] - b.complexity[0] || a.complexity[1] - b.complexity[1]);
       const offered = brackets.slice(0, state.rule.n);
       // The rule a link names (or the one chosen before the season changed):
@@ -1841,7 +1845,7 @@ async function ensureRuleSearch() {
         }
         chosen = Math.max(0, i);
       }
-      state.rule.result = { key, settings, mode: 'search', brackets: offered, scored, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap };
+      state.rule.result = { key, settings, mode: 'search', brackets: offered, scored, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen };
       state.rule.chosen = chosen;
     }
   } finally {
@@ -1915,7 +1919,7 @@ const RULE_ONE_SHOWN = 6;   // rows of the one-variable table shown before "all"
 /* Every control ends here: the inputs go into the URL (they are part of the
  * selection a link carries, see writeRuleHash) and the search runs if they
  * changed. */
-function ruleChanged() { writeHash(); ensureRuleSearch(); }
+function ruleChanged() { state.rule.refused = false; writeHash(); ensureRuleSearch(); }
 function setRuleMode(m) { state.rule.mode = m; if (m === 'hand') state.rule.hand = ruleHand(); ruleChanged(); }
 function setRuleCheckpoint(r, on) {
   const cps = new Set(state.rule.checkpoints);
@@ -1923,7 +1927,7 @@ function setRuleCheckpoint(r, on) {
   // At least one early checkpoint (Round of 32 through Final Four): without
   // one the search cannot prune before the finalists and would enumerate
   // keys^4 sequences per season before its first constraint.
-  if (!RULE_EARLY_ROUNDS.some(x => cps.has(x))) { renderRulePanel(); return; }
+  if (!RULE_EARLY_ROUNDS.some(x => cps.has(x))) { state.rule.refused = true; renderRulePanel(); return; }
   state.rule.checkpoints = [...cps].sort((a, b) => a - b);
   ruleChanged();
 }
@@ -1975,6 +1979,9 @@ function renderRulePanel() {
     const hand = state.rule.mode === 'hand' ? ruleHand() : null;
     const onKey = hand && hand.every(k => k === hand[0]) ? hand[0] : null;
     const most = Math.max(...t.rows.map(x => x.exact.length));
+    // Chance: picks that ignore the teams reach each Final Four slot with
+    // probability 1/16 and the champion with 1/64.
+    const chance = `<tr class="one-chance"><td>Chance (picks that ignore the teams)</td><td class="num">${(t.n / 4).toFixed(1)}<span class="one-of"> / ${4 * t.n}</span></td><td class="num">≈ 0</td><td class="num">${(t.n / 64).toFixed(2)}<span class="one-of"> / ${t.n}</span></td></tr>`;
     const row = x => `
       <tr class="one-row${x.key === onKey ? ' on' : ''}" onclick="setRuleOne('${x.key}')" role="button" tabindex="0"
           onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setRuleOne('${x.key}'); }">
@@ -1983,13 +1990,14 @@ function renderRulePanel() {
         <td class="num">${x.exact.length}${x.exact.length ? `<span class="one-of"> (${x.exact.join(', ')})</span>` : ''}</td>
         <td class="num">${x.champ}<span class="one-of"> / ${x.m}</span></td>
       </tr>`;
-    const head = `<tr><th>One variable, every round</th><th class="num">Final Four teams right</th><th class="num">Final Four exact</th><th class="num">Champion right</th></tr>`;
+    const head = `<tr><th>One variable, every round</th><th class="num">Final Four teams right</th><th class="num">Final Four exact (all four)</th><th class="num">Champion right</th></tr>`;
     one = `
     <div class="rule-one">
       <p class="ex-line">Every game to the team ahead on one variable, in every round, across the <b>${t.n}</b> played seasons before ${state.year}.
         ${most <= 1 ? `<b>No single variable reproduces the Final Four in more than ${most === 0 ? 'zero seasons' : 'one season'}.</b>` : `The most any single variable reproduces the Final Four is <b>${most}</b> seasons.`}
+        The ratings at the top are several times chance, and gaps of a few teams between them are noise: a season's four Final Four slots rise and fall together, so this is ${t.n} seasons, not ${4 * t.n} independent picks.
         Click one to see the bracket it gives.</p>
-      <table class="one-tbl"><thead>${head}</thead><tbody>${t.rows.slice(0, RULE_ONE_SHOWN).map(row).join('')}</tbody></table>
+      <table class="one-tbl"><thead>${head}</thead><tbody>${t.rows.slice(0, RULE_ONE_SHOWN).map(row).join('')}${chance}</tbody></table>
       ${t.rows.length > RULE_ONE_SHOWN ? `<details class="rule-more one-more"><summary>All ${t.rows.length} variables</summary>
         <table class="one-tbl"><tbody>${t.rows.slice(RULE_ONE_SHOWN).map(row).join('')}</tbody></table></details>` : ''}
     </div>
@@ -2002,7 +2010,8 @@ function renderRulePanel() {
   const hand = state.rule.mode === 'hand';
   const rounds = `
     <div class="rule-line"><span class="ex-gname">Rounds</span>
-      ${RULE_CHECKPOINTS.map(c => `<button class="chip${cps.has(c.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${c.r}, ${!cps.has(c.r)})" title="${c.label}"><span class="chip-name">${c.short}</span></button>`).join('')}
+      ${RULE_CHECKPOINTS.map(c => `<button class="chip${cps.has(c.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${c.r}, ${!cps.has(c.r)})"><span class="chip-name">${c.label}</span></button>`).join('')}
+      ${state.rule.refused ? `<span class="rule-hint warn">Keep at least one of Round of 32 through Final Four: without an early round the search cannot prune and would not finish.</span>` : ''}
     </div>`;
   const yearOpts = sel => played.map(y => `<option value="${y}"${y === sel ? ' selected' : ''}>${y}</option>`).join('');
   const seasons = hand ? '' : `
@@ -2036,7 +2045,8 @@ function renderRulePanel() {
       <div class="rule-line"><span class="ex-gname">Offer</span>
         <input class="rule-num" type="number" min="1" max="${RULE_N_MAX}" value="${state.rule.n}" onchange="setRuleN(this.value)">
         <button class="chip${state.rule.rank === 'simple' ? ' on' : ''}" onclick="setRuleRank('simple')"><span class="chip-name">simplest first</span></button>
-        <button class="chip${state.rule.rank === 'outside' ? ' on' : ''}" onclick="setRuleRank('outside')" title="Ranked among the ${RULE_RANK_POOL} simplest distinct brackets"><span class="chip-name">most other seasons first</span></button>
+        <button class="chip${state.rule.rank === 'outside' ? ' on' : ''}" onclick="setRuleRank('outside')"><span class="chip-name">most other seasons first</span></button>
+        ${state.rule.rank === 'outside' ? `<span class="rule-hint">ranked among the ${RULE_RANK_POOL} simplest distinct brackets; that count is then selected on, not a check</span>` : ''}
       </div>
       <div class="rule-line"><span class="ex-gname">Criteria per rule</span>
         <button class="chip${state.rule.maxCriteria === null ? ' on' : ''}" onclick="setRuleMax(null)"><span class="chip-name">any</span></button>
@@ -2069,9 +2079,14 @@ function renderRulePanel() {
     const offer = pending
       ? `the ${r.brackets.length} ${state.rule.rank === 'outside' ? 'reproducing the most other seasons' : 'simplest'}${capText} are listed below — the ${state.year} field is not out yet, so they give no bracket until it is.`
       : `${r.brackets.length} of the ${r.scored} distinct brackets they${capText} give ${state.year} are offered below.`;
+    // Every survivor against the seasons outside the range -- the one
+    // statement here nothing on the panel can tune.
+    const g = r.gen;
+    const genText = !g || !r.nOutside ? ''
+      : ` <b>${g.checked < g.n ? `Of the ${g.checked.toLocaleString()} simplest, ` : 'Of those, '}${g.any === 0 ? 'none' : g.any.toLocaleString()} reproduce${g.any === 1 ? 's' : ''} ${ruleTargetText()} in any of the ${r.nOutside} other played seasons${g.best > 1 ? ` (at most ${g.best})` : ''}.</b>`;
     const head = r.backedOff
-      ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules; ${offer}</p>`
-      : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}; ${offer}</p>`;
+      ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules.${genText} ${offer[0].toUpperCase() + offer.slice(1)}</p>`
+      : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}.${genText} ${offer[0].toUpperCase() + offer.slice(1)}</p>`;
     const list = r.brackets.map((b, i) => `
       <button class="rule-row${i === Math.min(state.rule.chosen, r.brackets.length - 1) ? ' on' : ''}" onclick="setRuleChosen(${i})">
         <span class="rule-seq">${b.seq.map(ruleLabel).join(' → ')}</span>
@@ -2081,7 +2096,9 @@ function renderRulePanel() {
     results = head + list;
   }
   body.innerHTML = one + `<div class="rule-controls">${rounds}${seasons}${criteria}${handRows}${more}</div>` + results + `
-    <p class="ex-foot">Experimental. Searched rules were found by looking for what reproduces past results, which is why they reproduce them; the seasons outside the range each rule also reproduces is the only number here it was not chosen on. Nothing on this panel is scored against the pool or used by any other part of the page.</p>`;
+    <p class="ex-foot">Experimental. Searched rules were found by looking for what reproduces past results, which is why they reproduce them. ${state.rule.mode === 'search' && state.rule.rank === 'outside'
+      ? `The seasons outside the range each rule reproduces is, under this ranking, what the list was sorted by — the best of ${RULE_RANK_POOL} — so it is selected on too; only the count over every survivor above was not.`
+      : `The seasons outside the range each rule also reproduces, and the count over every survivor above, are the only numbers here nothing was chosen on.`} Nothing on this panel is scored against the pool or used by any other part of the page.</p>`;
 }
 /* RULE-COPY-END */
 

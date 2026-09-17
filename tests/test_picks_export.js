@@ -833,6 +833,9 @@ check('at least one early checkpoint (Round of 32 through Final Four) stays', ()
   assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4]);
   app.setRuleCheckpoint(0, false);
   assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4], 'refused: nothing before the finalists');
+  assert.strictEqual(app.state.rule.refused, true, 'the refusal is shown, not silent');
+  app.setRuleCheckpoint(3, true);
+  assert.strictEqual(app.state.rule.refused, false, 'and cleared by the next change');
 });
 
 check('eligible criteria: a set never empties, "all" clears the restriction', () => {
@@ -867,6 +870,7 @@ checkAsync('the search fits the chosen range, backs off, and counts seasons outs
   assert.strictEqual(r.scored, 1); assert.strictEqual(r.brackets.length, 1);
   assert.deepStrictEqual([...r.brackets[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
   assert.strictEqual(JSON.stringify(r.brackets[0].outside), JSON.stringify({ k: 0, m: 1, years: [] }), 'only 2023 lies outside, and it does not fit');
+  assert.strictEqual(JSON.stringify(r.gen), JSON.stringify({ n: 64, checked: 64, any: 0, best: 0 }), 'every survivor checked against the outside season');
   assert.strictEqual(r.brackets[0].picks[5][0], 0);
   const st = app.ruleStrategy();
   assert.strictEqual(JSON.stringify(st.prior), JSON.stringify({ k: 0, m: 1 }));
