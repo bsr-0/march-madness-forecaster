@@ -396,6 +396,24 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- small screens ---------- */
 
 @media (max-width: 720px) {
+  /* On a phone the collapsed panels (Explore, Adjust, Why) sit ABOVE the
+     bracket rather than after 32 games of it. Reordered here, not in the
+     DOM, so the desktop reading order (headline, table, bracket, then the
+     panels) is untouched. Every child of #main gets an explicit order so a
+     future section cannot land somewhere by default. */
+  #main { display: flex; flex-direction: column; }
+  #headline { order: 0; }
+  #compare { order: 1; }
+  #dropped-note { order: 2; }
+  #explore { order: 3; }
+  #tune { order: 4; }
+  #why { order: 5; }
+  #board-tools { order: 6; }
+  #board-nav { order: 7; }
+  #rnav-dots { order: 8; }
+  #board { order: 9; }
+  #empty { order: 10; }
+  #tune, #why, #explore { margin-bottom: 12px; }
   .bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
   .bar-l { justify-content: space-between; }
   .modes { justify-content: stretch; }
