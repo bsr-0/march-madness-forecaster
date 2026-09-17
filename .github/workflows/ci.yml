@@ -215,8 +215,39 @@ jobs:
   #                                 Checkpoint 3 is decided on this run, so during
   #                                 the live-forecast window a broken prospective
   #                                 pipeline must stop a merge.
+  # The rendered site in a browser: docs/ served as GitHub Pages serves it,
+  # the states a visitor reaches, no page error. What the node tests cannot
+  # see (they drive app.js through DOM stubs). Non-blocking until it has
+  # been green for a few consecutive runs; then promote to ::error:: below.
+  site-smoke:
+    name: "Site Smoke (Playwright)"
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: "1.58.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: "playwright==1.58.0 pytest-timeout"
+          skip-editable-install: "true"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Browser smoke over docs/
+        run: pytest tests/e2e -m e2e --timeout=600 --tb=short -q
+
   # Non-blocking: freeze-check and prospective-integration Apr 8 – Dec 31
-  #               (post-tournament edit window), full-tests, audit.
+  #               (post-tournament edit window), full-tests, audit, site-smoke.
   all-gates:
     name: "CI"
     if: always()
@@ -226,6 +257,7 @@ jobs:
       - prospective-integration
       - full-tests
       - audit
+      - site-smoke
     runs-on: ubuntu-latest
     env:
       # Freeze-check enforcement window: MM-DD strings inclusive.
@@ -258,5 +290,8 @@ jobs:
           fi
           if [[ "${{ needs.audit.result }}" == "failure" ]]; then
             echo "::warning::Dependency audit failed — check results"
+          fi
+          if [[ "${{ needs.site-smoke.result }}" == "failure" ]]; then
+            echo "::warning::Site smoke (Playwright) failed — check results; promote to ::error:: once this job has been green for a few runs"
           fi
           echo "Merge gate passed"
