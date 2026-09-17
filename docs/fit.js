@@ -908,6 +908,145 @@ function exclusionModels(rows, cols, years, asOf, minYear) {
   });
 }
 
+/* ---------------------------------------------------------------- rule search
+ *
+ * EXPERIMENTAL, FOUND AFTER THE FACT, NOT A MODEL. A "rule" is one criterion
+ * per round: in that round every game goes to the team with the better
+ * value of one variable (direction-corrected z, higher is better; ties to the
+ * better seed, then the lower index -- the board's own tie rule). The search
+ * enumerates every such sequence over the constrained rounds and keeps the
+ * ones that reproduce the chosen checkpoints (Elite Eight, Final Four,
+ * finalists, champion) in EVERY fit season. What survives is a description of
+ * those seasons, not evidence about the next one: measured on the shipped
+ * data, one season needs 2 criteria, two seasons need 3, and three seasons
+ * (2024-2026) have no survivor at all. The page says so beside every result.
+ *
+ * season: { first_round: number[64], crit: {key: number[64]}, seed: number[64],
+ *           actual: number[][] (winners per round, as team indices) }
+ * keys:   the criterion keys, in a fixed order shared by all seasons
+ * checkpoints: set of round indices whose WINNERS must match `actual`
+ *           (2 = Elite Eight teams, 3 = Final Four, 4 = finalists, 5 = champion)
+ *
+ * Sequences are encoded as integers base keys.length, most significant digit
+ * = round 0, so sets of them intersect cheaply across seasons.
+ */
+function rulePlay(field, crit, seed, k) {
+  const out = new Array(field.length / 2);
+  for (let g = 0; g < field.length; g += 2) {
+    const a = field[g], b = field[g + 1];
+    const va = crit[k][a], vb = crit[k][b];
+    let w;
+    if (va !== vb) w = va > vb ? a : b;
+    else if (seed[a] !== seed[b]) w = seed[a] < seed[b] ? a : b;
+    else w = Math.min(a, b);
+    out[g / 2] = w;
+  }
+  return out;
+}
+
+function sameSet(arr, target) {
+  if (arr.length !== target.size) return false;
+  for (const t of arr) if (!target.has(t)) return false;
+  return true;
+}
+
+/* Every criterion sequence over rounds 0..lastRound that reproduces the
+ * season's checkpoints. Depth-first over rounds with the surviving field as
+ * the memo key, so the work is proportional to distinct states, not to
+ * keys^rounds. Returns a Set of encoded sequences. */
+function ruleSequencesForSeason(season, keys, checkpoints, lastRound) {
+  const B = keys.length;
+  const targets = {};
+  for (const r of checkpoints) targets[r] = new Set(season.actual[r]);
+  let level = new Map([[season.first_round.join(','), { field: season.first_round.slice(), seqs: [0] }]]);
+  for (let r = 0; r <= lastRound; r++) {
+    const next = new Map();
+    for (const { field, seqs } of level.values()) {
+      for (let ki = 0; ki < B; ki++) {
+        const nf = rulePlay(field, season.crit, season.seed, keys[ki]);
+        if (targets[r] && !sameSet(nf, targets[r])) continue;
+        const id = nf.join(',');
+        let e = next.get(id);
+        if (!e) { e = { field: nf, seqs: [] }; next.set(id, e); }
+        for (const sq of seqs) e.seqs.push(sq * B + ki);
+      }
+    }
+    level = next;
+  }
+  const out = new Set();
+  for (const { seqs } of level.values()) for (const sq of seqs) out.add(sq);
+  return out;
+}
+
+function decodeRule(code, keys, nRounds) {
+  const B = keys.length, out = new Array(nRounds);
+  for (let i = nRounds - 1; i >= 0; i--) { out[i] = keys[code % B]; code = Math.floor(code / B); }
+  return out;
+}
+
+/* (distinct criteria, switches): the complexity the results are ranked by. */
+function ruleComplexity(seq) {
+  let switches = 0;
+  for (let i = 1; i < seq.length; i++) if (seq[i] !== seq[i - 1]) switches++;
+  return [new Set(seq).size, switches];
+}
+
+/* Rules that reproduce the checkpoints in ALL `seasons`. If none do, backs
+ * off one season at a time (dropping the earliest) and reports which range
+ * did have survivors, so "no rule fits 2024-2026" comes back as a finding
+ * with the longest range that does, rather than as an empty list. */
+function ruleSearch(seasons, keys, checkpoints) {
+  const cps = [...checkpoints].sort((a, b) => a - b);
+  if (!cps.length) return { rules: [], usedSeasons: [], lastRound: -1 };
+  const lastRound = cps[cps.length - 1];
+  const cpSet = new Set(cps);
+  for (let start = 0; start < seasons.length; start++) {
+    const used = seasons.slice(start);
+    let inter = null;
+    for (const sn of used) {
+      const s = ruleSequencesForSeason(sn, keys, cpSet, lastRound);
+      inter = inter === null ? s : new Set([...inter].filter(x => s.has(x)));
+      if (!inter.size) break;
+    }
+    if (inter && inter.size) {
+      const rules = [...inter].map(code => decodeRule(code, keys, lastRound + 1));
+      rules.sort((a, b) => {
+        const ca = ruleComplexity(a), cb = ruleComplexity(b);
+        return ca[0] - cb[0] || ca[1] - cb[1] || a.join().localeCompare(b.join());
+      });
+      return { rules, usedSeasons: used.map(s => s.year), lastRound, backedOff: start > 0 };
+    }
+  }
+  return { rules: [], usedSeasons: [], lastRound, backedOff: true };
+}
+
+/* Apply a rule to a season until one team remains (six rounds for 64). Rounds past the last
+ * constrained one reuse the last criterion (stated on the page). Returns the
+ * board shape solveBracket() produces: rounds of {a, b, win}. */
+function ruleBracket(season, seq) {
+  let field = season.first_round.slice();
+  const rounds = [];
+  for (let r = 0; field.length > 1; r++) {
+    const k = seq[Math.min(r, seq.length - 1)];
+    const next = rulePlay(field, season.crit, season.seed, k);
+    const games = [];
+    for (let g = 0; g < field.length; g += 2) games.push({ a: field[g], b: field[g + 1], win: next[g / 2] });
+    rounds.push(games);
+    field = next;
+  }
+  return rounds;
+}
+
+/* Does the rule reproduce the checkpoints in this season? For the honest
+ * check on seasons OUTSIDE the fit range. */
+function ruleReproduces(season, seq, checkpoints) {
+  const rounds = ruleBracket(season, seq);
+  for (const r of checkpoints) {
+    if (!sameSet(rounds[r].map(g => g.win), new Set(season.actual[r]))) return false;
+  }
+  return true;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
@@ -915,5 +1054,6 @@ if (typeof module !== 'undefined' && module.exports) {
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
+    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, decodeRule,
   };
 }

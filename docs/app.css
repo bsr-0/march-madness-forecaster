@@ -203,6 +203,25 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .ex-senstab tr.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); padding-left: 8px; }
 .ex-foot { margin: 16px 0 0; font-size: 11px; line-height: 1.5; color: var(--ink-3); max-width: 86ch; }
 
+/* ---------- rule search (experimental, fenced) ---------- */
+.lab { border-color: rgba(224, 137, 74, .55); }
+.lab > summary .tune-title { color: var(--up); }
+.warn-tag { background: rgba(224, 137, 74, .16) !important; color: var(--up) !important; }
+#rule-body { padding: 0 16px 16px; }
+.rule-controls { display: flex; flex-direction: column; gap: 8px; margin: 0 0 14px; }
+.rule-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.rule-group .ex-gname { min-width: 110px; }
+.rule-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.rule-check input { accent-color: var(--up); margin: 0; }
+.rule-row {
+  display: block; width: 100%; text-align: left; padding: 9px 10px; margin: 0 0 6px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2);
+}
+.rule-row:hover { border-color: var(--line-2); }
+.rule-row.on { border-color: var(--up); box-shadow: inset 3px 0 0 var(--up); }
+.rule-seq { display: block; font-size: 12.5px; color: var(--ink); }
+.rule-meta { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-3); }
+
 /* ---------- weights ---------- */
 
 .panel {
@@ -405,15 +424,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   #headline { order: 0; }
   #compare { order: 1; }
   #dropped-note { order: 2; }
-  #explore { order: 3; }
-  #tune { order: 4; }
-  #why { order: 5; }
-  #board-tools { order: 6; }
-  #board-nav { order: 7; }
-  #rnav-dots { order: 8; }
-  #board { order: 9; }
-  #empty { order: 10; }
-  #tune, #why, #explore { margin-bottom: 12px; }
+  #rulepanel { order: 3; }
+  #explore { order: 4; }
+  #tune { order: 5; }
+  #why { order: 6; }
+  #board-tools { order: 7; }
+  #board-nav { order: 8; }
+  #rnav-dots { order: 9; }
+  #board { order: 10; }
+  #empty { order: 11; }
+  #tune, #why, #explore, #rulepanel { margin-bottom: 12px; }
   .bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
   .bar-l { justify-content: space-between; }
   .modes { justify-content: stretch; }
