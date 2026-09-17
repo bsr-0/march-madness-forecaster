@@ -70,11 +70,12 @@
        orange, opened only while that strategy is selected. Finds the
        per-round single-variable rules that reproduce chosen checkpoints over
        a chosen range of played seasons before this one (from chosen eligible
-       criteria) and offers the brackets they give this season, ranked
-       simplest first or by seasons outside the range also reproduced; or
-       lets the user compose one rule by hand and see which past seasons it
-       reproduces. The criterion deciding each round is printed under the
-       board's round headers. Never scored, never fed to anything else; the
+       criteria, using at most a chosen number of them) and offers the
+       brackets they give this season, ranked simplest first or by seasons
+       outside the range also reproduced; or lets the user compose one rule
+       by hand and see which past seasons it reproduces. The criterion
+       deciding each round is printed under the board's round headers, and
+       the whole configuration travels in the URL. Never scored, never fed to anything else; the
        panel says so, and shows how quickly such rules stop working. -->
   <details class="tune lab" id="rulepanel" hidden>
     <summary class="tune-head">
@@ -218,7 +219,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=2ce082e5"></script>
-<script src="app.js?v=6b0e73b4"></script>
+<script src="fit.js?v=168e4d1e"></script>
+<script src="app.js?v=1a13e60c"></script>
 </body>
 </html>

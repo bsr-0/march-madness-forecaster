@@ -73,13 +73,13 @@ function loadApp(hash, opts = {}) {
   // board, which need a DOM; tests of the search state replace those two
   // renderers (function declarations, so reassignable in the script scope)
   // and check state.rule directly.
-  if (opts.noRender) vm.runInContext('render = () => {}; renderStrategies = () => {};', ctx);
+  if (opts.noRender) vm.runInContext('globalThis.__renders = 0; render = () => { globalThis.__renders++; }; renderStrategies = () => {};', ctx);
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleKey, setRuleKeysAll };', ctx);
+    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleKey, setRuleKeysAll, setRuleChosen, renders: () => globalThis.__renders };', ctx);
   return ctx.__api;
 }
 
@@ -666,8 +666,9 @@ check('the rule strategy carries no p1, no ev, and no record', () => {
   const app = loadApp('');
   fitted64(app);                                   // a season with 64 teams and a fit
   app.state.strategy = app.RULE;
+  app.state.seasonsIndex = [{ year: 2025, status: 'ready' }, { year: 2026, status: 'ready' }];
   app.state.rule.result = {
-    key: 'k', mode: 'search', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3, scored: 1, nOutside: 4,
+    key: app.ruleKey(), mode: 'search', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3, scored: 1, nOutside: 4,
     brackets: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], outside: { k: 0, m: 4, years: [] } }],
   };
   const st = app.currentStrategy();
@@ -690,6 +691,69 @@ check('with no result yet, the rule strategy resolves to nothing rather than to 
   app.state.strategy = app.RULE; app.state.rule.result = null;
   assert.strictEqual(app.ruleStrategy(), null);
   assert.strictEqual(app.currentStrategy(), null);
+});
+
+check('a result for other inputs -- another season, other checkpoints -- is not shown', () => {
+  // Regression: state.rule.result was never invalidated when the season
+  // changed, so switching years in the rule strategy put the previous
+  // season's picks (team indices into a different bracket) on the new board.
+  const app = loadApp('');
+  fitted64(app);
+  app.state.strategy = app.RULE;
+  app.state.seasonsIndex = [{ year: 2024, status: 'ready' }, { year: 2025, status: 'ready' }, { year: 2026, status: 'ready' }];
+  const picks = app.solveBracket(app.winProb).map(g => g.map(x => x.win));
+  app.state.rule.result = { key: app.ruleKey(), mode: 'search', usedSeasons: [2025], requested: [2025], backedOff: false, nRules: 1, lastRound: 5, scored: 1, nOutside: 1,
+    brackets: [{ seq: ['barthag'], rounds: [], picks, complexity: [1, 0], outside: { k: 0, m: 1, years: [] } }] };
+  assert.ok(app.ruleStrategy(), 'shown for the inputs it was computed from');
+  app.state.year = 2026;                                             // fitted64 displays 2027
+  assert.strictEqual(app.ruleStrategy(), null, 'not shown after the season changed');
+  app.state.year = 2027;
+  assert.ok(app.ruleStrategy());
+  app.state.rule.checkpoints = [2, 5];
+  assert.strictEqual(app.ruleStrategy(), null, 'not shown after the checkpoints changed');
+});
+
+check('the rule configuration round-trips through the URL and defaults add nothing', () => {
+  const app = loadApp('#y=2026&s=rule&rc=1345&rf=2023&rt=2024&rn=8&rk=b,zz&rr=outside&rx=2&ri=3');
+  app.readHash();
+  const r = app.state.rule;
+  assert.strictEqual(app.state.strategy, app.RULE);
+  assert.deepStrictEqual([...r.checkpoints], [1, 3, 4, 5]);
+  assert.strictEqual(r.from, 2023); assert.strictEqual(r.to, 2024);
+  assert.strictEqual(r.n, 8); assert.deepStrictEqual([...r.keys], ['b', 'zz']);
+  assert.strictEqual(r.rank, 'outside'); assert.strictEqual(r.maxCriteria, 2); assert.strictEqual(r.chosen, 3);
+  // Restored keys are checked against the season: `zz` is unknown and drops, `b` stays.
+  app.state.season = { status: 'ready', teams: [], strategies: [], first_round: [], z: { a: [], b: [] }, variables: [{ key: 'a', label: 'A', group: 'G' }] };
+  assert.deepStrictEqual([...app.ruleKeys()], ['b']);
+  app.writeHash();
+  for (const part of ['s=rule', 'rc=1345', 'rf=2023', 'rt=2024', 'rn=8', 'rk=b%2Czz', 'rr=outside', 'rx=2', 'ri=3']) assert.ok(ctxHash.value.includes(part), part + ' missing from ' + ctxHash.value);
+  // The untouched panel writes only the checkpoints.
+  const plain = loadApp('#y=2026&s=rule');
+  plain.readHash();
+  plain.state.season = { status: 'ready', teams: [], strategies: [], first_round: [], z: {}, variables: [] };
+  plain.writeHash();
+  assert.strictEqual(ctxHash.value, '#y=2026&o=p1&s=rule&rc=345', ctxHash.value);
+  // Hand mode carries the composed rule, checked against the season on read.
+  const hand = loadApp('#y=2026&s=rule&rm=hand&rh=a,b,zz,a,b,a&rc=25');
+  hand.readHash();
+  hand.state.season = plain.state.season; hand.state.season.z = { a: [], b: [] }; hand.state.season.variables = [{ key: 'a', label: 'A', group: 'G' }];
+  assert.strictEqual(hand.state.rule.mode, 'hand');
+  assert.deepStrictEqual([...hand.ruleHand()], ['a', 'b', 'a', 'a', 'b', 'a'], 'an unknown criterion falls back to the season\'s first variable');
+  assert.deepStrictEqual([...hand.state.rule.checkpoints], [2, 5]);
+  hand.writeHash();
+  assert.ok(ctxHash.value.includes('rm=hand') && ctxHash.value.includes('rh=a%2Cb%2Czz%2Ca%2Cb%2Ca') && ctxHash.value.includes('rc=25'), ctxHash.value);
+});
+
+check('a link without an early checkpoint, or with junk, keeps the defaults', () => {
+  const app = loadApp('#s=rule&rc=45&rn=999&rx=0&ri=-2&rh=a,b');
+  app.readHash();
+  const r = app.state.rule;
+  assert.deepStrictEqual([...r.checkpoints], [3, 4, 5], 'finalists + champion alone cannot prune: refused');
+  assert.strictEqual(r.n, 20); assert.strictEqual(r.maxCriteria, 1); assert.strictEqual(r.chosen, 0);
+  assert.strictEqual(r.hand, null, 'a hand rule must name all six rounds');
+  const bad = loadApp('#s=rule&rc=9x');
+  bad.readHash();
+  assert.deepStrictEqual([...bad.state.rule.checkpoints], [3, 4, 5]);
 });
 
 /* ---------- rule search: the panel's controls, driven end to end ---------- */
@@ -748,7 +812,7 @@ check('the fit range is clamped to played seasons before the displayed one and d
   assert.deepStrictEqual([r.from, r.to, [...r.fit], [...r.played]], [null, null, [], []]);
 });
 
-check('at least one of Elite Eight / Final Four stays a checkpoint', () => {
+check('at least one early checkpoint (Round of 32 through Final Four) stays', () => {
   const app = ruleApp();
   app.state.rule.checkpoints = [3, 4, 5];
   app.setRuleCheckpoint(3, false);                                   // would leave finalists + champion only
@@ -757,6 +821,12 @@ check('at least one of Elite Eight / Final Four stays a checkpoint', () => {
   assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4, 5]);
   app.setRuleCheckpoint(5, false);
   assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4]);
+  app.setRuleCheckpoint(1, true); app.setRuleCheckpoint(2, false);   // Sweet 16 alone is an early checkpoint
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [1, 4]);
+  app.setRuleCheckpoint(0, true); app.setRuleCheckpoint(1, false);   // so is the Round of 32
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4]);
+  app.setRuleCheckpoint(0, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4], 'refused: nothing before the finalists');
 });
 
 check('eligible criteria: a set never empties, "all" clears the restriction', () => {
@@ -830,6 +900,59 @@ checkAsync('composing by hand applies the rule and reports every played season i
   app.setRuleHand(5, 'b'); await app.ensureRuleSearch();
   assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, false, false], 'a b final flips the champion everywhere');
   assert.strictEqual(app.ruleRoundLabel(5, ' · '), ' · B');
+});
+
+checkAsync('both modes redraw the page once their result is in', async () => {
+  // Regression: hand mode returned from inside the try block after storing
+  // its result and never reached the redraw, so the panel stayed on
+  // "Searching…" and the board empty with a correct result held in state.
+  const app = ruleApp();
+  await app.ensureRuleSearch();
+  assert.strictEqual(app.renders(), 1, 'search mode');
+  app.state.rule.mode = 'hand';
+  await app.ensureRuleSearch();
+  assert.strictEqual(app.renders(), 2, 'hand mode');
+  assert.strictEqual(app.state.rule.busy, false);
+});
+
+checkAsync('the criteria cap drops rules with more distinct criteria, and says so when nothing is left', async () => {
+  // Fixture seasons 2024-2025 are both `a`; with the mirror `b` also
+  // eligible, `a`/`seed` interchange in every constrained round, so every
+  // survivor uses 1 or 2 criteria. A cap of 1 keeps the pure ones; ranking
+  // is unchanged because the all-`a` rule is simplest either way.
+  const app = ruleApp();
+  app.setRuleRange(2024, 2025); app.setRuleN(20); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.result.nRules, 64);
+  app.setRuleMax(1); await app.ensureRuleSearch();
+  let r = app.state.rule.result;
+  assert.strictEqual(r.nRules, 64, 'survivors are counted before the cap');
+  assert.strictEqual(r.overCap, true);
+  assert.strictEqual(r.brackets.length, 1, 'a and seed give the same bracket');
+  assert.ok(r.brackets.every(b => b.complexity[0] <= 1));
+  // Round of 32 as a checkpoint: `actual` is the all-`a` bracket, so it
+  // prunes at round 0 and `b` never survives any round.
+  app.setRuleCheckpoint(0, true); await app.ensureRuleSearch();
+  r = app.state.rule.result;
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 3, 4, 5]);
+  assert.strictEqual(r.nRules, 64);
+  assert.deepStrictEqual([...r.brackets[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
+  // Only `b` eligible with the cap: survivors exist for no range, so overCap stays false and the ordinary message applies.
+  app.setRuleKeysAll(false); app.setRuleKey('b', true); app.setRuleKey('seed', false); await app.ensureRuleSearch();
+  r = app.state.rule.result;
+  assert.strictEqual(r.nRules, 0); assert.strictEqual(r.overCap, false); assert.strictEqual(r.brackets.length, 0);
+});
+
+checkAsync('the chosen bracket survives the first search of a link, and resets on later changes', async () => {
+  const app = ruleApp();
+  app.state.rule.chosen = 1;                                          // as readHash() would leave it
+  await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.chosen, 1, 'the first search keeps the link\'s choice');
+  assert.strictEqual(app.ruleStrategy().picks[5][0], 0, 'clamped to the one bracket offered');
+  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.chosen, 0, 'a change from the panel starts the new list at its first bracket');
+  app.setRuleChosen(4);
+  assert.strictEqual(app.state.rule.chosen, 4);
+  assert.ok(ctxHash.value.includes('ri=4'), ctxHash.value);
 });
 
 checkAsync('an overlapping earlier call abandons; the result matches the latest controls', async () => {
