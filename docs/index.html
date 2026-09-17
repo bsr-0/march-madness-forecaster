@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=8e4ad27b">
+<link rel="stylesheet" href="app.css?v=66dfc4b6">
 </head>
 <body>
 
@@ -65,6 +65,20 @@
   <section class="board" id="board"></section>
 
   <section class="empty" id="empty" hidden></section>
+
+  <!-- 3a. RULE SEARCH (experimental strategy only). Fenced: its own panel,
+       orange, opened only while that strategy is selected. Finds the
+       per-round single-variable rules that reproduce chosen checkpoints over
+       the last few played seasons before this one and offers the brackets
+       they give this season. Never scored, never fed to anything else; the
+       panel says so, and shows how quickly such rules stop working. -->
+  <details class="tune lab" id="rulepanel" hidden>
+    <summary class="tune-head">
+      <span class="tune-title">Rule search — experimental</span>
+      <span class="tune-sub">Not part of the validated methodology. No chance of finishing first, no expected points, no claim of anything.</span>
+    </summary>
+    <div class="panel" id="rule-body"></div>
+  </details>
 
   <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
        on/off toggle was removed 2026-08-29 because measurement said choosing
@@ -200,7 +214,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=a9195992"></script>
-<script src="app.js?v=260e2c4a"></script>
+<script src="fit.js?v=c409635d"></script>
+<script src="app.js?v=bc5db449"></script>
 </body>
 </html>

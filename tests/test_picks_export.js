@@ -72,7 +72,7 @@ function loadApp(hash) {
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
-    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb };', ctx);
+    + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy };', ctx);
   return ctx.__api;
 }
 
@@ -555,7 +555,7 @@ check('no causal or importance words anywhere in the Fitted Model surface', () =
     const end = rest.search(/\n(function |\/\* ----------|const [A-Z_]+ = )/);
     return end < 0 ? rest : rest.slice(0, end);
   };
-  const block = ['equationHTML', 'reliabilityHTML', 'renderExplore', 'sensitivityHTML', 'advancementHTML', 'probTitle']
+  const block = ['equationHTML', 'reliabilityHTML', 'renderExplore', 'sensitivityHTML', 'advancementHTML', 'probTitle', 'renderRulePanel', 'ruleStrategy']
     .map(body).join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '')        // block comments
     .replace(/^\s*\/\/.*$/gm, '')            // line comments
@@ -641,6 +641,48 @@ check('the baseline bracket is solved inside sensitivity(), not read from state.
   const sens = app.sensitivity();
   assert.ok(Array.isArray(sens.base) && sens.base.length === 6);
   assert.strictEqual(sens.byKey.barthag.changed, 0);
+});
+
+/* ---------- rule search: an experimental strategy, fenced ---------- */
+console.log('\nrule search strategy fencing');
+
+check('s=rule round-trips through the URL and is not turned into a filter state', () => {
+  const app = loadApp('#y=2026&s=rule&champ=9');
+  app.readHash();
+  assert.strictEqual(app.state.strategy, app.RULE);
+  app.state.season = { teams: [], strategies: [], first_round: [] };
+  app.writeHash();
+  assert.ok(ctxHash.value.includes('s=rule'), ctxHash.value);
+});
+
+check('the rule strategy carries no p1, no ev, and no record', () => {
+  const app = loadApp('');
+  fitted64(app);                                   // a season with 64 teams and a fit
+  app.state.strategy = app.RULE;
+  app.state.rule.result = {
+    key: 'k', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3,
+    brackets: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], prior: { k: 0, m: 4, years: [] } }],
+  };
+  const st = app.currentStrategy();
+  assert.strictEqual(st.id, app.RULE);
+  assert.strictEqual(st.p1, undefined);
+  assert.strictEqual(st.ev, undefined);
+  assert.strictEqual(st.picks.length, 6);
+  const row = app.strategyRows().find(r => r.id === app.RULE);
+  assert.strictEqual(row.p1, null); assert.strictEqual(row.ev, null); assert.strictEqual(row.record, null);
+  assert.ok(/not scored/i.test(row.kind));
+  // and the export says so on its second line
+  app.state.rounds = st.picks.map((w, r) => w.map((win, i) => ({ a: win, b: win, win })));
+  const text = app.picksAsText();
+  assert.ok(/not scored against the pool/i.test(text.split('\n')[1]), text.split('\n')[1]);
+});
+
+check('with no result yet, the rule strategy resolves to nothing rather than to another bracket', () => {
+  const app = loadApp('');
+  fitted64(app);
+  app.state.strategy = app.RULE; app.state.rule.result = null;
+  assert.strictEqual(app.ruleStrategy(), null);
+  assert.strictEqual(app.currentStrategy(), null);
 });
 
 console.log(`\n${passed} checks passed`);

@@ -202,4 +202,67 @@ check('the training boundary is the full model\'s: no row at or after asOf is fi
   }
 });
 
+
+console.log('\nrule search (experimental strategy)');
+
+// A 4-team "season": first_round [0,1,2,3]; two criteria. Under `a` team 0
+// beats 1 and 2 beats 3, then 0 beats 2 (champion 0). Under `b` team 1 beats
+// 0 and 3 beats 2, then 3 beats 1 (champion 3). Seeds break ties.
+function tiny(actual) {
+  return { year: 2000, first_round: [0, 1, 2, 3], seed: [1, 2, 1, 2],
+           crit: { a: [4, 3, 2, 1], b: [1, 2, 3, 4] }, actual };
+}
+const KEYS = ['a', 'b'];
+
+check('rulePlay follows the board tie rule: value, then better seed, then lower index', () => {
+  const s = tiny([[0, 2], [0]]);
+  assert.deepStrictEqual(F.rulePlay([0, 1, 2, 3], s.crit, s.seed, 'a'), [0, 2]);
+  assert.deepStrictEqual(F.rulePlay([0, 1, 2, 3], s.crit, s.seed, 'b'), [1, 3]);
+  const tied = { c: [5, 5, 5, 5] };
+  assert.deepStrictEqual(F.rulePlay([0, 1, 2, 3], tied, [2, 1, 1, 1], 'c'), [1, 2]);   // seed, then lower index
+});
+
+check('sequences that reproduce checkpoints are exactly the ones that do', () => {
+  // 4 teams = 2 rounds (r0: two games, r1: final). Checkpoint 1 = champion.
+  const s = tiny([[0, 2], [0]]);
+  const found = F.ruleSequencesForSeason(s, KEYS, new Set([1]), 1);
+  // Brute force: 2^2 sequences; champion 0 needs a then a (a,b gives 2 vs 0 under b -> 2; b,a gives 1 vs 3 under a -> 1)
+  const brute = [];
+  for (const k0 of KEYS) for (const k1 of KEYS) {
+    let f = F.rulePlay(s.first_round, s.crit, s.seed, k0); f = F.rulePlay(f, s.crit, s.seed, k1);
+    if (f[0] === 0) brute.push(k0 + k1);
+  }
+  const decoded = [...found].map(c => F.decodeRule(c, KEYS, 2).join('')).sort();
+  assert.deepStrictEqual(decoded, brute.sort());
+  assert.deepStrictEqual(decoded, ['aa']);
+});
+
+check('ruleSearch intersects seasons and backs off to the longest surviving range', () => {
+  const s1 = tiny([[0, 2], [0]]);                 // champion 0: needs a,a
+  const s2 = tiny([[1, 3], [3]]);                 // champion 3: needs b,b
+  const both = F.ruleSearch([s1, s2], KEYS, new Set([1]));
+  // Nothing satisfies both; drops the EARLIEST (s1) and reports s2 alone.
+  assert.strictEqual(both.backedOff, true);
+  assert.deepStrictEqual(both.usedSeasons, [2000]);
+  assert.deepStrictEqual(both.rules.map(r => r.join('')), ['bb']);
+  const same = F.ruleSearch([s1, s1], KEYS, new Set([1]));
+  assert.strictEqual(same.backedOff, false);
+  assert.deepStrictEqual(same.rules.map(r => r.join('')), ['aa']);
+});
+
+check('rules are ranked simplest first: distinct criteria, then switches', () => {
+  const seqs = [['a', 'b', 'a'], ['a', 'a', 'a'], ['a', 'a', 'b'], ['b', 'b', 'b']];
+  seqs.sort((x, y) => { const cx = F.ruleComplexity(x), cy = F.ruleComplexity(y); return cx[0] - cy[0] || cx[1] - cy[1] || x.join().localeCompare(y.join()); });
+  assert.deepStrictEqual(seqs.map(q => q.join('')), ['aaa', 'bbb', 'aab', 'aba']);
+});
+
+check('ruleBracket reuses the last criterion for rounds past the rule, and ruleReproduces checks checkpoints', () => {
+  const s = tiny([[0, 2], [0]]);
+  const rounds = F.ruleBracket(s, ['a']);           // one criterion, applied to both rounds
+  assert.deepStrictEqual(rounds.map(g => g.map(x => x.win)), [[0, 2], [0]]);
+  assert.strictEqual(rounds.length, 2, 'stops when one team remains');
+  assert.strictEqual(F.ruleReproduces(s, ['a'], [1]), true);
+  assert.strictEqual(F.ruleReproduces(s, ['b'], [1]), false);
+});
+
 console.log(`\n${passed} checks passed`);

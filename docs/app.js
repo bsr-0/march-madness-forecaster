@@ -77,6 +77,15 @@ const MOBILE_ROUND_DEFAULT = ROUNDS.indexOf('Final Four');
  * of the season payload by id. */
 const MODEL = 'model';
 
+/* The experimental rule-search strategy. Found after the fact, never scored
+ * by the pool referee, fenced on the page; see ruleSearch() in fit.js and
+ * the RULE SEARCH section below. */
+const RULE = 'rule';
+const RULE_N = 5;
+const RULE_CHECKPOINTS = [
+  { r: 2, label: 'Elite Eight' }, { r: 3, label: 'Final Four' }, { r: 4, label: 'Finalists' }, { r: 5, label: 'Champion' },
+];
+
 /* Variables the fitted strategy uses.
  *
  * FIXED, NOT CHOSEN. This is the key set the frozen baseline in
@@ -130,6 +139,10 @@ const state = {
   // finalists and the semifinals are the end of the story, not the start.
   mobileRound: MOBILE_ROUND_DEFAULT,
   explore: 'adj_defensive_efficiency',   // variable key the Explore panel is showing
+  // Rule search (experimental strategy): what the user asked a rule to
+  // reproduce, over how many prior played seasons, and the last result.
+  rule: { checkpoints: [3, 4, 5], range: 3, chosen: 0, result: null, busy: false },
+  seasonsIndex: null,   // seasons.json, kept so the rule search knows which prior seasons were played
   training: null,
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
@@ -559,6 +572,7 @@ function currentStrategy() {
       source: SRC_LABEL[src.s] || src.s,
     };
   }
+  if (state.strategy === RULE) return ruleStrategy();
   const list = (state.season && state.season.strategies) || [];
   return list.find(s => s.id === state.strategy) || null;
 }
@@ -636,6 +650,7 @@ function writeHash() {
   p.set('y', String(state.year));
   p.set('o', state.objective);
   if (state.strategy === MODEL) p.set('s', 'model');
+  if (state.strategy === RULE) p.set('s', 'rule');
   for (const k of HASH_KEYS) {
     if (state.pick[k] !== null && state.pick[k] !== undefined) p.set(k, String(state.pick[k]));
   }
@@ -657,6 +672,7 @@ function readHash() {
     state.strategy = state.objective;
   }
   if (p.get('s') === 'model') state.strategy = MODEL;
+  if (p.get('s') === 'rule') state.strategy = RULE;
   for (const k of HASH_KEYS) {
     const v = p.get(k);
     if (v === null) continue;
@@ -675,7 +691,7 @@ function readHash() {
   // board still showing the UNFILTERED bracket -- Florida selected, Michigan on
   // screen. A shared link that shows a different bracket than it promised is
   // worse than one that shows nothing.
-  if (state.strategy !== MODEL) state.strategy = anyFilter() ? CUSTOM : state.objective;
+  if (state.strategy !== MODEL && state.strategy !== RULE) state.strategy = anyFilter() ? CUSTOM : state.objective;
 
   // And show the controls that are evidently active, or the filtering looks
   // like the site's own opinion.
@@ -702,7 +718,7 @@ function readHash() {
  */
 function reconcileFiltersWithSeason() {
   if (!state.season || state.season.status !== 'ready') return;
-  if (!anyFilter() || state.strategy === MODEL) return;
+  if (!anyFilter() || state.strategy === MODEL || state.strategy === RULE) return;
   if (matching().length) return;
 
   state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
@@ -797,6 +813,7 @@ function render() {
     { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
     { for (const id of ['headline', 'compare', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
     { const ex = document.getElementById('explore'); if (ex) ex.hidden = true; }
+    { const rp = document.getElementById('rulepanel'); if (rp) rp.hidden = true; }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -832,11 +849,12 @@ function render() {
     // member of the candidate pool for a belief the USER supplied, which is not
     // a validated recommendation at all.
     const kind = !st ? 'Tested on past seasons'
+      : st.id === RULE ? 'Experimental'
       : st.id === CUSTOM ? 'Your pick'
       : st.id === 'ev' ? 'Exact optimum'
       : 'Backtested rule';
-    note.innerHTML = `<span class="tag">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
-      (st ? ` <strong>${p1Pct(st.p1)}</strong> chance of finishing first, ` +
+    note.innerHTML = `<span class="tag${st && st.id === RULE ? ' alt' : ''}">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
+      (st && st.id !== RULE ? ` <strong>${p1Pct(st.p1)}</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Unavailable</span><span>The fitted model needs training data for seasons before ${state.year}.</span>`;
@@ -878,6 +896,18 @@ function render() {
 
   document.getElementById('equation').innerHTML = anyEnabled() ? equationHTML() : '';
 
+  if (state.strategy === RULE && !ruleStrategy()) {
+    // Nothing to draw yet: the search is fetching prior seasons or found no
+    // rule. The panel says which; the board stays empty rather than showing
+    // some other strategy's bracket under this label.
+    state.rounds = null;
+    board.innerHTML = '';
+    { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
+    { for (const id of ['headline', 'compare']) { const el = document.getElementById(id); if (el) el.hidden = true; } }
+    updateMobileNav();
+    renderRulePanel();
+    return;
+  }
   const rounds = usingOptimized() ? solveFromPicks() : solveByFit();
   const truth = solveActual();
   // Kept for the exporter. Presentation state only -- copyPicks() serialises
@@ -888,6 +918,7 @@ function render() {
   renderHeadline(rounds);
   renderCompare();
   renderExplore();
+  renderRulePanel();
   { const why = document.getElementById('why'); if (why) why.hidden = false; }
   // `active`/`data-r` matter only under the narrow-viewport CSS (see
   // app.css's @media (max-width: 720px)), which shows one .round at a time
@@ -944,8 +975,18 @@ function strategyRows() {
       active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     };
   });
+  const rs = ruleStrategy();
   const fe = fittedEval();
   const live = fitReady() ? solveByFit() : null;
+  rows.push({
+    id: RULE,
+    label: 'Rule search',
+    kind: 'Experimental — fit after the fact, not scored',
+    p1: null, ev: null,
+    champion: rs ? teams[rs.picks[5][0]] : null,
+    filtered: false, record: null,
+    active: state.strategy === RULE,
+  });
   rows.push({
     id: MODEL,
     label: 'Fitted model',
@@ -1003,11 +1044,14 @@ function renderHeadline(rounds) {
   const fe = !st ? fittedEval() : null;
   const nOpp = (s.p1_pool_size || 30) - 1;
 
+  const rr = state.strategy === RULE ? state.rule.result : null;
   const objective = !st ? 'Fitted model'
+    : st.id === RULE ? 'Rule search (experimental)'
     : st.id === CUSTOM ? (state.objective === 'ev' ? 'Most expected points, with your filters' : 'Win the pool, with your filters')
     : st.id === 'ev' ? 'Most expected points'
     : 'Win the pool';
   const kind = !st ? 'Evaluated, not selected'
+    : st.id === RULE ? 'Experimental, not scored'
     : st.id === CUSTOM ? 'Your pick'
     : st.id === 'ev' ? 'Exact optimum'
     : 'Backtested rule';
@@ -1016,6 +1060,8 @@ function renderHeadline(rounds) {
   // page most needed and did not have: what kind of thing the bracket IS.
   const estimand = !st
     ? `The fitted model’s own game-by-game picks. Scored by the same pool referee as the other rows — evaluated, never selected.`
+    : st.id === RULE
+      ? `A rule found after the fact: in each round, every game goes to the team better on one chosen variable. It was kept because it reproduces ${ruleTargetText()} in ${rr ? ruleYearsText(rr.usedSeasons) : 'the chosen seasons'} — that is what it was searched for, not evidence about this season.`
     : st.id === CUSTOM
       ? `The best bracket in the candidate pool under your filters, ranked by ${state.objective === 'ev' ? 'expected points' : 'chance of finishing first'}. A belief you supplied, not a validated recommendation.`
     : st.id === 'ev'
@@ -1026,12 +1072,15 @@ function renderHeadline(rounds) {
   // audit's numbers live in artifacts/methodology_audit/step18.
   const evidence = !st
     ? `Fitted only on tournaments before ${state.year} — never on this one.`
+    : st.id === RULE ? (st.prior ? `On the ${st.prior.m} played seasons before that range it reproduces ${ruleTargetText()} in ${st.prior.k}.` : '')
     : st.id === CUSTOM ? ''
     : st.id === 'ev'
       ? `The exact expected-points maximum on this bracket; not a pool backtest.`
       : `Backtested on 15 tournaments (2011–2026, no 2020); the edge over a seed bracket held under an independent market referee.`;
 
-  const nums = st
+  const nums = st && st.id === RULE
+    ? `<span class="hl-num muted">Not scored against the pool: no chance of finishing first, no expected points</span>`
+    : st
     ? `<span class="hl-num"><b>${p1Pct(st.p1)}</b> chance of finishing first</span>` +
       `<span class="hl-num"><b>${st.ev.toFixed(0)}</b> expected points</span>`
     : fe && !fe.stale
@@ -1056,7 +1105,7 @@ function renderHeadline(rounds) {
     <div class="hl-top">
       <span class="hl-season">${state.year} bracket</span>
       <span class="hl-obj">${objective}</span>
-      <span class="tag${st && st.id !== CUSTOM ? '' : ' alt'}">${kind}</span>
+      <span class="tag${st && st.id !== CUSTOM && st.id !== RULE ? '' : ' alt'}${st && st.id === RULE ? ' warn-tag' : ''}">${kind}</span>
     </div>
     <div class="champ-card hl-champ">
       <span class="champ-seed">${champ.seed}</span>
@@ -1067,7 +1116,7 @@ function renderHeadline(rounds) {
       <span class="champ-region">${champ.region}</span>
     </div>
     <div class="hl-nums">${nums}
-      <span class="hl-meta">63 picks · simulated against ${nOpp} modelled opponents</span>
+      <span class="hl-meta">${st && st.id === RULE ? '63 picks · not simulated against any pool' : `63 picks · simulated against ${nOpp} modelled opponents`}</span>
     </div>
     <p class="hl-estimand">${estimand}</p>
     <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>
@@ -1406,6 +1455,161 @@ function renderExplore() {
     <p class="ex-foot">Looking, not editing: the bracket, the probabilities and every number above are the validated model’s and do not change with what is chosen here. The per-variable on/off toggle this replaces was removed because measurement showed choosing the variables bought nothing.</p>`;
 }
 
+
+/* ---------- rule search (experimental strategy) ----------
+ *
+ * WHAT IT IS. One criterion per round; every game in that round goes to the
+ * team better on that one variable. The user says which checkpoints a rule
+ * must reproduce (Elite Eight, Final Four, finalists, champion) and over how
+ * many prior played seasons; fit.js ruleSearch() returns every rule that
+ * does, simplest first; the first RULE_N distinct brackets it yields for the
+ * displayed season are offered.
+ *
+ * WHAT IT IS NOT. Not a model, not validated, not scored: no P(1st), no EV,
+ * no track record, never fed to anything. A rule that reproduces the last
+ * two seasons is a description of those seasons found after the fact;
+ * measured on the shipped data one season needs 2 criteria, two need 3, and
+ * three (2024-2026) have none. The page shows that regress rather than
+ * hiding it, and shows each rule's hit rate on the played seasons BEFORE its
+ * fit range -- the one number about it the user cannot tune.
+ *
+ * WALK-FORWARD, LIKE EVERYTHING ELSE HERE. The fit seasons are the last
+ * `range` played seasons strictly before the displayed one. A 2026 bracket
+ * from a rule fit on 2024-2026 would be a bracket fit on its own result.
+ */
+function playedSeasonsBefore(year) {
+  return (state.seasonsIndex || []).filter(x => x.status === 'ready' && x.year < year).map(x => x.year).sort((a, b) => a - b);
+}
+
+function ruleSeasonFrom(payload, year) {
+  const crit = Object.assign({}, payload.z);
+  crit.seed = payload.teams.map(t => -t.seed);
+  return { year, first_round: payload.first_round, crit, seed: payload.teams.map(t => t.seed), actual: payload.actual };
+}
+
+function ruleTargetText() {
+  const cps = new Set(state.rule.checkpoints);
+  return RULE_CHECKPOINTS.filter(c => cps.has(c.r)).map(c => c.label.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' and $1');
+}
+function ruleYearsText(years) {
+  if (!years || !years.length) return '';
+  return years.length === 1 ? String(years[0]) : `${years[0]}–${years[years.length - 1]}`;
+}
+
+/* Fetch what the search needs, run it, keep the top RULE_N distinct
+ * brackets with their pre-range hit rate. Cached by (year, checkpoints,
+ * range) on state.rule.result. */
+async function ensureRuleSearch() {
+  const s = state.season;
+  if (!s || s.status !== 'ready') return;
+  const key = `${state.year}|${state.rule.checkpoints.join(',')}|${state.rule.range}`;
+  if (state.rule.result && state.rule.result.key === key) return;
+  state.rule.busy = true; renderRulePanel();
+  try {
+    const played = playedSeasonsBefore(state.year).filter(y => y !== state.year);
+    const fitYears = played.slice(-state.rule.range);
+    const priorYears = played.slice(0, Math.max(0, played.length - state.rule.range));
+    const payloads = {};
+    for (const y of [...fitYears, ...priorYears]) payloads[y] = ruleSeasonFrom(await loadSeason(y), y);
+    // Only seasons whose result is complete can be a checkpoint.
+    const complete = y => payloads[y].actual && payloads[y].actual.every(r => r.length);
+    const fit = fitYears.filter(complete).map(y => payloads[y]);
+    const prior = priorYears.filter(complete).map(y => payloads[y]);
+    const keys = Object.keys(payloads[fitYears[0]].crit).sort();
+    const res = fit.length ? ruleSearch(fit, keys, new Set(state.rule.checkpoints)) : { rules: [], usedSeasons: [], backedOff: true };
+    const here = ruleSeasonFrom(s, state.year);
+    const brackets = [], seen = new Set();
+    for (const seq of res.rules) {
+      const rounds = ruleBracket(here, seq);
+      const sig = rounds.map(g => g.map(x => x.win).join(',')).join('|');
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      const k = prior.filter(p => ruleReproduces(p, seq, state.rule.checkpoints)).length;
+      brackets.push({ seq, rounds, picks: rounds.map(g => g.map(x => x.win)), complexity: ruleComplexity(seq), prior: { k, m: prior.length, years: prior.map(p => p.year) } });
+      if (brackets.length >= RULE_N) break;
+    }
+    state.rule.result = { key, brackets, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound };
+    state.rule.chosen = 0;
+  } finally {
+    state.rule.busy = false;
+  }
+  renderStrategies();
+  render();
+}
+
+/* The chosen rule bracket in the shape currentStrategy() returns for the
+ * precomputed strategies, so solveFromPicks(), the headline, the table and
+ * the exporter all take it through the paths they already have. p1 and ev
+ * are deliberately absent. */
+function ruleStrategy() {
+  const r = state.rule.result;
+  if (!r || !r.brackets.length) return null;
+  const b = r.brackets[Math.min(state.rule.chosen, r.brackets.length - 1)];
+  const label = s => (state.season.variables.find(v => v.key === s) || {}).label || (s === 'seed' ? 'Seed (chalk)' : s);
+  return {
+    id: RULE,
+    label: 'Rule search',
+    note: `Rule: ${b.seq.map(label).join(' → ')}${b.seq.length < 6 ? ' (later rounds reuse the last criterion)' : ''}. ` +
+      `Reproduces ${ruleTargetText()} in ${ruleYearsText(r.usedSeasons)}${r.backedOff ? ` — the longest range with any surviving rule; ${ruleYearsText(r.requested)} has none` : ''}. ` +
+      `${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'}, ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'}; ${r.nRules.toLocaleString()} rules survived, this is bracket ${Math.min(state.rule.chosen, r.brackets.length - 1) + 1} of ${r.brackets.length} offered.`,
+    picks: b.picks,
+    rule: b.seq,
+    prior: b.prior,
+  };
+}
+
+function setRuleCheckpoint(r, on) {
+  const cps = new Set(state.rule.checkpoints);
+  if (on) cps.add(r); else cps.delete(r);
+  if (!cps.size) return;              // at least one checkpoint, or there is nothing to search for
+  state.rule.checkpoints = [...cps].sort((a, b) => a - b);
+  ensureRuleSearch();
+}
+function setRuleRange(n) { state.rule.range = n; ensureRuleSearch(); }
+function setRuleChosen(i) { state.rule.chosen = i; renderStrategies(); render(); }
+
+/* RULE-COPY-START -- the wording guard scans this renderer too. */
+function renderRulePanel() {
+  const host = document.getElementById('rulepanel');
+  const body = document.getElementById('rule-body');
+  if (!host || !body) return;
+  if (state.strategy !== RULE || !state.season || state.season.status !== 'ready') { host.hidden = true; return; }
+  host.hidden = false; host.open = true;
+  const r = state.rule.result;
+  const label = s => (state.season.variables.find(v => v.key === s) || {}).label || (s === 'seed' ? 'Seed (chalk)' : s);
+  const played = playedSeasonsBefore(state.year);
+  const cps = new Set(state.rule.checkpoints);
+  const controls = `
+    <div class="rule-controls">
+      <div class="rule-group"><span class="ex-gname">Must reproduce</span>
+        ${RULE_CHECKPOINTS.map(c => `<label class="rule-check"><input type="checkbox" ${cps.has(c.r) ? 'checked' : ''} onchange="setRuleCheckpoint(${c.r}, this.checked)"> ${c.label}</label>`).join('')}
+      </div>
+      <div class="rule-group"><span class="ex-gname">In the last</span>
+        ${[3, 4].map(n => `<button class="chip${state.rule.range === n ? ' on' : ''}" onclick="setRuleRange(${n})"><span class="chip-name">${n} played seasons</span></button>`).join('')}
+        <span class="ex-sub">before ${state.year}${played.length ? ` (${ruleYearsText(played.slice(-state.rule.range))})` : ''}</span>
+      </div>
+    </div>`;
+  let results = '';
+  if (state.rule.busy) results = `<p class="ex-line">Searching…</p>`;
+  else if (!r) results = '';
+  else if (!r.brackets.length) results = `<p class="ex-line">No single-criterion rule reproduces ${ruleTargetText()} in ${ruleYearsText(r.requested)} — nor in any shorter range ending in ${r.requested[r.requested.length - 1] || ''}. Fewer checkpoints or a different range may have one.</p>`;
+  else {
+    const head = r.backedOff
+      ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules, ${r.brackets.length} distinct brackets for ${state.year} offered below, simplest first.</p>`
+      : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}; the ${r.brackets.length} distinct brackets they give ${state.year} are offered below, simplest first.</p>`;
+    const list = r.brackets.map((b, i) => `
+      <button class="rule-row${i === Math.min(state.rule.chosen, r.brackets.length - 1) ? ' on' : ''}" onclick="setRuleChosen(${i})">
+        <span class="rule-seq">${b.seq.map(label).join(' → ')}</span>
+        <span class="rule-meta">${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'} · champion ${state.season.teams[b.picks[5][0]].name}
+          · before the range: ${b.prior.m ? `${b.prior.k} of ${b.prior.m} seasons` : 'no earlier seasons to check'}</span>
+      </button>`).join('');
+    results = head + list;
+  }
+  body.innerHTML = controls + results + `
+    <p class="ex-foot">Experimental. These rules were found by searching for what reproduces past results, which is why they reproduce them; the count of earlier seasons each rule also reproduces is the only number here it was not chosen on. Nothing on this panel is scored against the pool or used by any other part of the page.</p>`;
+}
+/* RULE-COPY-END */
+
 /* ---------- narrow-viewport round navigation ----------
  *
  * See the @media (max-width: 720px) rule in app.css: below that width, .board
@@ -1724,6 +1928,16 @@ function renderStrategies() {
     })(),
   }));
   opts.push({
+    id: RULE,
+    label: 'Rule search',
+    sub: 'Experimental. One criterion per round — every game in that round goes to the team '
+       + 'better on one variable — chosen because it reproduces the checkpoints you pick over the '
+       + 'last few played seasons before this one. Found after the fact, not validated, and not '
+       + 'scored against the pool: no chance of finishing first, no expected points.',
+    tag: 'experimental',
+    stat: '',
+  });
+  opts.push({
     id: MODEL,
     label: 'Fitted model',
     // Used to end "...This is the only strategy the variable weights apply
@@ -2009,6 +2223,7 @@ function picksAsText() {
     st && st.p1 !== undefined
       ? `${p1Pct(st.p1)} to finish first, ${st.ev.toFixed(0)} expected points`
       : '',
+    st && st.id === RULE ? `Experimental rule search — not scored against the pool. ${st.note}` : '',
     // The fitted bracket's numbers travel too, labelled for what they are.
     (() => { const fe = !st ? fittedEval() : null;
              return fe && !fe.stale
@@ -2126,7 +2341,7 @@ function setStrategy(id) {
     state.objective = id;
     state.strategy = anyFilter() ? CUSTOM : id;
   } else {
-    if (id === MODEL) state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
+    if (id === MODEL || id === RULE) state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.strategy = id;
   }
   state.notice = '';
@@ -2134,6 +2349,7 @@ function setStrategy(id) {
   writeHash();
   renderStrategies();
   render();
+  if (id === RULE) ensureRuleSearch();
 }
 
 /* ---------- team drawer ---------- */
@@ -2310,6 +2526,7 @@ async function init() {
   // "not_started" until Selection Sunday, so the newest LISTED season is an
   // empty state for most of the year.
   // A shared link names its own season; otherwise open on the newest ready one.
+  state.seasonsIndex = idx.seasons;
   const fromHash = readHash();
   const fallback = pickDefaultSeason(idx.seasons);
   if (fromHash !== null && idx.seasons.some(s => s.year === fromHash)) {
