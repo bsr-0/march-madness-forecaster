@@ -255,6 +255,22 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .rule-handrow .ex-round { min-width: 64px; }
 .rule-yr { display: inline-block; padding: 1px 7px; border-radius: 5px; font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--ink-3); background: var(--panel); border: 1px solid var(--line); }
 .rule-yr.ok { color: var(--good); border-color: rgba(95, 185, 138, .4); }
+/* One variable in every round, scored on every prior played season: the
+   panel's first content, a compact clickable table. */
+.rule-one { margin: 2px 0 14px; }
+.one-tbl { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.one-tbl th { text-align: left; padding: 0 10px 5px 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.one-tbl td { padding: 5px 10px 5px 8px; border-top: 1px solid var(--line); color: var(--ink-2); }
+.one-tbl .num { text-align: right; white-space: nowrap; }
+.one-of { color: var(--ink-3); }
+.one-row { cursor: pointer; }
+.one-row:hover td { background: var(--panel); }
+.one-row.on td { background: var(--panel); color: var(--ink); }
+.one-row.on td:first-child { box-shadow: inset 3px 0 0 var(--up); }
+.one-more { margin: 4px 0 0; }
+.one-more > summary { font-size: 11.5px; }
+.rule-sect { margin: 0 0 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+
 /* Criterion under the round name on the board, rule strategy only. */
 .r-sub { display: block; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--up); margin-top: 1px; }
 
