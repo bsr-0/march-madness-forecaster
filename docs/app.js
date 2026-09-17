@@ -155,6 +155,8 @@ const state = {
     rank: 'simple',                // 'simple' | 'outside' (most seasons outside the range reproduced)
     maxCriteria: null,             // offer only rules using at most this many distinct criteria; null = any
     hand: null,                    // by-hand rule: one criterion per round, 6 entries
+    want: null,                    // the chosen rule as a criterion sequence, so the choice survives a new field (see rq in the URL)
+    ref: null,                     // under a pending field: the latest played season's payload, for variable keys and labels
     chosen: 0, result: null, busy: false,
     token: 0,                      // the latest ensureRuleSearch() call; earlier ones abandon when superseded
   },
@@ -634,12 +636,18 @@ function p1Pct(p) {
  * Split out of init() so it can be tested without a network.
  */
 function pickDefaultSeason(seasons) {
-  const ready = (seasons || []).filter(s => s.status === 'ready').map(s => s.year);
+  const all = (seasons || []).slice().sort((a, b) => a.year - b.year);
+  const ready = all.filter(s => s.status === 'ready').map(s => s.year);
+  // The newest listed season is the front door once it can show something:
+  // its bracket, or -- from the day the previous season is played until
+  // Selection Sunday -- the rule search over the seasons before it, with a
+  // blank bracket waiting for the field (see fieldPending()).
+  const newest = all[all.length - 1];
+  if (newest && newest.status === 'not_started' && ready.some(y => y < newest.year)) return newest.year;
   if (ready.length) return Math.max(...ready);
   // No bracket anywhere: show the newest thing we know about and let its own
   // empty state explain itself, rather than a year that may not be listed.
-  const all = (seasons || []).map(s => s.year);
-  return all.length ? Math.max(...all) : null;
+  return all.length ? all[all.length - 1].year : null;
 }
 
 /* ---------- addressable state ----------
@@ -697,7 +705,10 @@ function writeRuleHash(p) {
     if (r.keys) p.set('rk', r.keys.join(','));
     if (r.rank === 'outside') p.set('rr', 'outside');
     if (r.maxCriteria !== null) p.set('rx', String(r.maxCriteria));
-    if (r.chosen) p.set('ri', String(r.chosen));
+    // The chosen rule by its criteria, not its position: the list is
+    // deduplicated by bracket once a field exists, so a position chosen
+    // before Selection Sunday would not survive the field arriving.
+    if (r.want) p.set('rq', r.want.join(','));
   }
   p.set('rc', r.checkpoints.join(''));
 }
@@ -721,8 +732,11 @@ function readRuleHash(p) {
   if (p.get('rr') === 'outside') r.rank = 'outside';
   const rx = parseInt(p.get('rx'), 10);
   if (Number.isFinite(rx)) r.maxCriteria = Math.max(1, Math.min(ROUNDS.length, rx));
-  const ri = parseInt(p.get('ri'), 10);
-  if (Number.isFinite(ri) && ri >= 0) r.chosen = ri;                         // clamped to the offered list by ruleStrategy()
+  const rq = p.get('rq');
+  if (rq) {
+    const want = rq.split(',');
+    if (want.length >= 1 && want.length <= ROUNDS.length) r.want = want;   // resolved against the survivors by ensureRuleSearch()
+  }
   const rh = p.get('rh');
   if (rh) {
     const hand = rh.split(',');
@@ -882,6 +896,29 @@ function render() {
   const empty = document.getElementById('empty');
   const note = document.getElementById('mode-note');
   const weights = document.getElementById('strategy');
+  { const main = document.getElementById('main'); if (main) main.classList.toggle('pending', fieldPending(s)); }
+  if (fieldPending(s)) {
+    // The field is not out: the strategy table (rule search selectable, the
+    // rest listed for what they will be), the rule panel with its rules,
+    // and a blank bracket the chosen rule fills on Selection Sunday.
+    // Everything that needs a field -- headline, tools, filters, explore,
+    // the methodology layer -- stays hidden.
+    state.rounds = null;
+    for (const id of ['headline', 'board-tools', 'board-nav', 'rnav-dots', 'explore', 'tune', 'why']) { const el = document.getElementById(id); if (el) el.hidden = true; }
+    weights.hidden = true;
+    note.innerHTML = '';
+    { const el = document.getElementById('dropped-note'); if (el) el.textContent = ''; }
+    state.notice = '';
+    renderCompare();
+    renderRulePanel();
+    // The wait note in the empty-state slot, in its light form, above the board.
+    empty.className = 'empty wait';
+    empty.hidden = false;
+    empty.innerHTML = `<p class="e-sub">${s.message || `The ${s.year} field is not out yet.`} It is announced on Selection Sunday ${s.year}; the rule chosen above fills this bracket then.</p>`;
+    board.innerHTML = blankBoardHTML();
+    return;
+  }
+  empty.className = 'empty';
   if (!s || s.status !== 'ready') {
     board.innerHTML = '';
     state.rounds = null;
@@ -1044,6 +1081,16 @@ function render() {
  * evaluation on file is for exactly that bracket (fittedEval()). */
 function strategyRows() {
   const s = state.season;
+  if (fieldPending(s)) {
+    // Listed for what they will be, selectable when the field is.
+    const wait = `Awaiting the ${s.year} field`;
+    return [
+      { id: 'p1', label: 'Win the pool', kind: `Backtested rule · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+      { id: 'ev', label: 'Most expected points', kind: `Exact optimum · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+      { id: RULE, label: 'Rule search', kind: 'Experimental — fit after the fact, not scored', p1: null, ev: null, champion: null, filtered: false, record: null, active: state.strategy === RULE },
+      { id: MODEL, label: 'Fitted model', kind: `Evaluated, not selected · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+    ];
+  }
   const teams = s.teams;
   const filt = state.strategy === MODEL ? null : filteredEntry().entry;
   const rows = (s.strategies || []).map(st => {
@@ -1232,8 +1279,9 @@ function renderCompare() {
         ${played ? `<th class="num cmp-real">Scored</th><th class="cmp-real">Finish</th>` : ''}
       </tr></thead>
       <tbody>${rows.map(r => `
-        <tr class="cmp-row${r.active ? ' on' : ''}" onclick="setStrategy('${r.id}')" role="button" tabindex="0"
-            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }">
+        ${r.pending ? `<tr class="cmp-row na" aria-disabled="true">`
+          : `<tr class="cmp-row${r.active ? ' on' : ''}" onclick="setStrategy('${r.id}')" role="button" tabindex="0"
+            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }">`}
           <td><span class="cmp-label">${r.label}</span>
               <span class="cmp-kind">${r.kind}${r.filtered ? ' · filtered' : ''}${r.stale ? ' · not scored' : ''}</span></td>
           <td class="num">${cell(r.p1, p1Pct)}</td>
@@ -1590,6 +1638,23 @@ function playedSeasonsBefore(year) {
   return (state.seasonsIndex || []).filter(x => x.status === 'ready' && x.year < year).map(x => x.year).sort((a, b) => a - b);
 }
 
+/* A listed season whose field is not out yet, with played seasons before
+ * it: 2027 from the day 2026 is played until Selection Sunday. The rule
+ * search has everything it needs -- it reads only prior seasons -- and only
+ * the bracket waits for the field. The pool strategies and the fitted
+ * model need the field itself, so under a pending season they are listed
+ * and not selectable. */
+function fieldPending(s = state.season) {
+  return !!s && s.status === 'not_started' && playedSeasonsBefore(s.year).length > 0;
+}
+
+/* The season the rule search reads variable keys and labels from: the
+ * displayed one, or under a pending field the latest played season (loaded
+ * by setYear() before anything renders). Null only before that load. */
+function ruleRef() {
+  return state.season && state.season.status === 'ready' ? state.season : state.rule.ref;
+}
+
 function ruleSeasonFrom(payload, year) {
   const crit = Object.assign({}, payload.z);
   crit.seed = payload.teams.map(t => -t.seed);
@@ -1597,9 +1662,10 @@ function ruleSeasonFrom(payload, year) {
 }
 
 function ruleLabel(k) {
-  return (state.season.variables.find(v => v.key === k) || {}).label || (k === 'seed' ? 'Seed (chalk)' : k);
+  const ref = ruleRef();
+  return (ref && ref.variables.find(v => v.key === k) || {}).label || (k === 'seed' ? 'Seed (chalk)' : k);
 }
-function ruleAllKeys() { return [...Object.keys(state.season.z), 'seed'].sort(); }
+function ruleAllKeys() { const ref = ruleRef(); return [...(ref ? Object.keys(ref.z) : []), 'seed'].sort(); }
 /* The by-hand rule as it stands, or its starting point: the season's first
  * listed variable in every round (the overall rating on the shipped data),
  * seed if the season lists none. Never a key the season lacks: an entry the
@@ -1607,8 +1673,9 @@ function ruleAllKeys() { return [...Object.keys(state.season.z), 'seed'].sort();
  * hand) is replaced by that starting point, so rulePlay() is never handed a
  * criterion it cannot read. */
 function ruleHand() {
-  const v = state.season.variables;
-  const base = v.length && v[0].key in state.season.z ? v[0].key : 'seed';
+  const ref = ruleRef();
+  const v = ref ? ref.variables : [];
+  const base = v.length && v[0].key in ref.z ? v[0].key : 'seed';
   if (!state.rule.hand) return Array(ROUNDS.length).fill(base);
   const known = new Set(ruleAllKeys());
   return state.rule.hand.map(k => (known.has(k) ? k : base));
@@ -1656,10 +1723,31 @@ function ruleYearsText(years) {
  * board's column header. Empty unless the rule strategy is showing. */
 function ruleRoundLabel(r, sep) {
   if (state.strategy !== RULE) return '';
-  const st = ruleStrategy();
-  if (!st || !st.rule) return '';
-  const k = st.rule[Math.min(r, st.rule.length - 1)];
+  const b = ruleChosen();
+  if (!b) return '';
+  const k = b.seq[Math.min(r, b.seq.length - 1)];
   return sep ? `${sep}${ruleLabel(k)}` : `<span class="r-sub">${ruleLabel(k)}</span>`;
+}
+
+/* The current result, or null if none is held for the inputs on the
+ * panel (or for this season). */
+function ruleResult() {
+  const r = state.rule.result;
+  return r && r.key === ruleKey() ? r : null;
+}
+/* The chosen entry of the current result: a bracket, or under a pending
+ * field a rule with no picks yet. */
+function ruleChosen() {
+  const r = ruleResult();
+  if (!r || !r.brackets.length) return null;
+  return r.brackets[Math.min(state.rule.chosen, r.brackets.length - 1)];
+}
+/* The inputs other than the season: a change here starts the offered list
+ * at its first entry, while a season change keeps the chosen rule (it is a
+ * criterion sequence, meaningful in any season). */
+function ruleSettingsKey() {
+  const r = state.rule;
+  return JSON.stringify([r.mode, r.checkpoints, r.from, r.to, r.n, r.keys, r.rank, r.maxCriteria, r.hand]);
 }
 
 /* Fetch what the search needs, run it, keep the offered brackets with their
@@ -1668,14 +1756,15 @@ const RULE_RANK_POOL = 500;   // distinct brackets scored when ranking by outsid
 
 async function ensureRuleSearch() {
   const s = state.season;
-  if (!s || s.status !== 'ready') return;
+  if (!s || !(s.status === 'ready' || fieldPending(s))) return;
   const { played, fit: fitYears } = ruleRange();
   const key = ruleKey();
   if (state.rule.result && state.rule.result.key === key) return;
-  // A new list starts at its first bracket -- unless this is the first
-  // search of the page, where `chosen` may have come from a shared link
-  // and names the bracket that link promised.
-  if (state.rule.result && state.rule.chosen) { state.rule.chosen = 0; writeHash(); }
+  // A changed control starts the new list at its first entry. A season
+  // change alone keeps the chosen rule, and the first search of the page
+  // honours the rule a shared link names (`want`, from rq in the URL).
+  const settings = ruleSettingsKey();
+  if (state.rule.result && state.rule.result.settings !== settings) { state.rule.chosen = 0; state.rule.want = null; writeHash(); }
   // Every control calls this without awaiting, so two quick clicks overlap
   // here. Only the latest call may write a result: an earlier one finishing
   // last would leave a result for inputs no longer on the panel.
@@ -1686,13 +1775,18 @@ async function ensureRuleSearch() {
     for (const y of played) payloads[y] = ruleSeasonFrom(await loadSeason(y), y);
     if (token !== state.rule.token) return;
     const complete = y => payloads[y].actual && payloads[y].actual.every(r => r.length);
-    const here = ruleSeasonFrom(s, state.year);
+    // No field yet: the search runs, the rules are listed, and picks wait.
+    const here = s.status === 'ready' ? ruleSeasonFrom(s, state.year) : null;
     const cps = state.rule.checkpoints;
+    const apply = seq => {
+      if (!here) return { rounds: null, picks: null };
+      const rounds = ruleBracket(here, seq);
+      return { rounds, picks: rounds.map(g => g.map(x => x.win)) };
+    };
     if (state.rule.mode === 'hand') {
       const seq = ruleHand();
-      const rounds = ruleBracket(here, seq);
       const per = played.filter(complete).map(y => ({ year: y, ok: ruleReproduces(payloads[y], seq, cps) }));
-      state.rule.result = { key, mode: 'hand', brackets: [{ seq, rounds, picks: rounds.map(g => g.map(x => x.win)), complexity: ruleComplexity(seq), per }] };
+      state.rule.result = { key, settings, mode: 'hand', brackets: [{ seq, ...apply(seq), complexity: ruleComplexity(seq), per }] };
       // No early return: a `return` here used to leave the try block and
       // skip the redraw below, so hand mode sat on "Searching…" with its
       // result held in state and the board empty.
@@ -1709,20 +1803,44 @@ async function ensureRuleSearch() {
       // the criteria cap means every later one is too: stop there.
       const maxCx = state.rule.maxCriteria;
       let overCap = false;
+      // With a field, distinct BRACKETS are offered (many rules give the
+      // same picks); without one, distinct rules.
+      const sigOf = (seq, b) => (here ? b.picks.map(g => g.join(',')).join('|') : seq.join(','));
+      const entry = seq => {
+        const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
+        return { seq, ...apply(seq), complexity: ruleComplexity(seq), outside: { k: hits.length, m: outside.length, years: hits } };
+      };
       for (const seq of res.rules) {
         const complexity = ruleComplexity(seq);
         if (maxCx !== null && complexity[0] > maxCx) { overCap = true; break; }
-        const rounds = ruleBracket(here, seq);
-        const sig = rounds.map(g => g.map(x => x.win).join(',')).join('|');
+        const b = entry(seq);
+        const sig = sigOf(seq, b);
         if (seen.has(sig)) continue;
         seen.add(sig);
-        const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
-        brackets.push({ seq, rounds, picks: rounds.map(g => g.map(x => x.win)), complexity, outside: { k: hits.length, m: outside.length, years: hits } });
+        brackets.push(b);
         if (brackets.length >= cap) break;
       }
       const scored = brackets.length;
       if (state.rule.rank === 'outside') brackets.sort((a, b) => b.outside.k - a.outside.k || a.complexity[0] - b.complexity[0] || a.complexity[1] - b.complexity[1]);
-      state.rule.result = { key, mode: 'search', brackets: brackets.slice(0, state.rule.n), scored, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap };
+      const offered = brackets.slice(0, state.rule.n);
+      // The rule a link names (or the one chosen before the season changed):
+      // find it among the offered entries by sequence, then -- with a field --
+      // by the bracket it gives, since the offered list is deduplicated by
+      // picks; failing that, if it survived at all, list it as one more.
+      const want = state.rule.want;
+      let chosen = 0;
+      if (want) {
+        const same = seq => seq.length === want.length && seq.every((k, i) => k === want[i]);
+        let i = offered.findIndex(b => same(b.seq));
+        if (i < 0 && res.rules.some(same)) {
+          const b = entry(want);
+          if (here) { const sig = sigOf(want, b); i = offered.findIndex(o => sigOf(o.seq, o) === sig); }
+          if (i < 0) { offered.push(b); i = offered.length - 1; }
+        }
+        chosen = Math.max(0, i);
+      }
+      state.rule.result = { key, settings, mode: 'search', brackets: offered, scored, usedSeasons: res.usedSeasons, requested: fitYears, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap };
+      state.rule.chosen = chosen;
     }
   } finally {
     if (token === state.rule.token) state.rule.busy = false;
@@ -1745,6 +1863,7 @@ function ruleStrategy() {
   if (r.key !== ruleKey()) return null;
   const i = Math.min(state.rule.chosen, r.brackets.length - 1);
   const b = r.brackets[i];
+  if (!b.picks) return null;          // pending field: a rule, not yet a bracket
   const seqText = b.seq.map(ruleLabel).join(' → ') + (b.seq.length < 6 ? ' (later rounds reuse the last criterion)' : '');
   const cx = `${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'}, ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'}`;
   let note, prior;
@@ -1789,14 +1908,19 @@ function setRuleKey(k, on) {
 }
 function setRuleKeysAll(on) { state.rule.keys = on ? null : ['seed']; ruleChanged(); }
 function setRuleHand(r, k) { const h = ruleHand().slice(); h[r] = k; state.rule.hand = h; ruleChanged(); }
-function setRuleChosen(i) { state.rule.chosen = Math.max(0, i); writeHash(); renderStrategies(); render(); }
+function setRuleChosen(i) {
+  const r = ruleResult();
+  state.rule.chosen = Math.max(0, i);
+  state.rule.want = r && r.brackets[state.rule.chosen] ? r.brackets[state.rule.chosen].seq.slice() : null;
+  writeHash(); renderStrategies(); render();
+}
 
 /* RULE-COPY-START -- the wording guard scans this renderer too. */
 function renderRulePanel() {
   const host = document.getElementById('rulepanel');
   const body = document.getElementById('rule-body');
   if (!host || !body) return;
-  if (state.strategy !== RULE || !state.season || state.season.status !== 'ready') { host.hidden = true; return; }
+  if (state.strategy !== RULE || !state.season || !(state.season.status === 'ready' || fieldPending())) { host.hidden = true; return; }
   host.hidden = false; host.open = true;
   // Only a result for the inputs on the panel; a held one for other inputs
   // (or another season) is not shown while the new search runs.
@@ -1806,7 +1930,7 @@ function renderRulePanel() {
   const keysOn = new Set(ruleKeys());
   const all = ruleAllKeys();
   const groups = {};
-  for (const v of state.season.variables) (groups[v.group] ||= []).push(v.key);
+  for (const v of (ruleRef() || { variables: [] }).variables) (groups[v.group] ||= []).push(v.key);
   groups['Seed'] = ['seed'];
 
   // Three one-line controls: which rounds a rule must get right, which
@@ -1863,7 +1987,9 @@ function renderRulePanel() {
   else if (!r) results = '';
   else if (r.mode === 'hand') {
     const b = r.brackets[0];
-    results = `<p class="ex-line">This rule gives ${state.year} a bracket with champion <b>${state.season.teams[b.picks[b.picks.length - 1][0]].name}</b>. ${b.per.length
+    results = `<p class="ex-line">${b.picks
+      ? `This rule gives ${state.year} a bracket with champion <b>${state.season.teams[b.picks[b.picks.length - 1][0]].name}</b>.`
+      : `This rule fills the ${state.year} bracket once the field is out.`} ${b.per.length
       ? `Across the ${b.per.length} played seasons before ${state.year} it reproduces ${ruleTargetText()} in:
       ${b.per.map(x => `<span class="rule-yr${x.ok ? ' ok' : ''}">${x.year}</span>`).join(' ')}`
       : `There are no played seasons before ${state.year} to check it against.`}</p>`;
@@ -1875,13 +2001,19 @@ function renderRulePanel() {
     results = `<p class="ex-line">No single-criterion rule reproduces ${ruleTargetText()} in ${ruleYearsText(r.requested)} — nor in any shorter range ending in ${r.requested[r.requested.length - 1] || ''}. Fewer checkpoints, more criteria, or a different range may have one.</p>`;
   } else {
     const capText = state.rule.maxCriteria === null ? '' : ` (those using at most ${state.rule.maxCriteria} ${state.rule.maxCriteria === 1 ? 'criterion' : 'criteria'})`;
+    const pending = !r.brackets[0].picks;
+    // With a field: distinct brackets the rules give this season. Without
+    // one: the rules themselves, which fill the bracket on Selection Sunday.
+    const offer = pending
+      ? `the ${r.brackets.length} ${state.rule.rank === 'outside' ? 'reproducing the most other seasons' : 'simplest'}${capText} are listed below — the ${state.year} field is not out yet, so they give no bracket until it is.`
+      : `${r.brackets.length} of the ${r.scored} distinct brackets they${capText} give ${state.year} are offered below.`;
     const head = r.backedOff
-      ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules; ${r.brackets.length} of the ${r.scored} distinct brackets they${capText} give ${state.year} are offered below.</p>`
-      : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}; ${r.brackets.length} of the ${r.scored} distinct brackets they${capText} give ${state.year} are offered below.</p>`;
+      ? `<p class="ex-line"><b>No rule reproduces ${ruleTargetText()} across ${ruleYearsText(r.requested)}.</b> The longest range ending in ${r.requested[r.requested.length - 1]} with a surviving rule is ${ruleYearsText(r.usedSeasons)}: ${r.nRules.toLocaleString()} rules; ${offer}</p>`
+      : `<p class="ex-line">${r.nRules.toLocaleString()} rules reproduce ${ruleTargetText()} in every season of ${ruleYearsText(r.usedSeasons)}; ${offer}</p>`;
     const list = r.brackets.map((b, i) => `
       <button class="rule-row${i === Math.min(state.rule.chosen, r.brackets.length - 1) ? ' on' : ''}" onclick="setRuleChosen(${i})">
         <span class="rule-seq">${b.seq.map(ruleLabel).join(' → ')}</span>
-        <span class="rule-meta">${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'} · champion ${state.season.teams[b.picks[5][0]].name}
+        <span class="rule-meta">${b.complexity[0]} ${b.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${b.complexity[1]} ${b.complexity[1] === 1 ? 'switch' : 'switches'}${b.picks ? ` · champion ${state.season.teams[b.picks[5][0]].name}` : ''}
           · outside the range: ${b.outside.m ? `${b.outside.k} of ${b.outside.m} seasons${b.outside.k ? ` (${b.outside.years.join(', ')})` : ''}` : 'no other seasons to check'}</span>
       </button>`).join('');
     results = head + list;
@@ -2136,6 +2268,22 @@ function gameHTML(g, round, actualGame) {
       ${sideHTML(g.a, g.win === g.a, pa === null ? null : pa, g.b, round, actualGame ? actualGame.a : null)}
       ${sideHTML(g.b, g.win === g.b, pa === null ? null : 1 - pa, g.a, round, actualGame ? actualGame.b : null)}
     </div>`;
+}
+
+/* Sixty-three empty games under the round headers (with the chosen rule's
+ * criterion under each, as on a filled board), for a season whose field is
+ * not out. Every round carries `active`: on a phone that shows them all,
+ * stacked, since there is no round navigator without state.rounds. */
+function blankBoardHTML() {
+  return ROUNDS.map((name, r) => {
+    const n = 32 >> r;
+    const games = Array.from({ length: n }, () => `
+      <div class="game blank">
+        <div class="side"><span class="seed"></span><span class="tcol"><span class="tname">—</span></span></div>
+        <div class="side"><span class="seed"></span><span class="tcol"><span class="tname">—</span></span></div>
+      </div>`).join('');
+    return `<div class="round active" data-r="${r}" style="--n:${n}"><p class="r-label">${name}${ruleRoundLabel(r)}</p>${games}</div>`;
+  }).join('');
 }
 
 /* The percentage badge always comes from the live fitted model (fit.js), even
@@ -2615,6 +2763,9 @@ function setFilter(kind, value) {
 }
 
 function setStrategy(id) {
+  // Without a field there is nothing for the pool strategies or the fitted
+  // model to show; their rows are listed and not selectable.
+  if (fieldPending() && id !== RULE) return;
   // Choosing an objective KEEPS the filters and re-resolves them under the new
   // question, which is the whole point of separating the two. Only the fitted
   // model clears them, because it has no pool to filter.
@@ -2789,6 +2940,14 @@ async function setYear(year) {
   } catch {
     state.season = null;
   }
+  if (fieldPending()) {
+    // Only the rule search works without a field, and it reads keys and
+    // labels from the latest played season; loaded before anything renders.
+    const played = playedSeasonsBefore(year);
+    state.rule.ref = await loadSeason(played[played.length - 1]);
+    state.strategy = RULE;
+    state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
+  }
   reconcileFiltersWithSeason();
   writeHash();
   // Refit: the excluded season changed, so the coefficients must change too.
@@ -2806,11 +2965,9 @@ async function init() {
     fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
     loadTraining(),
   ]);
-  // Open on the newest season that actually has a bracket. Not max(year):
-  // 2027 is listed from the moment the calendar knows about it and stays
-  // "not_started" until Selection Sunday, so the newest LISTED season is an
-  // empty state for most of the year.
-  // A shared link names its own season; otherwise open on the newest ready one.
+  // Open on the newest listed season once it can show something (see
+  // pickDefaultSeason(): its bracket, or the rule search with a blank
+  // bracket while its field is pending). A shared link names its own.
   state.seasonsIndex = idx.seasons;
   const fromHash = readHash();
   const fallback = pickDefaultSeason(idx.seasons);
@@ -2820,10 +2977,17 @@ async function init() {
     state.year = fallback;
   }
 
-  document.getElementById('years').innerHTML = idx.seasons.map(s => `
-    <button class="yr${s.year === state.year ? ' on' : ''}${s.status === 'ready' ? '' : ' na'}"
-            data-year="${s.year}" title="${s.status === 'ready' ? '' : `No bracket available for ${s.year}`}"
-            onclick="setYear(${s.year})">${s.year}</button>`).join('');
+  // Newest season first -- the one to fill in -- then the played seasons
+  // as history: every backtest claim on the page is checkable by opening
+  // the season it was scored on, which is what these are for.
+  const listed = idx.seasons.slice().sort((a, b) => b.year - a.year);
+  const yearBtn = s => `
+    <button class="yr${s.year === state.year ? ' on' : ''}${s.status === 'ready' || fieldPending(s) ? '' : ' na'}"
+            data-year="${s.year}" title="${s.status === 'ready' ? '' : fieldPending(s) ? `Field announced on Selection Sunday ${s.year}` : `No bracket available for ${s.year}`}"
+            onclick="setYear(${s.year})">${s.year}</button>`;
+  document.getElementById('years').innerHTML = yearBtn(listed[0])
+    + (listed.length > 1 ? `<span class="yr-sep">past seasons</span>` : '')
+    + listed.slice(1).map(yearBtn).join('');
 
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);

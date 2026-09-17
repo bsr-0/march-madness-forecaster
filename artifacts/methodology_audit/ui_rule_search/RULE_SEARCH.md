@@ -88,6 +88,27 @@ panel, export header). Measured on the shipped data the regress is stark and
 is shown, not hidden: 2026 alone needs 2 criteria, 2025–2026 needs 3, and
 2023–2025 or 2024–2026 have no surviving rule at all.
 
+## A season whose field is not out (2026-09-17)
+From the day the previous season is played until Selection Sunday, the
+newest listed season (`status: not_started` with played seasons before it)
+is the page's front door: the strategy table lists the pool strategies and
+the fitted model as awaiting the field (not selectable), the rule search
+runs over the seasons before it (2025–2026 for 2027 by default — 2026 is a
+*prior* season from 2027's point of view, which is why it belongs in
+2027's fit and never in its own), and the board is 63 blank games under
+the chosen rule's criteria. Variable keys and labels come from the latest
+played season. Results are distinct *rules* (there is no bracket to
+deduplicate by) with the outside-range count; picks are null and
+`ruleStrategy()` resolves to nothing. The chosen rule travels in the URL as
+its criterion sequence (`rq`), not a list position, so the same link
+resolves to the bracket that rule gives once the field exists (matched by
+sequence, then by picks since the list is then deduplicated by bracket;
+a surviving rule not among the offered `n` is listed as one more). A
+season change keeps the chosen rule; a control change resets it. The year
+row lists the newest season first and the played seasons after a "past
+seasons" label: they are the history every backtest claim is checked
+against.
+
 ## Walk-forward
 Fit seasons are strictly before the displayed season. A 2026 bracket from a
 rule fit on 2024–2026 would be a bracket fit on its own result and is not
