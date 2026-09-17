@@ -88,6 +88,42 @@ panel, export header). Measured on the shipped data the regress is stark and
 is shown, not hidden: 2026 alone needs 2 criteria, 2025–2026 needs 3, and
 2023–2025 or 2024–2026 have no surviving rule at all.
 
+## One variable, every round (2026-09-17)
+The panel's first content, before any control: each variable applied on
+its own in every round, scored on every played season before the
+displayed one — Final Four teams right, seasons where the Final Four is
+exact (all four), champions right — sorted by Final Four teams right, six
+rows shown and the rest behind "All 32 variables", with a chance row
+(picks that ignore the teams: 1/16 per Final Four slot, 1/64 for the
+champion). Walk-forward like the search; nothing is selected on it.
+Measured on the shipped data (14 seasons): no single variable reproduces
+the Final Four in more than one season, and that one is 2025, when all
+four 1 seeds reached it; the best (Torvik national rank) gets 26 of 56
+Final Four teams and 5 of 14 champions, seed itself 22 and 3, chance 3.5
+and 0.2. The copy states that gaps of a few teams between rows are noise:
+a season's four slots move together, so n is seasons, not teams. This is
+the finding the search rests on — a rule has to switch variables between
+rounds to reproduce even two seasons — and it is shown first so it does
+not have to be discovered through the controls. Clicking a row composes
+that variable by hand in every round. `oneVariableTable()` in app.js,
+computed once per displayed season from the payloads the search loads.
+
+## Generalisation of every survivor (2026-09-17, review item 2)
+Beside the survivor count the panel states how many of *all* the
+surviving rules reproduce the checkpoints in at least one played season
+outside the fit range (`ruleGeneralisation()` in fit.js: exact while
+rules × outside seasons ≤ 200,000 applications, otherwise on the simplest
+prefix, which the copy says). On the shipped data for 2027 (fit
+2025–2026, Final Four + finalists + champion): **of 7,137 survivors, none
+reproduces those in any of the other 12 seasons** (13 reproduce the Final
+Four alone in one other season). Under the "most other seasons first"
+ranking the per-row outside count is what the list was sorted by (best of
+500) and the footer says it is selected on; the count over every survivor
+is the one number no control tunes. Refusing to uncheck the last early
+checkpoint now shows a message instead of silently not toggling; the
+round chips carry full names and the ranking caveat is visible text, not
+a tooltip (review items 7, 8).
+
 ## A season whose field is not out (2026-09-17)
 From the day the previous season is played until Selection Sunday, the
 newest listed season (`status: not_started` with played seasons before it)

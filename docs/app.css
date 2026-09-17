@@ -224,6 +224,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .rule-line .chip.on { border-color: var(--up); }
 .rule-dash { color: var(--ink-3); font-size: 12px; margin: 0 1px; }
 .rule-hint { margin-left: 6px; font-size: 11px; color: var(--ink-3); }
+.rule-hint.warn { flex-basis: 100%; margin: 2px 0 0 72px; color: var(--up); }
+.one-chance td { color: var(--ink-3); font-style: italic; }
 .rule-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .rule-group .ex-gname { min-width: 110px; }
 .rule-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-2); cursor: pointer; }

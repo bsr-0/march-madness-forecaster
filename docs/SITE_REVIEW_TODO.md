@@ -69,3 +69,68 @@ Full `pytest tests/` (2,258 passed, 43 min) surfaced two pre-existing defects in
 2. **Classified 2026-09-16 — isolated to non-production CLI code; not repaired by design.** Full trace: `run_optimize_pool` (single-mode, `construction_mode=forward_greedy`) → `PoolOptimizer.optimize()` → `leverage.py:2267 ParetoOptimizer.generate_pareto_brackets` → `leverage.py:1492 construct_bracket(...)` **without `region_order`** → `bracket_construction._build_seed_map` falls back to `_REGION_ORDER=("East","West","South","Midwest")`. The re-ranker (`pool_cmds._rerank_brackets_by_p1st`) then projects those picks onto the season's *real* F4 pairing from `resolve_region_order` (2026: `West/Midwest/East/South`) via the strict `picks_to_bool_vector`, which raises when the constructed semifinal winners are not one-per-real-semifinal. It is a residual of audit F3-1 in a caller the audit did not reach; `torvik` mode passes only by coincidence of which teams its round probabilities push through.
    **Dependency evidence (PASS gate):** `run_optimize_pool` is invoked only by the CLI subcommand and `tests/test_optimize_pool_e2e.py`; no production build, CI job, `build_candidate_artifact`, `build_ui_payload`, `evaluate_fitted_bracket`, `generate_poolaware_bracket`, Step 9 `referee_audit`, or audit Path 1/2/3 reaches `PoolOptimizer`/`ParetoOptimizer`. The only backtest-side route (`mc_pool_backtest.build_optimized_brackets`) has **no callers anywhere**. Every actual `construct_bracket` call on a production/validation path passes `region_order` (AST-verified), and the shared projection is strict, so a topology mismatch on those paths would raise rather than mis-score — none does (full suite, 14 fitted evaluations with exact parity). README's recommended CLI route (`auto`) and the `det_*` route both pass `region_order` and are clean. Guards: `tests/test_topology_isolation.py` (AST contract, pins the defect's location, asserts the dead helper stays dead); the `seed` e2e case is `xfail(strict=True)` with the classification as its reason; `AGENT_NOTES.md` updated. No methodology, referee, model, or topology behaviour changed.
    **Two adjacent research scripts noted, not touched:** `scripts/retrospective_scorer.py:296` also omits `region_order` (would hit the same strict `TopologyMismatch` on affected seasons), and `scripts/rank_correlation_diagnostic.py:160` is stale — it calls `_build_first_round_matchups(seeds, regions)` against the post-audit 3-argument signature and cannot run. Neither is on a production path. `artifacts/rank_correlation_diagnostic.json` / `o6_winner_rank_diagnostic.json` (the O3/O6 council-lesson evidence consumed by `tests/test_pool_optimizer_calibration.py`) were generated 2026-04-12, before F3-1, on the mixed topology that finding describes; they are legacy gate evidence, not part of the Step 1–18 audit chain or any shipped number. Re-deriving them is a new experiment and was explicitly out of scope.
+
+## Independent review of the 2026-09-17 rule-search / 2027 landing work
+
+Reviewed as an outside evaluator with statistics and UX standards, after the
+session that added: rule-search customisation (checkpoints, criteria cap, URL
+state), the strategy table first with filters gated by strategy, the compact
+panel, the 2027 pending-field landing (rule search over 2025–2026, blank
+bracket, year row as history) and the one-variable table. Measurements taken
+on the shipped data and the live site.
+
+### Statistics
+1. **Footer claim false under one setting.** The panel footer says the
+   outside-range count is "the only number here it was not chosen on"; the
+   "most other seasons first" ranking selects on exactly that number (best of
+   500). Copy must be conditional on the ranking. — **Fixed 2026-09-17.**
+2. **The real finding is one sentence, not five rows.** Of the 7,137 rules
+   reproducing Final Four + finalists + champion in 2025–2026, **zero**
+   reproduce them in any of the other 12 seasons (13 reproduce the Final Four
+   alone in one other season). The panel showed "0 of 12" on each of five rows
+   and left the inference to the reader. Now computed for every survivor
+   (`ruleGeneralisation()` in fit.js; exact up to 200k applications, else on
+   the simplest prefix with the copy saying so) and stated. — **Fixed.**
+3. **One-variable table implied a ranking the data can't support.** National
+   rank 26/56 vs seed 22/56 is four Final Four slots over 14 seasons, and the
+   four slots in a season move together. Missing: a chance row (random picks:
+   3.5 of 56 Final Four teams, 0.2 champions of 14 — the top variables are
+   ~6× chance, which the bold "no single variable…" sentence buried) and a
+   note that gaps of a few teams are noise. — **Fixed:** chance row and noise
+   sentence added; "exact" labelled as all four.
+4. **Default fit window of 2 seasons is the most overfit-prone setting.** It
+   is the right window for 2027 (2025–2026), but "7,137 rules" reads as
+   abundance. The generalisation sentence (item 2) now sits beside it. Open:
+   consider printing the survivor count as a warning rather than a result.
+5. "Final Four exact" is a maximal criterion (4 of 4); its harshness was not
+   stated. — **Fixed** (column reads "all four").
+
+### UX
+6. **Landing leads with the experimental strategy and a table of dashes.**
+   On 2027 the first things on screen are three greyed strategies with "—",
+   then the fenced experimental panel, then 63 empty boxes; the one-line
+   orientation ("field announced Selection Sunday; the validated strategies
+   appear then") is fourth. Should be first, and the blank bracket should be
+   a compact placeholder. — Open (#2 in the fix order).
+7. **Silent refusal.** The "at least one early checkpoint" hint was removed
+   in the compact pass; unchecking the last one now just does not toggle. —
+   **Fixed:** an inline message appears on refusal.
+8. **Tooltips on a phone.** "Ranked among the 500 simplest" and the chips'
+   full round names moved into `title=`; the site's own comments say phones
+   have no tooltips. — **Fixed:** visible text.
+9. **A choice can resolve to a different rule than the one chosen.** `rq`
+   resolution by picks keeps the first-listed rule's sequence, so the board
+   labels rounds with a different variable than the URL names. — Open (#3).
+10. **Landing cost.** Live: 0.8 s to first paint, 2.4 s to rules, 15 fetches
+    / 643 KB on desktop; the search is synchronous and freezes the tab for
+    its duration, unmeasured on phones. Web Worker. — Open (#4).
+
+### Process
+11. The two rendering bugs found in this session (hand mode never redrawing;
+    pending table rows losing their cells) were invisible to the test suite,
+    which drives state through DOM stubs; both were caught by hand in
+    Chromium. A Playwright smoke test in CI would have covered both. — Open.
+12. What held: walk-forward discipline throughout (2026 never in its own fit;
+    2027 reads 2025–2026; the table excludes the displayed season), the
+    request-token and key-matching fixes, `rq` by sequence, and two
+    pre-existing bugs fixed under the stop-and-fix rule.

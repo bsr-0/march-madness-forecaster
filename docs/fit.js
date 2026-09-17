@@ -1082,6 +1082,28 @@ function ruleReproduces(season, seq, checkpoints) {
   return true;
 }
 
+/* How many of `rules` reproduce the checkpoints in at least one of `seasons`
+ * (the seasons OUTSIDE the fit range), and the most seasons any one does --
+ * the one statement about a search that its inputs cannot tune: "of the N
+ * survivors, K reproduce any other season". Exact while rules x seasons is
+ * within RULE_GEN_DIRECT applications (7,137 rules x 12 seasons is 0.3 s);
+ * beyond that, on the simplest `checked` rules, and the caller says so. */
+const RULE_GEN_DIRECT = 200000;
+function ruleGeneralisation(rules, seasons, checkpoints) {
+  const cps = new Set(checkpoints);
+  const n = rules.length;
+  if (!n || !seasons.length) return { n, checked: n, any: 0, best: 0 };
+  const checked = Math.min(n, Math.max(1, Math.floor(RULE_GEN_DIRECT / seasons.length)));
+  let any = 0, best = 0;
+  for (let i = 0; i < checked; i++) {
+    let k = 0;
+    for (const sn of seasons) if (ruleReproduces(sn, rules[i], cps)) k++;
+    if (k) any++;
+    if (k > best) best = k;
+  }
+  return { n, checked, any, best };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
@@ -1089,6 +1111,6 @@ if (typeof module !== 'undefined' && module.exports) {
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
-    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule,
+    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT,
   };
 }

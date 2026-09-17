@@ -289,6 +289,22 @@ check('ruleComplexityOfCode is right at the 32-key edge, where the mask bit for 
   assert.throws(() => F.ruleSearch([], Array(33).fill('x'), new Set([2])), /33 criteria/);
 });
 
+check('ruleGeneralisation counts survivors that reproduce any outside season, exactly or on the simplest prefix', () => {
+  const sa = tiny([[0, 2], [0]]), sb = tiny([[1, 3], [3]]);
+  const rules = [['a', 'a'], ['b', 'b'], ['a', 'b']];
+  let g = F.ruleGeneralisation(rules, [sa, sb], [1]);
+  assert.deepStrictEqual(g, { n: 3, checked: 3, any: 2, best: 1 });
+  g = F.ruleGeneralisation(rules, [sa, sa], [1]);
+  assert.deepStrictEqual(g, { n: 3, checked: 3, any: 1, best: 2 });
+  assert.deepStrictEqual(F.ruleGeneralisation([], [sa], [1]), { n: 0, checked: 0, any: 0, best: 0 });
+  assert.deepStrictEqual(F.ruleGeneralisation(rules, [], [1]), { n: 3, checked: 3, any: 0, best: 0 });
+  // Beyond the budget only the simplest prefix is checked, and says so.
+  const many = Array.from({ length: F.RULE_GEN_DIRECT + 10 }, (_, i) => (i === F.RULE_GEN_DIRECT + 5 ? ['b', 'b'] : ['a', 'a']));
+  g = F.ruleGeneralisation(many, [sb], [1]);
+  assert.strictEqual(g.checked, F.RULE_GEN_DIRECT);
+  assert.strictEqual(g.any, 0, 'the one rule that fits sits past the checked prefix');
+});
+
 check('ruleBracket reuses the last criterion for rounds past the rule, and ruleReproduces checks checkpoints', () => {
   const s = tiny([[0, 2], [0]]);
   const rounds = F.ruleBracket(s, ['a']);           // one criterion, applied to both rounds
