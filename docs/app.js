@@ -803,6 +803,14 @@ function usingOptimized() {
   return state.strategy !== MODEL;
 }
 
+/* The strategies whose bracket comes out of the precomputed pool, which is
+ * what the Adjust filters narrow: the two objectives and a filtered pick.
+ * The fitted model solves its own bracket and the rule search applies a
+ * rule, so the filters have nothing to act on under either. */
+function usingFilters() {
+  return state.strategy !== MODEL && state.strategy !== RULE;
+}
+
 function anyEnabled() {
   return !usingOptimized() && state.fit && state.fit.keys.length > 0;
 }
@@ -883,6 +891,7 @@ function render() {
     { for (const id of ['headline', 'compare', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
     { const ex = document.getElementById('explore'); if (ex) ex.hidden = true; }
     { const rp = document.getElementById('rulepanel'); if (rp) rp.hidden = true; }
+    { const tune = document.getElementById('tune'); if (tune) tune.hidden = true; }
     weights.hidden = true;
     { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
@@ -903,6 +912,12 @@ function render() {
 
   empty.hidden = true;
   weights.hidden = false;   // the panel is the only control surface
+  // The filters narrow the precomputed pool. The fitted model and the rule
+  // search do not draw from it, so under those two the Adjust panel is not
+  // offered at all rather than shown with nothing to act on (2026-09-17;
+  // it used to stay up, dimmed under the model and live under the rule
+  // search, where a click silently switched strategy).
+  { const tune = document.getElementById('tune'); if (tune) tune.hidden = !usingFilters(); }
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
 
@@ -972,7 +987,10 @@ function render() {
     state.rounds = null;
     board.innerHTML = '';
     { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
-    { for (const id of ['headline', 'compare']) { const el = document.getElementById(id); if (el) el.hidden = true; } }
+    { const el = document.getElementById('headline'); if (el) el.hidden = true; }
+    // The strategy table stays: it is the way to another strategy, and
+    // hiding it with the board used to strand the visitor here.
+    renderCompare();
     updateMobileNav();
     renderRulePanel();
     return;

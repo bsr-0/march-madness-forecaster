@@ -148,7 +148,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* ---------- comparison table ----------
  *
- * Three rows, four columns, the same numbers the cards show. The row is the
+ * Four rows, the same numbers the cards show; first on the page. The row is the
  * selector; the cards moved into the methodology layer as explanations. */
 .compare { margin: 0 0 18px; overflow-x: auto; }
 .cmp { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -432,12 +432,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @media (max-width: 720px) {
   /* On a phone the collapsed panels (Explore, Adjust, Why) sit ABOVE the
      bracket rather than after 32 games of it. Reordered here, not in the
-     DOM, so the desktop reading order (headline, table, bracket, then the
+     DOM, so the desktop reading order (table, headline, bracket, then the
      panels) is untouched. Every child of #main gets an explicit order so a
      future section cannot land somewhere by default. */
   #main { display: flex; flex-direction: column; }
-  #headline { order: 0; }
-  #compare { order: 1; }
+  #compare { order: 0; }
+  #headline { order: 1; }
   #dropped-note { order: 2; }
   #rulepanel { order: 3; }
   #explore { order: 4; }
