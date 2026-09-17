@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=56aa9935">
+<link rel="stylesheet" href="app.css?v=37cb54bc">
 </head>
 <body>
 
@@ -24,19 +24,23 @@
 
 <main id="main">
 
-  <!-- 1. WHAT SHOULD I PICK. The one-glance summary of the bracket on screen:
+  <!-- 1. WHICH STRATEGY. Four rows, one per strategy, same columns each; the
+       row you click is the bracket you get. First on the page (2026-09-17;
+       it sat under the headline before) so the choice comes before the
+       answer, and it stays up in every ready-season state -- including a
+       rule search with nothing found, where it used to vanish with the
+       board and leave no way back. The fitted model's row is labelled for
+       what it is: scored by the same referee as the pool strategies, never
+       selected by it. -->
+  <section class="compare" id="compare" hidden></section>
+
+  <!-- 2. WHAT YOU GET. The one-glance summary of the bracket on screen:
        season, objective, champion, the two numbers, and the one sentence that
        says what kind of thing this is (a pool strategy, not a game-prediction
        ranking). Everything a visitor needs before the bracket itself; nothing
        they do not. Filled by renderHeadline() from the same payload fields
        the comparison table and the board use, so the three cannot disagree. -->
   <section class="headline" id="headline" hidden></section>
-
-  <!-- 2. WHY THIS ONE, AND WHAT ELSE IS THERE. Three rows, one per strategy,
-       same four columns each; the row you click is the bracket you get. The
-       fitted model's row is labelled for what it is: scored by the same
-       referee as the other two, never selected by it. -->
-  <section class="compare" id="compare" hidden></section>
 
   <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
   <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
@@ -108,8 +112,11 @@
        "Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly
        a 3 seed, and they are completely different brackets. Collapsed:
        <details> rather than JS, so there is no state to keep in sync and it
-       works before any script runs. -->
-  <details class="tune" id="tune">
+       works before any script runs. Shown only for the pool strategies
+       (render() sets `hidden`): the filters narrow the precomputed pool,
+       which the fitted model and the rule search do not draw from, so under
+       those two the panel would offer a control with nothing to act on. -->
+  <details class="tune" id="tune" hidden>
     <summary class="tune-head">
       <span class="tune-title">Adjust this bracket</span>
       <span class="tune-sub">Back a team, or force a shape. The recommendation above already assumes none of it.</span>
@@ -220,6 +227,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=168e4d1e"></script>
-<script src="app.js?v=1a13e60c"></script>
+<script src="app.js?v=c085800f"></script>
 </body>
 </html>
