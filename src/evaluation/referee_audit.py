@@ -602,7 +602,7 @@ def build_4champ_choice(ctx: SeasonContext, candidates: Sequence[Tuple[np.ndarra
     """``meta_region_4champ`` exactly as the harness selects it (seed referee, 300 trials, rng 99999 + year)."""
     from scripts.mc_pool_backtest import ESPN_SCORING, REFEREE_NOISE_STD, draw_selection_trials, score_candidate_p1
 
-    champs = [(v, l) for v, l in candidates if l.startswith("tv_champ=")]
+    champs = [(v, label) for v, label in candidates if label.startswith("tv_champ=")]
     if not champs:
         return None
     rng = np.random.default_rng(99999 + ctx.year)
@@ -863,7 +863,7 @@ def run_season(year: int, cfg: AuditConfig) -> Dict[str, object]:
     metrics = evaluate_season(ctx, strategies, cfg)
     _t("evaluation", t0)
 
-    labels = [l for _, l in candidates]
+    labels = [label for _, label in candidates]
     if cfg.candidates_dir:
         d = Path(cfg.candidates_dir)
         d.mkdir(parents=True, exist_ok=True)
