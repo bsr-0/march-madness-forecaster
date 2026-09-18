@@ -17,6 +17,10 @@ from typing import Dict, Iterable, Optional, Tuple
 CANONICAL_TO_KAGGLE_ALIAS: Dict[str, str] = {
     "maryland_baltimore_county": "umbc",
     "st__john_s__ny": "st john's",  # the cascade misses this; (NY) suffix isn't standalone
+    "mount_st__mary_s": "mount st. mary's",  # 2025 field; Kaggle abbreviates with a period
+    "saint_francis": "saint francis (pa)",  # 2025 field; Kaggle keeps the (NY)/(PA) suffix
+    "stephen_f_austin": "stephen f. austin",  # 2014-2018 fields; initial takes a period
+    "texas_a_m_corpus_christi": "texas a&m-corpus christi",  # 2022-2023 fields
 }
 
 
@@ -45,6 +49,13 @@ def canonical_to_kaggle_id(
     - ``__`` -> `` `` resolves the double-underscore separator from the
       canonicalizer's ``,``/``.`` substitution (``miami__fl`` -> ``miami fl``).
     - ``saint_`` -> ``st `` resolves the saint/st prefix difference.
+    - A trailing ``_s`` -> ``'s`` resolves possessives with no suffix
+      (``saint_peter_s`` -> ``saint peter's``).
+    - A trailing ``__xx`` -> `` (xx)`` resolves Kaggle's parenthesised
+      disambiguators (``loyola__il`` -> ``loyola (il)``).
+    - ``_a_t`` -> `` a&t`` resolves ``north_carolina_a_t``.
+    - ``-`` for ``_`` resolves Kaggle's hyphenated spellings
+      (``nevada_las_vegas`` -> ``nevada-las-vegas``).
     - Manual aliases handle the residual misses (``maryland_baltimore_county`` -> ``umbc``).
     """
     if canonical_id in CANONICAL_TO_KAGGLE_ALIAS:
@@ -78,6 +89,22 @@ def canonical_to_kaggle_id(
             .lower()
         )
         candidates.append(st_form)
+
+    # trailing possessive with no suffix: saint_peter_s -> saint peter's
+    if canonical_id.endswith("_s"):
+        candidates.append(possessive[:-2] + "'s")
+
+    # parenthesised disambiguator: loyola__il -> loyola (il)
+    if "__" in canonical_id and not canonical_id.endswith("__"):
+        head, _, tail = canonical_id.rpartition("__")
+        candidates.append(f"{head.replace('_', ' ')} ({tail.replace('_', ' ')})".strip().lower())
+
+    # north carolina a&t
+    if canonical_id.endswith("_a_t"):
+        candidates.append(canonical_id[:-4].replace("__", " ").replace("_", " ").strip().lower() + " a&t")
+
+    # hyphenated: nevada_las_vegas -> nevada-las-vegas
+    candidates.append(canonical_id.replace("__", "-").replace("_", "-").strip().lower())
 
     for c in candidates:
         if c in spellings_map:
