@@ -30,11 +30,21 @@ passed over — the run has to start at the most recent season some rule
 can reproduce, and the panel names the seasons it skipped. *Run phase:*
 from that season, the window grows one season back while the intersection
 of survivors is non-empty; the season that leaves none is `stoppedAt`.
-Seasons past the break are never enumerated. Survivors are ranked simplest
-first (distinct criteria, switches, then criterion order round by round).
-The cap is applied inside the enumeration (`ruleSequencesForSeason` carries
-a criterion mask per sequence), which is what makes both settings cheap;
-the set is identical to filtering afterwards.
+Seasons past the break are never enumerated. Survivors are ranked fewest
+`RULE_GENERAL_KEYS` criteria first — barthag, national rank, Massey rank,
+strength of schedule, Simple rating, adjusted offense, adjusted defense,
+and seed: composite ratings and rank-of-ratings, real and correlated with
+winning, but a whole season folded into one number rather than the one
+specific thing the search is meant to surface. Tempo and every box-score,
+form and roster variable count as specific and rank ahead of them when a
+rule of the same complexity survives on either side. *Then* simplest
+(distinct criteria, switches, criterion order round by round). This only
+reorders the survivors; a rule leaning on a rating is still offered when
+no specific-only rule reproduces the window (see `ruleGeneralCount`, and
+`general` on each offered entry). The cap is applied inside the
+enumeration (`ruleSequencesForSeason` carries a criterion mask per
+sequence), which is what makes both settings cheap; the set is identical
+to filtering afterwards, and the specific-first ranking doesn't touch it.
 
 ## Three things, kept apart
 | On the panel | Meaning | Selected on? |
@@ -64,9 +74,15 @@ run at 400× the survivors and a memory cost a phone would not survive. On
 the **2025** page no rule reproduces the Final Four in 2024, 2023, 2022 or
 2021 at either cap (the 4-Alabama / 11-NC State Final Four of 2024 has no
 one-variable-per-round reproduction even for the Sweet 16 alone); Simple
-starts its run at 2019 and says so. The primary 2027 rule under Simple,
-Tempo → Simple rating ×5, reproduces the Final Four in 1 of 14 played
-seasons and the champion in 2 of 14.
+starts its run at 2019 and says so. The counts above are unchanged by the
+specific-first ranking (it reorders survivors, never prunes them); which
+rule is *primary* is what moved. The primary 2027 rule under Simple is now
+Shot defense → Shot defense → Shooting (eFG%) → Shot defense → Shot
+defense → Shot defense (0 rating variables; before this ranking existed
+the simplest-by-code survivor was Tempo → Simple rating ×5, which used one).
+It reproduces the Final Four in 1 of 14 played seasons and the champion in
+2 of 14 — the same record, since both are drawn from the same 72
+survivors of the same search; only the offered order differs.
 
 ## The chosen rule, and links
 The chosen rule travels in the URL as its criterion sequence (`rq`), with
@@ -108,13 +124,21 @@ Not validated, not a model, never scored: no P(1st), no EV, no track
 record. Experimental at every surface (table row, headline tag, panel,
 export header). A rule that reproduces the last two seasons is a
 description of those seasons found after the fact; the panel shows how
-quickly that gives out and how few survivors repeat.
+quickly that gives out and how few survivors repeat. Ranking survivors to
+avoid composite ratings is a legibility choice, not a claim that a
+specific variable predicts better than a rating one — it does not change
+which seasons a rule reproduces, its generalisation, or its short-history
+warning, only which of the equally-simple, equally-fitted survivors is
+shown first.
 
 ## Tests
 `tests/test_collinearity.js`: rulePlay's tie rule; sequences against brute
 force; `ruleRun` growing back, stopping, skipping, empty and throwing
 cases; the cap pruned inside the enumeration equal to filtering after;
-ranking under and without the cap; the 32-key sign-bit edge under the cap;
+ranking under and without the cap; the specific-first tie-break (a rating
+key at the position code order would otherwise favor still ranks below
+every rating-free survivor, at any complexity, and never changes which
+sequences survive); the 32-key sign-bit edge under the cap;
 `ruleGeneralisation`; the job (distinct by picks / by sequence, the run and
 what lies outside it, a skipped newest season, the named rule in all four
 outcomes, no seasons). `tests/test_picks_export.js`: URL round-trip and

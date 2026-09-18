@@ -1026,6 +1026,32 @@ function ruleComplexityOfCode(code, B, nRounds) {
   return [bitCount(mask), switches];
 }
 
+/* Composite ratings and rank-of-ratings: a team's whole season folded into
+ * one number (or, for seed, the committee's own). Real, and correlated with
+ * winning, but the opposite of what the rule search is meant to surface --
+ * "this specific thing about a team predicts this specific round." Kept
+ * out of ruleComplexityOfCode's tested two-number contract; counted
+ * separately, once per survivor (never inside a sort comparator), by
+ * ruleGeneralCount below. Tempo and the offense/defense splits stay out of
+ * this set -- pace and a side of the ball are specific, not a strength
+ * rating. */
+const RULE_GENERAL_KEYS = new Set([
+  'barthag', 't_rank', 'massey_avg_rank', 'sos_avg_opp_barthag', 'srs',
+  'adj_offensive_efficiency', 'adj_defensive_efficiency', 'seed',
+]);
+
+/* How many distinct RULE_GENERAL_KEYS criteria (by `generalMask`, a bitmask
+ * over the same key indices ruleComplexityOfCode uses) a sequence uses.
+ * Decoded the same cheap way, as its own function so ruleComplexityOfCode's
+ * two-element return (asserted against ruleComplexity() in tests) is
+ * untouched. */
+function ruleGeneralCount(code, B, nRounds, generalMask) {
+  if (!generalMask) return 0;
+  let mask = 0;
+  for (let i = nRounds - 1; i >= 0; i--) { mask |= 1 << (code % B); code = Math.floor(code / B); }
+  return bitCount(mask & generalMask);
+}
+
 /* How far back one rule can reproduce the checkpoints. `seasons` newest
  * first. Skip phase: a newest season that no rule reproduces on its own is
  * recorded in `skipped` and passed over -- the run has to start at the
@@ -1033,17 +1059,23 @@ function ruleComplexityOfCode(code, B, nRounds) {
  * the window grows one season back while the intersection of survivors is
  * non-empty; `stoppedAt` is the season that left none (null if every
  * remaining season was consumed). Seasons past the break are never
- * enumerated. Survivors are ranked simplest first: fewest distinct
- * criteria, then fewest switches, then by the encoded sequence -- criterion
- * index per round, round 0 most significant, which with `keys` sorted is
- * alphabetical round by round; one number per rule in a typed-array sort. */
-function ruleRun(seasons, keys, checkpoints, maxCriteria) {
+ * enumerated. Survivors are ranked fewest RULE_GENERAL_KEYS criteria first
+ * (a rule built from specific, non-composite variables is offered ahead of
+ * an equally simple one that leans on a rating or a rank, when one
+ * survives), then simplest: fewest distinct criteria, then fewest
+ * switches, then by the encoded sequence -- criterion index per round,
+ * round 0 most significant, which with `keys` sorted is alphabetical round
+ * by round; one number per rule in a typed-array sort. `generalKeys`
+ * (default RULE_GENERAL_KEYS; pass null/empty Set to turn the tie-break
+ * off) never changes which sequences survive, only their order. */
+function ruleRun(seasons, keys, checkpoints, maxCriteria, generalKeys = RULE_GENERAL_KEYS) {
   const cps = [...new Set(checkpoints)].sort((a, b) => a - b);
   if (!cps.length) throw new Error('ruleRun: no checkpoints');
   const lastRound = cps[cps.length - 1];
   const cpSet = new Set(cps);
   const B = keys.length, nRounds = lastRound + 1, M = Math.pow(B, nRounds);
   if (B > 32) throw new Error(`ruleRun: ${B} criteria; the complexity mask holds 32`);
+  const generalMask = generalKeys ? keys.reduce((m, k, ki) => generalKeys.has(k) ? m | (1 << ki) : m, 0) : 0;
   const run = [], skipped = [];
   let S = null, stoppedAt = null;
   for (const sn of seasons) {
@@ -1057,11 +1089,16 @@ function ruleRun(seasons, keys, checkpoints, maxCriteria) {
     S = next; run.push(sn.year);
   }
   if (S === null) return { rules: [], run, skipped, stoppedAt };
+  // (general count * 33 + distinct criteria) leaves distinct (< 33) its own
+  // decimal digit under general, exactly as (distinct * 8 + switches) already
+  // leaves switches (< 8) its own digit under distinct -- same trick, one
+  // more tier, still one comparable float per rule.
   const order = new Float64Array(S.size);
   let i = 0;
   for (const code of S) {
     const [distinct, switches] = ruleComplexityOfCode(code, B, nRounds);
-    order[i++] = (distinct * 8 + switches) * M + code;
+    const general = ruleGeneralCount(code, B, nRounds, generalMask);
+    order[i++] = ((general * 33 + distinct) * 8 + switches) * M + code;
   }
   order.sort();
   const rules = new Array(order.length);
@@ -1121,11 +1158,13 @@ function ruleGeneralisation(rules, seasons, checkpoints) {
 /* The whole search job, pure, so it can run in a worker (app.js
  * runRuleSearchJob) or inline where there is none -- the same function
  * either way, never a second implementation. ruleRun over the played
- * seasons; the offered entries (distinct by the bracket they give when a
- * field exists, by sequence when it does not); each entry's matches among
- * the seasons OUTSIDE the run and its per-round record over every played
- * season; the generalisation of every survivor; and the resolution of the
- * rule a link names.
+ * seasons (ranked, by default, to prefer a rule built from specific
+ * variables over an equally simple one leaning on a composite rating or a
+ * rank -- see RULE_GENERAL_KEYS); the offered entries (distinct by the
+ * bracket they give when a field exists, by sequence when it does not);
+ * each entry's matches among the seasons OUTSIDE the run and its per-round
+ * record over every played season; the generalisation of every survivor;
+ * and the resolution of the rule a link names.
  *
  *   played       every complete played season, newest first
  *   here         the displayed season, or null while its field is pending
@@ -1150,7 +1189,8 @@ function ruleSearchJob({ played, here, keys, checkpoints, maxCriteria, want }) {
   const entry = seq => {
     const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
     const perRound = [...cps].sort((a, b) => a - b).map(r => ({ r, k: played.filter(p => ruleReproduces(p, seq, [r])).length, m: played.length }));
-    return { seq, ...apply(seq), complexity: ruleComplexity(seq), matches: { k: hits.length, m: outside.length, years: hits }, perRound };
+    const general = [...new Set(seq)].filter(k => RULE_GENERAL_KEYS.has(k)).length;
+    return { seq, ...apply(seq), complexity: ruleComplexity(seq), general, matches: { k: hits.length, m: outside.length, years: hits }, perRound };
   };
   const offered = [], seen = new Set();
   for (const seq of res.rules) {
@@ -1191,6 +1231,6 @@ if (typeof module !== 'undefined' && module.exports) {
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
-    rulePlay, ruleSequencesForSeason, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_OFFERED, ruleRun, bitCount,
+    rulePlay, ruleSequencesForSeason, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, ruleGeneralCount, RULE_GENERAL_KEYS, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_OFFERED, ruleRun, bitCount,
   };
 }
