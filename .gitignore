@@ -63,6 +63,11 @@ artifacts/backtest_runs/
 # and 87 bytes of it is worth keeping when the 770 KB it describes is not.
 artifacts/candidates/*.json
 
+# Kaggle submission CSVs (~3 MB each, 132k rows, regenerated in ~10 s by
+# scripts/kaggle_submission.py). The .meta.json sidecar -- what went into the
+# file, which champions slot 2 boosted -- stays tracked; it is the record.
+artifacts/kaggle_submission_*.csv
+
 # Pytest
 .pytest_cache/
 pytest-cache-files-*/

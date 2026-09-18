@@ -1,0 +1,118 @@
+{
+  "year": 2026,
+  "generated_at": "2026-09-18T02:28:08+00:00",
+  "git_head": "4d6ae47",
+  "sample": "/Users/benrosen/Documents/prediction_models/madness/march-madness-forecaster/data/kaggle/SampleSubmissionStage2.csv",
+  "mens": {
+    "model": "pit_production_model.pairwise_for_year",
+    "field_size": 68,
+    "bridged": 68,
+    "unbridged": []
+  },
+  "womens": {
+    "model": "womens_kaggle_model.pairwise_for_year",
+    "keys": [
+      "srs",
+      "sos",
+      "adj_offensive_efficiency",
+      "adj_defensive_efficiency",
+      "adj_tempo",
+      "effective_fg_pct",
+      "three_pt_pct",
+      "three_pt_rate",
+      "offensive_reb_rate",
+      "turnover_rate"
+    ],
+    "teams_with_stats": 363
+  },
+  "export_stats": {
+    "total_rows": 132133,
+    "predicted_rows": 67981,
+    "defaulted_rows": 64152,
+    "bad_id_rows": 0,
+    "season_mismatch": 0,
+    "mens_rows": 66430,
+    "womens_rows": 65703,
+    "mens_predicted": 2278,
+    "womens_predicted": 65703,
+    "predict_failures": 0
+  },
+  "hedge": {
+    "output": "/Users/benrosen/Documents/prediction_models/madness/march-madness-forecaster/artifacts/kaggle_submission_2026_hedge.csv",
+    "strength": 1.0,
+    "mens": {
+      "champion": "duke",
+      "kaggle_id": 1181,
+      "rows_boosted": 364,
+      "top5": [
+        {
+          "team": "duke",
+          "kaggle_id": 1181,
+          "name": "Duke",
+          "mean_win_p": 0.9153
+        },
+        {
+          "team": "michigan",
+          "kaggle_id": 1276,
+          "name": "Michigan",
+          "mean_win_p": 0.9077
+        },
+        {
+          "team": "florida",
+          "kaggle_id": 1196,
+          "name": "Florida",
+          "mean_win_p": 0.8979
+        },
+        {
+          "team": "illinois",
+          "kaggle_id": 1228,
+          "name": "Illinois",
+          "mean_win_p": 0.8805
+        },
+        {
+          "team": "arizona",
+          "kaggle_id": 1112,
+          "name": "Arizona",
+          "mean_win_p": 0.8598
+        }
+      ]
+    },
+    "womens": {
+      "champion": "3163",
+      "kaggle_id": 3163,
+      "rows_boosted": 362,
+      "top5": [
+        {
+          "team": "3163",
+          "kaggle_id": 3163,
+          "name": "Connecticut",
+          "mean_win_p": 0.9914
+        },
+        {
+          "team": "3400",
+          "kaggle_id": 3400,
+          "name": "Texas",
+          "mean_win_p": 0.9863
+        },
+        {
+          "team": "3417",
+          "kaggle_id": 3417,
+          "name": "UCLA",
+          "mean_win_p": 0.9855
+        },
+        {
+          "team": "3261",
+          "kaggle_id": 3261,
+          "name": "LSU",
+          "mean_win_p": 0.9834
+        },
+        {
+          "team": "3376",
+          "kaggle_id": 3376,
+          "name": "South Carolina",
+          "mean_win_p": 0.982
+        }
+      ]
+    }
+  }
+}

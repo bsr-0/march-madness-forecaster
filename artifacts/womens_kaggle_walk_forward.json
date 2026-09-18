@@ -1,0 +1,149 @@
+{
+  "keys": [
+    "srs",
+    "sos",
+    "adj_offensive_efficiency",
+    "adj_defensive_efficiency",
+    "adj_tempo",
+    "effective_fg_pct",
+    "three_pt_pct",
+    "three_pt_rate",
+    "offensive_reb_rate",
+    "turnover_rate"
+  ],
+  "min_test_year": 2014,
+  "n_training_games": 961,
+  "skipped_games": {},
+  "per_year": [
+    {
+      "year": 2014,
+      "n_games": 63,
+      "model_brier": 0.1262,
+      "model_log_loss": 0.3863,
+      "seed_brier": 0.1591,
+      "bss_vs_seed": 0.207,
+      "accuracy": 0.8095,
+      "link_a": 1.0,
+      "link_nu": null
+    },
+    {
+      "year": 2015,
+      "n_games": 63,
+      "model_brier": 0.1165,
+      "model_log_loss": 0.3622,
+      "seed_brier": 0.1469,
+      "bss_vs_seed": 0.2072,
+      "accuracy": 0.8095,
+      "link_a": 1.006,
+      "link_nu": null
+    },
+    {
+      "year": 2016,
+      "n_games": 63,
+      "model_brier": 0.1622,
+      "model_log_loss": 0.4633,
+      "seed_brier": 0.1723,
+      "bss_vs_seed": 0.0585,
+      "accuracy": 0.7143,
+      "link_a": 1.0749,
+      "link_nu": 40.0
+    },
+    {
+      "year": 2017,
+      "n_games": 63,
+      "model_brier": 0.1255,
+      "model_log_loss": 0.3866,
+      "seed_brier": 0.1409,
+      "bss_vs_seed": 0.1091,
+      "accuracy": 0.8413,
+      "link_a": 0.9849,
+      "link_nu": null
+    },
+    {
+      "year": 2018,
+      "n_games": 63,
+      "model_brier": 0.154,
+      "model_log_loss": 0.461,
+      "seed_brier": 0.1672,
+      "bss_vs_seed": 0.079,
+      "accuracy": 0.7619,
+      "link_a": 0.9921,
+      "link_nu": null
+    },
+    {
+      "year": 2019,
+      "n_games": 63,
+      "model_brier": 0.1327,
+      "model_log_loss": 0.4059,
+      "seed_brier": 0.1314,
+      "bss_vs_seed": -0.0102,
+      "accuracy": 0.8095,
+      "link_a": 0.9542,
+      "link_nu": null
+    },
+    {
+      "year": 2021,
+      "n_games": 63,
+      "model_brier": 0.1459,
+      "model_log_loss": 0.4352,
+      "seed_brier": 0.1428,
+      "bss_vs_seed": -0.0212,
+      "accuracy": 0.7619,
+      "link_a": 0.9568,
+      "link_nu": null
+    },
+    {
+      "year": 2022,
+      "n_games": 67,
+      "model_brier": 0.1464,
+      "model_log_loss": 0.4448,
+      "seed_brier": 0.177,
+      "bss_vs_seed": 0.1724,
+      "accuracy": 0.7761,
+      "link_a": 0.9494,
+      "link_nu": null
+    },
+    {
+      "year": 2023,
+      "n_games": 67,
+      "model_brier": 0.1751,
+      "model_log_loss": 0.5052,
+      "seed_brier": 0.1742,
+      "bss_vs_seed": -0.0054,
+      "accuracy": 0.7313,
+      "link_a": 0.9661,
+      "link_nu": null
+    },
+    {
+      "year": 2024,
+      "n_games": 67,
+      "model_brier": 0.1304,
+      "model_log_loss": 0.3932,
+      "seed_brier": 0.1216,
+      "bss_vs_seed": -0.0725,
+      "accuracy": 0.791,
+      "link_a": 0.9489,
+      "link_nu": null
+    },
+    {
+      "year": 2025,
+      "n_games": 67,
+      "model_brier": 0.1167,
+      "model_log_loss": 0.3606,
+      "seed_brier": 0.1199,
+      "bss_vs_seed": 0.0271,
+      "accuracy": 0.8358,
+      "link_a": 0.9737,
+      "link_nu": null
+    }
+  ],
+  "pooled": {
+    "n_games": 709,
+    "model_brier": 0.1393,
+    "model_log_loss": 0.4187,
+    "seed_brier": 0.1502,
+    "bss_vs_seed": 0.0729,
+    "seasons_model_beats_seed": 7,
+    "n_seasons": 11
+  }
+}

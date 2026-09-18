@@ -269,6 +269,39 @@ containing teams that never played the Round of 64. Those figures are void rathe
 superseded, and the spread among them is itself the argument for quoting a CI instead of a
 digit: they all sit inside a single standard error of each other.
 
+## Kaggle submission (men's + women's)
+
+Kaggle's March Machine Learning Mania scores one `ID,Pred` CSV over every game
+in both tournaments, plain Brier. `scripts/kaggle_submission.py` writes it:
+
+```bash
+march-madness ingest --year 2027          # men's field + stats -> docs/data/team_stats_by_year.json
+march-madness download-kaggle             # Stage 2 dataset incl. W*.csv and SampleSubmissionStage2.csv
+python scripts/kaggle_submission.py --year 2027   # -> artifacts/kaggle_submission_2027.csv (+ .meta.json)
+```
+
+- **Men's** rows come from the site's fitted model
+  (`src/prediction/pit_production_model.pairwise_for_year`, Brier 0.146 walk-forward),
+  bridged to Kaggle TeamIDs by `src/prediction/kaggle_bridge`. The script exits
+  non-zero if any field team fails to bridge; add an alias there.
+- **Women's** rows come from `src/prediction/womens_kaggle_model`: the same ridge /
+  Student-t machinery, imported from the men's port rather than copied, on features
+  built from Kaggle's women's box scores (Massey-style rating, SOS, adjusted
+  efficiencies, tempo, four factors). Walk-forward 2014–2025: Brier 0.139 vs 0.150
+  seed-only, BSS +0.07 (`scripts/backtest_womens_brier.py`,
+  `artifacts/womens_kaggle_walk_forward.json`).
+- Pairs neither model covers (men's teams outside the field) are 0.5; Kaggle never
+  scores them.
+- **Slot 2.** Kaggle accepts two submissions and ranks you on the better one.
+  `--hedge` also writes `..._hedge.csv`: slot 1 with every game involving a chosen
+  champion pushed to P=1 on each half (the "0-1 trick"). Champion = the team the model
+  rates strongest against its field (a strength ranking, not a simulated title
+  probability); override with `--champion duke` / `--womens-champion 3163`. In 2026
+  the hedge (Duke) would have scored 0.176 vs slot 1's 0.171 on the men's games —
+  slot 1 counts, nothing lost. `src/optimization/dual_submission.py` is not used: it
+  assumes per-round Brier weights the competition does not have.
+- The CSVs are git-ignored (3 MB, regenerable); the `.meta.json` sidecar is tracked.
+
 ## Maintenance
 
 ### Annual data refresh
