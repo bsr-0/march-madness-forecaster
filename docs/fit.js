@@ -913,20 +913,23 @@ function exclusionModels(rows, cols, years, asOf, minYear) {
  * EXPERIMENTAL, FOUND AFTER THE FACT, NOT A MODEL. A "rule" is one criterion
  * per round: in that round every game goes to the team with the better
  * value of one variable (direction-corrected z, higher is better; ties to the
- * better seed, then the lower index -- the board's own tie rule). The search
- * enumerates every such sequence over the constrained rounds and keeps the
- * ones that reproduce the chosen checkpoints (Elite Eight, Final Four,
- * finalists, champion) in EVERY fit season. What survives is a description of
- * those seasons, not evidence about the next one: measured on the shipped
- * data, one season needs 2 criteria, two seasons need 3, and three seasons
- * (2024-2026) have no survivor at all. The page says so beside every result.
+ * better seed, then the lower index -- the board's own tie rule). The
+ * question the search answers is HOW FAR BACK one rule can reproduce the
+ * chosen rounds: starting from the newest played season, the window grows
+ * one season back while any rule still reproduces every season in it
+ * (ruleRun). What survives is a description of those seasons, not evidence
+ * about the next one. Measured on the shipped data (Final Four + champion,
+ * 32 criteria) for the 2027 page: a rule of at most two variables reaches
+ * one season (2026; 72 rules); of at most three, two seasons (2025-2026;
+ * 39 rules), and none reaches 2024. Without a cap the survivors run to
+ * millions (5.25M for 2025 alone, ~600 MB) with no longer run, so the cap
+ * is applied inside the enumeration and no uncapped search is offered.
  *
- * season: { first_round: number[64], crit: {key: number[64]}, seed: number[64],
- *           actual: number[][] (winners per round, as team indices) }
+ * season: { year, first_round: number[64], crit: {key: number[64]},
+ *           seed: number[64], actual: number[][] (winners per round) }
  * keys:   the criterion keys, in a fixed order shared by all seasons
- * checkpoints: set of round indices whose WINNERS must match `actual`
- *           (0 = Round of 32 teams, 1 = Sweet 16, 2 = Elite Eight, 3 = Final
- *           Four, 4 = finalists, 5 = champion)
+ * checkpoints: round indices whose WINNERS must match `actual`
+ *           (1 = Sweet 16, 2 = Elite Eight, 3 = Final Four, 5 = champion)
  *
  * Sequences are encoded as integers base keys.length, most significant digit
  * = round 0, so sets of them intersect cheaply across seasons.
@@ -951,25 +954,42 @@ function sameSet(arr, target) {
   return true;
 }
 
+/* Set bits of a criterion mask: how many distinct criteria a sequence uses. */
+function bitCount(m) {
+  let n = 0;
+  for (; m; m &= m - 1) n++;
+  return n;
+}
+
 /* Every criterion sequence over rounds 0..lastRound that reproduces the
- * season's checkpoints. Depth-first over rounds with the surviving field as
- * the memo key, so the work is proportional to distinct states, not to
- * keys^rounds. Returns a Set of encoded sequences. */
-function ruleSequencesForSeason(season, keys, checkpoints, lastRound) {
+ * season's checkpoints, using at most `maxCriteria` distinct criteria (null:
+ * any). Depth-first over rounds with the surviving field as the memo key,
+ * so the work is proportional to distinct states, not to keys^rounds. The
+ * cap is applied as sequences are extended -- each carries the mask of the
+ * criteria it has used -- so a capped search never builds the millions of
+ * uncapped survivors; the set is identical to filtering afterwards. Returns
+ * a Set of encoded sequences. */
+function ruleSequencesForSeason(season, keys, checkpoints, lastRound, maxCriteria = null) {
   const B = keys.length;
   const targets = {};
   for (const r of checkpoints) targets[r] = new Set(season.actual[r]);
-  let level = new Map([[season.first_round.join(','), { field: season.first_round.slice(), seqs: [0] }]]);
+  let level = new Map([[season.first_round.join(','), { field: season.first_round.slice(), seqs: [0], masks: [0] }]]);
   for (let r = 0; r <= lastRound; r++) {
     const next = new Map();
-    for (const { field, seqs } of level.values()) {
+    for (const { field, seqs, masks } of level.values()) {
       for (let ki = 0; ki < B; ki++) {
         const nf = rulePlay(field, season.crit, season.seed, keys[ki]);
         if (targets[r] && !sameSet(nf, targets[r])) continue;
         const id = nf.join(',');
+        const bit = 1 << ki;
         let e = next.get(id);
-        if (!e) { e = { field: nf, seqs: [] }; next.set(id, e); }
-        for (const sq of seqs) e.seqs.push(sq * B + ki);
+        for (let i = 0; i < seqs.length; i++) {
+          const m = masks[i] | bit;
+          if (maxCriteria !== null && bitCount(m) > maxCriteria) continue;
+          if (!e) { e = { field: nf, seqs: [], masks: [] }; next.set(id, e); }
+          e.seqs.push(seqs[i] * B + ki);
+          e.masks.push(m);
+        }
       }
     }
     level = next;
@@ -1003,56 +1023,50 @@ function ruleComplexityOfCode(code, B, nRounds) {
     if (i < nRounds - 1 && d !== prev) switches++;
     prev = d;
   }
-  let distinct = 0;
-  for (let m = mask; m; m &= m - 1) distinct++;
-  return [distinct, switches];
+  return [bitCount(mask), switches];
 }
 
-/* Rules that reproduce the checkpoints in ALL `seasons`. If none do, backs
- * off one season at a time (dropping the earliest) and reports which range
- * did have survivors, so "no rule fits 2024-2026" comes back as a finding
- * with the longest range that does, rather than as an empty list.
- *
- * Ranked simplest first: fewest distinct criteria, then fewest switches,
- * then by the encoded sequence -- criterion index per round, round 0 most
- * significant, which with `keys` sorted is alphabetical round by round. The
- * sort runs on one number per rule (complexity * B^rounds + code), so it is
- * a numeric typed-array sort rather than two million comparator calls. */
-function ruleSearch(seasons, keys, checkpoints) {
-  const cps = [...checkpoints].sort((a, b) => a - b);
-  if (!cps.length) return { rules: [], usedSeasons: [], lastRound: -1 };
+/* How far back one rule can reproduce the checkpoints. `seasons` newest
+ * first. Skip phase: a newest season that no rule reproduces on its own is
+ * recorded in `skipped` and passed over -- the run has to start at the
+ * most recent season some rule can reproduce. Run phase: from that season,
+ * the window grows one season back while the intersection of survivors is
+ * non-empty; `stoppedAt` is the season that left none (null if every
+ * remaining season was consumed). Seasons past the break are never
+ * enumerated. Survivors are ranked simplest first: fewest distinct
+ * criteria, then fewest switches, then by the encoded sequence -- criterion
+ * index per round, round 0 most significant, which with `keys` sorted is
+ * alphabetical round by round; one number per rule in a typed-array sort. */
+function ruleRun(seasons, keys, checkpoints, maxCriteria) {
+  const cps = [...new Set(checkpoints)].sort((a, b) => a - b);
+  if (!cps.length) throw new Error('ruleRun: no checkpoints');
   const lastRound = cps[cps.length - 1];
   const cpSet = new Set(cps);
   const B = keys.length, nRounds = lastRound + 1, M = Math.pow(B, nRounds);
-  if (B > 32) throw new Error(`ruleSearch: ${B} criteria; the complexity mask holds 32`);
-  // Each season's set once: the back-off loop re-uses the later seasons.
-  const perSeason = new Map();
-  const seqsOf = sn => {
-    if (!perSeason.has(sn)) perSeason.set(sn, ruleSequencesForSeason(sn, keys, cpSet, lastRound));
-    return perSeason.get(sn);
-  };
-  for (let start = 0; start < seasons.length; start++) {
-    const used = seasons.slice(start);
-    let inter = null;
-    for (const sn of used) {
-      const s = seqsOf(sn);
-      inter = inter === null ? s : new Set([...inter].filter(x => s.has(x)));
-      if (!inter.size) break;
+  if (B > 32) throw new Error(`ruleRun: ${B} criteria; the complexity mask holds 32`);
+  const run = [], skipped = [];
+  let S = null, stoppedAt = null;
+  for (const sn of seasons) {
+    const s = ruleSequencesForSeason(sn, keys, cpSet, lastRound, maxCriteria);
+    if (S === null) {
+      if (!s.size) { skipped.push(sn.year); continue; }
+      S = s; run.push(sn.year); continue;
     }
-    if (inter && inter.size) {
-      const order = new Float64Array(inter.size);
-      let i = 0;
-      for (const code of inter) {
-        const [distinct, switches] = ruleComplexityOfCode(code, B, nRounds);
-        order[i++] = (distinct * 8 + switches) * M + code;
-      }
-      order.sort();
-      const rules = new Array(order.length);
-      for (let j = 0; j < order.length; j++) rules[j] = decodeRule(order[j] % M, keys, nRounds);
-      return { rules, usedSeasons: used.map(s => s.year), lastRound, backedOff: start > 0 };
-    }
+    const next = new Set([...S].filter(c => s.has(c)));
+    if (!next.size) { stoppedAt = sn.year; break; }
+    S = next; run.push(sn.year);
   }
-  return { rules: [], usedSeasons: [], lastRound, backedOff: true };
+  if (S === null) return { rules: [], run, skipped, stoppedAt };
+  const order = new Float64Array(S.size);
+  let i = 0;
+  for (const code of S) {
+    const [distinct, switches] = ruleComplexityOfCode(code, B, nRounds);
+    order[i++] = (distinct * 8 + switches) * M + code;
+  }
+  order.sort();
+  const rules = new Array(order.length);
+  for (let j = 0; j < order.length; j++) rules[j] = decodeRule(order[j] % M, keys, nRounds);
+  return { rules, run, skipped, stoppedAt };
 }
 
 /* Apply a rule to a season until one team remains (six rounds for 64). Rounds past the last
@@ -1083,7 +1097,7 @@ function ruleReproduces(season, seq, checkpoints) {
 }
 
 /* How many of `rules` reproduce the checkpoints in at least one of `seasons`
- * (the seasons OUTSIDE the fit range), and the most seasons any one does --
+ * (the seasons OUTSIDE the run), and the most seasons any one does --
  * the one statement about a search that its inputs cannot tune: "of the N
  * survivors, K reproduce any other season". Exact while rules x seasons is
  * within RULE_GEN_DIRECT applications (7,137 rules x 12 seasons is 0.3 s);
@@ -1104,73 +1118,57 @@ function ruleGeneralisation(rules, seasons, checkpoints) {
   return { n, checked, any, best };
 }
 
-/* The whole search-mode job, pure, so it can run in a worker (app.js
+/* The whole search job, pure, so it can run in a worker (app.js
  * runRuleSearchJob) or inline where there is none -- the same function
- * either way, never a second implementation. ruleSearch over the fit
+ * either way, never a second implementation. ruleRun over the played
  * seasons; the offered entries (distinct by the bracket they give when a
- * field exists, by sequence when it does not); the generalisation of every
- * survivor; the ranking; and the resolution of the rule a link names.
+ * field exists, by sequence when it does not); each entry's matches among
+ * the seasons OUTSIDE the run and its per-round record over every played
+ * season; the generalisation of every survivor; and the resolution of the
+ * rule a link names.
  *
- *   fit          rule-shaped seasons in the fit range (complete)
- *   played       every complete played season (fit is a subset); the ones
- *                the search did not select on are "outside"
+ *   played       every complete played season, newest first
  *   here         the displayed season, or null while its field is pending
- *   keys         the eligible criteria, sorted
+ *   keys         the criteria, sorted
  *   checkpoints  rounds whose winners a rule must reproduce (array)
- *   n            entries to offer;  rank 'simple' | 'outside';
- *   maxCriteria  distinct criteria a rule may use, or null
- *   want         a criterion sequence to find among the offered, or null
+ *   maxCriteria  distinct criteria a rule may use (never null on the page)
+ *   want         a criterion sequence to find among the survivors, or null
  */
-const RULE_RANK_POOL = 500;   // distinct brackets scored when ranking by outside-range hits
-function ruleSearchJob({ fit, played, here, keys, checkpoints, n, rank, maxCriteria, want }) {
+const RULE_OFFERED = 3;   // the simplest rule and two alternatives
+function ruleSearchJob({ played, here, keys, checkpoints, maxCriteria, want }) {
   const cps = new Set(checkpoints);
-  const res = fit.length ? ruleSearch(fit, keys, cps) : { rules: [], usedSeasons: [], lastRound: -1, backedOff: true };
-  // "Outside" means outside the seasons the rule was actually selected on:
-  // after a back-off the dropped seasons count too, and count as misses.
-  const outside = played.filter(p => !res.usedSeasons.includes(p.year));
+  const res = ruleRun(played, keys, checkpoints, maxCriteria);
+  // Outside the run -- skipped newer seasons included -- these are
+  // descriptive: a match there never extends the run.
+  const outside = played.filter(p => !res.run.includes(p.year));
   const apply = seq => {
     if (!here) return { rounds: null, picks: null };
     const rounds = ruleBracket(here, seq);
     return { rounds, picks: rounds.map(g => g.map(x => x.win)) };
   };
-  const brackets = [], seen = new Set();
-  const cap = rank === 'outside' ? Math.max(RULE_RANK_POOL, n) : n;
-  // With a field, distinct BRACKETS are offered (many rules give the same
-  // picks); without one, distinct rules.
   const sigOf = (seq, b) => (here ? b.picks.map(g => g.join(',')).join('|') : seq.join(','));
   const entry = seq => {
     const hits = outside.filter(p => ruleReproduces(p, seq, cps)).map(p => p.year);
-    return { seq, ...apply(seq), complexity: ruleComplexity(seq), outside: { k: hits.length, m: outside.length, years: hits } };
+    const perRound = [...cps].sort((a, b) => a - b).map(r => ({ r, k: played.filter(p => ruleReproduces(p, seq, [r])).length, m: played.length }));
+    return { seq, ...apply(seq), complexity: ruleComplexity(seq), matches: { k: hits.length, m: outside.length, years: hits }, perRound };
   };
-  // ruleSearch() orders by distinct criteria first, so the first rule over
-  // the criteria cap means every later one is too: stop there.
-  let overCap = false;
+  const offered = [], seen = new Set();
   for (const seq of res.rules) {
-    const complexity = ruleComplexity(seq);
-    if (maxCriteria !== null && complexity[0] > maxCriteria) { overCap = true; break; }
     const b = entry(seq);
     const sig = sigOf(seq, b);
     if (seen.has(sig)) continue;
     seen.add(sig);
-    brackets.push(b);
-    if (brackets.length >= cap) break;
+    offered.push(b);
+    if (offered.length >= RULE_OFFERED) break;
   }
-  const scored = brackets.length;
-  // Every survivor against every season outside the range: the one
-  // statement the inputs cannot tune (see ruleGeneralisation).
   const gen = ruleGeneralisation(res.rules, outside, cps);
-  if (rank === 'outside') brackets.sort((a, b) => b.outside.k - a.outside.k || a.complexity[0] - b.complexity[0] || a.complexity[1] - b.complexity[1]);
-  const offered = brackets.slice(0, n);
   // The rule a link names (or the one chosen before the season changed):
   // find it among the offered entries by sequence, then -- with a field --
   // by the bracket it gives, since the offered list is deduplicated by
   // picks; the entry then becomes the named rule itself, so the panel row
-  // and the round labels carry the sequence the link names, not the
-  // simpler rule that happened to be listed first for the same picks.
-  // Failing that, if it survived at all, list it as one more.
-  // A named rule that did not survive is reported (wantMissed), not quietly
-  // replaced: the first entry is shown, and the panel says the link's rule
-  // is not among the survivors here.
+  // and the round labels carry the sequence the link names. Failing that,
+  // if it survived at all, list it as one more. A named rule that did not
+  // survive is reported (wantMissed), not quietly replaced.
   let chosen = 0, wantMissed = false;
   if (want) {
     const same = seq => seq.length === want.length && seq.every((k, i) => k === want[i]);
@@ -1183,7 +1181,7 @@ function ruleSearchJob({ fit, played, here, keys, checkpoints, n, rank, maxCrite
     wantMissed = i < 0;
     chosen = Math.max(0, i);
   }
-  return { brackets: offered, scored, usedSeasons: res.usedSeasons, backedOff: res.backedOff, nRules: res.rules.length, lastRound: res.lastRound, nOutside: outside.length, overCap, gen, chosen, wantMissed };
+  return { run: res.run, skipped: res.skipped, stoppedAt: res.stoppedAt, nRules: res.rules.length, entries: offered, chosen, wantMissed, gen, nOutside: outside.length };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -1193,6 +1191,6 @@ if (typeof module !== 'undefined' && module.exports) {
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
-    rulePlay, ruleSequencesForSeason, ruleSearch, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_RANK_POOL,
+    rulePlay, ruleSequencesForSeason, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_OFFERED, ruleRun, bitCount,
   };
 }

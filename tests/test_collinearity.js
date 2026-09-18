@@ -237,28 +237,44 @@ check('sequences that reproduce checkpoints are exactly the ones that do', () =>
   assert.deepStrictEqual(decoded, ['aa']);
 });
 
-check('ruleSearch intersects seasons and backs off to the longest surviving range', () => {
-  const s1 = tiny([[0, 2], [0]]);                 // champion 0: needs a,a
-  const s2 = tiny([[1, 3], [3]]);                 // champion 3: needs b,b
-  const both = F.ruleSearch([s1, s2], KEYS, new Set([1]));
-  // Nothing satisfies both; drops the EARLIEST (s1) and reports s2 alone.
-  assert.strictEqual(both.backedOff, true);
-  assert.deepStrictEqual(both.usedSeasons, [2000]);
-  assert.deepStrictEqual(both.rules.map(r => r.join('')), ['bb']);
-  const same = F.ruleSearch([s1, s1], KEYS, new Set([1]));
-  assert.strictEqual(same.backedOff, false);
-  assert.deepStrictEqual(same.rules.map(r => r.join('')), ['aa']);
+/* Seasons for the run: newest first, distinct years. Under `a` the champion
+ * is 0 (rule aa); under `b` it is 3 (bb); T's champion is 2, which only
+ * `ab` gives (a in round 0 puts 0 and 2 through, b in the final sends 2). */
+const S0 = { ...tiny([[0, 2], [0]]), year: 2000 };
+const S1 = { ...tiny([[1, 3], [3]]), year: 2001 };
+const S2 = { ...tiny([[0, 2], [0]]), year: 2002 };
+const T = { ...tiny([[0, 2], [2]]), year: 2001 };
+const untouched = { year: 1999, seed: [1, 2, 1, 2], crit: S0.crit, actual: S0.actual, get first_round() { throw new Error('computed a season past the break'); } };
+
+check('ruleRun grows the window back from the newest season and stops at the first that breaks it', () => {
+  let r = F.ruleRun([S1, S0], KEYS, [1], null);
+  assert.deepStrictEqual(r, { rules: [['b', 'b']], run: [2001], skipped: [], stoppedAt: 2000 });
+  r = F.ruleRun([S2, S0], KEYS, [1], null);
+  assert.deepStrictEqual(r, { rules: [['a', 'a']], run: [2002, 2000], skipped: [], stoppedAt: null });
+  r = F.ruleRun([S2, S1, untouched], KEYS, [1], null);
+  assert.deepStrictEqual([r.run, r.stoppedAt], [[2002], 2001], 'the season past the break is never enumerated');
+});
+
+check('a newest season with no survivor is skipped and the run starts at the first that has one', () => {
+  let r = F.ruleRun([T, S0], KEYS, [1], 1);
+  assert.deepStrictEqual(r, { rules: [['a', 'a']], run: [2000], skipped: [2001], stoppedAt: null });
+  r = F.ruleRun([T, S0], KEYS, [1], null);
+  assert.deepStrictEqual(r, { rules: [['a', 'b']], run: [2001], skipped: [], stoppedAt: 2000 });
+  r = F.ruleRun([T], KEYS, [1], 1);
+  assert.deepStrictEqual(r, { rules: [], run: [], skipped: [2001], stoppedAt: null });
+  assert.deepStrictEqual(F.ruleRun([], KEYS, [1], null), { rules: [], run: [], skipped: [], stoppedAt: null });
+  assert.throws(() => F.ruleRun([S0], KEYS, [], null), /no checkpoints/);
 });
 
 check('rules are ranked simplest first: distinct criteria, then switches, then round-by-round order', () => {
   // A season whose checkpoint every sequence reproduces, so the ranking is
-  // the only thing ruleSearch() decides. Three keys, three rounds (8 teams);
+  // the only thing ruleRun() decides. Three keys, three rounds (8 teams);
   // `c` is a copy of `a`. Checkpoint 0 = the round-of-8 winners, reproduced
   // by a, b and c alike here because every criterion picks the same winners.
   const s = { year: 2001, first_round: [0, 1, 2, 3, 4, 5, 6, 7], seed: [1, 2, 1, 2, 1, 2, 1, 2],
               crit: { a: [8, 7, 6, 5, 4, 3, 2, 1], b: [8, 7, 6, 5, 4, 3, 2, 1], c: [8, 7, 6, 5, 4, 3, 2, 1] },
               actual: [[0, 2, 4, 6], [0, 4], [0]] };
-  const res = F.ruleSearch([s], ['a', 'b', 'c'], new Set([0, 2]));
+  const res = F.ruleRun([s], ['a', 'b', 'c'], [0, 2], null);
   const got = res.rules.map(r => r.join(''));
   assert.strictEqual(got.length, 27);
   assert.deepStrictEqual(got.slice(0, 3), ['aaa', 'bbb', 'ccc'], '1 criterion first');
@@ -267,6 +283,11 @@ check('rules are ranked simplest first: distinct criteria, then switches, then r
   // The whole order agrees with the comparator it replaced.
   const ref = got.slice().sort((x, y) => { const cx = F.ruleComplexity(x.split('')), cy = F.ruleComplexity(y.split('')); return cx[0] - cy[0] || cx[1] - cy[1] || x.localeCompare(y); });
   assert.deepStrictEqual(got, ref);
+  // Under a cap the order is the same list with the over-cap rules absent.
+  const capped = F.ruleRun([s], ['a', 'b', 'c'], [0, 2], 2).rules.map(r => r.join(''));
+  assert.strictEqual(capped.length, 21);
+  assert.ok(capped.every(r => new Set(r).size <= 2));
+  assert.deepStrictEqual(capped, got.filter(r => new Set(r).size <= 2));
 });
 
 check('ruleComplexityOfCode agrees with ruleComplexity on every 3-key, 4-round sequence', () => {
@@ -286,7 +307,15 @@ check('ruleComplexityOfCode is right at the 32-key edge, where the mask bit for 
     ['k31', 'k30', 'k29', 'k28', 'k27', 'k26'],
     ['k5', 'k5', 'k31', 'k31', 'k5', 'k5'],
   ]) assert.deepStrictEqual(F.ruleComplexityOfCode(enc(seq), B, 6), F.ruleComplexity(seq), seq.join(','));
-  assert.throws(() => F.ruleSearch([], Array(33).fill('x'), new Set([2])), /33 criteria/);
+  assert.throws(() => F.ruleRun([], Array(33).fill('x'), [2], null), /33 criteria/);
+  // 32 identical criteria on the 4-team season: every one-variable rule
+  // survives a cap of 1, including the one whose mask is the sign bit.
+  const crit = {}; for (const k of keys) crit[k] = [4, 3, 2, 1];
+  const s32 = { year: 2000, first_round: [0, 1, 2, 3], seed: [1, 2, 1, 2], crit, actual: [[0, 2], [0]] };
+  const one = F.ruleRun([s32], keys, [1], 1).rules;
+  assert.strictEqual(one.length, 32);
+  assert.ok(one.some(r => r[0] === 'k31' && r[1] === 'k31'));
+  assert.strictEqual(F.ruleRun([s32], keys, [1], 2).rules.length, 1024);
 });
 
 check('ruleGeneralisation counts survivors that reproduce any outside season, exactly or on the simplest prefix', () => {
@@ -316,71 +345,84 @@ function eight(cOverride, actual, year) {
   const a = [8, 7, 6, 5, 4, 3, 2, 1], c = a.slice(); for (const [i, v] of cOverride) c[i] = v;
   return { year, first_round: [0, 1, 2, 3, 4, 5, 6, 7], seed: [1, 2, 1, 2, 1, 2, 1, 2], crit: { a, c }, actual };
 }
-const X = eight([[4, 9]], [[0, 2, 4, 6], [0, 4], [0]], 2000);
-const W = eight([[1, 9]], [[1, 2, 4, 6], [1, 4], [1]], 2001);
-const JOB = { keys: ['a', 'c'], checkpoints: [0, 2], n: 5, rank: 'simple', maxCriteria: null, want: null };
-const seqs = out => out.brackets.map(b => b.seq.join(''));
+const X = eight([[4, 9]], [[0, 2, 4, 6], [0, 4], [0]], 2001);           // newest: survivors aaa, caa, cca, aca
+const W = eight([[1, 9]], [[1, 2, 4, 6], [1, 4], [1]], 2000);           // c in round 0 puts 1 through: caa, cac, cca, ccc
+const V = eight([[1, 9]], [[0, 2, 4, 6], [0, 4], [0]], 1999);           // a in round 0: aaa, aac, aca, acc
+const U = eight([[1, 9]], [[1, 2, 4, 6], [1, 4], [1]], 1998);           // as W, older
+const H = { ...X, year: 2002 };                                          // the displayed field
+const JOB = { keys: ['a', 'c'], checkpoints: [0, 2], maxCriteria: null, want: null };
+const seqs = out => out.entries.map(b => b.seq.join(''));
 
 console.log('\nrule search job');
 
+check('the cap is pruned inside the enumeration and equals filtering afterwards', () => {
+  const dec = set => [...set].map(c => F.decodeRule(c, ['a', 'c'], 3).join('')).sort();
+  const all = dec(F.ruleSequencesForSeason(X, ['a', 'c'], new Set([0, 2]), 2));
+  assert.deepStrictEqual(all, ['aaa', 'aca', 'caa', 'cca']);
+  assert.deepStrictEqual(dec(F.ruleSequencesForSeason(X, ['a', 'c'], new Set([0, 2]), 2, 1)), ['aaa']);
+  assert.deepStrictEqual(dec(F.ruleSequencesForSeason(X, ['a', 'c'], new Set([0, 2]), 2, 2)), all);
+  assert.deepStrictEqual(F.ruleRun([X], ['a', 'c'], [0, 2], 1).rules, [['a', 'a', 'a']]);
+  assert.strictEqual(F.bitCount(0), 0); assert.strictEqual(F.bitCount(0b1011), 3); assert.strictEqual(F.bitCount(1 << 31), 1);
+});
+
 check('with a field the offered entries are distinct by the bracket they give', () => {
-  const out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: X });
+  const out = F.ruleSearchJob({ ...JOB, played: [X], here: H });
   assert.deepStrictEqual(seqs(out), ['aaa']);
-  assert.deepStrictEqual(out.brackets[0].picks, [[0, 2, 4, 6], [0, 4], [0]]);
-  assert.deepStrictEqual([out.scored, out.nRules, out.nOutside, out.usedSeasons, out.backedOff, out.chosen], [1, 4, 1, [2000], false, 0]);
-  assert.deepStrictEqual(out.gen, { n: 4, checked: 4, any: 2, best: 1 });
-  assert.deepStrictEqual(out.brackets[0].outside, { k: 0, m: 1, years: [] });
+  assert.deepStrictEqual(out.entries[0].picks, [[0, 2, 4, 6], [0, 4], [0]]);
+  assert.deepStrictEqual([out.nRules, out.nOutside, out.run, out.skipped, out.stoppedAt, out.chosen, out.wantMissed], [4, 0, [2001], [], null, 0, false]);
+  assert.deepStrictEqual(out.gen, { n: 4, checked: 4, any: 0, best: 0 });
+  assert.deepStrictEqual(out.entries[0].matches, { k: 0, m: 0, years: [] });
+  assert.deepStrictEqual(out.entries[0].perRound, [{ r: 0, k: 1, m: 1 }, { r: 2, k: 1, m: 1 }]);
 });
 
-check('without a field the entries are distinct rules, simplest first, capped at n', () => {
-  let out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null });
-  assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca', 'aca']);
-  assert.ok(out.brackets.every(b => b.picks === null && b.rounds === null));
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, n: 2 });
-  assert.deepStrictEqual(seqs(out), ['aaa', 'caa']);
-  assert.strictEqual(out.scored, 2);
+check('without a field the entries are distinct rules: the simplest and two alternatives', () => {
+  assert.strictEqual(F.RULE_OFFERED, 3);
+  const out = F.ruleSearchJob({ ...JOB, played: [X], here: null });
+  assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca']);
+  assert.ok(out.entries.every(b => b.picks === null && b.rounds === null));
 });
 
-check('ranking by outside seasons scores a pool of RULE_RANK_POOL and sorts by hits', () => {
-  assert.strictEqual(F.RULE_RANK_POOL, 500);
-  const out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, n: 1, rank: 'outside' });
-  assert.strictEqual(out.scored, 4, 'all four survivors scored, not just n');
-  assert.deepStrictEqual(seqs(out), ['caa']);
-  assert.deepStrictEqual(out.brackets[0].outside, { k: 1, m: 1, years: [2001] });
+check('the run, what lies outside it, and matches that never extend it', () => {
+  const out = F.ruleSearchJob({ ...JOB, played: [X, W, V, U], here: null });
+  assert.deepStrictEqual([out.run, out.stoppedAt, out.nOutside], [[2001, 2000], 1999, 2]);
+  assert.deepStrictEqual(seqs(out), ['caa', 'cca']);
+  assert.deepStrictEqual(out.entries[0].matches, { k: 1, m: 2, years: [1998] }, 'U fits; V broke the run and does not');
+  assert.deepStrictEqual(out.gen, { n: 2, checked: 2, any: 2, best: 1 });
+  assert.deepStrictEqual(out.entries[0].perRound, [{ r: 0, k: 3, m: 4 }, { r: 2, k: 3, m: 4 }]);
 });
 
-check('the criteria cap stops at the first rule over it', () => {
-  const out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, maxCriteria: 1 });
-  assert.deepStrictEqual(seqs(out), ['aaa']);
-  assert.strictEqual(out.overCap, true); assert.strictEqual(out.nRules, 4);
+check('a skipped newest season is named, counts as outside, and the run starts below it', () => {
+  const out = F.ruleSearchJob({ keys: KEYS, checkpoints: [1], maxCriteria: 1, want: null, played: [T, S0], here: null });
+  assert.deepStrictEqual([out.skipped, out.run, out.stoppedAt, out.nOutside], [[2001], [2000], null, 1]);
+  assert.deepStrictEqual(seqs(out), ['aa']);
+  assert.deepStrictEqual(out.entries[0].matches, { k: 0, m: 1, years: [] });
+  // No rule anywhere: a finding, not a crash; wantMissed only when a rule was named.
+  let none = F.ruleSearchJob({ keys: KEYS, checkpoints: [1], maxCriteria: 1, want: null, played: [T], here: null });
+  assert.deepStrictEqual([none.run, none.skipped, none.entries, none.nRules, none.nOutside, none.chosen, none.wantMissed], [[], [2001], [], 0, 1, 0, false]);
+  none = F.ruleSearchJob({ keys: KEYS, checkpoints: [1], maxCriteria: 1, want: ['a', 'b'], played: [T], here: null });
+  assert.strictEqual(none.wantMissed, true);
 });
 
-check('the rule a link names: by sequence; by picks, becoming the entry; as one more; or not at all', () => {
-  let out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, want: ['c', 'a', 'a'] });
-  assert.strictEqual(out.chosen, 1);
+check('the rule a link names: by sequence; by picks, becoming the entry; as one more; or missed', () => {
+  let out = F.ruleSearchJob({ ...JOB, played: [X], here: null, want: ['c', 'a', 'a'] });
+  assert.strictEqual(out.chosen, 1); assert.strictEqual(out.wantMissed, false);
   // With a field the named rule gives the one offered bracket: the entry becomes that rule, with its own numbers.
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: X, want: ['c', 'c', 'a'] });
+  out = F.ruleSearchJob({ ...JOB, played: [X, W], here: H, want: ['c', 'c', 'a'] });
   assert.deepStrictEqual(seqs(out), ['cca']);
-  assert.deepStrictEqual(out.brackets[0].complexity, [2, 1]);
-  assert.deepStrictEqual(out.brackets[0].outside, { k: 1, m: 1, years: [2001] });
+  assert.deepStrictEqual(out.entries[0].complexity, [2, 1]);
+  assert.deepStrictEqual(out.entries[0].matches, { k: 0, m: 0, years: [] }, 'W is in the run, so nothing lies outside');
   assert.strictEqual(out.chosen, 0);
-  // Survived but not among the offered n: listed as one more.
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, n: 1, want: ['c', 'c', 'a'] });
-  assert.deepStrictEqual(seqs(out), ['aaa', 'cca']); assert.strictEqual(out.chosen, 1);
+  // Survived but not among the offered three: listed as one more.
+  out = F.ruleSearchJob({ ...JOB, played: [X], here: null, want: ['a', 'c', 'a'] });
+  assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca', 'aca']); assert.strictEqual(out.chosen, 3);
   // Did not survive: the first entry, and said so.
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, want: ['c', 'c', 'c'] });
-  assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca', 'aca']); assert.strictEqual(out.chosen, 0);
-  assert.strictEqual(out.wantMissed, true);
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null, want: ['c', 'a', 'a'] });
-  assert.strictEqual(out.wantMissed, false);
-  out = F.ruleSearchJob({ ...JOB, fit: [X], played: [X, W], here: null });
-  assert.strictEqual(out.wantMissed, false, 'nothing named, nothing missed');
+  out = F.ruleSearchJob({ ...JOB, played: [X], here: null, want: ['c', 'c', 'c'] });
+  assert.deepStrictEqual(seqs(out), ['aaa', 'caa', 'cca']); assert.strictEqual(out.chosen, 0); assert.strictEqual(out.wantMissed, true);
 });
 
-check('no fit seasons is a finding, not a crash', () => {
-  const out = F.ruleSearchJob({ ...JOB, fit: [], played: [X, W], here: null });
-  assert.deepStrictEqual([out.nRules, out.brackets, out.backedOff, out.usedSeasons, out.nOutside, out.chosen], [0, [], true, [], 2, 0]);
-  assert.deepStrictEqual(out.gen, { n: 0, checked: 0, any: 0, best: 0 });
+check('no played seasons is a finding, not a crash', () => {
+  const out = F.ruleSearchJob({ ...JOB, played: [], here: null });
+  assert.deepStrictEqual(out, { run: [], skipped: [], stoppedAt: null, nRules: 0, entries: [], chosen: 0, wantMissed: false, gen: { n: 0, checked: 0, any: 0, best: 0 }, nOutside: 0 });
 });
 
 check('ruleBracket reuses the last criterion for rounds past the rule, and ruleReproduces checks checkpoints', () => {
