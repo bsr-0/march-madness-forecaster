@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rule search — the top rule, from every angle</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane: #f9f9f7; --surface: #fcfcfb;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --s1: #2a78d6;                                          /* the rule / featured season / Final Four exact */
+    --de: #c3c2b7;
+    --good: #006300; --crit: #d03b3b; --warn-bg: #fff4d6; --warn-ink: #5a3d00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --plane: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --s1: #3987e5;
+      --de: #52514e;
+      --good: #0ca30c; --crit: #e66767; --warn-bg: #3a2e10; --warn-ink: #fbe3a3;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--plane); }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 20px 56px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 0 0 6px; color: var(--ink); }
+  p { margin: 0 0 8px; }
+  .sub { color: var(--ink-2); }
+  .small { font-size: 13px; color: var(--muted); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); vertical-align: middle; margin-left: 8px; }
+  .tag.ok { background: color-mix(in oklab, var(--good) 16%, var(--surface)); color: var(--good); }
+  section { margin-top: 30px; }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px 18px; margin-top: 12px; overflow-x: auto; }
+  .grid { display: grid; gap: 10px; }
+  .grid.tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 10px 14px; }
+  .tile .label { font-size: 12px; color: var(--ink-2); }
+  .tile .value { font-size: 24px; font-weight: 600; line-height: 1.15; margin-top: 2px; }
+  .tile .of { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .tile .note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .status { display: inline-flex; align-items: center; gap: 5px; }
+  .status.good { color: var(--good); } .status.crit { color: var(--crit); }
+  .status svg { width: 13px; height: 13px; flex: none; }
+
+  /* the rule, six rounds */
+  .rule { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 10px; }
+  .rule .rd { border-radius: 8px; padding: 8px 7px; border: 1px solid var(--ring); position: relative; }
+  .rule .rd.k1 { background: color-mix(in oklab, var(--s1) 10%, var(--surface)); }
+  .rule .rd.k2 { background: color-mix(in oklab, var(--s1) 22%, var(--surface)); }
+  .rule .rd .r { font-size: 10px; color: var(--muted); }
+  .rule .rd .c { font-size: 12px; font-weight: 600; margin-top: 4px; line-height: 1.2; }
+  .rule .rd .sw { position: absolute; top: -8px; left: -8px; background: var(--ink); color: var(--surface); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 999px; }
+  @media (max-width: 700px) { .rule { grid-template-columns: repeat(3, 1fr); } }
+  .hero { font-size: 30px; font-weight: 600; line-height: 1.15; margin: 4px 0 4px; }
+
+  /* bracket cards */
+  .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+  .bcard { border: 1px solid var(--ring); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+  .bcard.feature { border-color: var(--s1); background: color-mix(in oklab, var(--s1) 6%, var(--surface)); }
+  .bcard .yr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .bcard .yr b { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .bcard .yr span { font-size: 11px; color: var(--muted); }
+  .tier { margin-bottom: 5px; }
+  .tier .tl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; display: block; margin-bottom: 3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 11px; line-height: 1.3; padding: 2px 6px 2px 5px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid transparent; white-space: nowrap; }
+  .chip.right { background: color-mix(in oklab, var(--good) 14%, var(--surface)); color: var(--ink); border-color: color-mix(in oklab, var(--good) 35%, var(--surface)); }
+  .chip.wrong { background: var(--plane); color: var(--ink-2); }
+  .chip.champ { font-size: 12px; font-weight: 600; padding: 3px 8px; }
+  .chip svg { width: 10px; height: 10px; flex: none; }
+  .miss { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+
+  details.more { margin-top: 12px; }
+  details.more summary { font-size: 13px; color: var(--ink-2); cursor: pointer; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 6px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { color: var(--ink-2); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.hl td { font-weight: 600; }
+
+  /* one-variable bar chart */
+  figure { margin: 0; }
+  figcaption { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin: 4px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  svg text { font-family: inherit; fill: var(--ink-2); font-size: 11px; }
+  svg .tick { fill: var(--muted); font-variant-numeric: tabular-nums; }
+  svg .grid line { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--axis); stroke-width: 1; }
+  svg .lbl { fill: var(--ink); font-weight: 600; }
+  svg .hit { fill: transparent; }
+
+  /* strategy strip */
+  .strip { display: grid; grid-template-columns: 150px repeat(14, 1fr); gap: 3px; align-items: center; margin-top: 10px; min-width: 640px; }
+  .strip .rlab { font-size: 12px; color: var(--ink-2); text-align: right; padding-right: 6px; }
+  .strip .ylab { font-size: 10.5px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+  .cell { height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+  .cell svg { width: 12px; height: 12px; }
+  .cell.right { background: color-mix(in oklab, var(--good) 16%, var(--surface)); color: var(--good); }
+  .cell.wrong { background: var(--plane); color: var(--de); }
+  .cell.exact { outline: 2px solid var(--s1); outline-offset: -2px; }
+
+  ul { margin: 4px 0 8px; padding-left: 20px; } li { margin-bottom: 3px; }
+  .not { border-left: 3px solid var(--crit); padding-left: 14px; }
+  footer { margin-top: 36px; font-size: 12px; color: var(--muted); }
+  code { font-size: 12.5px; background: color-mix(in oklab, var(--ink) 6%, var(--surface)); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Rule search: the top rule, from every angle <span class="tag">Experimental · not a model</span></h1>
+  <p class="sub">The top-ranked rule that reproduces the <b>2026 Final Four and champion</b>, from the site's client-side rule search (played 2011–2026, 32 criteria). Ranked, by default, to prefer a rule built from specific variables over an equally simple one leaning on a composite rating or a rank <span class="tag ok">0 rating variables</span>. Measured on the shipped data, 2026-09-18.</p>
+</header>
+
+<!-- ─────────────────────────────── 1. the rule ─────────────────────────────── -->
+<section id="rule">
+  <h2>1 · The rule</h2>
+  <div class="card">
+    <div class="hero">Shot defense → Shooting (eFG%) → Shot defense</div>
+    <p class="sub">Round of 64, Round of 32, Elite Eight, Final Four and the final: the team that allows the <b>lower effective field-goal %</b>. Sweet 16 only: the team that <b>shoots</b> the better effective field-goal %. Ties go to the better seed.</p>
+    <div class="rule" id="rule-rounds"></div>
+    <p class="small" style="margin-top:8px">Simplest of 72 survivors, and the simplest of the <b>14</b> that use no composite rating, rank, or seed. Found on the 2027 page (field not out): the criteria fill the round headers; once the field ships, this link fills the bracket. <code>rq=opp_effective_fg_pct,opp_effective_fg_pct,effective_fg_pct,opp_effective_fg_pct,opp_effective_fg_pct,opp_effective_fg_pct</code> · <code>rc=3,5</code>.</p>
+  </div>
+  <div class="grid tiles" style="margin-top:10px">
+    <div class="tile"><div class="label">Run</div><div class="value">2026 <span class="of">only</span></div><div class="note">2025 breaks it (0 of 72 survive)</div></div>
+    <div class="tile"><div class="label">F4 teams right</div><div class="value">14 <span class="of">of 56</span></div><div class="note">exact all-4 only in 2026</div></div>
+    <div class="tile"><div class="label">Finalists right</div><div class="value">7 <span class="of">of 28</span></div><div class="note">both finalists only in 2019, 2026</div></div>
+    <div class="tile"><div class="label">Champion right</div><div class="value">2 <span class="of">of 14</span></div><div class="note">2024, 2026 · 0 of 13 older seasons match F4+champion together</div></div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────── 2. later rounds, season by season ─────────────────────────────── -->
+<section id="brackets">
+  <h2>2 · The later rounds, season by season</h2>
+  <p class="sub">The real Final Four, finalists and champion for every played season, 2026 first. A team is checked when the rule's own bracket also had it reaching that same stage — the same set-match the search selects on. 2026 is the only season checked at every stage; 2025 shows the common shape: some Final Four teams right, the champion missed.</p>
+  <div class="bgrid" id="bracket-grid"></div>
+  <p class="small" style="margin-top:8px">"Rule picked" names shown only where the rule's own pick differs from reality.</p>
+</section>
+
+<!-- ─────────────────────────────── 3. multiple strategies ─────────────────────────────── -->
+<section id="strategies">
+  <h2>3 · Two ways to ask the question</h2>
+  <p class="sub">The panel's own controls: which rounds must match. Loosening the target from Final Four + Champion to Final Four alone reaches one season further back — at the cost of the champion, which is no longer part of what the rule was selected on.</p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Strategy</th><th>Rule</th><th>Run</th><th class="num">Cap needed for a rating-free rule</th><th class="num">F4 exact</th><th class="num">Champion right</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Final Four + Champion <span class="small">(default)</span></td><td>Shot defense → Shooting → Shot defense ×4</td><td>2026</td><td class="num">Simple (≤2)</td><td class="num">1 of 14</td><td class="num">2 of 14</td></tr>
+        <tr><td>Final Four only</td><td>Shot defense ×2 → Average margin → Road wins</td><td>2025–2026</td><td class="num">Flexible (≤3)</td><td class="num">2 of 14</td><td class="num">3 of 14<span class="small"> (incidental)</span></td></tr>
+      </tbody>
+    </table>
+    <p class="small" style="margin-top:8px"><b>Final Four + Finalists + Champion</b> (all three) narrows the Final-Four-+-Champion survivors from 72 to 33 without changing which one ranks first — the same rule already gets both 2026 finalists right, so adding the stricter checkpoint costs nothing here.</p>
+  </div>
+  <div class="card">
+    <figure>
+      <figcaption><b>Champion picked right, by strategy and season.</b> Outlined cells are seasons each strategy's rule reproduces the Final Four exactly. Final-Four-only reaches 2025 and 2026 on the Final Four, but its champion is right in neither — the three seasons it does get the champion right (2013, 2019, 2024) were never part of what it was selected on.</figcaption>
+      <div class="legend"><span><i style="background:color-mix(in oklab, var(--good) 30%, var(--surface))"></i>Champion right</span><span><i style="background:var(--plane); border:1px solid var(--ring)"></i>Champion wrong</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:11px;height:11px;outline:2px solid var(--s1);outline-offset:-2px;display:inline-block;border-radius:3px"></span>Final Four exact</span></div>
+      <div id="strip"></div>
+    </figure>
+  </div>
+</section>
+
+<!-- ─────────────────────────────── 4. why specific variables ─────────────────────────────── -->
+<section id="onevar">
+  <h2>4 · Why the ranking favors Shot defense over a rating</h2>
+  <p class="sub">Each of the 32 criteria used alone in every round, scored on the 14 played seasons before 2026. Composite ratings and ranks (barthag, national rank, Massey rank, SOS, Simple rating, adjusted offense/defense, and seed) are what the default ranking now deprioritizes; Shot defense — this rule's main criterion — already outperforms most of them alone.</p>
+  <div class="card">
+    <figure>
+      <figcaption><b>Final Four teams right across 14 seasons</b> (of 56), one variable every round. Chance is 3.5.</figcaption>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Used by this rule</span><span><i style="background:var(--warn-bg); border:1px solid var(--warn-ink)"></i>Deprioritized (composite rating / rank / seed)</span><span><i style="background:var(--de)"></i>Other specific variables</span></div>
+      <div id="onevar-chart"></div>
+    </figure>
+    <details class="more"><summary>All 32 variables</summary><div id="onevar-table"></div></details>
+  </div>
+</section>
+
+<!-- ─────────────────────────────── 5. what it is not ─────────────────────────────── -->
+<section id="not">
+  <h2>5 · What it is not</h2>
+  <div class="card not">
+    <ul>
+      <li><b>Not a model, not validated, never scored.</b> No P(1st), no EV, no track record. Nothing in production scoring, selection, the candidate artifact, the fitted evaluation or the track record reads it.</li>
+      <li><b>Found after the fact.</b> A rule that reproduces the last season is a description of that season. 0 of 72 Final-Four-+-Champion survivors repeat in any of the 13 older seasons — the short-history warning, not a survivor count.</li>
+      <li><b>The specific-over-rating preference is a legibility choice, not a claim.</b> It reorders equally simple, equally fitted survivors; it never changes which seasons a rule reproduces or its generalisation.</li>
+      <li><b>Experimental at every surface</b> — strategy-table row, headline tag, panel and export header — and always a client-side feature of the site.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  Source: <code>docs/fit.js</code> (<code>ruleRun</code>, <code>ruleSearchJob</code>, <code>ruleBracket</code>, <code>RULE_GENERAL_KEYS</code>) run on <code>docs/data/season_*.json</code> with the 2027 page's inputs; numbers agree with <code>RULE_SEARCH.md</code>.
+</footer>
+
+</main>
+
+<script>
+/* ---------------------------------------------------------------- data
+ * Produced by running fit.js ruleSearchJob()/ruleRun()/ruleBracket() over
+ * the shipped seasons (played 2011–2026) with the 2027 page's inputs and
+ * the default specific-over-rating ranking (RULE_GENERAL_KEYS). */
+const SEASONS = [2026,2025,2024,2023,2022,2021,2019,2018,2017,2016,2015,2014,2013,2011];
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const check = ok => ok
+  ? `<svg viewBox="0 0 16 16" aria-label="right"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`
+  : `<svg viewBox="0 0 16 16" aria-label="wrong"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
+
+// per-season Final Four / finalists / champion, actual vs. the rule's own bracket
+const BRACKET = {"2011":{"f4":[["Butler",8,false],["UConn",3,false],["Kentucky",4,false],["VCU",11,false]],"finalists":[["Butler",8,false],["UConn",3,false]],"champion":["UConn",3,false],"rulePick":{"champion":"Texas"}},"2013":{"f4":[["Louisville",1,true],["Michigan",4,false],["Syracuse",4,false],["Wichita State",9,false]],"finalists":[["Louisville",1,false],["Michigan",4,false]],"champion":["Louisville",1,false],"rulePick":{"champion":"Kansas"}},"2014":{"f4":[["UConn",7,false],["Florida",1,false],["Kentucky",8,false],["Wisconsin",2,false]],"finalists":[["UConn",7,false],["Kentucky",8,false]],"champion":["UConn",7,false],"rulePick":{"champion":"Arizona"}},"2015":{"f4":[["Duke",1,false],["Kentucky",1,true],["Michigan State",7,false],["Wisconsin",1,false]],"finalists":[["Duke",1,false],["Wisconsin",1,false]],"champion":["Duke",1,false],"rulePick":{"champion":"Kentucky"}},"2016":{"f4":[["UNC",1,false],["Oklahoma",2,false],["Syracuse",10,false],["Villanova",2,false]],"finalists":[["UNC",1,false],["Villanova",2,false]],"champion":["Villanova",2,false],"rulePick":{"champion":"Michigan State"}},"2017":{"f4":[["Gonzaga",1,true],["UNC",1,false],["Oregon",3,false],["South Carolina",7,false]],"finalists":[["Gonzaga",1,true],["UNC",1,false]],"champion":["UNC",1,false],"rulePick":{"champion":"Gonzaga"}},"2018":{"f4":[["Kansas",1,false],["Loyola (IL)",11,false],["Michigan",3,false],["Villanova",1,false]],"finalists":[["Michigan",3,false],["Villanova",1,false]],"champion":["Villanova",1,false],"rulePick":{"champion":"Michigan State"}},"2019":{"f4":[["Auburn",5,false],["Michigan State",2,false],["Texas Tech",3,true],["Virginia",1,true]],"finalists":[["Texas Tech",3,true],["Virginia",1,true]],"champion":["Virginia",1,false],"rulePick":{"champion":"Texas Tech"}},"2021":{"f4":[["Baylor",1,false],["Gonzaga",1,false],["Houston",2,false],["UCLA",11,false]],"finalists":[["Baylor",1,false],["Gonzaga",1,false]],"champion":["Baylor",1,false],"rulePick":{"champion":"Grand Canyon"}},"2022":{"f4":[["Duke",2,false],["Kansas",1,false],["UNC",8,false],["Villanova",2,false]],"finalists":[["Kansas",1,false],["UNC",8,false]],"champion":["Kansas",1,false],"rulePick":{"champion":"Gonzaga"}},"2023":{"f4":[["UConn",4,true],["Florida Atlantic",9,true],["Miami (FL)",5,false],["San Diego State",5,false]],"finalists":[["UConn",4,false],["San Diego State",5,false]],"champion":["UConn",4,false],"rulePick":{"champion":"Alabama"}},"2024":{"f4":[["Alabama",4,false],["UConn",1,true],["NC State",11,false],["Purdue",1,false]],"finalists":[["UConn",1,true],["Purdue",1,false]],"champion":["UConn",1,true],"rulePick":{"champion":"UConn"}},"2025":{"f4":[["Auburn",1,true],["Duke",1,false],["Florida",1,true],["Houston",1,false]],"finalists":[["Florida",1,true],["Houston",1,false]],"champion":["Florida",1,false],"rulePick":{"champion":"Tennessee"}},"2026":{"f4":[["Arizona",1,true],["Connecticut",2,true],["Illinois",3,true],["Michigan",1,true]],"finalists":[["Connecticut",2,true],["Michigan",1,true]],"champion":["Michigan",1,true],"rulePick":{"champion":"Michigan"}}};
+
+// strategy A (Final Four + Champion, this rule) and strategy B (Final Four only)
+const STRAT_A_CHAMP = {2011:false,2013:false,2014:false,2015:false,2016:false,2017:false,2018:false,2019:false,2021:false,2022:false,2023:false,2024:true,2025:false,2026:true};
+const STRAT_A_F4EX  = {2011:false,2013:false,2014:false,2015:false,2016:false,2017:false,2018:false,2019:false,2021:false,2022:false,2023:false,2024:false,2025:false,2026:true};
+const STRAT_B_CHAMP = {2011:false,2013:true,2014:false,2015:false,2016:false,2017:false,2018:false,2019:true,2021:false,2022:false,2023:false,2024:true,2025:false,2026:false};
+const STRAT_B_F4EX  = {2011:false,2013:false,2014:false,2015:false,2016:false,2017:false,2018:false,2019:false,2021:false,2022:false,2023:false,2024:false,2025:true,2026:true};
+
+// one variable, every round: Final Four teams right of 56, exact seasons, champions right; tier: 'rule' | 'general' | 'specific'
+const ONEVAR = [
+  ['National rank',26,'2025',5,'general'],['Seed (chalk)',22,'2025',3,'general'],['Massey composite rank',22,'2025',2,'general'],['Simple rating (margin + SOS)',22,'2025',2,'general'],
+  ['Overall rating',21,'2025',2,'general'],['Offense',16,'',2,'general'],['Conf. tournament wins',14,'',1,'specific'],['Average margin',13,'',1,'specific'],['Shot defense',12,'',1,'rule'],
+  ['Assist-to-turnover',11,'',1,'specific'],['Road wins',11,'',1,'specific'],['Offensive rebounding',10,'',2,'specific'],['Strength of schedule',10,'',2,'general'],['Coach tournament wins',9,'',1,'specific'],
+  ['Defense',8,'',2,'general'],['Shooting (eFG%)',8,'',1,'rule'],['Double-digit scorers',8,'',1,'specific'],['Close-game record',7,'',1,'specific'],["Program's tourney history",6,'',1,'specific'],
+  ['3PT defense',6,'',1,'specific'],['3PT accuracy',6,'',1,'specific'],['Fouling',6,'',0,'specific'],['3PT volume',6,'',0,'specific'],['Tempo',5,'',0,'specific'],['Forcing turnovers',5,'',0,'specific'],
+  ['Bad losses',4,'',0,'specific'],['Returning players',4,'',0,'specific'],['Consistency',4,'',0,'specific'],['Ball security',4,'',0,'specific'],['Havoc (steals + blocks)',3,'',0,'specific'],
+  ['Defensive rebounding',2,'',0,'specific'],['Free throw rate',1,'',0,'general'],
+];
+
+/* ---------------------------------------------------------------- 1. the rule */
+(function () {
+  const host = document.getElementById('rule-rounds');
+  const rounds = ['Round of 64','Round of 32','Sweet 16','Elite Eight','Final Four','Championship'];
+  const seq = ['Shot D','Shot D','Shooting','Shot D','Shot D','Shot D'];
+  rounds.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.className = 'rd ' + (seq[i] === 'Shooting' ? 'k2' : 'k1');
+    d.innerHTML = `${i === 2 ? '<span class="sw">switch</span>' : (i === 3 ? '<span class="sw">switch</span>' : '')}<div class="r">${r}</div><div class="c">${seq[i]}</div>`;
+    host.appendChild(d);
+  });
+})();
+
+/* ---------------------------------------------------------------- 2. bracket grid */
+(function () {
+  const host = document.getElementById('bracket-grid');
+  const teamChip = ([name, seed, right]) => `<span class="chip ${right ? 'right' : 'wrong'}">${right ? check(true) : ''}${name} <span style="opacity:.6">(${seed})</span></span>`;
+  SEASONS.forEach(y => {
+    const b = BRACKET[y];
+    const champRight = b.champion[2];
+    const card = document.createElement('div');
+    card.className = 'bcard' + (y === 2026 ? ' feature' : '');
+    card.innerHTML = `
+      <div class="yr"><b>${y}</b><span>${champRight ? 'champion right' : 'champion missed'}</span></div>
+      <div class="tier"><span class="tl">Final Four</span><div class="chips">${b.f4.map(teamChip).join('')}</div></div>
+      <div class="tier"><span class="tl">Finalists</span><div class="chips">${b.finalists.map(teamChip).join('')}</div></div>
+      <div class="tier"><span class="tl">Champion</span><div class="chips"><span class="chip champ ${champRight ? 'right' : 'wrong'}">${champRight ? check(true) : check(false)}${b.champion[0]}</span></div>
+        ${!champRight ? `<div class="miss">Rule picked: ${b.rulePick.champion}</div>` : ''}</div>`;
+    host.appendChild(card);
+  });
+})();
+
+/* ---------------------------------------------------------------- 3. strategy strip */
+(function () {
+  const host = document.getElementById('strip');
+  const years = SEASONS.slice().reverse(); // oldest first, reads like a timeline
+  const rowHTML = (label, champMap, exMap) => `<div class="rlab">${label}</div>` + years.map(y =>
+    `<div class="cell ${champMap[y] ? 'right' : 'wrong'}${exMap[y] ? ' exact' : ''}">${champMap[y] ? check(true) : ''}</div>`).join('');
+  host.innerHTML = `<div class="strip">
+      <div></div>${years.map(y => `<div class="ylab">${y}</div>`).join('')}
+      ${rowHTML('FF + Champion', STRAT_A_CHAMP, STRAT_A_F4EX)}
+      ${rowHTML('Final Four only', STRAT_B_CHAMP, STRAT_B_F4EX)}
+    </div>`;
+})();
+
+/* ---------------------------------------------------------------- 4. one variable at a time */
+(function () {
+  const host = document.getElementById('onevar-chart');
+  const top = ONEVAR.slice(0, 9);
+  const W = Math.min(host.clientWidth || 1000, 1040), m = { t: 6, r: 36, b: 24, l: 170 };
+  const rh = 20, H = m.t + top.length * rh + m.b;
+  const pw = W - m.l - m.r;
+  const x = v => m.l + (v / 28) * pw;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Final Four teams right by single variable, top 9' }, host);
+  const g = el('g', { class: 'grid' }, svg);
+  for (let v = 0; v <= 28; v += 7) { el('line', { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b }, g); const t = el('text', { x: x(v), y: H - 8, 'text-anchor': 'middle', class: 'tick' }, svg); t.textContent = v; }
+  el('line', { x1: x(0), x2: x(0), y1: m.t, y2: H - m.b, class: 'axis' }, svg);
+  const colorFor = tier => tier === 'rule' ? css('--s1') : tier === 'general' ? css('--warn-ink') : css('--de');
+  top.forEach(([name, f4, exact, champ, tier], i) => {
+    const yy = m.t + i * rh, bh = 14;
+    const t = el('text', { x: m.l - 8, y: yy + bh / 2 + 4, 'text-anchor': 'end', class: tier === 'rule' ? 'lbl' : '' }, svg); t.textContent = name;
+    const w = x(f4) - x(0), r = Math.min(4, w / 2);
+    const p = `M${x(0)},${yy} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${bh - 2 * r} a${r},${r} 0 0 1 ${-r},${r} h${-(w - r)} z`;
+    el('path', { d: p, fill: colorFor(tier), opacity: tier === 'general' ? 0.55 : 1 }, svg);
+    const v = el('text', { x: x(f4) + 6, y: yy + bh / 2 + 4, class: tier === 'rule' ? 'lbl' : '' }, svg); v.textContent = f4;
+  });
+  host.innerHTML = ''; host.appendChild(svg);
+  const tbl = document.getElementById('onevar-table');
+  tbl.innerHTML = `<table><thead><tr><th>Variable (every round)</th><th>Kind</th><th class="num">F4 right / 56</th><th>F4 exact</th><th class="num">Champion right / 14</th></tr></thead><tbody>${
+    ONEVAR.map(([n, f, e, c, tier]) => `<tr${tier === 'rule' ? ' class="hl"' : ''}><td>${n}</td><td>${tier === 'rule' ? 'used by this rule' : tier === 'general' ? 'composite rating / rank' : 'specific'}</td><td class="num">${f}</td><td>${e || '—'}</td><td class="num">${c}</td></tr>`).join('')
+  }</tbody></table>`;
+})();
+</script>
+</body>
+</html>

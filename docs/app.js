@@ -1894,7 +1894,7 @@ function renderRulePanel() {
     <div class="rule-line"><span class="ex-gname">Rule complexity</span>
       <button class="chip${simple ? ' on' : ''}" onclick="setRuleComplexity('simple')"><span class="chip-name">Simple</span></button>
       <button class="chip${simple ? '' : ' on'}" onclick="setRuleComplexity('flexible')"><span class="chip-name">Flexible</span></button>
-      <span class="rule-hint">Simple: at most two variables across the rounds. Flexible: up to three.</span>
+      <span class="rule-hint">Simple: at most two variables across the rounds. Flexible: up to three. Ranked to prefer a rule built from specific variables over an equally simple one leaning on a composite rating or a rank, when one survives.</span>
     </div>`;
 
   let results = '';
@@ -1921,7 +1921,7 @@ function renderRulePanel() {
     const row = (e, i) => `
       <button class="rule-row${i === Math.min(state.rule.chosen, r.entries.length - 1) ? ' on' : ''}" onclick="setRuleChosen(${i})">
         <span class="rule-seq">${e.seq.map(ruleLabel).join(' → ')}</span>
-        <span class="rule-meta">${e.complexity[0]} ${e.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${e.complexity[1]} ${e.complexity[1] === 1 ? 'switch' : 'switches'}${e.picks ? ` · champion ${state.season.teams[e.picks[5][0]].name}` : ''}
+        <span class="rule-meta">${e.complexity[0]} ${e.complexity[0] === 1 ? 'criterion' : 'criteria'} · ${e.complexity[1]} ${e.complexity[1] === 1 ? 'switch' : 'switches'}${e.general ? ` · uses ${e.general} rating ${e.general === 1 ? 'variable' : 'variables'}` : ' · no rating variables'}${e.picks ? ` · champion ${state.season.teams[e.picks[5][0]].name}` : ''}
           · other matches: ${e.matches.m ? `${e.matches.k} of ${e.matches.m} older seasons${e.matches.k ? ` (${e.matches.years.join(', ')})` : ''}` : 'no older seasons outside the run'}</span>
       </button>`;
     const list = `<p class="rule-sect">Recent run · ${ruleYearsText(r.run)}</p>${row(r.entries[0], 0)}` +

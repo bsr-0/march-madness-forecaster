@@ -290,6 +290,38 @@ check('rules are ranked simplest first: distinct criteria, then switches, then r
   assert.deepStrictEqual(capped, got.filter(r => new Set(r).size <= 2));
 });
 
+check('ranking prefers zero RULE_GENERAL_KEYS criteria ahead of code order, without changing which sequences survive', () => {
+  // Same season shape as above. `srs` is a real RULE_GENERAL_KEYS entry, put
+  // at index 0 -- the position code order would otherwise rank first --
+  // so a change in ranking can only be the new tie-break, not coincidence.
+  const s = { year: 2001, first_round: [0, 1, 2, 3, 4, 5, 6, 7], seed: [1, 2, 1, 2, 1, 2, 1, 2],
+              crit: { srs: [8, 7, 6, 5, 4, 3, 2, 1], b: [8, 7, 6, 5, 4, 3, 2, 1], c: [8, 7, 6, 5, 4, 3, 2, 1] },
+              actual: [[0, 2, 4, 6], [0, 4], [0]] };
+  const keys = ['srs', 'b', 'c'];
+  const eq = (x, y) => x.length === y.length && x.every((v, i) => v === y[i]);
+  const withDefault = F.ruleRun([s], keys, [0, 2], null).rules;
+  const withoutTieBreak = F.ruleRun([s], keys, [0, 2], null, null).rules;
+  assert.strictEqual(withDefault.length, withoutTieBreak.length, 'same survivors either way');
+  assert.strictEqual(withDefault.length, 27);
+  assert.ok(withoutTieBreak.every(a => withDefault.some(b => eq(a, b))), 'same set, only order differs');
+  // Without the tie-break, code order (srs = index 0) puts the all-srs
+  // rule first, as ruleRun always did before this feature.
+  assert.ok(eq(withoutTieBreak[0], ['srs', 'srs', 'srs']));
+  // With it (the default), the two all-specific 1-criterion rules rank
+  // ahead of it despite tying on distinct criteria (1) and switches (0).
+  assert.ok(eq(withDefault[0], ['b', 'b', 'b']));
+  assert.ok(eq(withDefault[1], ['c', 'c', 'c']));
+  // general count outranks distinct/switches entirely, not just within a
+  // tier: EVERY sequence that never touches srs -- 1-criterion or 2 --
+  // ranks ahead of EVERY sequence that does, including a 2-criterion
+  // all-specific rule (0 general, 2 distinct) ahead of the 1-criterion,
+  // pure-srs rule (1 general, 1 distinct).
+  const withoutSrs = [], withSrs = [];
+  withDefault.forEach((r, i) => (r.includes('srs') ? withSrs : withoutSrs).push(i));
+  assert.strictEqual(withoutSrs.length, 8, '1-criterion bbb/ccc plus the six 2-criterion b/c-only sequences');
+  assert.ok(Math.max(...withoutSrs) < Math.min(...withSrs), 'every srs-free rule ranks ahead of every rule using srs');
+});
+
 check('ruleComplexityOfCode agrees with ruleComplexity on every 3-key, 4-round sequence', () => {
   const keys = ['a', 'b', 'c'];
   for (let code = 0; code < 81; code++) {
