@@ -85,10 +85,11 @@ def test_landing_opens_pending_with_orientation_first(site, page):
     settle(page)
     assert "y=2027" in page.evaluate("location.hash") and "s=rule" in page.evaluate("location.hash")
     assert visible(page, "#empty.wait")
+    assert page.locator("#empty.wait").inner_text().startswith("2027 field not announced yet")
     assert top(page, "#empty") < top(page, "#compare") < top(page, "#rulepanel") < top(page, "#board")
     assert page.locator("#compare .cmp-row").count() == 4
     assert page.locator("#compare .cmp-row.na").count() == 3
-    assert page.locator("#rule-body .rule-row").count() >= 1
+    assert page.locator("#rule-body .rule-row").count() == 3
     assert page.locator("#board > .round").count() == 6
     counts = page.eval_on_selector_all("#board .r-count", "els => els.map(e => e.textContent)")
     assert counts == ["32 games", "16 games", "8 games", "4 games", "2 games", "1 game"]
@@ -98,34 +99,36 @@ def test_landing_opens_pending_with_orientation_first(site, page):
         assert not visible(page, hidden), hidden
 
 
-def test_choosing_a_rule_writes_rq_and_fills_2026(site, page):
+def test_a_chosen_rule_travels_in_rq_and_is_said_when_2026_lacks_it(site, page):
+    # No Simple rule reproduces both 2026 and 2025, so a rule chosen on 2027
+    # (run: 2026) is not a survivor on 2026 (run: 2025): the page says so and
+    # keeps the link's rule rather than quietly showing another under its name.
     page.goto(site)
     settle(page)
-    rows = page.locator("#rule-body .rule-row")
-    rows.nth(1 if rows.count() > 1 else 0).click()
+    page.locator("#rule-body .rule-row").nth(1).click()
     assert "rq=" in page.evaluate("location.hash")
     want = page.evaluate("state.rule.want")
     page.click(".yr[data-year='2026']")
     settle(page)
+    assert page.evaluate("state.rule.result.wantMissed") is True
+    assert page.locator("#rule-body .ex-line:has-text('The rule this link names')").is_visible()
     assert page.locator("#board .side.picked").count() == 63
-    assert page.evaluate("ruleChosen().seq") == want
+    assert page.evaluate("state.rule.want") == want
+    assert "rq=" in page.evaluate("location.hash")
     labels = page.eval_on_selector_all("#board .r-sub", "els => els.map(e => e.textContent)")
-    assert labels == page.evaluate("state.rule.want.map(ruleLabel)")
+    assert labels == page.evaluate("ruleChosen().seq.map(ruleLabel)")
 
 
-def test_hand_mode_renders_its_result_line(site, page):
+def test_one_variable_table_is_collapsed_after_the_alternatives(site, page):
     page.goto(site + "#y=2026&s=rule")
     settle(page)
-    page.click("#rule-body details.rule-more:not(.one-more) > summary")   # 'More', not the variables table
-    page.click("#rule-body .chip:has-text('compose by hand')")
-    settle(page)
-    line = page.locator("#rule-body .ex-line:has-text('This rule')").inner_text()
-    assert line.startswith("This rule gives 2026 a bracket with champion"), line
-    assert page.locator("#board .side.picked").count() == 63
-    page.click(".yr[data-year='2027']")
-    settle(page)
-    line = page.locator("#rule-body .ex-line:has-text('This rule')").inner_text()
-    assert line.startswith("This rule fills the 2027 bracket once the field is out"), line
+    table = page.locator("#rule-body details.one-more")
+    assert table.count() == 1
+    assert page.evaluate("document.querySelector('#rule-body details.one-more').open") is False
+    assert top(page, "#rule-body .rule-row") < top(page, "#rule-body details.one-more")
+    assert page.locator("#rule-body select").count() == 0, "no pickers left on the panel"
+    table.locator("summary").click()
+    assert page.locator("#rule-body .one-tbl tbody tr").count() >= 30
 
 
 def test_filters_gate_per_strategy_on_2026(site, page):
@@ -144,18 +147,39 @@ def test_filters_gate_per_strategy_on_2026(site, page):
 def test_checkpoint_guard_shows_its_message(site, page):
     page.goto(site + "#y=2026&s=rule")
     settle(page)
-    assert page.evaluate("state.rule.checkpoints") == [3, 4, 5]
-    page.click("#rule-body .chip:has-text('Final Four')")   # would leave finalists + champion: refused
+    assert page.evaluate("state.rule.checkpoints") == [3, 5]
+    assert page.locator("#rule-body .rule-line .chip").count() == 6
+    page.click("#rule-body .chip:has-text('Final Four')")   # would leave the champion alone: refused
     assert page.locator("#rule-body .rule-hint.warn").is_visible()
-    assert page.locator("#rule-body .rule-hint.warn").inner_text().startswith("Keep at least one of Round of 32")
-    assert page.evaluate("state.rule.checkpoints") == [3, 4, 5]
+    assert page.locator("#rule-body .rule-hint.warn").inner_text().startswith("Keep at least one of Sweet 16")
+    assert page.evaluate("state.rule.checkpoints") == [3, 5]
+
+
+def test_a_skipped_newest_season_is_said_and_the_run_starts_below_it(site, page):
+    # 2024 has no one-variable-per-round survivor for the Final Four at any
+    # cap: on 2025 the search says so and starts the run at the most recent
+    # season a rule reproduces.
+    page.goto(site + "#y=2025&s=rule")
+    settle(page)
+    line = page.locator("#rule-body .ex-line:has-text('No simple rule reproduces')")
+    assert line.inner_text().startswith("No simple rule reproduces final four and champion in ")
+    assert line.locator(".chip:has-text('Try Flexible')").count() == 1
+    skipped = page.evaluate("state.rule.result.skipped")
+    assert skipped[0] == 2024
+    assert page.evaluate("state.rule.result.run[0]") < 2024
+    assert page.locator("#board .side.picked").count() == 63
+    assert visible(page, "#compare")
+    line.locator(".chip:has-text('Try Flexible')").click()
+    settle(page)
+    assert page.evaluate("state.rule.maxCriteria") == 3
+    assert page.evaluate("state.rule.result.skipped")[0] == 2024
 
 
 def test_search_runs_off_the_main_thread_and_the_latest_controls_win(site, page):
     page.goto(site + "#y=2026&s=rule")
     settle(page)
     page.evaluate("window.__ticks = 0; (function loop() { window.__ticks++; requestAnimationFrame(loop); })();")
-    page.click("#rule-body .chip:has-text('last 3')")     # 2023-2025: the slow case
+    page.click("#rule-body .chip:has-text('Flexible')")    # the heavier of the two settings
     page.wait_for_function("() => state.rule.busy")
     assert "Searching" in page.locator("#rule-body").inner_text(), "the busy state is painted"
     assert page.evaluate("state.rule.job !== null"), "the search is in a worker"
@@ -163,8 +187,8 @@ def test_search_runs_off_the_main_thread_and_the_latest_controls_win(site, page)
     page.wait_for_timeout(1000)
     if page.evaluate("state.rule.busy"):
         assert page.evaluate("window.__ticks") - ticks0 >= 20, "the page keeps painting during the search"
-    page.evaluate("setRuleRank('outside')")                 # a control change mid-search
+    page.evaluate("setRuleComplexity('simple')")              # a control change mid-search
     settle(page)
-    assert page.evaluate("state.rule.rank") == "outside"
+    assert page.evaluate("state.rule.maxCriteria") == 2
     assert page.evaluate("state.rule.job === null")
     assert page.evaluate("state.rule.error") is None

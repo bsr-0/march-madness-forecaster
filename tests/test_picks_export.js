@@ -100,7 +100,7 @@ function loadApp(hash, opts = {}) {
   vm.runInContext(
     'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
-    + 'ensureRuleSearch, ruleRange, ruleKeys, ruleKey, ruleHand, ruleRoundLabel, setRuleCheckpoint, setRuleMode, setRuleHand, setRuleRange, setRuleLast, setRuleN, setRuleRank, setRuleMax, setRuleOne, setRuleKey, setRuleKeysAll, setRuleChosen, setStrategy, fieldPending, ruleChosen, pendingBoardHTML, renders: () => globalThis.__renders };', ctx);
+    + 'ensureRuleSearch, ruleAllKeys, ruleKey, ruleRoundLabel, setRuleCheckpoint, setRuleComplexity, setRuleChosen, setStrategy, fieldPending, ruleChosen, pendingBoardHTML, RULE_FLEXIBLE_MAX, RULE_SIMPLE_MAX, renders: () => globalThis.__renders };', ctx);
   ctx.__api.__worker = wk;
   return ctx.__api;
 }
@@ -695,8 +695,8 @@ check('the rule strategy carries no p1, no ev, and no record', () => {
   app.state.strategy = app.RULE;
   app.state.seasonsIndex = [{ year: 2025, status: 'ready' }, { year: 2026, status: 'ready' }];
   app.state.rule.result = {
-    key: app.ruleKey(), mode: 'search', usedSeasons: [2025], requested: [2023, 2024, 2025], backedOff: true, nRules: 1, lastRound: 3, scored: 1, nOutside: 4,
-    brackets: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], outside: { k: 0, m: 4, years: [] } }],
+    key: app.ruleKey(), run: [2025], skipped: [], stoppedAt: null, nRules: 1, nOutside: 0, gen: { n: 1, checked: 1, any: 0, best: 0 }, chosen: 0, wantMissed: false,
+    entries: [{ seq: ['barthag'], rounds: app.solveBracket(app.winProb), picks: app.solveBracket(app.winProb).map(g => g.map(x => x.win)), complexity: [1, 0], matches: { k: 0, m: 0, years: [] }, perRound: [{ r: 3, k: 1, m: 1 }, { r: 5, k: 1, m: 1 }] }],
   };
   const st = app.currentStrategy();
   assert.strictEqual(st.id, app.RULE);
@@ -729,8 +729,8 @@ check('a result for other inputs -- another season, other checkpoints -- is not 
   app.state.strategy = app.RULE;
   app.state.seasonsIndex = [{ year: 2024, status: 'ready' }, { year: 2025, status: 'ready' }, { year: 2026, status: 'ready' }];
   const picks = app.solveBracket(app.winProb).map(g => g.map(x => x.win));
-  app.state.rule.result = { key: app.ruleKey(), mode: 'search', usedSeasons: [2025], requested: [2025], backedOff: false, nRules: 1, lastRound: 5, scored: 1, nOutside: 1,
-    brackets: [{ seq: ['barthag'], rounds: [], picks, complexity: [1, 0], outside: { k: 0, m: 1, years: [] } }] };
+  app.state.rule.result = { key: app.ruleKey(), run: [2025], skipped: [], stoppedAt: null, nRules: 1, nOutside: 1, gen: { n: 1, checked: 1, any: 0, best: 0 }, chosen: 0, wantMissed: false,
+    entries: [{ seq: ['barthag'], rounds: [], picks, complexity: [1, 0], matches: { k: 0, m: 1, years: [] }, perRound: [{ r: 3, k: 1, m: 2 }, { r: 5, k: 1, m: 2 }] }] };
   assert.ok(app.ruleStrategy(), 'shown for the inputs it was computed from');
   app.state.year = 2026;                                             // fitted64 displays 2027
   assert.strictEqual(app.ruleStrategy(), null, 'not shown after the season changed');
@@ -741,49 +741,38 @@ check('a result for other inputs -- another season, other checkpoints -- is not 
 });
 
 check('the rule configuration round-trips through the URL and defaults add nothing', () => {
-  const app = loadApp('#y=2026&s=rule&rc=1345&rf=2023&rt=2024&rn=8&rk=b,zz&rr=outside&rx=2&rq=b,a,a,a,a,a');
+  const app = loadApp('#y=2026&s=rule&rc=1345&rs=flexible&rq=b,a,a,a,a,a');
   app.readHash();
   const r = app.state.rule;
   assert.strictEqual(app.state.strategy, app.RULE);
-  assert.deepStrictEqual([...r.checkpoints], [1, 3, 4, 5]);
-  assert.strictEqual(r.from, 2023); assert.strictEqual(r.to, 2024);
-  assert.strictEqual(r.n, 8); assert.deepStrictEqual([...r.keys], ['b', 'zz']);
-  assert.strictEqual(r.rank, 'outside'); assert.strictEqual(r.maxCriteria, 2); assert.deepStrictEqual([...r.want], ['b', 'a', 'a', 'a', 'a', 'a']);
-  // Restored keys are checked against the season: `zz` is unknown and drops, `b` stays.
+  assert.deepStrictEqual([...r.checkpoints], [1, 3, 5], 'the finalists (4) are not a round the panel offers');
+  assert.strictEqual(r.maxCriteria, app.RULE_FLEXIBLE_MAX);
+  assert.deepStrictEqual([...r.want], ['b', 'a', 'a', 'a', 'a', 'a']);
   app.state.season = { status: 'ready', teams: [], strategies: [], first_round: [], z: { a: [], b: [] }, variables: [{ key: 'a', label: 'A', group: 'G' }] };
-  assert.deepStrictEqual([...app.ruleKeys()], ['b']);
   app.writeHash();
-  for (const part of ['s=rule', 'rc=1345', 'rf=2023', 'rt=2024', 'rn=8', 'rk=b%2Czz', 'rr=outside', 'rx=2', 'rq=b%2Ca%2Ca%2Ca%2Ca%2Ca']) assert.ok(ctxHash.value.includes(part), part + ' missing from ' + ctxHash.value);
-  // The untouched panel writes only the checkpoints.
+  for (const part of ['s=rule', 'rc=135', 'rs=flexible', 'rq=b%2Ca%2Ca%2Ca%2Ca%2Ca']) assert.ok(ctxHash.value.includes(part), part + ' missing from ' + ctxHash.value);
+  // The untouched panel writes only the rounds.
   const plain = loadApp('#y=2026&s=rule');
   plain.readHash();
   plain.state.season = { status: 'ready', teams: [], strategies: [], first_round: [], z: {}, variables: [] };
   plain.writeHash();
-  assert.strictEqual(ctxHash.value, '#y=2026&o=p1&s=rule&rc=345', ctxHash.value);
-  // Hand mode carries the composed rule, checked against the season on read.
-  const hand = loadApp('#y=2026&s=rule&rm=hand&rh=a,b,zz,a,b,a&rc=25');
-  hand.readHash();
-  hand.state.season = plain.state.season; hand.state.season.z = { a: [], b: [] }; hand.state.season.variables = [{ key: 'a', label: 'A', group: 'G' }];
-  assert.strictEqual(hand.state.rule.mode, 'hand');
-  assert.deepStrictEqual([...hand.ruleHand()], ['a', 'b', 'a', 'a', 'b', 'a'], 'an unknown criterion falls back to the season\'s first variable');
-  assert.deepStrictEqual([...hand.state.rule.checkpoints], [2, 5]);
-  hand.writeHash();
-  assert.ok(ctxHash.value.includes('rm=hand') && ctxHash.value.includes('rh=a%2Cb%2Czz%2Ca%2Cb%2Ca') && ctxHash.value.includes('rc=25'), ctxHash.value);
+  assert.strictEqual(ctxHash.value, '#y=2026&o=p1&s=rule&rc=35', ctxHash.value);
 });
 
 check('a link without an early checkpoint, or with junk, keeps the defaults', () => {
-  const app = loadApp('#s=rule&rc=45&rn=999&rx=0&rq=a,b,c,d,e,f,g&rh=a,b');
+  const app = loadApp('#s=rule&rc=45&rs=junk&rq=a,b,c,d,e,f,g');
   app.readHash();
   const r = app.state.rule;
-  assert.deepStrictEqual([...r.checkpoints], [3, 4, 5], 'finalists + champion alone cannot prune: refused');
-  assert.strictEqual(r.n, 20); assert.strictEqual(r.maxCriteria, 1); assert.strictEqual(r.want, null, 'a rule longer than the rounds is dropped');
-  assert.strictEqual(r.hand, null, 'a hand rule must name all six rounds');
-  const bad = loadApp('#s=rule&rc=9x');
-  bad.readHash();
-  assert.deepStrictEqual([...bad.state.rule.checkpoints], [3, 4, 5]);
+  assert.deepStrictEqual([...r.checkpoints], [3, 5], 'the champion alone cannot prune: refused');
+  assert.strictEqual(r.maxCriteria, app.RULE_SIMPLE_MAX, 'anything but "flexible" is Simple');
+  assert.strictEqual(r.want, null, 'a rule longer than the rounds is dropped');
+  for (const rc of ['9x', '04', '']) {
+    const bad = loadApp(`#s=rule&rc=${rc}`);
+    bad.readHash();
+    assert.deepStrictEqual([...bad.state.rule.checkpoints], [3, 5], `rc=${rc}`);
+  }
 });
 
-/* ---------- rule search: the panel's controls, driven end to end ---------- */
 console.log('\nrule search controls');
 
 /* Synthetic seasons for the search: 64 teams, two criteria. `a` falls with
@@ -824,115 +813,78 @@ function ruleApp(delayFor, extra = {}) {
   return app;
 }
 
-check('the fit range is clamped to played seasons before the displayed one and defaults to the last two', () => {
+check('the defaults are Final Four + Champion, Simple, and every variable plus seed', () => {
   const app = ruleApp();
-  let r = app.ruleRange();
-  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2024, 2025, [2024, 2025]], 'never the displayed season: 2024-2025 under 2026');
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 4, 5], 'Final Four, finalists and champion by default');
-  app.state.rule.from = 2024; app.state.rule.to = 2026;              // 2026 is the displayed season: not selectable
-  r = app.ruleRange();
-  assert.deepStrictEqual([r.from, r.to, [...r.fit]], [2024, 2025, [2024, 2025]]);
-  app.state.rule.from = 2025; app.state.rule.to = 2023;              // reversed pickers still make a range
-  r = app.ruleRange();
-  assert.deepStrictEqual([r.from, r.to], [2023, 2025]);
-  app.state.year = 2023;                                             // nothing played before it
-  r = app.ruleRange();
-  assert.deepStrictEqual([r.from, r.to, [...r.fit], [...r.played]], [null, null, [], []]);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 5]);
+  assert.strictEqual(app.state.rule.maxCriteria, app.RULE_SIMPLE_MAX);
+  assert.deepStrictEqual([...app.ruleAllKeys()], ['a', 'b', 'seed']);
+  assert.throws(() => app.setRuleComplexity('any'), /setRuleComplexity/);
 });
 
-check('at least one early checkpoint (Round of 32 through Final Four) stays', () => {
+check('at least one early checkpoint (Sweet 16, Elite Eight or Final Four) stays', () => {
   const app = ruleApp();
-  app.state.rule.checkpoints = [3, 4, 5];
-  app.setRuleCheckpoint(3, false);                                   // would leave finalists + champion only
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 4, 5]);
-  app.setRuleCheckpoint(2, true); app.setRuleCheckpoint(3, false);
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4, 5]);
-  app.setRuleCheckpoint(5, false);
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 4]);
-  app.setRuleCheckpoint(1, true); app.setRuleCheckpoint(2, false);   // Sweet 16 alone is an early checkpoint
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [1, 4]);
-  app.setRuleCheckpoint(0, true); app.setRuleCheckpoint(1, false);   // so is the Round of 32
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4]);
-  app.setRuleCheckpoint(0, false);
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 4], 'refused: nothing before the finalists');
+  app.setRuleCheckpoint(3, false);                                   // would leave the champion alone
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [3, 5]);
   assert.strictEqual(app.state.rule.refused, true, 'the refusal is shown, not silent');
-  app.setRuleCheckpoint(3, true);
+  app.setRuleCheckpoint(2, true);
   assert.strictEqual(app.state.rule.refused, false, 'and cleared by the next change');
-});
-
-check('eligible criteria: a set never empties, "all" clears the restriction', () => {
-  const app = ruleApp();
-  assert.deepStrictEqual([...app.ruleKeys()], ['a', 'b', 'seed']);
-  app.setRuleKey('a', false);
-  assert.deepStrictEqual([...app.ruleKeys()], ['b', 'seed']);
-  app.setRuleKeysAll(false);
-  assert.deepStrictEqual([...app.ruleKeys()], ['seed']);
-  app.setRuleKey('seed', false);                                     // refused: nothing left to search over
-  assert.deepStrictEqual([...app.ruleKeys()], ['seed']);
-  app.setRuleKeysAll(true);
-  assert.strictEqual(app.state.rule.keys, null);
+  app.setRuleCheckpoint(3, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [2, 5]);
+  app.setRuleCheckpoint(5, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [2]);
+  app.setRuleCheckpoint(1, true); app.setRuleCheckpoint(2, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [1]);
+  app.setRuleCheckpoint(1, false);
+  assert.deepStrictEqual([...app.state.rule.checkpoints], [1], 'refused: nothing before the champion');
 });
 
 const asyncChecks = [];
 function checkAsync(name, fn) { asyncChecks.push([name, fn]); }
 
-checkAsync('the search fits the chosen range, backs off, and counts seasons outside it', async () => {
+checkAsync('the run grows back from the newest played season and stops at the first that breaks it', async () => {
+  // 2026 displayed: 2025 and 2024 are `a` seasons, 2023 the mirror.
   const app = ruleApp();
-  app.setRuleLast(3);                                                // the default is the last two; back-off needs the mirror season in range
   await app.ensureRuleSearch();
   let r = app.state.rule.result;
-  assert.strictEqual(r.mode, 'search');
-  assert.deepStrictEqual([...r.requested], [2023, 2024, 2025]);
-  assert.deepStrictEqual([...r.usedSeasons], [2024, 2025], '2023 is the mirror: dropped by the back-off');
-  assert.strictEqual(r.backedOff, true);
-  // Seeds in the fixture pick the lower index too, so `a` and `seed` are
-  // interchangeable: 2^6 rules, all giving the one bracket, of which the
-  // all-`a` one sorts first.
+  assert.deepStrictEqual([[...r.run], [...r.skipped], r.stoppedAt], [[2025, 2024], [], 2023]);
+  // Seeds pick like `a`, so `a` and `seed` interchange: 2^6 rules, all giving the one bracket.
   assert.strictEqual(r.nRules, 64);
-  assert.strictEqual(r.scored, 1); assert.strictEqual(r.brackets.length, 1);
-  assert.deepStrictEqual([...r.brackets[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
-  assert.strictEqual(JSON.stringify(r.brackets[0].outside), JSON.stringify({ k: 0, m: 1, years: [] }), 'only 2023 lies outside, and it does not fit');
+  assert.strictEqual(r.entries.length, 1);
+  assert.deepStrictEqual([...r.entries[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
+  assert.strictEqual(JSON.stringify(r.entries[0].matches), JSON.stringify({ k: 0, m: 1, years: [] }), '2023 lies outside the run and does not fit');
+  assert.strictEqual(JSON.stringify(r.entries[0].perRound), JSON.stringify([{ r: 3, k: 2, m: 3 }, { r: 5, k: 2, m: 3 }]));
   assert.strictEqual(JSON.stringify(r.gen), JSON.stringify({ n: 64, checked: 64, any: 0, best: 0 }), 'every survivor checked against the outside season');
-  assert.strictEqual(r.brackets[0].picks[5][0], 0);
+  assert.strictEqual(r.entries[0].picks[5][0], 0);
   const st = app.ruleStrategy();
   assert.strictEqual(JSON.stringify(st.prior), JSON.stringify({ k: 0, m: 1 }));
-  assert.ok(/2024–2025/.test(st.note) && /2023–2025 has none/.test(st.note), st.note);
+  assert.ok(/2024–2025/.test(st.note) && /2023 breaks every one/.test(st.note), st.note);
   assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · A');
-  // A range with the mirror season alone: the rule is `b`, and both other seasons lie outside it.
-  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  // 2024 displayed: only the mirror season before it; the rule is `b`, nothing lies outside.
+  app.state.year = 2024; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
   r = app.state.rule.result;
-  assert.strictEqual(r.backedOff, false);
-  assert.strictEqual(r.nRules, 1);
-  assert.deepStrictEqual([...r.brackets[0].seq], ['b', 'b', 'b', 'b', 'b', 'b']);
-  assert.strictEqual(JSON.stringify(r.brackets[0].outside), JSON.stringify({ k: 0, m: 2, years: [] }));
-  assert.strictEqual(r.brackets[0].picks[5][0], 63);
-  // Restricting the criteria to one that fits no season ending the range leaves no bracket, and the strategy resolves to nothing.
-  app.setRuleLast(3); app.setRuleKeysAll(false); app.setRuleKey('b', true); app.setRuleKey('seed', false);
-  assert.deepStrictEqual([...app.ruleKeys()], ['b']);
-  await app.ensureRuleSearch();
-  r = app.state.rule.result;
-  assert.strictEqual(r.brackets.length, 0);
-  assert.strictEqual(r.nRules, 0);
+  assert.deepStrictEqual([[...r.run], r.stoppedAt, r.nRules], [[2023], null, 1]);
+  assert.deepStrictEqual([...r.entries[0].seq], ['b', 'b', 'b', 'b', 'b', 'b']);
+  assert.strictEqual(r.entries[0].picks[5][0], 63);
+  assert.strictEqual(r.entries[0].matches.m, 0);
+  // 2023 displayed: nothing played before it.
+  app.state.year = 2023; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
+  assert.strictEqual(app.state.rule.result.entries.length, 0);
   assert.strictEqual(app.ruleStrategy(), null);
 });
 
-checkAsync('composing by hand applies the rule and reports every played season it reproduces', async () => {
+checkAsync('a newest season no rule reproduces is skipped, and the run starts at the first one does', async () => {
+  // 2025 displayed, with 2024 rewritten so its Final Four is unreachable
+  // under a, b or seed: 2024 is skipped, the run starts at 2023 (`b`).
   const app = ruleApp();
-  app.setRuleMode('hand');
-  assert.deepStrictEqual([...app.state.rule.hand], ['a', 'a', 'a', 'a', 'a', 'a'], 'starts from the season\'s first listed variable, not a hardcoded key');
-  for (let i = 0; i < 6; i++) app.setRuleHand(i, 'a');
+  app.state.year = 2025;
+  const odd = ruleSeasonPayload('a'); odd.actual[3] = [0, 1, 2, 3];
+  app.state.cache = { 2024: odd };
   await app.ensureRuleSearch();
   const r = app.state.rule.result;
-  assert.strictEqual(r.mode, 'hand');
-  assert.strictEqual(r.brackets.length, 1);
-  assert.strictEqual(JSON.stringify(r.brackets[0].per.map(x => [x.year, x.ok])), JSON.stringify([[2023, false], [2024, true], [2025, true]]));
-  const st = app.ruleStrategy();
-  assert.strictEqual(JSON.stringify(st.prior), JSON.stringify({ k: 2, m: 3 }));
-  assert.ok(/composed by hand/.test(st.note) && /2 of 3 played seasons before 2026 \(2024, 2025\)/.test(st.note), st.note);
-  assert.strictEqual(st.p1, undefined); assert.strictEqual(st.ev, undefined);
-  app.setRuleHand(5, 'b'); await app.ensureRuleSearch();
-  assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, false, false], 'a b final flips the champion everywhere');
-  assert.strictEqual(app.ruleRoundLabel(5, ' · '), ' · B');
+  assert.deepStrictEqual([[...r.skipped], [...r.run], r.stoppedAt], [[2024], [2023], null]);
+  assert.deepStrictEqual([...r.entries[0].seq], ['b', 'b', 'b', 'b', 'b', 'b']);
+  assert.strictEqual(r.nOutside, 1, 'the skipped season counts as outside');
+  assert.strictEqual(r.entries[0].matches.k, 0);
 });
 
 checkAsync('the pending board is six round headers with game counts under the chosen rule, and no game boxes', async () => {
@@ -949,7 +901,7 @@ checkAsync('the pending board is six round headers with game counts under the ch
   assert.strictEqual((html.match(/<span class="r-sub">A<\/span>/g) || []).length, 6, 'the chosen all-a rule under every round');
 });
 
-checkAsync('one variable in every round is scored on every prior played season, and a row composes it by hand', async () => {
+checkAsync('one variable in every round is scored on every prior played season', async () => {
   // Fixture: 2023 is the `b` season, 2024-2025 are `a`; seed picks like `a`.
   const app = ruleApp();
   await app.ensureRuleSearch();
@@ -962,13 +914,8 @@ checkAsync('one variable in every round is scored on every prior played season, 
   assert.strictEqual(JSON.stringify(t.rows.map(r => r.key).slice(0, 2).sort()), '["a","seed"]', 'sorted by Final Four teams right');
   assert.strictEqual(t.rows[2].key, 'b');
   // The table is for the season, not the search inputs: a control change keeps it.
-  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  app.setRuleComplexity('flexible'); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.table, t);
-  // Clicking a row composes that variable in every round.
-  app.setRuleOne('b'); await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.mode, 'hand');
-  assert.deepStrictEqual([...app.ruleHand()], ['b', 'b', 'b', 'b', 'b', 'b']);
-  assert.strictEqual(app.ruleStrategy().picks[5][0], 63);
   // A new season recomputes it over that season's prior seasons.
   app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.table.year, 2025); assert.strictEqual(app.state.rule.table.n, 2);
@@ -977,7 +924,7 @@ checkAsync('one variable in every round is scored on every prior played season, 
 checkAsync('with a Worker the search runs through it, from the same job, on fit.js by its stamped URL', async () => {
   const inline = ruleApp(); await inline.ensureRuleSearch();
   const app = ruleApp(undefined, { worker: true }); await app.ensureRuleSearch();
-  assert.strictEqual(JSON.stringify(app.state.rule.result.brackets), JSON.stringify(inline.state.rule.result.brackets));
+  assert.strictEqual(JSON.stringify(app.state.rule.result.entries), JSON.stringify(inline.state.rule.result.entries));
   assert.strictEqual(JSON.stringify(app.state.rule.result.gen), JSON.stringify(inline.state.rule.result.gen));
   assert.ok(app.__worker.src.includes('importScripts("http://h/madness/fit.js?v=abc")'), app.__worker.src);
   assert.strictEqual(app.__worker.workers.length, 1);
@@ -989,7 +936,7 @@ checkAsync('a control change terminates the running worker and the latest result
   const app = ruleApp(undefined, { worker: true });
   const first = app.ensureRuleSearch();
   while (!app.state.rule.job) await new Promise(r => setTimeout(r, 1));   // past the payload fetches, into the worker
-  app.setRuleRange(2023, 2023);                                       // supersedes: terminates worker 1, starts worker 2
+  app.setRuleComplexity('flexible');                                 // supersedes: terminates worker 1, starts worker 2
   await first;
   while (app.state.rule.busy) await new Promise(r => setTimeout(r, 5));
   const [w1, w2] = app.__worker.workers;
@@ -997,7 +944,8 @@ checkAsync('a control change terminates the running worker and the latest result
   assert.ok(w1.dead && !w1.delivered, 'the first worker was terminated before it could answer');
   assert.ok(w2.delivered, 'the second answered');
   assert.strictEqual(app.state.rule.result.key, app.ruleKey());
-  assert.deepStrictEqual([...app.state.rule.result.usedSeasons], [2023]);
+  assert.strictEqual(app.state.rule.maxCriteria, app.RULE_FLEXIBLE_MAX);
+  assert.deepStrictEqual([...app.state.rule.result.run], [2025, 2024]);
   assert.strictEqual(app.state.rule.job, null);
 });
 
@@ -1008,50 +956,37 @@ checkAsync('a worker error is said on the panel and rejects, not swallowed', asy
   assert.strictEqual(app.state.rule.error, 'boom');
   assert.strictEqual(app.state.rule.busy, false); assert.strictEqual(app.state.rule.job, null);
   app.__worker.fail = null;
-  app.setRuleRange(2023, 2023);
+  app.setRuleComplexity('flexible');
   assert.strictEqual(app.state.rule.error, null, 'cleared by the next change');
   while (app.state.rule.busy) await new Promise(r => setTimeout(r, 5));
-  assert.ok(app.state.rule.result && app.state.rule.result.brackets.length);
+  assert.ok(app.state.rule.result && app.state.rule.result.entries.length);
 });
 
-checkAsync('both modes redraw the page once their result is in', async () => {
-  // Regression: hand mode returned from inside the try block after storing
-  // its result and never reached the redraw, so the panel stayed on
-  // "Searching…" and the board empty with a correct result held in state.
+checkAsync('the page redraws once the result is in', async () => {
+  // Regression: an early return inside the try block once skipped the
+  // redraw, leaving "Searching…" on the panel with a correct result held.
   const app = ruleApp();
   await app.ensureRuleSearch();
-  assert.strictEqual(app.renders(), 1, 'search mode');
-  app.state.rule.mode = 'hand';
+  assert.strictEqual(app.renders(), 1);
+  app.state.rule.maxCriteria = app.RULE_FLEXIBLE_MAX;
   await app.ensureRuleSearch();
-  assert.strictEqual(app.renders(), 2, 'hand mode');
+  assert.strictEqual(app.renders(), 2);
   assert.strictEqual(app.state.rule.busy, false);
 });
 
-checkAsync('the criteria cap drops rules with more distinct criteria, and says so when nothing is left', async () => {
-  // Fixture seasons 2024-2025 are both `a`; with the mirror `b` also
-  // eligible, `a`/`seed` interchange in every constrained round, so every
-  // survivor uses 1 or 2 criteria. A cap of 1 keeps the pure ones; ranking
-  // is unchanged because the all-`a` rule is simplest either way.
+checkAsync('Flexible lifts the cap, writes rs, and resets the choice', async () => {
   const app = ruleApp();
-  app.setRuleRange(2024, 2025); app.setRuleN(20); await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.result.nRules, 64);
-  app.setRuleMax(1); await app.ensureRuleSearch();
-  let r = app.state.rule.result;
-  assert.strictEqual(r.nRules, 64, 'survivors are counted before the cap');
-  assert.strictEqual(r.overCap, true);
-  assert.strictEqual(r.brackets.length, 1, 'a and seed give the same bracket');
-  assert.ok(r.brackets.every(b => b.complexity[0] <= 1));
-  // Round of 32 as a checkpoint: `actual` is the all-`a` bracket, so it
-  // prunes at round 0 and `b` never survives any round.
-  app.setRuleCheckpoint(0, true); await app.ensureRuleSearch();
-  r = app.state.rule.result;
-  assert.deepStrictEqual([...app.state.rule.checkpoints], [0, 3, 4, 5]);
-  assert.strictEqual(r.nRules, 64);
-  assert.deepStrictEqual([...r.brackets[0].seq], ['a', 'a', 'a', 'a', 'a', 'a']);
-  // Only `b` eligible with the cap: survivors exist for no range, so overCap stays false and the ordinary message applies.
-  app.setRuleKeysAll(false); app.setRuleKey('b', true); app.setRuleKey('seed', false); await app.ensureRuleSearch();
-  r = app.state.rule.result;
-  assert.strictEqual(r.nRules, 0); assert.strictEqual(r.overCap, false); assert.strictEqual(r.brackets.length, 0);
+  await app.ensureRuleSearch();
+  app.setRuleChosen(0);
+  assert.ok(app.state.rule.want, 'a rule chosen');
+  const key = app.state.rule.result.key;
+  app.setRuleComplexity('flexible'); await app.ensureRuleSearch();
+  assert.ok(ctxHash.value.includes('rs=flexible'), ctxHash.value);
+  assert.strictEqual(app.state.rule.want, null); assert.strictEqual(app.state.rule.chosen, 0);
+  assert.notStrictEqual(app.state.rule.result.key, key);
+  assert.strictEqual(app.state.rule.result.nRules, 64, 'the fixture never needs a third variable');
+  app.setRuleComplexity('simple'); await app.ensureRuleSearch();
+  assert.ok(!ctxHash.value.includes('rs='), ctxHash.value);
 });
 
 checkAsync('the chosen rule is a criterion sequence: resolved against the survivors, kept across seasons, reset by a control', async () => {
@@ -1061,7 +996,7 @@ checkAsync('the chosen rule is a criterion sequence: resolved against the surviv
   const app = ruleApp();
   app.state.rule.want = ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'];  // as readHash() would leave it
   await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.result.brackets.length, 1);
+  assert.strictEqual(app.state.rule.result.entries.length, 1);
   assert.strictEqual(app.state.rule.chosen, 0);
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'kept: the rule survived');
@@ -1074,20 +1009,20 @@ checkAsync('the chosen rule is a criterion sequence: resolved against the surviv
   app.setRuleChosen(0);
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.ok(ctxHash.value.includes('rq=seed%2Cseed%2Cseed%2Cseed%2Cseed%2Cseed'), ctxHash.value);
-  // A season change keeps it (2025 displayed: fit 2023-2024, back-off to 2024).
+  // A season change keeps it (2025 displayed: the run is 2024 alone; 2023 breaks it).
   app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
   // A season where the named rule does not survive: the first entry shows, the result says the rule was missed, and the link keeps it.
-  app.state.year = 2024; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();   // fit 2023 only: the mirror season, rule `b`
+  app.state.year = 2024; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();   // only 2023 before it: the mirror season, rule `b`
   assert.strictEqual(app.state.rule.result.wantMissed, true);
   assert.deepStrictEqual([...app.ruleChosen().seq], ['b', 'b', 'b', 'b', 'b', 'b']);
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'kept for a season that has it');
   app.state.year = 2025; app.state.season = ruleSeasonPayload('a'); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.result.wantMissed, false);
   // A control change starts over.
-  app.setRuleRange(2023, 2023); await app.ensureRuleSearch();
+  app.setRuleComplexity('flexible'); await app.ensureRuleSearch();
   assert.strictEqual(app.state.rule.want, null);
   assert.strictEqual(app.state.rule.chosen, 0);
   assert.ok(!ctxHash.value.includes('rq='), ctxHash.value);
@@ -1114,43 +1049,36 @@ check('a listed season with played seasons before it is pending, not empty; the 
   assert.ok(rows.every(r => r.p1 === null && r.ev === null && r.champion === null));
   app.setStrategy('p1');
   assert.strictEqual(app.state.strategy, app.RULE, 'the pool strategies are not selectable without a field');
-  assert.deepStrictEqual([...app.ruleKeys()], ['a', 'b', 'seed'], 'keys come from the latest played season');
+  assert.deepStrictEqual([...app.ruleAllKeys()], ['a', 'b', 'seed'], 'keys come from the latest played season');
 });
 
 checkAsync('under a pending field the search lists rules without picks, and the choice carries to the field', async () => {
   const app = pendingApp();
-  app.setRuleN(2);                                                      // 2025-2026 by default: both `a`
   await app.ensureRuleSearch();
   const r = app.state.rule.result;
-  assert.deepStrictEqual([...r.requested], [2025, 2026], '2026 is a prior season from 2027, so it is in the fit');
+  assert.deepStrictEqual([[...r.run], r.stoppedAt], [[2026, 2025, 2024], 2023], '2026 is a prior season from 2027, so the run starts there');
   assert.strictEqual(r.nRules, 64);
-  assert.strictEqual(r.brackets.length, 2, 'distinct rules, not distinct brackets: there is no bracket to deduplicate by');
-  assert.strictEqual(JSON.stringify(r.brackets.map(b => b.seq.join(' '))), JSON.stringify(['a a a a a a', 'seed seed seed seed seed seed']), 'simplest first: one criterion, no switches');
-  assert.ok(r.brackets.every(b => b.picks === null && b.rounds === null));
+  assert.strictEqual(r.entries.length, 3, 'distinct rules, not distinct brackets: there is no bracket to deduplicate by');
+  assert.strictEqual(JSON.stringify(r.entries.map(b => b.seq.join(' '))), JSON.stringify(['a a a a a a', 'seed seed seed seed seed seed', 'a a a a a seed']), 'simplest first');
+  assert.ok(r.entries.every(b => b.picks === null && b.rounds === null));
+  assert.strictEqual(JSON.stringify(r.entries[0].perRound), JSON.stringify([{ r: 3, k: 3, m: 4 }, { r: 5, k: 3, m: 4 }]));
   assert.strictEqual(app.ruleStrategy(), null, 'a rule is not a bracket yet');
   assert.strictEqual(app.ruleRoundLabel(0, ' · '), ' · A', 'but the board headers show its criteria');
   assert.strictEqual(app.renders(), 1);
-  // Choose the second rule; a rule not among the offered two but surviving is listed as one more.
+  // Choose the second rule; a rule not among the offered three but surviving is listed as one more.
   app.setRuleChosen(1);
   assert.deepStrictEqual([...app.state.rule.want], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed']);
-  app.state.rule.want = ['a', 'a', 'a', 'a', 'a', 'seed'];             // survives, but is not among the two simplest
+  app.state.rule.want = ['a', 'a', 'a', 'a', 'seed', 'seed'];          // survives, but is not among the three simplest
   app.state.rule.result = null; await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.result.brackets.length, 3);
-  assert.strictEqual(app.state.rule.chosen, 2);
-  // Hand mode: the rule is checked against past seasons, and gives no picks.
-  app.setRuleMode('hand'); await app.ensureRuleSearch();
-  assert.strictEqual(app.state.rule.result.brackets[0].picks, null);
-  assert.deepStrictEqual([...app.state.rule.result.brackets[0].per.map(x => x.ok)], [false, true, true, true]);
-  assert.strictEqual(app.ruleStrategy(), null);
+  assert.strictEqual(app.state.rule.result.entries.length, 4);
+  assert.strictEqual(app.state.rule.chosen, 3);
   // The field arrives (2027 becomes a ready season): the same link's rule fills it.
-  // (Settle the mode change first: a control change resets the choice; a season change keeps it.)
-  app.setRuleMode('search'); await app.ensureRuleSearch();
   app.state.rule.want = ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'];
   app.state.seasonsIndex = app.state.seasonsIndex.map(x => (x.year === 2027 ? { year: 2027, status: 'ready' } : x));
   app.state.season = ruleSeasonPayload('a');
   await app.ensureRuleSearch();
   assert.strictEqual(app.fieldPending(), false);
-  assert.strictEqual(app.state.rule.result.brackets.length, 1, 'with a field, one distinct bracket');
+  assert.strictEqual(app.state.rule.result.entries.length, 1, 'with a field, one distinct bracket');
   assert.strictEqual(app.state.rule.chosen, 0, 'the all-seed rule gives that bracket, so it is the one chosen');
   assert.strictEqual(app.ruleStrategy().picks[5][0], 0);
   assert.deepStrictEqual([...app.ruleChosen().seq], ['seed', 'seed', 'seed', 'seed', 'seed', 'seed'], 'and the entry carries the named rule');
@@ -1160,13 +1088,13 @@ checkAsync('under a pending field the search lists rules without picks, and the 
 checkAsync('an overlapping earlier call abandons; the result matches the latest controls', async () => {
   // The first fetch is the slowest, so the first ensureRuleSearch() resumes
   // after the second has finished. Without the token it would then run the
-  // search and overwrite the by-hand result with one for stale inputs.
+  // search and overwrite the newer result with one for stale inputs.
   const app = ruleApp(n => (n === 0 ? 30 : 0));
   const first = app.ensureRuleSearch();
-  app.setRuleMode('hand');
+  app.state.rule.maxCriteria = app.RULE_FLEXIBLE_MAX;
   const second = app.ensureRuleSearch();
   await Promise.all([first, second]);
-  assert.strictEqual(app.state.rule.result.mode, 'hand');
+  assert.strictEqual(app.state.rule.result.key, app.ruleKey());
   assert.strictEqual(app.state.rule.busy, false);
 });
 
