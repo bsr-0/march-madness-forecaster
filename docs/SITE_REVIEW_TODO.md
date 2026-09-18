@@ -152,3 +152,25 @@ on the shipped data and the live site.
     2027 reads 2025–2026; the table excludes the displayed season), the
     request-token and key-matching fixes, `rq` by sequence, and two
     pre-existing bugs fixed under the stop-and-fix rule.
+
+## 2026-09-18 simplification of Rule Search
+
+The product contract changed from "choose how to search" to "how far back
+can a rule reproduce these rounds?". Controls cut to two: rounds (Sweet 16
+/ Elite Eight / Final Four / Champion) and complexity (Simple = at most two
+variables, Flexible = three). The window is automatic: `ruleRun()` grows it
+back from the newest played season, skips a newest season no rule
+reproduces (and says which), and stops at the first that leaves no rule.
+Results keep three things apart — the recent run (selected on), other
+matches and the per-round record (descriptive, never extend the run), and
+this season's bracket — with the simplest survivor and two alternatives.
+Removed with their tests and CSS: the fit range and pickers, the criteria
+checklist, number to offer, the outside ranking, the criteria cap chips,
+compose by hand, the More drawer, the clickable one-variable rows, and URL
+params rm rf rt rn rk rr rx rh. The survivor count is demoted to the
+short-history warning (closes the open note under Statistics item 4). The
+cap is applied inside the enumeration, so the heaviest offered search is
+~0.4 s; the uncapped path (5.25M survivors, ~600 MB on 2026) is gone.
+Measured: 2027 Simple → 2026 only; Flexible → 2025–2026; 2025 has no rule
+in 2024–2021 at either cap and starts at 2019. Details and numbers in
+`artifacts/methodology_audit/ui_rule_search/RULE_SEARCH.md`.
