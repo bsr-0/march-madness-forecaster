@@ -1,7 +1,7 @@
 {
   "year": 2026,
-  "generated_at": "2026-09-18T02:28:08+00:00",
-  "git_head": "4d6ae47",
+  "generated_at": "2026-09-19T13:23:14+00:00",
+  "git_head": "4fd8a80",
   "sample": "/Users/benrosen/Documents/prediction_models/madness/march-madness-forecaster/data/kaggle/SampleSubmissionStage2.csv",
   "mens": {
     "model": "pit_production_model.pairwise_for_year",
@@ -25,6 +25,8 @@
     ],
     "teams_with_stats": 363
   },
+  "post_tournament_backtest": true,
+  "post_tournament_warning": "2026 Selection Sunday was 2026-03-15; today is 2026-09-19. This submission is NOT a blind forecast -- it was built after the field (and very likely the results) were known.",
   "export_stats": {
     "total_rows": 132133,
     "predicted_rows": 67981,
@@ -38,7 +40,7 @@
     "predict_failures": 0
   },
   "hedge": {
-    "output": "/Users/benrosen/Documents/prediction_models/madness/march-madness-forecaster/artifacts/kaggle_submission_2026_hedge.csv",
+    "output": "artifacts/kaggle_submission_2026_hedge.csv",
     "strength": 1.0,
     "mens": {
       "champion": "duke",

@@ -47,7 +47,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -56,6 +56,7 @@ import pandas as pd
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+from src.data.season_calendar import UnknownSeasonError, get_selection_sunday  # noqa: E402
 from src.exports.kaggle import (  # noqa: E402
     apply_champion_boost,
     generate_predictions,
@@ -67,6 +68,84 @@ from src.prediction import womens_kaggle_model as womens  # noqa: E402
 from src.prediction.kaggle_bridge import build_bridge, normalize_kaggle_spellings  # noqa: E402
 from src.prediction.pit_production_model import STATS as MENS_STATS  # noqa: E402
 from src.prediction.pit_production_model import pairwise_for_year as mens_pairwise  # noqa: E402
+
+# Torvik snapshots the men's feature table is allowed to be built from.
+# Mirrors scripts/generate_team_stats_table.py::VALID_PRETOURNAMENT_TYPES --
+# checked again here, independently, because that gate runs when the table
+# is built and this script can run much later against a table that was
+# already on disk.
+_VALID_PRETOURNAMENT_TORVIK_TYPES = {"pre_tournament", "pre_tournament_computed"}
+
+
+class LeakageGuardError(SystemExit):
+    """A submission would not be a genuine blind forecast."""
+
+
+def _assert_not_post_selection_sunday(year: int, allow_override: bool) -> Optional[str]:
+    """Refuse to build a submission after that season's field is known.
+
+    Every leakage guard downstream of this one (the `y < year` training cutoff
+    in pairwise_for_year, the pre_tournament torvik check in
+    generate_team_stats_table.py) protects the MODEL'S inputs. None of them
+    stop a human from running this script in September for a March tournament
+    that has already been played and calling the output a "prediction" -- by
+    then the actual result is sitting in the repo's own historical data, and
+    nothing about the pipeline can tell a genuine forecast from a fit-to-the-
+    answer replay. Selection Sunday is the right boundary rather than the
+    first tip-off: after it, "predicting" who reaches each round is no longer
+    blind even for games days away, because the seeding itself may already be
+    informed by things that happened after it in a re-run.
+
+    Returns a human-readable warning string when the override was needed and
+    used, else None.
+    """
+    try:
+        selection_sunday = get_selection_sunday(year)
+    except UnknownSeasonError:
+        return None  # no boundary on record -- nothing to enforce
+
+    today = date.today()
+    if today < selection_sunday:
+        return None
+
+    warning = (
+        f"{year} Selection Sunday was {selection_sunday}; today is {today}. "
+        f"This submission is NOT a blind forecast -- it was built after the field "
+        f"(and very likely the results) were known."
+    )
+    if not allow_override:
+        raise LeakageGuardError(
+            f"refusing to build a {year} submission: {warning}\n"
+            "Pass --allow-post-tournament to build one anyway for retrospective "
+            "evaluation; it will be stamped as such in the sidecar meta.json."
+        )
+    print(f"WARNING: {warning}")
+    return warning
+
+
+def _assert_mens_torvik_is_pretournament(year: int, data_root: Path) -> None:
+    """Re-check the men's feature source's own provenance at submission time.
+
+    generate_team_stats_table.py already refuses to build a year's row unless
+    its torvik snapshot is marked pre-tournament. This re-asserts the same
+    thing against the CURRENT torvik_{year}.json, independently, so a table
+    built correctly months ago can't silently ship alongside a snapshot that
+    was since overwritten with a post-season vintage.
+    """
+    for prefix in (data_root / "raw" / "historical", data_root / "raw"):
+        path = prefix / f"torvik_{year}.json"
+        if not path.exists():
+            continue
+        data_type = json.loads(path.read_text()).get("data_type")
+        if data_type not in _VALID_PRETOURNAMENT_TORVIK_TYPES:
+            raise LeakageGuardError(
+                f"refusing to build a {year} men's submission: {path} has "
+                f"data_type={data_type!r}, not one of {sorted(_VALID_PRETOURNAMENT_TORVIK_TYPES)}. "
+                "Its ratings may have absorbed tournament results."
+            )
+        return
+    # No torvik file found at all -- build_mens() will raise its own clear
+    # error when it tries to load team stats; nothing to check here.
 
 DEFAULT_KAGGLE_DIR = REPO / "data" / "kaggle"
 DEFAULT_SAMPLE = DEFAULT_KAGGLE_DIR / "SampleSubmissionStage2.csv"
@@ -180,6 +259,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="still write the file when a men's field team has no Kaggle TeamID (its games score as 0.5)",
     )
+    parser.add_argument(
+        "--allow-post-tournament",
+        action="store_true",
+        help=(
+            "build a submission after that season's Selection Sunday has passed. "
+            "Refused by default because a file built this late cannot be a blind "
+            "forecast; use this only for retrospective scoring, not for a real entry."
+        ),
+    )
     hedge = parser.add_argument_group("slot 2")
     hedge.add_argument("--hedge", action="store_true", help="also write <output stem>_hedge.csv with champion boosts")
     hedge.add_argument("--champion", help="men's champion to boost (canonical id, e.g. duke); default: strongest")
@@ -194,6 +282,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    post_tournament_warning = _assert_not_post_selection_sunday(args.year, args.allow_post_tournament)
+    if not args.skip_mens:
+        _assert_mens_torvik_is_pretournament(args.year, args.data_root)
+
     output = args.output or (REPO / "artifacts" / f"kaggle_submission_{args.year}.csv")
     if not args.sample.exists():
         raise SystemExit(f"sample submission not found: {args.sample}")
@@ -207,6 +299,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "sample": str(args.sample),
         "mens": None,
         "womens": None,
+        "post_tournament_backtest": post_tournament_warning is not None,
+        "post_tournament_warning": post_tournament_warning,
     }
 
     mens: Optional[HalfModel] = None
