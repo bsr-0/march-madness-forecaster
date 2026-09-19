@@ -1,27 +1,27 @@
 {
   "year": 2026,
-  "generated_at": "2026-09-19T13:11:32.986743+00:00",
-  "prediction_source": "data/forecaster_output.json",
+  "generated_at": "2026-09-19T13:14:45.933769+00:00",
+  "prediction_source": "artifacts/kaggle_submission_2026.csv",
   "results_source": "/Users/benrosen/Documents/prediction_models/madness/march-madness-forecaster/data/raw/historical/tournament_context_2026.json",
   "n_games_with_predictions": 67,
   "n_games_total": 67,
   "n_predictions_unmatched": 0,
   "aggregate_metrics": {
-    "brier_score": 0.217899,
-    "log_loss": 0.669968,
-    "accuracy": 0.6866,
-    "round_weighted_brier": 0.331412,
-    "n_correct": 46,
+    "brier_score": 0.171258,
+    "log_loss": 0.506457,
+    "accuracy": 0.7313,
+    "round_weighted_brier": 0.176934,
+    "n_correct": 49,
     "n_upsets_total": 16,
-    "n_upsets_correct": 0,
-    "upset_accuracy": 0.0
+    "n_upsets_correct": 4,
+    "upset_accuracy": 0.25
   },
   "per_round_metrics": {
     "E8": {
       "round_name": "E8",
       "n_games": 4,
-      "brier": 0.19961,
-      "log_loss": 0.588441,
+      "brier": 0.216373,
+      "log_loss": 0.630335,
       "accuracy": 0.75,
       "n_upsets": 1,
       "n_upsets_correct": 0
@@ -29,8 +29,8 @@
     "F4": {
       "round_name": "F4",
       "n_games": 2,
-      "brier": 0.385087,
-      "log_loss": 1.081585,
+      "brier": 0.340749,
+      "log_loss": 0.908432,
       "accuracy": 0.5,
       "n_upsets": 0,
       "n_upsets_correct": 0
@@ -38,47 +38,47 @@
     "FF": {
       "round_name": "FF",
       "n_games": 4,
-      "brier": 0.388204,
-      "log_loss": 1.085701,
-      "accuracy": 0.25,
+      "brier": 0.365716,
+      "log_loss": 1.078077,
+      "accuracy": 0.5,
       "n_upsets": 0,
       "n_upsets_correct": 0
     },
     "NCG": {
       "round_name": "NCG",
       "n_games": 1,
-      "brier": 0.73017,
-      "log_loss": 1.927579,
-      "accuracy": 0.0,
+      "brier": 0.031312,
+      "log_loss": 0.19474,
+      "accuracy": 1.0,
       "n_upsets": 0,
       "n_upsets_correct": 0
     },
     "R32": {
       "round_name": "R32",
       "n_games": 16,
-      "brier": 0.201609,
-      "log_loss": 0.729782,
-      "accuracy": 0.75,
+      "brier": 0.18154,
+      "log_loss": 0.546906,
+      "accuracy": 0.6875,
       "n_upsets": 4,
-      "n_upsets_correct": 0
+      "n_upsets_correct": 1
     },
     "R64": {
       "round_name": "R64",
       "n_games": 32,
-      "brier": 0.157264,
-      "log_loss": 0.472666,
-      "accuracy": 0.75,
+      "brier": 0.137076,
+      "log_loss": 0.402967,
+      "accuracy": 0.7812,
       "n_upsets": 8,
-      "n_upsets_correct": 0
+      "n_upsets_correct": 2
     },
     "S16": {
       "round_name": "S16",
       "n_games": 8,
-      "brier": 0.311183,
-      "log_loss": 0.912343,
-      "accuracy": 0.625,
+      "brier": 0.142756,
+      "log_loss": 0.430243,
+      "accuracy": 0.75,
       "n_upsets": 3,
-      "n_upsets_correct": 0
+      "n_upsets_correct": 1
     }
   },
   "games": [
@@ -89,14 +89,14 @@
       "team2_id": "texas",
       "team1_seed": 11,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.896,
+      "predicted_prob_team1": 0.319093,
       "team1_score": 66,
       "team2_score": 68,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": false,
-      "brier_component": 0.802816,
-      "log_loss_component": 2.263364
+      "brier_component": 0.10182,
+      "log_loss_component": 0.38433
     },
     {
       "round_name": "FF",
@@ -105,14 +105,14 @@
       "team2_id": "maryland_baltimore_county",
       "team1_seed": 16,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.5,
+      "predicted_prob_team1": 0.568953,
       "team1_score": 86,
       "team2_score": 83,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.25,
-      "log_loss_component": 0.693147
+      "brier_component": 0.185802,
+      "log_loss_component": 0.563957
     },
     {
       "round_name": "FF",
@@ -121,14 +121,14 @@
       "team2_id": "miami__oh",
       "team1_seed": 11,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.5,
+      "predicted_prob_team1": 0.575995,
       "team1_score": 79,
       "team2_score": 89,
       "team1_won": false,
       "correct": false,
       "upset": false,
-      "brier_component": 0.25,
-      "log_loss_component": 0.693147
+      "brier_component": 0.33177,
+      "log_loss_component": 0.85801
     },
     {
       "round_name": "FF",
@@ -137,14 +137,14 @@
       "team2_id": "prairie_view",
       "team1_seed": 16,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.5,
+      "predicted_prob_team1": 0.918407,
       "team1_score": 55,
       "team2_score": 67,
       "team1_won": false,
       "correct": false,
       "upset": false,
-      "brier_component": 0.25,
-      "log_loss_component": 0.693147
+      "brier_component": 0.843471,
+      "log_loss_component": 2.506012
     },
     {
       "round_name": "R64",
@@ -153,14 +153,14 @@
       "team2_id": "siena",
       "team1_seed": 1,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.995,
+      "predicted_prob_team1": 0.983911,
       "team1_score": 71,
       "team2_score": 65,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 2.5e-05,
-      "log_loss_component": 0.005013
+      "brier_component": 0.000259,
+      "log_loss_component": 0.01622
     },
     {
       "round_name": "R64",
@@ -169,14 +169,14 @@
       "team2_id": "howard",
       "team1_seed": 1,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.995,
+      "predicted_prob_team1": 0.969153,
       "team1_score": 101,
       "team2_score": 80,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 2.5e-05,
-      "log_loss_component": 0.005013
+      "brier_component": 0.000952,
+      "log_loss_component": 0.031333
     },
     {
       "round_name": "R64",
@@ -185,14 +185,14 @@
       "team2_id": "idaho",
       "team1_seed": 2,
       "team2_seed": 15,
-      "predicted_prob_team1": 0.9944,
+      "predicted_prob_team1": 0.939234,
       "team1_score": 78,
       "team2_score": 47,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 3.1e-05,
-      "log_loss_component": 0.005616
+      "brier_component": 0.003693,
+      "log_loss_component": 0.062691
     },
     {
       "round_name": "R64",
@@ -201,14 +201,14 @@
       "team2_id": "north_dakota_state",
       "team1_seed": 3,
       "team2_seed": 14,
-      "predicted_prob_team1": 0.9792,
+      "predicted_prob_team1": 0.869879,
       "team1_score": 92,
       "team2_score": 67,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000433,
-      "log_loss_component": 0.021019
+      "brier_component": 0.016931,
+      "log_loss_component": 0.139401
     },
     {
       "round_name": "R64",
@@ -217,14 +217,14 @@
       "team2_id": "pennsylvania",
       "team1_seed": 3,
       "team2_seed": 14,
-      "predicted_prob_team1": 0.9792,
+      "predicted_prob_team1": 0.966022,
       "team1_score": 105,
       "team2_score": 70,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000433,
-      "log_loss_component": 0.021019
+      "brier_component": 0.001155,
+      "log_loss_component": 0.034569
     },
     {
       "round_name": "R64",
@@ -233,14 +233,14 @@
       "team2_id": "kennesaw_state",
       "team1_seed": 3,
       "team2_seed": 14,
-      "predicted_prob_team1": 0.9792,
+      "predicted_prob_team1": 0.961921,
       "team1_score": 73,
       "team2_score": 64,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000433,
-      "log_loss_component": 0.021019
+      "brier_component": 0.00145,
+      "log_loss_component": 0.038823
     },
     {
       "round_name": "R64",
@@ -249,14 +249,14 @@
       "team2_id": "troy",
       "team1_seed": 4,
       "team2_seed": 13,
-      "predicted_prob_team1": 0.9597,
+      "predicted_prob_team1": 0.836292,
       "team1_score": 76,
       "team2_score": 47,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.001624,
-      "log_loss_component": 0.041135
+      "brier_component": 0.0268,
+      "log_loss_component": 0.178777
     },
     {
       "round_name": "R64",
@@ -265,14 +265,14 @@
       "team2_id": "hawaii",
       "team1_seed": 4,
       "team2_seed": 13,
-      "predicted_prob_team1": 0.9864,
+      "predicted_prob_team1": 0.910901,
       "team1_score": 97,
       "team2_score": 78,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000185,
-      "log_loss_component": 0.013693
+      "brier_component": 0.007939,
+      "log_loss_component": 0.093321
     },
     {
       "round_name": "R64",
@@ -281,14 +281,14 @@
       "team2_id": "high_point",
       "team1_seed": 5,
       "team2_seed": 12,
-      "predicted_prob_team1": 0.9765,
+      "predicted_prob_team1": 0.852548,
       "team1_score": 82,
       "team2_score": 83,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.953552,
-      "log_loss_component": 3.750755
+      "brier_component": 0.726838,
+      "log_loss_component": 1.914253
     },
     {
       "round_name": "R64",
@@ -297,14 +297,14 @@
       "team2_id": "mcneese_state",
       "team1_seed": 5,
       "team2_seed": 12,
-      "predicted_prob_team1": 0.9026,
+      "predicted_prob_team1": 0.89621,
       "team1_score": 78,
       "team2_score": 68,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.009487,
-      "log_loss_component": 0.102476
+      "brier_component": 0.010772,
+      "log_loss_component": 0.109581
     },
     {
       "round_name": "R64",
@@ -313,14 +313,14 @@
       "team2_id": "south_florida",
       "team1_seed": 6,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.9606,
+      "predicted_prob_team1": 0.878717,
       "team1_score": 83,
       "team2_score": 79,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.001552,
-      "log_loss_component": 0.040197
+      "brier_component": 0.01471,
+      "log_loss_component": 0.129292
     },
     {
       "round_name": "R64",
@@ -329,14 +329,14 @@
       "team2_id": "virginia_commonwealth",
       "team1_seed": 6,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.8228,
+      "predicted_prob_team1": 0.786528,
       "team1_score": 78,
       "team2_score": 82,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.677,
-      "log_loss_component": 1.730476
+      "brier_component": 0.618626,
+      "log_loss_component": 1.54425
     },
     {
       "round_name": "R64",
@@ -345,14 +345,14 @@
       "team2_id": "texas",
       "team1_seed": 6,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.8228,
+      "predicted_prob_team1": 0.248175,
       "team1_score": 71,
       "team2_score": 79,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": true,
-      "brier_component": 0.677,
-      "log_loss_component": 1.730476
+      "brier_component": 0.061591,
+      "log_loss_component": 0.285252
     },
     {
       "round_name": "R64",
@@ -361,14 +361,14 @@
       "team2_id": "texas_a_m",
       "team1_seed": 7,
       "team2_seed": 10,
-      "predicted_prob_team1": 0.7107,
+      "predicted_prob_team1": 0.598613,
       "team1_score": 50,
       "team2_score": 63,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.505094,
-      "log_loss_component": 1.240291
+      "brier_component": 0.358338,
+      "log_loss_component": 0.912829
     },
     {
       "round_name": "R64",
@@ -377,14 +377,14 @@
       "team2_id": "tcu",
       "team1_seed": 8,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.5735,
+      "predicted_prob_team1": 0.699972,
       "team1_score": 64,
       "team2_score": 66,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.328902,
-      "log_loss_component": 0.852143
+      "brier_component": 0.489961,
+      "log_loss_component": 1.203879
     },
     {
       "round_name": "R64",
@@ -393,14 +393,14 @@
       "team2_id": "saint_louis",
       "team1_seed": 8,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.8839,
+      "predicted_prob_team1": 0.675352,
       "team1_score": 77,
       "team2_score": 102,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.781279,
-      "log_loss_component": 2.153303
+      "brier_component": 0.4561,
+      "log_loss_component": 1.125014
     },
     {
       "round_name": "R64",
@@ -409,14 +409,14 @@
       "team2_id": "long_island_university",
       "team1_seed": 1,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.9973,
+      "predicted_prob_team1": 0.983608,
       "team1_score": 92,
       "team2_score": 58,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 7e-06,
-      "log_loss_component": 0.002704
+      "brier_component": 0.000269,
+      "log_loss_component": 0.016528
     },
     {
       "round_name": "R64",
@@ -425,14 +425,14 @@
       "team2_id": "prairie_view",
       "team1_seed": 1,
       "team2_seed": 16,
-      "predicted_prob_team1": 0.9973,
+      "predicted_prob_team1": 0.995008,
       "team1_score": 114,
       "team2_score": 55,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 7e-06,
-      "log_loss_component": 0.002704
+      "brier_component": 2.5e-05,
+      "log_loss_component": 0.005005
     },
     {
       "round_name": "R64",
@@ -441,14 +441,14 @@
       "team2_id": "tennessee_state",
       "team1_seed": 2,
       "team2_seed": 15,
-      "predicted_prob_team1": 0.992,
+      "predicted_prob_team1": 0.95771,
       "team1_score": 108,
       "team2_score": 74,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 6.4e-05,
-      "log_loss_component": 0.008032
+      "brier_component": 0.001788,
+      "log_loss_component": 0.04321
     },
     {
       "round_name": "R64",
@@ -457,14 +457,14 @@
       "team2_id": "queens__nc",
       "team1_seed": 2,
       "team2_seed": 15,
-      "predicted_prob_team1": 0.992,
+      "predicted_prob_team1": 0.971755,
       "team1_score": 104,
       "team2_score": 71,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 6.4e-05,
-      "log_loss_component": 0.008032
+      "brier_component": 0.000798,
+      "log_loss_component": 0.028652
     },
     {
       "round_name": "R64",
@@ -473,14 +473,14 @@
       "team2_id": "furman",
       "team1_seed": 2,
       "team2_seed": 15,
-      "predicted_prob_team1": 0.9676,
+      "predicted_prob_team1": 0.96086,
       "team1_score": 82,
       "team2_score": 71,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.00105,
-      "log_loss_component": 0.032937
+      "brier_component": 0.001532,
+      "log_loss_component": 0.039927
     },
     {
       "round_name": "R64",
@@ -489,14 +489,14 @@
       "team2_id": "wright_state",
       "team1_seed": 3,
       "team2_seed": 14,
-      "predicted_prob_team1": 0.9792,
+      "predicted_prob_team1": 0.905056,
       "team1_score": 82,
       "team2_score": 73,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000433,
-      "log_loss_component": 0.021019
+      "brier_component": 0.009014,
+      "log_loss_component": 0.099758
     },
     {
       "round_name": "R64",
@@ -505,14 +505,14 @@
       "team2_id": "hofstra",
       "team1_seed": 4,
       "team2_seed": 13,
-      "predicted_prob_team1": 0.9864,
+      "predicted_prob_team1": 0.852109,
       "team1_score": 90,
       "team2_score": 70,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000185,
-      "log_loss_component": 0.013693
+      "brier_component": 0.021872,
+      "log_loss_component": 0.160041
     },
     {
       "round_name": "R64",
@@ -521,14 +521,14 @@
       "team2_id": "california_baptist",
       "team1_seed": 4,
       "team2_seed": 13,
-      "predicted_prob_team1": 0.9522,
+      "predicted_prob_team1": 0.581399,
       "team1_score": 68,
       "team2_score": 60,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.002285,
-      "log_loss_component": 0.04898
+      "brier_component": 0.175227,
+      "log_loss_component": 0.542318
     },
     {
       "round_name": "R64",
@@ -537,14 +537,14 @@
       "team2_id": "akron",
       "team1_seed": 5,
       "team2_seed": 12,
-      "predicted_prob_team1": 0.9765,
+      "predicted_prob_team1": 0.789786,
       "team1_score": 91,
       "team2_score": 71,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000552,
-      "log_loss_component": 0.023781
+      "brier_component": 0.04419,
+      "log_loss_component": 0.235993
     },
     {
       "round_name": "R64",
@@ -553,14 +553,14 @@
       "team2_id": "northern_iowa",
       "team1_seed": 5,
       "team2_seed": 12,
-      "predicted_prob_team1": 0.9026,
+      "predicted_prob_team1": 0.739471,
       "team1_score": 79,
       "team2_score": 53,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.009487,
-      "log_loss_component": 0.102476
+      "brier_component": 0.067875,
+      "log_loss_component": 0.30182
     },
     {
       "round_name": "R64",
@@ -569,14 +569,14 @@
       "team2_id": "miami__oh",
       "team1_seed": 6,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.8228,
+      "predicted_prob_team1": 0.883608,
       "team1_score": 78,
       "team2_score": 56,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.0314,
-      "log_loss_component": 0.195042
+      "brier_component": 0.013547,
+      "log_loss_component": 0.123742
     },
     {
       "round_name": "R64",
@@ -585,14 +585,14 @@
       "team2_id": "santa_clara",
       "team1_seed": 7,
       "team2_seed": 10,
-      "predicted_prob_team1": 0.9114,
+      "predicted_prob_team1": 0.318063,
       "team1_score": 89,
       "team2_score": 84,
       "team1_won": true,
-      "correct": true,
+      "correct": false,
       "upset": false,
-      "brier_component": 0.00785,
-      "log_loss_component": 0.092773
+      "brier_component": 0.465038,
+      "log_loss_component": 1.145506
     },
     {
       "round_name": "R64",
@@ -601,14 +601,14 @@
       "team2_id": "ucf",
       "team1_seed": 7,
       "team2_seed": 10,
-      "predicted_prob_team1": 0.9114,
+      "predicted_prob_team1": 0.7178720000000001,
       "team1_score": 75,
       "team2_score": 71,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.00785,
-      "log_loss_component": 0.092773
+      "brier_component": 0.079596,
+      "log_loss_component": 0.331464
     },
     {
       "round_name": "R64",
@@ -617,14 +617,14 @@
       "team2_id": "missouri",
       "team1_seed": 7,
       "team2_seed": 10,
-      "predicted_prob_team1": 0.7107,
+      "predicted_prob_team1": 0.600312,
       "team1_score": 80,
       "team2_score": 66,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.083694,
-      "log_loss_component": 0.341505
+      "brier_component": 0.15975,
+      "log_loss_component": 0.510306
     },
     {
       "round_name": "R64",
@@ -633,14 +633,14 @@
       "team2_id": "utah_state",
       "team1_seed": 8,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.5735,
+      "predicted_prob_team1": 0.654666,
       "team1_score": 76,
       "team2_score": 86,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.328902,
-      "log_loss_component": 0.852143
+      "brier_component": 0.428588,
+      "log_loss_component": 1.063243
     },
     {
       "round_name": "R64",
@@ -649,14 +649,14 @@
       "team2_id": "iowa",
       "team1_seed": 8,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.7884,
+      "predicted_prob_team1": 0.348164,
       "team1_score": 61,
       "team2_score": 67,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": true,
-      "brier_component": 0.621575,
-      "log_loss_component": 1.553058
+      "brier_component": 0.121218,
+      "log_loss_component": 0.427962
     },
     {
       "round_name": "R32",
@@ -665,14 +665,14 @@
       "team2_id": "saint_louis",
       "team1_seed": 1,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9822,
+      "predicted_prob_team1": 0.955065,
       "team1_score": 95,
       "team2_score": 72,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000317,
-      "log_loss_component": 0.01796
+      "brier_component": 0.002019,
+      "log_loss_component": 0.045976
     },
     {
       "round_name": "R32",
@@ -681,14 +681,14 @@
       "team2_id": "tcu",
       "team1_seed": 1,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9822,
+      "predicted_prob_team1": 0.946771,
       "team1_score": 81,
       "team2_score": 58,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000317,
-      "log_loss_component": 0.01796
+      "brier_component": 0.002833,
+      "log_loss_component": 0.054698
     },
     {
       "round_name": "R32",
@@ -697,14 +697,14 @@
       "team2_id": "texas_a_m",
       "team1_seed": 2,
       "team2_seed": 10,
-      "predicted_prob_team1": 0.9822,
+      "predicted_prob_team1": 0.878791,
       "team1_score": 88,
       "team2_score": 57,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000317,
-      "log_loss_component": 0.01796
+      "brier_component": 0.014692,
+      "log_loss_component": 0.129208
     },
     {
       "round_name": "R32",
@@ -713,14 +713,14 @@
       "team2_id": "louisville",
       "team1_seed": 3,
       "team2_seed": 6,
-      "predicted_prob_team1": 0.7107,
+      "predicted_prob_team1": 0.538624,
       "team1_score": 77,
       "team2_score": 69,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.083694,
-      "log_loss_component": 0.341505
+      "brier_component": 0.212868,
+      "log_loss_component": 0.618738
     },
     {
       "round_name": "R32",
@@ -729,14 +729,14 @@
       "team2_id": "texas",
       "team1_seed": 3,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.9554,
+      "predicted_prob_team1": 0.784065,
       "team1_score": 68,
       "team2_score": 74,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.912789,
-      "log_loss_component": 3.110021
+      "brier_component": 0.614758,
+      "log_loss_component": 1.532778
     },
     {
       "round_name": "R32",
@@ -745,14 +745,14 @@
       "team2_id": "virginia_commonwealth",
       "team1_seed": 3,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.9308,
+      "predicted_prob_team1": 0.951273,
       "team1_score": 76,
       "team2_score": 55,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.004789,
-      "log_loss_component": 0.071711
+      "brier_component": 0.002374,
+      "log_loss_component": 0.049954
     },
     {
       "round_name": "R32",
@@ -761,14 +761,14 @@
       "team2_id": "vanderbilt",
       "team1_seed": 4,
       "team2_seed": 5,
-      "predicted_prob_team1": 0.8839,
+      "predicted_prob_team1": 0.378748,
       "team1_score": 74,
       "team2_score": 72,
       "team1_won": true,
-      "correct": true,
+      "correct": false,
       "upset": false,
-      "brier_component": 0.013479,
-      "log_loss_component": 0.123411
+      "brier_component": 0.385954,
+      "log_loss_component": 0.970884
     },
     {
       "round_name": "R32",
@@ -777,14 +777,14 @@
       "team2_id": "high_point",
       "team1_seed": 4,
       "team2_seed": 12,
-      "predicted_prob_team1": 0.9822,
+      "predicted_prob_team1": 0.85437,
       "team1_score": 94,
       "team2_score": 88,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000317,
-      "log_loss_component": 0.01796
+      "brier_component": 0.021208,
+      "log_loss_component": 0.157391
     },
     {
       "round_name": "R32",
@@ -793,14 +793,14 @@
       "team2_id": "iowa",
       "team1_seed": 1,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9822,
+      "predicted_prob_team1": 0.927081,
       "team1_score": 72,
       "team2_score": 73,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.964717,
-      "log_loss_component": 4.028557
+      "brier_component": 0.859479,
+      "log_loss_component": 2.618406
     },
     {
       "round_name": "R32",
@@ -809,14 +809,14 @@
       "team2_id": "utah_state",
       "team1_seed": 1,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9308,
+      "predicted_prob_team1": 0.933762,
       "team1_score": 78,
       "team2_score": 66,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.004789,
-      "log_loss_component": 0.071711
+      "brier_component": 0.004387,
+      "log_loss_component": 0.068534
     },
     {
       "round_name": "R32",
@@ -825,14 +825,14 @@
       "team2_id": "miami__fl",
       "team1_seed": 2,
       "team2_seed": 7,
-      "predicted_prob_team1": 0.8228,
+      "predicted_prob_team1": 0.881618,
       "team1_score": 79,
       "team2_score": 69,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.0314,
-      "log_loss_component": 0.195042
+      "brier_component": 0.014014,
+      "log_loss_component": 0.125996
     },
     {
       "round_name": "R32",
@@ -841,14 +841,14 @@
       "team2_id": "kentucky",
       "team1_seed": 2,
       "team2_seed": 7,
-      "predicted_prob_team1": 0.8228,
+      "predicted_prob_team1": 0.806057,
       "team1_score": 82,
       "team2_score": 63,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.0314,
-      "log_loss_component": 0.195042
+      "brier_component": 0.037614,
+      "log_loss_component": 0.215601
     },
     {
       "round_name": "R32",
@@ -857,14 +857,14 @@
       "team2_id": "ucla",
       "team1_seed": 2,
       "team2_seed": 7,
-      "predicted_prob_team1": 0.9338,
+      "predicted_prob_team1": 0.846718,
       "team1_score": 73,
       "team2_score": 57,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.004382,
-      "log_loss_component": 0.068493
+      "brier_component": 0.023495,
+      "log_loss_component": 0.166388
     },
     {
       "round_name": "R32",
@@ -873,14 +873,14 @@
       "team2_id": "tennessee",
       "team1_seed": 3,
       "team2_seed": 6,
-      "predicted_prob_team1": 0.9114,
+      "predicted_prob_team1": 0.41492300000000004,
       "team1_score": 72,
       "team2_score": 79,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": true,
-      "brier_component": 0.83065,
-      "log_loss_component": 2.423623
+      "brier_component": 0.172161,
+      "log_loss_component": 0.536012
     },
     {
       "round_name": "R32",
@@ -889,14 +889,14 @@
       "team2_id": "st__john_s__ny",
       "team1_seed": 4,
       "team2_seed": 5,
-      "predicted_prob_team1": 0.5735,
+      "predicted_prob_team1": 0.505359,
       "team1_score": 65,
       "team2_score": 67,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.328902,
-      "log_loss_component": 0.852143
+      "brier_component": 0.255388,
+      "log_loss_component": 0.703923
     },
     {
       "round_name": "R32",
@@ -905,14 +905,14 @@
       "team2_id": "texas_tech",
       "team1_seed": 4,
       "team2_seed": 5,
-      "predicted_prob_team1": 0.8839,
+      "predicted_prob_team1": 0.469537,
       "team1_score": 90,
       "team2_score": 65,
       "team1_won": true,
-      "correct": true,
+      "correct": false,
       "upset": false,
-      "brier_component": 0.013479,
-      "log_loss_component": 0.123411
+      "brier_component": 0.281391,
+      "log_loss_component": 0.756008
     },
     {
       "round_name": "S16",
@@ -921,14 +921,14 @@
       "team2_id": "arkansas",
       "team1_seed": 1,
       "team2_seed": 4,
-      "predicted_prob_team1": 0.9381,
+      "predicted_prob_team1": 0.86486,
       "team1_score": 109,
       "team2_score": 88,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.003832,
-      "log_loss_component": 0.063899
+      "brier_component": 0.018263,
+      "log_loss_component": 0.145188
     },
     {
       "round_name": "S16",
@@ -937,14 +937,14 @@
       "team2_id": "texas",
       "team1_seed": 2,
       "team2_seed": 11,
-      "predicted_prob_team1": 0.9864,
+      "predicted_prob_team1": 0.864873,
       "team1_score": 79,
       "team2_score": 77,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000185,
-      "log_loss_component": 0.013693
+      "brier_component": 0.018259,
+      "log_loss_component": 0.145173
     },
     {
       "round_name": "S16",
@@ -953,14 +953,14 @@
       "team2_id": "illinois",
       "team1_seed": 2,
       "team2_seed": 3,
-      "predicted_prob_team1": 0.8839,
+      "predicted_prob_team1": 0.418258,
       "team1_score": 55,
       "team2_score": 65,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": true,
-      "brier_component": 0.781279,
-      "log_loss_component": 2.153303
+      "brier_component": 0.17494,
+      "log_loss_component": 0.541728
     },
     {
       "round_name": "S16",
@@ -969,14 +969,14 @@
       "team2_id": "iowa",
       "team1_seed": 4,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9338,
+      "predicted_prob_team1": 0.638843,
       "team1_score": 71,
       "team2_score": 77,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.871982,
-      "log_loss_component": 2.715075
+      "brier_component": 0.40812,
+      "log_loss_component": 1.018443
     },
     {
       "round_name": "S16",
@@ -985,14 +985,14 @@
       "team2_id": "st__john_s__ny",
       "team1_seed": 1,
       "team2_seed": 5,
-      "predicted_prob_team1": 0.7706,
+      "predicted_prob_team1": 0.935366,
       "team1_score": 80,
       "team2_score": 75,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.052624,
-      "log_loss_component": 0.260586
+      "brier_component": 0.004178,
+      "log_loss_component": 0.066817
     },
     {
       "round_name": "S16",
@@ -1001,14 +1001,14 @@
       "team2_id": "alabama",
       "team1_seed": 1,
       "team2_seed": 4,
-      "predicted_prob_team1": 0.9381,
+      "predicted_prob_team1": 0.875857,
       "team1_score": 90,
       "team2_score": 77,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.003832,
-      "log_loss_component": 0.063899
+      "brier_component": 0.015411,
+      "log_loss_component": 0.132552
     },
     {
       "round_name": "S16",
@@ -1017,14 +1017,14 @@
       "team2_id": "michigan_state",
       "team1_seed": 2,
       "team2_seed": 3,
-      "predicted_prob_team1": 0.5735,
+      "predicted_prob_team1": 0.509445,
       "team1_score": 67,
       "team2_score": 63,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.181902,
-      "log_loss_component": 0.555997
+      "brier_component": 0.240644,
+      "log_loss_component": 0.674433
     },
     {
       "round_name": "S16",
@@ -1033,14 +1033,14 @@
       "team2_id": "tennessee",
       "team1_seed": 2,
       "team2_seed": 6,
-      "predicted_prob_team1": 0.7706,
+      "predicted_prob_team1": 0.512084,
       "team1_score": 62,
       "team2_score": 76,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.593824,
-      "log_loss_component": 1.472288
+      "brier_component": 0.26223,
+      "log_loss_component": 0.717612
     },
     {
       "round_name": "E8",
@@ -1049,14 +1049,14 @@
       "team2_id": "purdue",
       "team1_seed": 1,
       "team2_seed": 2,
-      "predicted_prob_team1": 0.8789,
+      "predicted_prob_team1": 0.631842,
       "team1_score": 79,
       "team2_score": 64,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.014665,
-      "log_loss_component": 0.129084
+      "brier_component": 0.13554,
+      "log_loss_component": 0.459116
     },
     {
       "round_name": "E8",
@@ -1065,14 +1065,14 @@
       "team2_id": "iowa",
       "team1_seed": 3,
       "team2_seed": 9,
-      "predicted_prob_team1": 0.9693,
+      "predicted_prob_team1": 0.915834,
       "team1_score": 71,
       "team2_score": 59,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.000942,
-      "log_loss_component": 0.031181
+      "brier_component": 0.007084,
+      "log_loss_component": 0.08792
     },
     {
       "round_name": "E8",
@@ -1081,14 +1081,14 @@
       "team2_id": "tennessee",
       "team1_seed": 1,
       "team2_seed": 6,
-      "predicted_prob_team1": 0.9606,
+      "predicted_prob_team1": 0.863302,
       "team1_score": 95,
       "team2_score": 62,
       "team1_won": true,
       "correct": true,
       "upset": false,
-      "brier_component": 0.001552,
-      "log_loss_component": 0.040197
+      "brier_component": 0.018686,
+      "log_loss_component": 0.146991
     },
     {
       "round_name": "E8",
@@ -1097,14 +1097,14 @@
       "team2_id": "connecticut",
       "team1_seed": 1,
       "team2_seed": 2,
-      "predicted_prob_team1": 0.8839,
+      "predicted_prob_team1": 0.839155,
       "team1_score": 72,
       "team2_score": 73,
       "team1_won": false,
       "correct": false,
       "upset": true,
-      "brier_component": 0.781279,
-      "log_loss_component": 2.153303
+      "brier_component": 0.704181,
+      "log_loss_component": 1.827314
     },
     {
       "round_name": "F4",
@@ -1113,14 +1113,14 @@
       "team2_id": "michigan",
       "team1_seed": 1,
       "team2_seed": 1,
-      "predicted_prob_team1": 0.8692,
+      "predicted_prob_team1": 0.320103,
       "team1_score": 73,
       "team2_score": 91,
       "team1_won": false,
-      "correct": false,
+      "correct": true,
       "upset": false,
-      "brier_component": 0.755509,
-      "log_loss_component": 2.034086
+      "brier_component": 0.102466,
+      "log_loss_component": 0.385814
     },
     {
       "round_name": "F4",
@@ -1129,14 +1129,14 @@
       "team2_id": "illinois",
       "team1_seed": 2,
       "team2_seed": 3,
-      "predicted_prob_team1": 0.8789,
+      "predicted_prob_team1": 0.239058,
       "team1_score": 71,
       "team2_score": 62,
       "team1_won": true,
-      "correct": true,
+      "correct": false,
       "upset": false,
-      "brier_component": 0.014665,
-      "log_loss_component": 0.129084
+      "brier_component": 0.579033,
+      "log_loss_component": 1.431049
     },
     {
       "round_name": "NCG",
@@ -1145,14 +1145,14 @@
       "team2_id": "connecticut",
       "team1_seed": 1,
       "team2_seed": 2,
-      "predicted_prob_team1": 0.14549999999999996,
+      "predicted_prob_team1": 0.823049,
       "team1_score": 69,
       "team2_score": 63,
       "team1_won": true,
-      "correct": false,
+      "correct": true,
       "upset": false,
-      "brier_component": 0.73017,
-      "log_loss_component": 1.927579
+      "brier_component": 0.031312,
+      "log_loss_component": 0.19474
     }
   ]
 }
