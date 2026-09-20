@@ -19,6 +19,7 @@
   header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
   header h1{margin:0;font-size:20px;}
   header .sub{color:var(--muted);font-size:13px;}
+  #years{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}.year-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:4px 7px;cursor:pointer}.year-btn.on{color:var(--text);border-color:var(--accent)}.reset-btn{margin-top:8px;background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:11px;padding:3px 0}button:focus-visible,[role="button"]:focus-visible,summary:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
   #countdown{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:13px;text-align:center;}
   #countdown b{color:var(--accent);font-size:15px;}
 
@@ -29,7 +30,12 @@
   .scard.na{opacity:.65;cursor:default;}.scard-tag{font-size:10px;text-transform:uppercase;color:var(--accent2);letter-spacing:.04em;}
   .scard h4{margin:6px 0;font-size:15px;}.scard-note{min-height:52px;margin:0 0 10px;color:var(--muted);font-size:12.5px;line-height:1.4;}
   .scard-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-top:7px;}.scard-row b{color:var(--good);text-align:right;}.scard-row.real{color:var(--muted);}
-  .family-chips{display:flex;gap:6px;margin-bottom:12px}.chip{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1300}
+  .family-chips{display:flex;gap:6px;margin-bottom:12px}.chip{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1300}.chip.off{opacity:.4;cursor:not-allowed}.objective-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}.recommended{font-size:10px;color:var(--accent);font-weight:500;margin-left:6px}.comparison{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}.comparison th,.comparison td{text-align:left;padding:8px;border-top:1px solid var(--border)}.comparison th{color:var(--muted)}.active-filters{display:flex;flex-wrap:wrap;gap:6px}.result-count{font-size:12px;color:var(--good)}
+  #adjust{margin:0 0 24px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px}.adjust-help{color:var(--muted);font-size:12px}.objective-row,.chip-list{display:flex;flex-wrap:wrap;gap:6px}.filter-row{padding:10px 0;border-top:1px solid var(--border);display:grid;grid-template-columns:180px 1fr;gap:12px;font-size:12px;align-items:center}.clear-btn{margin-top:14px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;padding:7px 10px;cursor:pointer}
+  #rule-panel,#explore-panel{margin:0 0 24px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px}#rule-panel h3,#explore-panel h3{margin-top:0}.rule-results{display:grid;gap:7px}.rule-results .chip{display:flex;justify-content:space-between;gap:12px;text-align:left}
+  .variable-picker{display:grid;gap:10px;margin:12px 0}.variable-group>b{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}
+  .risk-control{padding:10px 0 14px}.risk-control label{display:flex;justify-content:space-between;font-size:12px}.risk-control input{width:100%;accent-color:var(--accent)}.risk-scale{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+  details.advanced{margin:0 0 16px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius)}details.advanced>summary{cursor:pointer;padding:15px 18px;font-weight:600}details.advanced>section{border-top:1px solid var(--border)}
 
   section.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:24px;}
   section.panel h2{margin-top:0;font-size:16px;}
@@ -43,9 +49,11 @@
   .team-slot.pickable:hover{background:#26313f;color:var(--text);cursor:pointer;}
   .seed{color:var(--accent2);font-weight:600;margin-right:6px;}
   .tbd-banner{font-size:12px;color:var(--warn);background:#3a2d16;border:1px solid #5a441f;border-radius:6px;padding:8px 12px;margin-bottom:14px;}
+  .board-tools,.board-nav{display:flex;gap:8px;align-items:center;margin:0 0 12px}.board-tools button,.board-nav button{background:var(--panel2);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;cursor:pointer}.board-detail{min-height:20px;color:var(--muted);font-size:12px;margin:10px 0}.comparison td,.comparison th{white-space:nowrap}
 
   footer{padding:16px 24px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);}
   a{color:var(--accent2);}
+  @media (max-width:720px){.bracket-wrap{overflow:hidden}.bracket{min-width:0;display:block}.board-round{display:none}.board-round.mobile-active{display:flex}.board-nav{justify-content:space-between}.comparison{display:block;overflow-x:auto}}
 </style>
 </head>
 <body>
@@ -54,6 +62,8 @@
   <div>
     <h1>Bracket Strategy Hub</h1>
     <div class="sub">Rule-based &amp; ML models for tournament bracket construction · <a href="#" id="repo-link">github repo</a></div>
+    <nav id="years" aria-label="Historical seasons"></nav>
+    <button class="reset-btn" onclick="resetView()">Reset view</button>
   </div>
   <div id="countdown">Tips off in <b id="days-left">—</b> days</div>
 </header>
@@ -65,17 +75,25 @@
       <div id="compare" hidden></div>
     </section>
 
+    <details class="advanced"><summary>Adjust bracket filters</summary><section id="adjust" hidden></section></details>
     <section class="panel">
-      <h2>2027 Bracket</h2>
-      <div class="tbd-banner">
+      <h2 id="bracket-title">Current bracket</h2>
+      <div class="tbd-banner" id="bracket-pending">
         2027 field, seeding, and matchups aren't set yet (Selection Sunday is ~6 months out). Slots below are placeholders — swap in real teams once the bracket is announced, or keep exploring how each strategy would seed a hypothetical field.
       </div>
+      <div class="board-tools"><button onclick="copyPicks()">Copy picks</button><button onclick="window.print()">Print</button></div>
+      <div class="board-nav"><button onclick="setMobileRound(-1)" aria-label="Previous round">←</button><span>Use arrows on mobile to change round</span><button onclick="setMobileRound(1)" aria-label="Next round">→</button></div>
+      <div class="board-detail" id="board-detail" aria-live="polite"></div>
       <div class="bracket-wrap">
         <div class="bracket" id="bracket-root"></div>
       </div>
     </section>
 
-    <section class="panel" id="leaderboard" hidden></section>
+    <details class="advanced"><summary>Rule search</summary><section id="rule-panel" aria-live="polite" hidden></section></details>
+    <details class="advanced"><summary>Explore fitted model</summary><section id="explore-panel" aria-live="polite" hidden></section></details>
+
+    <details class="advanced"><summary>Methodology and validation</summary><section class="panel method-copy"><p>The pool-winning rule is backtested across played seasons. Expected points is solved exactly for the bracket. The fitted model is trained only on seasons before the one shown. Experimental rule search is descriptive and not pool-scored.</p></section></details>
+    <details class="advanced"><summary>Historical results</summary><section class="panel" id="leaderboard" hidden></section></details>
     <p id="unavailable" hidden></p>
 </main>
 

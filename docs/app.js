@@ -73,6 +73,8 @@
 /* The browser-fitted strategy. Anything else is a precomputed bracket read out
  * of the season payload by id. */
 const MODEL = 'model';
+const RULE = 'rule';
+const RULE_CHECKPOINTS = [{ r: 1, label: 'Sweet 16' }, { r: 2, label: 'Elite Eight' }, { r: 3, label: 'Final Four' }, { r: 5, label: 'Champion' }];
 
 /* Variables the fitted strategy uses.
  *
@@ -99,6 +101,15 @@ const state = {
   // season the system was frozen to be judged on.
   year: 2026,
   strategy: 'p1',       // 'p1' | 'ev' | MODEL
+  objective: 'p1',
+  risk: 0.35,
+  pick: { champ: null, ones: null, depth: null, pred: null, src: null },
+  notice: '',
+  explore: 'adj_defensive_efficiency',
+  exploreTab: 'field',
+  mobileRound: 0,
+  boardDetail: '',
+  rule: { checkpoints: [3, 5], maxCriteria: 2, result: null, busy: false, error: null, chosen: 0 },
   fit: null,            // {beta, n, converged}
   advancement: null,    // {team: [P(reach R32), ..., P(win it all)]}, see refit()
   // Strategy-card family filter, added with the 2026-09-19 card restyle
@@ -319,6 +330,35 @@ function solveBracket(pFn) {
   return rounds;
 }
 
+/* Candidate-pool controls retained from the original UI. */
+const CUSTOM = 'custom';
+const AXIS_FIELD = { champ: 'c', ones: 'o', depth: 'd', src: 's' };
+const SRC_LABEL = { torvik: 'Torvik', massey_avg: 'Massey', elo: 'Elo', region_top_n: 'Region construction', shipped: 'Recommended' };
+function candidates() { return ((state.season && state.season.filters) || {}).candidates || []; }
+function matching(pick = state.pick) {
+  return candidates().filter(r => Object.entries(AXIS_FIELD).every(([k, f]) => pick[k] == null || r[f] === pick[k]) && (pick.pred == null || r.k[pick.pred] === '1'));
+}
+function anyFilter() { return Object.values(state.pick).some(v => v !== null); }
+function decodeBracket(bits) {
+  let cur = state.season.first_round.slice(), i = 0; const rounds = [];
+  for (let r = 0; r < 6; r++) { const next = []; for (let g = 0; g < cur.length; g += 2) next.push(bits[i++] === '1' ? cur[g] : cur[g + 1]); rounds.push(next); cur = next; }
+  return rounds;
+}
+function filteredEntry() {
+  if (!anyFilter()) return { entry: null, alts: [] };
+  const rows = matching(); if (!rows.length) return { entry: null, alts: [] };
+  const by = { p1: rows.reduce((a, b) => b.p1 > a.p1 ? b : a), ev: rows.reduce((a, b) => b.ev > a.ev ? b : a) };
+  return { entry: { n: rows.length, by, row: by[state.objective] }, alts: rows.slice().sort((a, b) => b[state.objective] - a[state.objective]).slice(0, 5) };
+}
+function riskCandidate() {
+  if (!state.season || !state.season.filters) return null;
+  const rows = candidates().filter(r => r.s === 'region_top_n' || r.s === 'shipped');
+  if (!rows.length) return null;
+  const maxUpsets = Math.max(...rows.map(r => r.o || 0), 1);
+  const target = state.risk * maxUpsets;
+  return rows.slice().sort((a, b) => Math.abs((a.o || 0) - target) - Math.abs((b.o || 0) - target) || b.p1 - a.p1)[0];
+}
+
 /* P(1st), printed no finer than it is known.
  *
  * toFixed(1) implies a resolution of 0.05pp against a standard error of about
@@ -405,6 +445,7 @@ function render() {
   const s = state.season;
   { const main = document.getElementById('main'); if (main) main.classList.toggle('pending', fieldPending(s)); }
   renderCountdown();
+  renderYears();
   const unavail = document.getElementById('unavailable');
   // Should not happen once at least one season is ready, but a season
   // payload can fail to load (loadSeason() in setYear()) -- said plainly
@@ -415,7 +456,78 @@ function render() {
     if (broken) unavail.textContent = s ? (s.message || 'Season unavailable.') : 'Season unavailable.';
   }
   renderCompare();
+  renderAdjust();
+  renderBoard();
+  renderRulePanel();
+  renderExplore();
   renderLeaderboard();
+}
+
+function writeHash() {
+  const p = new URLSearchParams({ y: String(state.year), s: state.strategy, o: state.objective, risk: String(state.risk) });
+  Object.entries(state.pick).forEach(([k, v]) => { if (v !== null) p.set(k, String(v)); });
+  p.set('rc', state.rule.checkpoints.join(',')); p.set('rm', String(state.rule.maxCriteria));
+  history.replaceState(null, '', `#${p}`);
+}
+function readHash() {
+  const p = new URLSearchParams((location.hash || '').slice(1));
+  const y = Number(p.get('y')); if (Number.isFinite(y) && y > 1900) state.year = y;
+  if (['p1', 'ev'].includes(p.get('o'))) state.objective = p.get('o');
+  if (p.has('risk')) state.risk = Math.max(0, Math.min(1, Number(p.get('risk')) || .35));
+  if ([MODEL, RULE, 'p1', 'ev'].includes(p.get('s'))) state.strategy = p.get('s');
+  for (const k of Object.keys(state.pick)) { if (p.has(k)) state.pick[k] = k === 'src' ? p.get(k) : Number(p.get(k)); }
+  if (p.has('rc')) state.rule.checkpoints = p.get('rc').split(',').map(Number).filter(Number.isFinite);
+  if (p.get('rm') === '3') state.rule.maxCriteria = 3;
+}
+function renderYears() {
+  const nav = document.getElementById('years'); if (!nav || !state.seasonsIndex) return;
+  nav.innerHTML = state.seasonsIndex.filter(s => s.status === 'ready').sort((a,b) => b.year-a.year).map(s => `<button class="year-btn${s.year === state.year ? ' on' : ''}" onclick="setYear(${s.year})">${s.year}</button>`).join('');
+}
+function resetView() { state.strategy = 'p1'; state.objective = 'p1'; state.pick = { champ: null, ones: null, depth: null, pred: null, src: null }; state.rule = { checkpoints: [3, 5], maxCriteria: 2, result: null, busy: false, error: null, chosen: 0 }; state.exploreTab = 'field'; history.replaceState(null, '', location.pathname); render(); }
+
+function renderBoard() {
+  const root = document.getElementById('bracket-root');
+  const pending = document.getElementById('bracket-pending');
+  const title = document.getElementById('bracket-title');
+  if (!root) return;
+  const s = state.season;
+  if (!s || s.status !== 'ready' || !Array.isArray(s.first_round)) {
+    if (pending) pending.hidden = false;
+    if (title) title.textContent = `${state.year || ''} Bracket`;
+    return;
+  }
+  if (pending) pending.hidden = true;
+  if (title) title.textContent = `${state.year} Bracket · ${state.strategy === MODEL ? 'Fitted model' : state.strategy === RULE ? 'Rule search' : state.objective === 'ev' ? 'Expected points' : 'P(1st)'}`;
+  let rounds = null;
+  if (state.strategy === MODEL && fitReady()) rounds = solveByFit();
+  else if (state.strategy === RULE && state.rule.result && state.rule.result.entries.length) rounds = state.rule.result.entries[state.rule.chosen].rounds;
+  else {
+    const st = state.strategy === CUSTOM ? filteredEntry().entry?.row : (state.strategy === 'p1' && !anyFilter() ? riskCandidate() : (s.strategies || []).find(x => x.id === state.strategy));
+    if (st) {
+      const picks = st.b ? decodeBracket(st.b) : st.picks;
+      let field = s.first_round.slice(); rounds = picks.map(winners => {
+        const games = []; for (let i = 0; i < field.length; i += 2) games.push({ a: field[i], b: field[i + 1], win: winners[i / 2] });
+        field = winners; return games;
+      });
+    }
+  }
+  if (!rounds) return;
+  const names = i => s.teams[i] || { name: 'TBD', seed: '—' };
+  root.innerHTML = rounds.map((games, r) => `<div class="region-col board-round${r === state.mobileRound ? ' mobile-active' : ''}"><div class="round-label">${['Round of 64','Round of 32','Sweet 16','Elite Eight','Final Four','Championship'][r]}</div>${games.map(g => { const a = names(g.a), b = names(g.b); return `<div class="matchup" onclick="showMatchup(${g.a},${g.b},${g.win},${g.p == null ? 'null' : g.p})"><div class="team-slot${g.win === g.a ? ' selected' : ''}"><span><span class="seed">${a.seed}</span>${a.name}</span>${g.win === g.a ? '<span>✓</span>' : ''}</div><div class="team-slot${g.win === g.b ? ' selected' : ''}"><span><span class="seed">${b.seed}</span>${b.name}</span>${g.win === g.b ? '<span>✓</span>' : ''}</div></div>`; }).join('')}</div>`).join('');
+  const detail = document.getElementById('board-detail'); if (detail) detail.textContent = state.boardDetail;
+}
+
+function setMobileRound(delta) { state.mobileRound = Math.max(0, Math.min(5, state.mobileRound + delta)); renderBoard(); }
+function showMatchup(a, b, win, p) { const s = state.season; if (!s || !s.teams[a] || !s.teams[b]) return; const ta = s.teams[a], tb = s.teams[b], winner = s.teams[win]; state.boardDetail = `${ta.seed} ${ta.name} vs ${tb.seed} ${tb.name} · pick: ${winner.name}${p == null ? '' : ` · fitted probability ${Math.round((win === a ? p : 1 - p) * 100)}%`}`; renderBoard(); }
+async function copyPicks() {
+  const s = state.season; if (!s || !s.first_round) return;
+  let rounds = state.strategy === MODEL ? solveByFit() : (state.strategy === RULE && state.rule.result?.entries.length ? state.rule.result.entries[state.rule.chosen].rounds : null);
+  if (!rounds) {
+    const st = state.strategy === CUSTOM ? filteredEntry().entry?.row : (s.strategies || []).find(x => x.id === state.strategy);
+    if (st) { const picks = st.b ? decodeBracket(st.b) : st.picks; let field = s.first_round.slice(); rounds = picks.map(winners => { const games = []; for (let i = 0; i < field.length; i += 2) games.push({ a: field[i], b: field[i + 1], win: winners[i / 2] }); field = winners; return games; }); }
+  }
+  const text = rounds ? rounds.flat().map(g => s.teams[g.win].name).join('\n') : 'Bracket picks are not available yet.';
+  try { await navigator.clipboard.writeText(text); } catch { window.prompt('Copy these picks:', text); }
 }
 
 /* ---------- headline and comparison ----------
@@ -444,22 +556,31 @@ function strategyRows() {
       { id: 'p1', label: 'Win the pool', kind: `Backtested rule · ${wait}`, p1: null, ev: null, champion: null, record: null, active: false, pending: true },
       { id: 'ev', label: 'Most expected points', kind: `Exact optimum · ${wait}`, p1: null, ev: null, champion: null, record: null, active: false, pending: true },
       { id: MODEL, label: 'Fitted model', kind: `Evaluated, not selected · ${wait}`, p1: null, ev: null, champion: null, record: null, active: false, pending: true },
+      { id: RULE, label: 'Rule search', kind: `Experimental · ${wait}`, p1: null, ev: null, champion: null, record: null, active: false, pending: true },
     ];
   }
   // No listed season has a usable bracket at all (should not happen once one
   // season is ready, but a season payload can fail to load -- see setYear()).
   if (!s || s.status !== 'ready') return [];
   const teams = s.teams;
+  const filt = state.strategy === MODEL ? null : filteredEntry().entry;
   const rows = (s.strategies || []).map(st => {
+    const risk = st.id === 'p1' && !anyFilter() ? riskCandidate() : null;
+    const value = risk || (filt && filt.by[st.id]) || st;
+    const picks = risk || (filt && filt.by[st.id]) ? decodeBracket(value.b) : st.picks;
     return {
       id: st.id,
       label: st.id === 'ev' ? 'Most expected points' : 'Win the pool',
       kind: st.id === 'ev' ? 'Exact optimum' : 'Backtested rule',
-      p1: st.p1, ev: st.ev, champion: teams[st.picks[5][0]],
+      p1: value.p1, ev: value.ev, champion: teams[picks[5][0]], filtered: !!filt || !!risk,
       record: trackRecord(st.id),
-      active: state.strategy === st.id,
+      active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     };
   });
+  const rr = state.rule.result;
+  rows.push({ id: RULE, label: 'Rule search', kind: 'Experimental rule search', p1: null, ev: null,
+    champion: rr && rr.entries && rr.entries[0] && rr.entries[0].picks ? teams[rr.entries[0].picks[5][0]] : null,
+    record: null, active: state.strategy === RULE, pending: false });
   const fe = fittedEval();
   const live = fitReady() ? solveByFit() : null;
   rows.push({
@@ -511,6 +632,7 @@ const FAMILY_LABEL = { all: 'All', backtested: 'Backtested rule', optimal: 'Exac
 function scardNote(id) {
   if (id === 'p1') return 'Fixed contrarian-risk rule, backtested across played seasons: takes upsets the field will not because second place pays nothing.';
   if (id === 'ev') return 'The exact expected-points maximum over the candidate pool, solved by dynamic programming.';
+  if (id === RULE) return 'Experimental one-variable-per-round rules searched across prior tournaments. Not scored as a pool strategy.';
   return 'A ridge regression fitted in your browser on seasons before this one, never on the one shown.';
 }
 
@@ -528,15 +650,17 @@ function renderCompare() {
   const shown = state.family === 'all' ? rows : rows.filter(r => r.family === state.family);
   box.hidden = false;
   box.innerHTML = `
+    <div class="objective-toggle"><span>Optimise for</span><button class="chip${state.objective === 'p1' ? ' on' : ''}" onclick="setObjective('p1')">Maximise P(1st)</button><button class="chip${state.objective === 'ev' ? ' on' : ''}" onclick="setObjective('ev')">Maximise expected points</button></div>
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
-      <span class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</span>`).join('')}</div>` : ''}
+      <button class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</button>`).join('')}</div>` : ''}
     <div class="strategy-grid">${shown.map(r => `
       <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
         ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
           onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }"`}>
-        <span class="scard-tag">${r.kind}</span>
-        <h4>${r.label}</h4>
+        <span class="scard-tag">${r.kind}${r.filtered ? ' · filtered' : ''}</span>
+        <h4>${r.label}${r.id === 'p1' ? ' <span class="recommended">Recommended starting point</span>' : ''}</h4>
         <p class="scard-note${r.stale ? ' stale' : ''}">${r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</p>
+        <div class="scard-row"><span>Objective</span><b>${r.id === 'p1' ? 'Win the pool' : r.id === 'ev' ? 'Expected points' : r.id === MODEL ? 'Game prediction' : 'Historical reproduction'}</b></div>
         <div class="scard-row"><span>Chance of 1st</span><b>${cell(r.p1, p1Pct)}</b></div>
         <div class="scard-row"><span>Exp. points</span><b>${cell(r.ev, v => v.toFixed(0))}</b></div>
         <div class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></div>
@@ -548,10 +672,42 @@ function renderCompare() {
         </div>` : ''}
       </div>`).join('')}
     </div>
+    <table class="comparison"><thead><tr><th>Strategy</th><th>Type</th><th>P(1st)</th><th>Expected points</th><th>Champion</th></tr></thead><tbody>${shown.map(r => `<tr><td>${r.label}</td><td>${r.kind}</td><td>${cell(r.p1, p1Pct)}</td><td>${cell(r.ev, v => v.toFixed(0))}</td><td>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</td></tr>`).join('')}</tbody></table>
+    <p class="cmp-foot">P(1st) is the expected share of first place in the modeled 30-entry pool, not a universal probability of winning any pool.</p>
+    ${state.notice ? `<p class="cmp-foot">${state.notice}</p>` : ''}
     ${rows.some(r => r.record) ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
       Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
       One season is one draw.</p>` : ''}`;
 }
+
+function renderAdjust() {
+  const box = document.getElementById('adjust'); if (!box) return;
+  const f = state.season && state.season.filters;
+  if (!f || state.strategy === MODEL || fieldPending()) { box.hidden = true; return; }
+  box.hidden = false;
+  const rows = [
+    ['champ', 'Champion', (f.champions || []).map(x => [x.team, `${x.seed} ${x.name}`])],
+    ['ones', '1-seeds in Final Four', (f.ones || []).map(x => [x, String(x)])],
+    ['depth', 'Lowest Final Four seed', (f.depths || []).map(x => [x, `${x}-seed`])],
+    ['pred', 'Bracket shape', (f.predicates || []).map(x => [x.i, x.label])],
+    ['src', 'Model source', (f.sources || []).map(x => [x, SRC_LABEL[x] || x])],
+  ];
+  const matches = matching();
+  const active = Object.entries(state.pick).filter(([, v]) => v !== null).map(([kind, value]) => `<button class="chip on" onclick="setFilter('${kind}',${JSON.stringify(value)})">${kind}: ${kind === 'src' ? (SRC_LABEL[value] || value) : value} ×</button>`).join('');
+  const riskControl = state.strategy === 'p1' || state.strategy === CUSTOM ? `<div class="risk-control"><label for="risk-slider"><b>Contrarian risk</b> <span>${state.risk < .25 ? 'Chalk-heavy' : state.risk > .65 ? 'Upset-heavy' : 'Balanced'}</span></label><input id="risk-slider" type="range" min="0" max="100" value="${Math.round(state.risk * 100)}" oninput="setRisk(this.value)"><div class="risk-scale"><span>Chalk</span><span>Validated default</span><span>Chaos</span></div><p class="adjust-help">Controls the P(1st) construction only. Expected points, fitted, and rule-search strategies do not optimize this parameter.</p></div>` : `<p class="adjust-help">Risk control applies only to the P(1st) construction; this strategy has its own fixed objective.</p>`;
+  box.innerHTML = `<h3>Adjust this bracket</h3><p class="adjust-help">These choices narrow the candidate pool; the selected objective still decides what is maximized.</p>${riskControl}<div class="active-filters">${active || '<span class="muted">No filters applied</span>'}</div><p class="result-count">${matches.length.toLocaleString()} candidate bracket${matches.length === 1 ? '' : 's'} match</p>
+    <div class="objective-row"><button class="chip${state.objective === 'p1' ? ' on' : ''}" onclick="setObjective('p1')">Maximise P(1st)</button><button class="chip${state.objective === 'ev' ? ' on' : ''}" onclick="setObjective('ev')">Maximise expected points</button></div>
+    ${rows.map(([kind, label, values]) => `<div class="filter-row"><b>${label}</b><div class="chip-list">${values.map(([v, name]) => { const ok = matching({ ...state.pick, [kind]: v }).length > 0; return `<button class="chip${state.pick[kind] === v ? ' on' : ''}${ok ? '' : ' off'}" ${ok ? '' : 'disabled title="No matching brackets with the other active filters"'} onclick="setFilter('${kind}',${JSON.stringify(v)})">${name}</button>`; }).join('')}</div></div>`).join('')}
+    <button class="clear-btn" onclick="clearFilters()">Clear all filters</button>`;
+}
+
+function setObjective(id) { state.objective = id; state.strategy = anyFilter() ? CUSTOM : id; state.notice = ''; writeHash(); render(); }
+function setRisk(value) { state.risk = Math.max(0, Math.min(1, Number(value) / 100)); writeHash(); renderCompare(); renderBoard(); }
+function setFilter(kind, value) {
+  if (state.pick[kind] === value) state.pick[kind] = null; else state.pick[kind] = value;
+  state.strategy = anyFilter() ? CUSTOM : state.objective; state.notice = ''; writeHash(); render();
+}
+function clearFilters() { state.pick = { champ: null, ones: null, depth: null, pred: null, src: null }; state.strategy = state.objective; state.notice = ''; writeHash(); render(); }
 
 /* Leaderboard: the real track record embedded in this season's payload
  * (trackRecord() -- scripts/build_track_record.py), for the two backtested
@@ -629,10 +785,81 @@ function setStrategy(id) {
   // and not selectable (strategyRows()'s fieldPending branch marks them
   // `pending`, and renderCompare() skips the click handler for those).
   if (fieldPending()) return;
-  if (![MODEL, 'p1', 'ev'].includes(id)) return;
-  state.strategy = id;
+  if (![MODEL, RULE, 'p1', 'ev'].includes(id)) return;
+  if (id === 'p1' || id === 'ev') state.objective = id;
+  state.strategy = anyFilter() && id !== MODEL && id !== RULE ? CUSTOM : id;
+  if (id === RULE) runRuleSearch();
+  writeHash();
   refit();
   render();
+}
+
+function ruleKeys(season) {
+  return [...Object.keys(season.z || {}), 'seed'].sort();
+}
+function ruleSeasonPayload(payload) {
+  return { year: payload.year, first_round: payload.first_round, crit: { ...(payload.z || {}), seed: payload.teams.map(t => -t.seed) }, seed: payload.teams.map(t => t.seed), actual: payload.actual };
+}
+async function runRuleSearch() {
+  const host = document.getElementById('rule-panel');
+  if (!state.season || !state.seasonsIndex || typeof ruleSearchJob !== 'function') return;
+  state.rule.busy = true; state.rule.error = null; if (host) host.hidden = false; renderRulePanel();
+  try {
+    const years = state.seasonsIndex.filter(x => x.status === 'ready' && x.year < state.year).map(x => x.year).sort((a, b) => b - a);
+    const raw = (await Promise.all(years.map(loadSeason))).filter(s => s && s.actual && s.first_round && s.z);
+    const payloads = raw.map(ruleSeasonPayload);
+    const here = ruleSeasonPayload(state.season);
+    const keys = ruleKeys(state.season);
+    const result = ruleSearchJob({ played: payloads, here, keys, checkpoints: state.rule.checkpoints, maxCriteria: state.rule.maxCriteria, want: null });
+    state.rule.result = result; state.rule.busy = false; renderRulePanel(); renderCompare();
+  } catch (e) { state.rule.busy = false; state.rule.error = e.message || String(e); renderRulePanel(); }
+}
+function setRuleCheckpoint(round) {
+  const set = new Set(state.rule.checkpoints); set.has(round) ? set.delete(round) : set.add(round);
+  if (![1, 2, 3].some(r => set.has(r))) return;
+  state.rule.checkpoints = [...set].sort((a, b) => a - b); writeHash(); runRuleSearch();
+}
+function setRuleComplexity(max) { state.rule.maxCriteria = max; writeHash(); runRuleSearch(); }
+function setRuleChosen(i) { state.rule.chosen = i; writeHash(); renderRulePanel(); }
+function renderRulePanel() {
+  const box = document.getElementById('rule-panel'); if (!box) return;
+  box.hidden = state.strategy !== RULE; if (box.hidden) return;
+  const r = state.rule.result;
+  const rounds = RULE_CHECKPOINTS.map(x => `<button class="chip${state.rule.checkpoints.includes(x.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${x.r})">${x.label}</button>`).join('');
+  const controls = `<div class="rule-timeline"><b>Checkpoints</b>${RULE_CHECKPOINTS.map(x => `<button class="timeline-step${state.rule.checkpoints.includes(x.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${x.r})"><span>${x.r + 1}</span>${x.label}</button>`).join('')}</div><div class="objective-row"><b>Complexity:</b><button class="chip${state.rule.maxCriteria === 2 ? ' on' : ''}" onclick="setRuleComplexity(2)">Simple (2)</button><span class="adjust-help">At most two variables across rounds.</span><button class="chip${state.rule.maxCriteria === 3 ? ' on' : ''}" onclick="setRuleComplexity(3)">Flexible (3)</button><span class="adjust-help">Up to three variables, more expressive but easier to overfit.</span></div>`;
+  if (state.rule.busy) { box.innerHTML = `<h3>Rule search</h3>${controls}<p>Searching prior seasons…</p>`; return; }
+  if (state.rule.error) { box.innerHTML = `<h3>Rule search</h3>${controls}<p>${state.rule.error}</p>`; return; }
+  const entries = (r && r.entries) || [];
+  const rows = entries.map((e, i) => `<button class="chip${i === state.rule.chosen ? ' on' : ''}" onclick="setRuleChosen(${i})"><b>${e.seq.map((k, n) => `${['R64','R32','S16','E8','F4','Final'][n]}: ${k}`).join(' · ')}</b><span>${e.matches.k}/${e.matches.m} older-season matches · ${e.complexity[0]} criteria · ${e.complexity[1]} switches</span></button>`).join('');
+  const chosen = entries[state.rule.chosen];
+  box.innerHTML = `<h3>Rule search</h3>${controls}<p class="adjust-help">A rule chooses the better team on one variable for each round. It is experimental and not pool-scored.</p>${entries.length ? `<p><b>Recent reproducibility run</b>: ${r.run.join(', ')} · ${r.nRules.toLocaleString()} surviving rules.</p><div class="rule-results">${rows}</div><p><b>Older-season matches</b>: the selected rule matches ${chosen.matches.k} of ${chosen.matches.m} seasons${chosen.matches.years.length ? ` (${chosen.matches.years.join(', ')})` : ''} outside the recent run.</p><p><b>Alternative rules</b>: choose another sequence above to compare its round-by-round record.</p>` : '<p>No rule matched those checkpoints in the available seasons.</p>'}`;
+}
+
+function setExplore(key) { state.explore = key; renderExplore(); }
+function setExploreTab(tab) { state.exploreTab = tab; renderExplore(); }
+function renderExplore() {
+  const box = document.getElementById('explore-panel'); if (!box) return;
+  box.hidden = state.strategy !== MODEL || !state.season || !fitReady(); if (box.hidden) return;
+  const vars = state.season.variables || []; const key = vars.some(v => v.key === state.explore) ? state.explore : (vars[0] || {}).key;
+  state.explore = key; const meta = vars.find(v => v.key === key) || { key, label: key };
+  const values = (state.season.z && state.season.z[key]) || [];
+  const ranked = state.season.teams.map((t, i) => ({ t, v: values[i] })).filter(x => Number.isFinite(x.v)).sort((a, b) => b.v - a.v).slice(0, 8);
+  const groups = {}; vars.forEach(v => (groups[v.group || 'Other'] ||= []).push(v));
+  const picker = Object.entries(groups).map(([group, items]) => `<div class="variable-group"><b>${group}</b><div class="chip-list">${items.map(v => `<button class="chip${v.key === key ? ' on' : ''}" onclick="setExplore('${v.key}')">${v.label || v.key}${CANONICAL_KEYS.includes(v.key) ? ' · in model' : ''}</button>`).join('')}</div></div>`).join('');
+  const top = ranked.map(x => `<div class="scard-row"><span>${x.t.seed} ${x.t.name}</span><b>${x.v.toFixed(2)}σ</b></div>`).join('');
+  const games = solveByFit().flat().map(g => ({ ...g, gap: Math.abs((values[g.a] || 0) - (values[g.b] || 0)) })).sort((a, b) => b.gap - a.gap).slice(0, 5);
+  const matchup = games.map(g => `<div class="scard-row"><span>${state.season.teams[g.a].name} vs ${state.season.teams[g.b].name}</span><b>${g.gap.toFixed(2)}σ · model: ${state.season.teams[g.win].name} (${Math.round(g.p * 100)}%)</b></div>`).join('');
+  let signal = '';
+  const col = state.training && state.training.keys.indexOf(key);
+  if (col >= 0 && typeof variableRecord === 'function') {
+    const rec = variableRecord(state.training.games, col, state.year);
+    if (rec) signal = `<p class="adjust-help">Historical one-variable signal: the higher-rated side won ${Math.round(rec.betterWins.rate * 100)}% of ${rec.betterWins.n} games; gap correlation with margin ${rec.corr.toFixed(2)}.</p>`;
+  }
+  const tabs = `<div class="objective-row"><button class="chip${state.exploreTab === 'field' ? ' on' : ''}" onclick="setExploreTab('field')">Field ranking</button><button class="chip${state.exploreTab === 'matchups' ? ' on' : ''}" onclick="setExploreTab('matchups')">Matchup gaps</button><button class="chip${state.exploreTab === 'sensitivity' ? ' on' : ''}" onclick="setExploreTab('sensitivity')">Model sensitivity</button></div>`;
+  const higher = meta.higher_better === false ? 'Lower values are better (for example, rank). Higher values are better for this variable.' : 'Higher values are better for this variable.';
+  const sensitivity = state.fit.keys.includes(key) ? `<p class="adjust-help">This variable is used by the fitted model. Its coefficient is ${state.fit.beta[state.fit.keys.indexOf(key)].toFixed(2)} margin points per standard deviation; removing variables requires a full refit.</p>` : '<p class="adjust-help">This variable is available for exploration but is not used by the validated fitted model.</p>';
+  const body = state.exploreTab === 'field' ? `<p><b>${meta.label || key}</b> — ${higher}</p>${top}${signal}` : state.exploreTab === 'matchups' ? `<p><b>Largest matchup gaps on the fitted bracket</b></p>${matchup}` : sensitivity;
+  box.innerHTML = `<h3>Explore fitted model variables</h3><p class="adjust-help">Inspect rankings, historical signal, matchup gaps, and sensitivity. Choosing a variable here does not change the fitted bracket.</p>${tabs}<div class="variable-picker">${picker}</div>${body}`;
 }
 
 function ordinal(n) {
@@ -656,6 +883,7 @@ async function setYear(year) {
   }
   // Refit: the excluded season changed, so the coefficients must change too.
   refit();
+  writeHash();
   render();
 }
 
@@ -667,6 +895,7 @@ async function init() {
   // pickDefaultSeason(): the newest listed season's bracket once it has one,
   // else the newest thing on record while its field is pending.
   state.seasonsIndex = idx.seasons;
+  readHash();
   const fallback = pickDefaultSeason(idx.seasons);
   if (fallback !== null) state.year = fallback;
 
