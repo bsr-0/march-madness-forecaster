@@ -269,8 +269,8 @@ check('a listed season with played seasons before it is pending, not empty; the 
     { year: 2025, status: 'ready' }, { year: 2026, status: 'ready' }, { year: 2027, status: 'not_started' },
   ];
   const rows = app.strategyRows();
-  assert.strictEqual(rows.length, 3, 'exactly the 3 real strategies -- no rule-search row any more');
-  assert.strictEqual(JSON.stringify(rows.map(r => r.id)), JSON.stringify(['p1', 'ev', 'model']));
+  assert.strictEqual(rows.length, 4, 'the three validated strategies plus the experimental rule search');
+  assert.strictEqual(JSON.stringify(rows.map(r => r.id)), JSON.stringify(['p1', 'ev', 'model', 'rule']));
   assert.ok(rows.every(r => r.pending === true));
   assert.ok(rows.every(r => r.p1 === null && r.ev === null && r.champion === null));
 });
