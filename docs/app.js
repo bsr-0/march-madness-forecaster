@@ -145,6 +145,12 @@ const state = {
   // finalists and the semifinals are the end of the story, not the start.
   mobileRound: MOBILE_ROUND_DEFAULT,
   explore: 'adj_defensive_efficiency',   // variable key the Explore panel is showing
+  // Strategy-card family filter, added with the 2026-09-19 card restyle
+  // (docs/index2.html). Purely a display filter over strategyRows()'s own
+  // `kind` string -- there are only 4 real strategies, so this narrows
+  // which cards show rather than changing what any of them compute.
+  // 'all' | 'backtested' | 'optimal' | 'fitted' | 'experimental'
+  family: 'all',
   // Rule search (experimental strategy): what the user asked a rule to
   // reproduce, over how many prior played seasons, and the last result.
   rule: {
@@ -868,6 +874,7 @@ function render() {
   const note = document.getElementById('mode-note');
   const weights = document.getElementById('strategy');
   { const main = document.getElementById('main'); if (main) main.classList.toggle('pending', fieldPending(s)); }
+  renderCountdown();
   if (fieldPending(s)) {
     // The field is not out: the strategy table (rule search selectable, the
     // rest listed for what they will be), the rule panel with its rules,
@@ -881,6 +888,7 @@ function render() {
     { const el = document.getElementById('dropped-note'); if (el) el.textContent = ''; }
     state.notice = '';
     renderCompare();
+    renderLeaderboard();
     renderRulePanel();
     // The orientation line in the empty-state slot, in its light form; CSS
     // (#main.pending) puts it first on every viewport. Composed here from
@@ -899,7 +907,7 @@ function render() {
     { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
     { const nav = document.getElementById('board-nav'); if (nav) nav.hidden = true; }
     { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
-    { for (const id of ['headline', 'compare', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
+    { for (const id of ['headline', 'compare', 'leaderboard', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
     { const ex = document.getElementById('explore'); if (ex) ex.hidden = true; }
     { const rp = document.getElementById('rulepanel'); if (rp) rp.hidden = true; }
     { const tune = document.getElementById('tune'); if (tune) tune.hidden = true; }
@@ -1002,6 +1010,7 @@ function render() {
     // The strategy table stays: it is the way to another strategy, and
     // hiding it with the board used to strand the visitor here.
     renderCompare();
+    renderLeaderboard();
     updateMobileNav();
     renderRulePanel();
     return;
@@ -1015,6 +1024,7 @@ function render() {
   { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
   renderHeadline(rounds);
   renderCompare();
+  renderLeaderboard();
   renderExplore();
   renderRulePanel();
   { const why = document.getElementById('why'); if (why) why.hidden = false; }
@@ -1233,38 +1243,120 @@ function renderHeadline(rounds) {
     ${went}`;
 }
 
+/* Which family chip a row falls under. Derived from the same `kind` string
+ * the card's tag prints, so a chip and a card can never name a row
+ * differently -- there is exactly one definition of what a strategy is. */
+function strategyFamily(kind) {
+  if (kind.startsWith('Backtested rule')) return 'backtested';
+  if (kind.startsWith('Exact optimum')) return 'optimal';
+  if (kind.startsWith('Evaluated, not selected')) return 'fitted';
+  return 'experimental';
+}
+const FAMILY_LABEL = { all: 'All', backtested: 'Backtested rule', optimal: 'Exact optimum', fitted: 'Fitted model', experimental: 'Experimental' };
+
+/* One line under each card's name. Short on purpose -- the full explanation
+ * for each strategy is renderStrategies()'s cards in the "why" panel below;
+ * this is the glance, not the methodology. */
+function scardNote(id) {
+  if (id === 'p1') return 'Fixed contrarian-risk rule, backtested across played seasons: takes upsets the field will not because second place pays nothing.';
+  if (id === 'ev') return 'The exact expected-points maximum over the candidate pool, solved by dynamic programming.';
+  if (id === MODEL) return 'A ridge regression fitted in your browser on seasons before this one, never on the one shown.';
+  return 'One variable per round, searched for how far back it reproduces the chosen rounds. Found after the fact -- never scored.';
+}
+
+function setFamily(val) {
+  state.family = val;
+  renderCompare();
+}
+
 function renderCompare() {
   const box = document.getElementById('compare');
   if (!box) return;
-  const rows = strategyRows();
+  const rows = strategyRows().map(r => ({ ...r, family: strategyFamily(r.kind) }));
   const cell = (v, f) => (v === null || v === undefined ? '<span class="muted">—</span>' : f(v));
-  // Played seasons get two more columns: the expectation on the left, the
-  // realisation on the right, and the header says which is which.
-  const played = rows.some(r => r.record);
+  const families = ['all', ...Array.from(new Set(rows.map(r => r.family)))];
+  const shown = state.family === 'all' ? rows : rows.filter(r => r.family === state.family);
   box.hidden = false;
   box.innerHTML = `
-    <table class="cmp">
-      <thead><tr>
-        <th>Strategy</th><th class="num">Chance of 1st</th><th class="num">Exp. points</th><th>Champion</th>
-        ${played ? `<th class="num cmp-real">Scored</th><th class="cmp-real">Finish</th>` : ''}
-      </tr></thead>
+    ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
+      <span class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</span>`).join('')}</div>` : ''}
+    <div class="strategy-grid">${shown.map(r => `
+      <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
+        ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }"`}>
+        <span class="scard-tag${r.family === 'experimental' ? ' alt' : ''}">${r.kind}${r.filtered ? ' · filtered' : ''}</span>
+        <h4>${r.label}</h4>
+        <p class="scard-note${r.stale ? ' stale' : ''}">${r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</p>
+        <div class="scard-row"><span>Chance of 1st</span><b>${cell(r.p1, p1Pct)}</b></div>
+        <div class="scard-row"><span>Exp. points</span><b>${cell(r.ev, v => v.toFixed(0))}</b></div>
+        <div class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></div>
+        ${r.record ? `<div class="scard-row real"><span>Scored</span><b>${r.record.points.toLocaleString()}</b></div>
+        <div class="scard-row real"><span>Finish</span><span>${finishText(r.record)}</span></div>` : ''}
+        ${r.id === 'p1' && !r.pending ? `<div class="risk-gauge">
+          <div class="risk-track"><span class="risk-mark" style="left:35%"></span></div>
+          <div class="risk-label"><span>Chalk</span><span>Chaos</span></div>
+        </div>` : ''}
+      </div>`).join('')}
+    </div>
+    ${rows.some(r => r.record) ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
+      Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
+      One season is one draw.</p>` : ''}`;
+}
+
+/* Leaderboard: the real track record embedded in this season's payload
+ * (trackRecord() -- scripts/build_track_record.py), for the two backtested
+ * rules and the fitted model. Not shown for a season that has not been
+ * played -- there is no realisation to report yet -- and the rule search is
+ * never a row here, on purpose: it is never scored against the pool (see
+ * its own panel's copy), so a leaderboard position for it would be a number
+ * this repo has explicitly refused to compute. */
+function renderLeaderboard() {
+  const box = document.getElementById('leaderboard');
+  if (!box) return;
+  const s = state.season;
+  const tr = s && s.track_record;
+  if (!tr || !tr.strategies) { box.hidden = true; box.innerHTML = ''; return; }
+  const LABEL = { p1: 'Win the pool', ev: 'Most expected points', model: 'Fitted model' };
+  const rows = Object.entries(tr.strategies)
+    .filter(([id]) => LABEL[id])
+    .map(([id, r]) => ({ id, label: LABEL[id], ...r }))
+    .sort((a, b) => b.won_share - a.won_share || b.points - a.points);
+  if (!rows.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="panel-head"><p class="panel-title">Strategy leaderboard — ${s.year}, as played</p></div>
+    <table class="lb">
+      <thead><tr><th>Strategy</th><th class="num">Points</th><th class="num">Won share</th><th>Finish</th></tr></thead>
       <tbody>${rows.map(r => `
-        ${r.pending ? `<tr class="cmp-row na" aria-disabled="true">`
-          : `<tr class="cmp-row${r.active ? ' on' : ''}" onclick="setStrategy('${r.id}')" role="button" tabindex="0"
-            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }">`}
-          <td><span class="cmp-label">${r.label}</span>
-              <span class="cmp-kind">${r.kind}${r.filtered ? ' · filtered' : ''}${r.stale ? ' · not scored' : ''}</span></td>
-          <td class="num">${cell(r.p1, p1Pct)}</td>
-          <td class="num">${cell(r.ev, v => v.toFixed(0))}</td>
-          <td>${r.champion ? `<span class="cmp-seed">${r.champion.seed}</span> ${r.champion.name}` : '<span class="muted">—</span>'}</td>
-          ${played ? `<td class="num cmp-real">${r.record ? r.record.points.toLocaleString() : '<span class="muted">—</span>'}</td>
-          <td class="cmp-real cmp-finish">${r.record ? finishText(r.record) : '<span class="muted">—</span>'}</td>` : ''}
+        <tr><td>${r.label}</td>
+          <td class="num">${r.points.toLocaleString()}</td>
+          <td class="num">${Math.round(r.won_share * 100)}%</td>
+          <td>${finishText(r)}</td>
         </tr>`).join('')}
       </tbody>
     </table>
-    ${played ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
-      Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
-      One season is one draw.</p>` : ''}`;
+    <p class="lb-foot">Points scored against the real ${s.year} outcome; won share and finish are across the same
+      ${tr.n_trials ? tr.n_trials.toLocaleString() : ''} simulated ${tr.pool_size || 30}-entry pools P(1st) is measured
+      against. One season is one draw, so this is not a multi-year average. The rule search is not scored and has no row here.</p>`;
+}
+
+/* Header countdown, shown only while the newest listed season is
+ * not_started (fieldPending()). No payload field carries an exact tip-off
+ * date -- src/prediction/market_probabilities.py's own working assumption is
+ * "Selection Sunday is typically mid-March; March 15 is conservative" -- so
+ * this is stated as an estimate against that same assumption, never as a
+ * precise clock. */
+function renderCountdown() {
+  const box = document.getElementById('countdown');
+  if (!box) return;
+  const s = state.season;
+  if (!fieldPending(s) || !s) { box.hidden = true; return; }
+  const est = new Date(Date.UTC(s.year, 2, 15)); // month 2 = March, 0-indexed
+  const days = Math.ceil((est - new Date()) / 86400000);
+  box.hidden = false;
+  box.innerHTML = days > 0
+    ? `~<b>${days}</b> days to Selection Sunday (est.)`
+    : `Selection Sunday ${s.year} is imminent (est.)`;
 }
 
 
