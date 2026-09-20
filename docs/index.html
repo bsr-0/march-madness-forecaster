@@ -2,254 +2,99 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bracket Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bracket Strategy Hub — 2027</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=4a3d6452">
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161d27; --panel2:#1d2733; --border:#232e3b; --border2:#2f3d4d;
+    --text:#e8edf2; --muted:#9aa7b6; --muted2:#6c7889; --accent:#ff6b35; --accent2:#3ba9ff;
+    --good:#3ecf8e; --warn:#ffb347; --bad:#ff5d5d;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+  header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  header h1{margin:0;font-size:20px;}
+  header .sub{color:var(--muted);font-size:13px;}
+  #countdown{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:13px;text-align:center;}
+  #countdown b{color:var(--accent);font-size:15px;}
+
+  main{max-width:1280px;margin:auto;padding:24px;}
+  .strategy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:28px;}
+  .scard{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;}
+  .scard.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent);}
+  .scard.na{opacity:.65;cursor:default;}.scard-tag{font-size:10px;text-transform:uppercase;color:var(--accent2);letter-spacing:.04em;}
+  .scard h4{margin:6px 0;font-size:15px;}.scard-note{min-height:52px;margin:0 0 10px;color:var(--muted);font-size:12.5px;line-height:1.4;}
+  .scard-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-top:7px;}.scard-row b{color:var(--good);text-align:right;}.scard-row.real{color:var(--muted);}
+  .family-chips{display:flex;gap:6px;margin-bottom:12px}.chip{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:6px 10px;border-radius:999px;font-size:12px;cursor:pointer}.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1300}
+
+  section.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:24px;}
+  section.panel h2{margin-top:0;font-size:16px;}
+
+  .bracket-wrap{overflow-x:auto;padding-bottom:10px;}
+  .bracket{display:flex;gap:22px;min-width:900px;}
+  .region-col{display:flex;flex-direction:column;justify-content:space-around;gap:8px;}
+  .round-label{font-size:10px;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:6px;}
+  .matchup{border:1px dashed var(--border);border-radius:6px;padding:6px;margin:6px 0;background:var(--panel2);}
+  .team-slot{display:flex;justify-content:space-between;font-size:12px;padding:4px 6px;border-radius:4px;color:var(--muted);}
+  .team-slot.pickable:hover{background:#26313f;color:var(--text);cursor:pointer;}
+  .seed{color:var(--accent2);font-weight:600;margin-right:6px;}
+  .tbd-banner{font-size:12px;color:var(--warn);background:#3a2d16;border:1px solid #5a441f;border-radius:6px;padding:8px 12px;margin-bottom:14px;}
+
+  footer{padding:16px 24px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);}
+  a{color:var(--accent2);}
+</style>
 </head>
 <body>
 
-<!-- One destination. The board is the product: pick a season, choose what you
-     are optimising for, and read the bracket that falls out. Per-variable
-     selection was removed 2026-08-29 (it measured null), and the Diagnostics
-     workbench beside it went on 2026-08-27. -->
-<header class="bar">
-  <div class="bar-l">
-    <span class="mark">Bracket Lab</span>
-    <!-- Newest season first, then the played seasons as history (init()). -->
-    <nav class="years" id="years" aria-label="Season"></nav>
+<header>
+  <div>
+    <h1>Bracket Strategy Hub</h1>
+    <div class="sub">Rule-based &amp; ML models for tournament bracket construction · <a href="#" id="repo-link">github repo</a></div>
   </div>
-  <!-- Only while the newest listed season is not_started (fieldPending()).
-       No payload carries an exact tip-off date, so this reads as an estimate
-       against "mid-March" -- see renderCountdown() in app.js -- not a
-       precise countdown clock. -->
-  <div class="countdown" id="countdown" hidden></div>
+  <div id="countdown">Tips off in <b id="days-left">—</b> days</div>
 </header>
 
 <main id="main">
-
-  <!-- 1. WHICH STRATEGY. One card per strategy, same fields each; the card
-       you click is the bracket you get. First on the page (2026-09-17;
-       it sat under the headline before) so the choice comes before the
-       answer, and it stays up in every ready-season state -- including a
-       rule search with nothing found, where it used to vanish with the
-       board and leave no way back. The fitted model's card is labelled for
-       what it is: scored by the same referee as the pool strategies, never
-       selected by it. Restyled 2026-09-19 from a table into cards (see
-       docs/index2.html); renderCompare() in app.js still builds it from the
-       exact same strategyRows() data, so nothing here can disagree with the
-       headline or the board. -->
-  <section class="compare" id="compare" hidden></section>
-
-  <!-- 1a. LEADERBOARD. Real per-strategy track record for the season on
-       screen (trackRecord() in app.js) -- not a fabricated multi-year
-       average. Only a played season has one, and only for the two
-       backtested rules and the fitted model: the rule search is excluded on
-       purpose because it is never scored (see its own panel). Hidden when
-       the season on screen hasn't been played yet. -->
-  <section class="panel" id="leaderboard" hidden></section>
-
-  <!-- 2. WHAT YOU GET. The one-glance summary of the bracket on screen:
-       season, objective, champion, the two numbers, and the one sentence that
-       says what kind of thing this is (a pool strategy, not a game-prediction
-       ranking). Everything a visitor needs before the bracket itself; nothing
-       they do not. Filled by renderHeadline() from the same payload fields
-       the comparison table and the board use, so the three cannot disagree. -->
-  <section class="headline" id="headline" hidden></section>
-
-  <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
-  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
-
-  <!-- 3. THE BRACKET. Getting it OUT is the deliverable of this whole system:
-       63 picks typed into a pool site. -->
-  <section class="board-tools" id="board-tools" hidden>
-    <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
-    <button class="tool" id="print-picks" onclick="window.print()">Print</button>
-    <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
-  </section>
-
-  <!-- Narrow-viewport only (see @media (max-width: 720px) in app.css): the
-       six-column board does not fit a phone width without either scrolling
-       sideways or shrinking past readable, so under that width the board
-       shows one round at a time instead. Always in the DOM -- CSS alone
-       decides whether it is visible, so there is nothing for JS to create or
-       tear down when the viewport crosses the breakpoint. -->
-  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
-    <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
-    <span class="rnav-label" id="rnav-label"></span>
-    <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
-  </nav>
-  <div class="rnav-dots" id="rnav-dots" hidden></div>
-
-  <!-- Season unavailable / not started. With played seasons before it a
-       not-started season is PENDING instead (fieldPending() in app.js): this
-       slot carries the one-line orientation, ordered first on the page by
-       CSS (#main.pending), and the board shows six round headers with game
-       counts under the chosen rule's criteria (pendingBoardHTML()). -->
-  <section class="empty" id="empty" hidden></section>
-
-  <section class="board" id="board"></section>
-
-  <!-- 3a. RULE SEARCH (experimental strategy only). Fenced: its own panel,
-       orange, opened only while that strategy is selected. Asks how far
-       back one criterion-per-round rule can reproduce the chosen rounds
-       (Sweet 16 / Elite Eight / Final Four / Champion; Simple = at most two
-       variables, Flexible = three), growing the window back from the newest
-       played season and stopping at the first that leaves no rule. Offers
-       the simplest survivor and two alternatives, each with its matches in
-       the older seasons outside the run and its per-round record; the
-       one-variable table sits collapsed beneath. The criterion deciding
-       each round is printed under the board's round headers; the rounds,
-       complexity and chosen rule travel in the URL. Never scored, never fed
-       to anything else; the panel says so. -->
-  <details class="tune lab" id="rulepanel" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Rule search — experimental</span>
-      <span class="tune-sub">How far back can one rule reproduce these rounds? Not part of the validated methodology: no chance of finishing first, no expected points, no claim of anything.</span>
-    </summary>
-    <div class="panel" id="rule-body"></div>
-  </details>
-
-  <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
-       on/off toggle was removed 2026-08-29 because measurement said choosing
-       bought nothing. This is what gives a single variable a purpose without
-       letting anyone edit the validated model: pick one and see where the
-       field ranks on it, where this bracket's games hinge on it, and what it
-       predicts on its own -- using only seasons before the one shown, from the
-       same training rows the model uses. The model, the board and every number above are untouched
-       by anything chosen here. -->
-  <details class="tune" id="explore" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Explore a variable</span>
-      <span class="tune-sub">Where the field stands on it, where this bracket hinges on it, and what it predicts on its own. Looking, not editing: the model does not change.</span>
-    </summary>
-    <div class="panel" id="explore-body"></div>
-  </details>
-
-  <!-- 4. ADJUST. Three filter axes over the precomputed candidate pool. Each
-       narrows WHICH brackets are eligible; the objective decides what is
-       maximised over them. One-seed count and depth sound alike and are not:
-       both of "Connecticut(2), Gonzaga(3), Florida(1), Michigan(1)" and
-       "Michigan State(3), Purdue(2), Illinois(3), Iowa State(2)" reach exactly
-       a 3 seed, and they are completely different brackets. Collapsed:
-       <details> rather than JS, so there is no state to keep in sync and it
-       works before any script runs. Shown only for the pool strategies
-       (render() sets `hidden`): the filters narrow the precomputed pool,
-       which the fitted model and the rule search do not draw from, so under
-       those two the panel would offer a control with nothing to act on. -->
-  <details class="tune" id="tune" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Adjust this bracket</span>
-      <span class="tune-sub">Back a team, or force a shape. The recommendation above already assumes none of it.</span>
-    </summary>
-
-  <section class="panel" id="champions" hidden>
-    <div class="panel-head"><p class="panel-title">Back a champion</p></div>
-    <div class="chips" id="champ-list"></div>
-    <p class="prior-note" id="champ-note"></p>
-  </section>
-
-  <section class="panel" id="ones" hidden>
-    <div class="panel-head"><p class="panel-title">How many 1 seeds reach the Final Four</p></div>
-    <div class="chips" id="ones-list"></div>
-    <p class="prior-note" id="ones-note"></p>
-  </section>
-
-  <section class="panel" id="shapes" hidden>
-    <div class="panel-head"><p class="panel-title">The biggest upset in your Final Four</p></div>
-    <div class="chips" id="shape-list"></div>
-    <p class="prior-note" id="shape-note"></p>
-  </section>
-
-  <section class="panel" id="dd16" hidden>
-    <div class="panel-head"><p class="panel-title">Well-known bracket patterns</p></div>
-    <div class="chips" id="dd-list"></div>
-    <p class="prior-note" id="dd-note"></p>
-  </section>
-
-  <!-- Provenance. The candidate pool is not one model's opinion: it is
-       simulated from Torvik, Elo and the Massey composite, plus region_top_n
-       constructions. Those disagree about real teams, and that disagreement is
-       the point -- a bracket Torvik would never sample is reachable. -->
-  <section class="panel" id="sources" hidden>
-    <div class="panel-head"><p class="panel-title">Which rating system</p></div>
-    <div class="chips" id="src-list"></div>
-    <p class="prior-note" id="src-note"></p>
-  </section>
-
-  <!-- Near-tied alternates. The referee's standard error is about half a point,
-       so the top few in any filtered set are not meaningfully ranked. Offering
-       only the argmax would present a coin flip as a verdict. -->
-  <section class="panel" id="alts" hidden>
-    <div class="panel-head"><p class="panel-title">Near-tied alternatives</p></div>
-    <div class="chips" id="alt-list"></div>
-    <p class="prior-note">
-      These score too close together for us to tell apart — the difference
-      between them is smaller than our own margin of error. Pick on something
-      the numbers cannot see: a team you believe in, or one you refuse to pick.
-    </p>
-  </section>
-
-  </details>
-
-  <!-- 5. HOW TRUSTWORTHY IS THIS. The methodology layer, collapsed: what the
-       strategy note says about the bracket on screen, the fitted model's
-       equation and its reliability table, the three strategies described in
-       full, and the P(1st) disclosure. All of it was above the bracket until
-       2026-09-16, which made the product read as a research dashboard that
-       happened to emit a bracket. The work that earned these paragraphs is in
-       artifacts/methodology_audit/; the page's job is to state the result
-       plainly and keep the reasoning one click away, not to bury the bracket
-       under it. -->
-  <details class="why" id="why" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Why this bracket, and how it was tested</span>
-      <span class="tune-sub">The objective, the referee, and the model behind the numbers above.</span>
-    </summary>
-
-    <section class="note" id="mode-note"></section>
-
-    <!-- The fitted model, printed. Empty unless the Fitted strategy is on. -->
-    <section id="equation"></section>
-
-    <!-- The three strategies in full. The comparison table above is the
-         selector; these are the explanations. -->
-    <section class="panel" id="strategy" hidden>
-      <div class="panel-head">
-        <p class="panel-title">The three strategies</p>
-      </div>
-      <div class="strat-list" id="strat-list"></div>
-      <!-- Mandatory disclosure (product.v3). It sits under the cards that print
-           "% to win" because that is the number it qualifies; the headline
-           repeats its substance in one line. Text comes from the artifact via
-           the payload; it is not retyped here. -->
-      <p class="disclosure" id="p1-note"></p>
+    <section>
+      <h2 style="font-size:16px;">Bracket strategies</h2>
+      <p style="color:var(--muted);font-size:13px;margin-top:-6px;">Choose the goal that matches your pool. The figures and labels come from this season's model output.</p>
+      <div id="compare" hidden></div>
     </section>
-  </details>
 
+    <section class="panel">
+      <h2>2027 Bracket</h2>
+      <div class="tbd-banner">
+        2027 field, seeding, and matchups aren't set yet (Selection Sunday is ~6 months out). Slots below are placeholders — swap in real teams once the bracket is announced, or keep exploring how each strategy would seed a hypothetical field.
+      </div>
+      <div class="bracket-wrap">
+        <div class="bracket" id="bracket-root"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="leaderboard" hidden></section>
+    <p id="unavailable" hidden></p>
 </main>
 
-<!-- Team inspector. Opens from any team on the board. -->
-<aside class="drawer" id="drawer" hidden aria-label="Team detail">
-  <div class="drawer-head">
-    <div>
-      <p class="d-name" id="d-name"></p>
-      <p class="d-sub" id="d-sub"></p>
-    </div>
-    <button class="x" id="d-close" aria-label="Close">&times;</button>
-  </div>
-  <div class="d-body" id="d-body"></div>
-</aside>
-<div class="scrim" id="scrim" hidden></div>
+<footer>
+  Bracket Strategy Hub
+</footer>
+<script>
+  const placeholderBracket = document.getElementById('bracket-root');
+  for (const region of ['East', 'West', 'South', 'Midwest']) {
+    const column = document.createElement('div');
+    column.className = 'region-col';
+    column.innerHTML = `<div class="round-label">${region} — Round of 16</div>${Array.from({length: 4}, () => `
+      <div class="matchup"><div class="team-slot"><span><span class="seed">TBD</span>Team A</span></div>
+      <div class="team-slot"><span><span class="seed">TBD</span>Team B</span></div></div>`).join('')}`;
+    placeholderBracket.appendChild(column);
+  }
+</script>
+<script src="fit.js"></script>
+<script src="app.js"></script>
 
-<!-- BUMP ?v= ON EVERY CHANGE TO THESE FILES. It is the only cache-busting
-     mechanism on the page and it fails silently: the deploy succeeds, the new
-     file sits on the server, and returning browsers keep running the old one
-     against the new data. v=23 shipped the strategy picker without a bump, so
-     anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=54aa26a5"></script>
-<script src="app.js?v=a4521811"></script>
 </body>
 </html>
