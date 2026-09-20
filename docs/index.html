@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=f4b98027">
+<link rel="stylesheet" href="app.css?v=4a3d6452">
 </head>
 <body>
 
@@ -21,19 +21,35 @@
     <!-- Newest season first, then the played seasons as history (init()). -->
     <nav class="years" id="years" aria-label="Season"></nav>
   </div>
+  <!-- Only while the newest listed season is not_started (fieldPending()).
+       No payload carries an exact tip-off date, so this reads as an estimate
+       against "mid-March" -- see renderCountdown() in app.js -- not a
+       precise countdown clock. -->
+  <div class="countdown" id="countdown" hidden></div>
 </header>
 
 <main id="main">
 
-  <!-- 1. WHICH STRATEGY. Four rows, one per strategy, same columns each; the
-       row you click is the bracket you get. First on the page (2026-09-17;
+  <!-- 1. WHICH STRATEGY. One card per strategy, same fields each; the card
+       you click is the bracket you get. First on the page (2026-09-17;
        it sat under the headline before) so the choice comes before the
        answer, and it stays up in every ready-season state -- including a
        rule search with nothing found, where it used to vanish with the
-       board and leave no way back. The fitted model's row is labelled for
+       board and leave no way back. The fitted model's card is labelled for
        what it is: scored by the same referee as the pool strategies, never
-       selected by it. -->
+       selected by it. Restyled 2026-09-19 from a table into cards (see
+       docs/index2.html); renderCompare() in app.js still builds it from the
+       exact same strategyRows() data, so nothing here can disagree with the
+       headline or the board. -->
   <section class="compare" id="compare" hidden></section>
+
+  <!-- 1a. LEADERBOARD. Real per-strategy track record for the season on
+       screen (trackRecord() in app.js) -- not a fabricated multi-year
+       average. Only a played season has one, and only for the two
+       backtested rules and the fitted model: the rule search is excluded on
+       purpose because it is never scored (see its own panel). Hidden when
+       the season on screen hasn't been played yet. -->
+  <section class="panel" id="leaderboard" hidden></section>
 
   <!-- 2. WHAT YOU GET. The one-glance summary of the bracket on screen:
        season, objective, champion, the two numbers, and the one sentence that
@@ -234,6 +250,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=54aa26a5"></script>
-<script src="app.js?v=2de0156b"></script>
+<script src="app.js?v=a4521811"></script>
 </body>
 </html>

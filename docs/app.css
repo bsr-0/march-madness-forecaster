@@ -1,22 +1,27 @@
-/* Bracket Lab — dark, minimal, near-monochrome. Colour is rationed: the only
-   saturated things on the page are a picked team, an upset, and a negative
-   coefficient. Everything else is greyscale so those three read instantly. */
+/* Bracket Lab — dark theme, restyled 2026-09-19 on the docs/index2.html
+   mockup's palette (warm orange accent over near-black panels) after the
+   product decision to replace the old near-monochrome look. Colour is still
+   rationed for what MATTERS on the board itself (a picked team, an upset, a
+   negative coefficient use --accent/--up/--bad exactly as before); the
+   warmer palette is spent on the strategy cards and chrome around it, which
+   is new surface, not the part the "ration colour" rule was protecting. */
 
 :root {
   color-scheme: dark;
-  --bg:      #0e1013;
-  --panel:   #16191e;
-  --panel-2: #1c2027;
-  --ink:     #e8eaed;
-  --ink-2:   #9ba3ae;
-  --ink-3:   #667080;
-  --line:    #24282f;
-  --line-2:  #333944;
-  --accent:  #6ea8fe;   /* picked team, positive coefficient */
-  --up:      #e0894a;   /* upset, negative coefficient */
-  --good:    #5fb98a;
-  --bad:     #e66e6e;
-  --r:       8px;
+  --bg:      #0f1419;
+  --panel:   #161d27;
+  --panel-2: #1d2733;
+  --ink:     #e8edf2;
+  --ink-2:   #9aa7b6;
+  --ink-3:   #6c7889;
+  --line:    #232e3b;
+  --line-2:  #2f3d4d;
+  --accent:  #ff6b35;   /* picked team, positive coefficient, primary action */
+  --accent-2:#3ba9ff;   /* secondary accent: informational tags, links */
+  --up:      #ffb347;   /* upset, negative coefficient */
+  --good:    #3ecf8e;
+  --bad:     #ff5d5d;
+  --r:       10px;
 }
 
 * { box-sizing: border-box; }
@@ -818,3 +823,81 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   background: var(--panel-2); border-radius: 7px; padding: 8px 10px;
 }
 .dropped:empty { display: none; padding: 0; }
+
+/* ---------- countdown (header) ----------
+ * Shown only while the newest listed season is not_started (fieldPending()).
+ * No payload field carries an exact tip-off date -- src/prediction/
+ * market_probabilities.py's own working assumption is "Selection Sunday is
+ * typically mid-March; March 15 is conservative" -- so this reads as an
+ * estimate, not a countdown clock. See renderCountdown() in app.js. */
+.countdown {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 7px 13px; font-size: 12.5px; color: var(--ink-2); text-align: center; white-space: nowrap;
+}
+.countdown b { color: var(--accent); font-weight: 700; }
+
+/* ---------- strategy cards (top-level picker, replaces the old .cmp table) ----------
+ * One card per row of strategyRows(): the same four selectable brackets the
+ * table used to list, same click target (setStrategy), same numbers. Cards
+ * read better at a glance than a six-column table and are what index2.html
+ * proposed; the family chips above them filter by the same `kind` string the
+ * card's tag already shows; the numbers are the same data throughout. */
+.family-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.strategy-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px; margin: 0 0 22px;
+}
+.scard {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 14px 16px; cursor: pointer; text-align: left; transition: border-color .1s, background .1s;
+}
+.scard:hover { border-color: var(--line-2); background: var(--panel-2); }
+.scard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.scard.na { cursor: default; opacity: .55; }
+.scard.na:hover { border-color: var(--line); background: var(--panel); }
+.scard-tag {
+  display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--accent-2); margin-bottom: 6px;
+}
+.scard-tag.alt { color: var(--up); }
+.scard h4 { margin: 0 0 6px; font-size: 15px; color: var(--ink); }
+.scard-note { margin: 0 0 6px; color: var(--ink-3); font-size: 12px; line-height: 1.4; }
+.scard-note.stale { color: var(--up); }
+.scard-row {
+  display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
+  color: var(--ink-2); margin-top: 5px; font-variant-numeric: tabular-nums;
+}
+.scard-row b { color: var(--ink); font-weight: 600; }
+.scard-row.real { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 7px; color: var(--ink-3); }
+
+/* Read-only. The fixed contrarian-risk coefficient the "Win the pool" rule
+ * uses (0.35 -- see app.js's WHY THE FIRST IS A FIXED RULE), placed on the
+ * card that rule belongs to. Not a control: app.js documents that choosing
+ * this per season was tried and measured WORSE than fixing it, so there is
+ * nothing here to drag. */
+.risk-gauge { margin-top: 8px; }
+.risk-track {
+  position: relative; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--line-2), var(--up));
+}
+.risk-mark {
+  position: absolute; top: -3px; width: 2px; height: 10px; background: var(--ink);
+  border-radius: 1px; transform: translateX(-1px);
+}
+.risk-label {
+  display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: .04em; margin-top: 3px;
+}
+
+/* ---------- leaderboard ----------
+ * Real per-strategy track record for the season on screen (trackRecord()),
+ * not a fabricated multi-year average: only a played season has one at all,
+ * and only for the two backtested rules and the fitted model -- the rule
+ * search is deliberately excluded (never scored; see its own panel's copy).
+ */
+.lb { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.lb th { text-align: left; padding: 0 12px 6px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.lb td { padding: 9px 12px 9px 10px; border-top: 1px solid var(--line); color: var(--ink-2); }
+.lb .num { text-align: right; }
+.lb tr:first-child td { color: var(--ink); }
+.lb-foot { margin: 8px 0 0 10px; font-size: 11.5px; line-height: 1.5; color: var(--ink-3); max-width: 86ch; }
