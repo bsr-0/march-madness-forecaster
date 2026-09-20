@@ -654,8 +654,8 @@ function renderCompare() {
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
       <button class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</button>`).join('')}</div>` : ''}
     <div class="strategy-grid">${shown.map(r => `
-      <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
-        ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
+      <div class="scard${r.pending && r.id !== RULE ? ' na' : r.active ? ' on' : ''}"
+        ${r.pending && r.id !== RULE ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
           onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }"`}>
         <span class="scard-tag">${r.kind}${r.filtered ? ' · filtered' : ''}</span>
         <h4>${r.label}${r.id === 'p1' ? ' <span class="recommended">Recommended starting point</span>' : ''}</h4>
@@ -721,13 +721,13 @@ function renderLeaderboard() {
   if (!box) return;
   const s = state.season;
   const tr = s && s.track_record;
-  if (!tr || !tr.strategies) { box.hidden = true; box.innerHTML = ''; return; }
+  if (!tr || !tr.strategies) { box.hidden = false; box.innerHTML = '<p class="adjust-help">Historical results are available after a completed tournament has a recorded outcome.</p>'; return; }
   const LABEL = { p1: 'Win the pool', ev: 'Most expected points', model: 'Fitted model' };
   const rows = Object.entries(tr.strategies)
     .filter(([id]) => LABEL[id])
     .map(([id, r]) => ({ id, label: LABEL[id], ...r }))
     .sort((a, b) => b.won_share - a.won_share || b.points - a.points);
-  if (!rows.length) { box.hidden = true; box.innerHTML = ''; return; }
+  if (!rows.length) { box.hidden = false; box.innerHTML = '<p class="adjust-help">No historical strategy results are available for this season.</p>'; return; }
   box.hidden = false;
   box.innerHTML = `
     <div class="panel-head"><p class="panel-title">Strategy leaderboard — ${s.year}, as played</p></div>
@@ -784,11 +784,12 @@ function setStrategy(id) {
   // Without a field there is nothing for any card to show; they are listed
   // and not selectable (strategyRows()'s fieldPending branch marks them
   // `pending`, and renderCompare() skips the click handler for those).
-  if (fieldPending()) return;
+  if (fieldPending() && id !== RULE) return;
   if (![MODEL, RULE, 'p1', 'ev'].includes(id)) return;
   if (id === 'p1' || id === 'ev') state.objective = id;
   state.strategy = anyFilter() && id !== MODEL && id !== RULE ? CUSTOM : id;
   if (id === RULE) runRuleSearch();
+  if (id === MODEL) { const panel = document.getElementById('explore-panel'); if (panel && panel.parentElement.tagName === 'DETAILS') panel.parentElement.open = true; }
   writeHash();
   refit();
   render();
@@ -803,13 +804,14 @@ function ruleSeasonPayload(payload) {
 async function runRuleSearch() {
   const host = document.getElementById('rule-panel');
   if (!state.season || !state.seasonsIndex || typeof ruleSearchJob !== 'function') return;
+  if (host && host.parentElement && host.parentElement.tagName === 'DETAILS') host.parentElement.open = true;
   state.rule.busy = true; state.rule.error = null; if (host) host.hidden = false; renderRulePanel();
   try {
     const years = state.seasonsIndex.filter(x => x.status === 'ready' && x.year < state.year).map(x => x.year).sort((a, b) => b - a);
     const raw = (await Promise.all(years.map(loadSeason))).filter(s => s && s.actual && s.first_round && s.z);
     const payloads = raw.map(ruleSeasonPayload);
-    const here = ruleSeasonPayload(state.season);
-    const keys = ruleKeys(state.season);
+    const here = raw.length ? ruleSeasonPayload(raw[0]) : null;
+    const keys = ruleKeys(raw[0] || state.season);
     const result = ruleSearchJob({ played: payloads, here, keys, checkpoints: state.rule.checkpoints, maxCriteria: state.rule.maxCriteria, want: null });
     state.rule.result = result; state.rule.busy = false; renderRulePanel(); renderCompare();
   } catch (e) { state.rule.busy = false; state.rule.error = e.message || String(e); renderRulePanel(); }
@@ -823,7 +825,8 @@ function setRuleComplexity(max) { state.rule.maxCriteria = max; writeHash(); run
 function setRuleChosen(i) { state.rule.chosen = i; writeHash(); renderRulePanel(); }
 function renderRulePanel() {
   const box = document.getElementById('rule-panel'); if (!box) return;
-  box.hidden = state.strategy !== RULE; if (box.hidden) return;
+  if (state.strategy !== RULE) { box.hidden = false; box.innerHTML = '<p class="adjust-help">Select the Rule search card above to run a historical reproducibility search.</p>'; return; }
+  box.hidden = false;
   const r = state.rule.result;
   const rounds = RULE_CHECKPOINTS.map(x => `<button class="chip${state.rule.checkpoints.includes(x.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${x.r})">${x.label}</button>`).join('');
   const controls = `<div class="rule-timeline"><b>Checkpoints</b>${RULE_CHECKPOINTS.map(x => `<button class="timeline-step${state.rule.checkpoints.includes(x.r) ? ' on' : ''}" onclick="setRuleCheckpoint(${x.r})"><span>${x.r + 1}</span>${x.label}</button>`).join('')}</div><div class="objective-row"><b>Complexity:</b><button class="chip${state.rule.maxCriteria === 2 ? ' on' : ''}" onclick="setRuleComplexity(2)">Simple (2)</button><span class="adjust-help">At most two variables across rounds.</span><button class="chip${state.rule.maxCriteria === 3 ? ' on' : ''}" onclick="setRuleComplexity(3)">Flexible (3)</button><span class="adjust-help">Up to three variables, more expressive but easier to overfit.</span></div>`;
@@ -839,7 +842,8 @@ function setExplore(key) { state.explore = key; renderExplore(); }
 function setExploreTab(tab) { state.exploreTab = tab; renderExplore(); }
 function renderExplore() {
   const box = document.getElementById('explore-panel'); if (!box) return;
-  box.hidden = state.strategy !== MODEL || !state.season || !fitReady(); if (box.hidden) return;
+  if (state.strategy !== MODEL || !state.season || !fitReady()) { box.hidden = false; box.innerHTML = '<p class="adjust-help">Select the Fitted model card above to explore variables, rankings, matchup gaps, and sensitivity.</p>'; return; }
+  box.hidden = false;
   const vars = state.season.variables || []; const key = vars.some(v => v.key === state.explore) ? state.explore : (vars[0] || {}).key;
   state.explore = key; const meta = vars.find(v => v.key === key) || { key, label: key };
   const values = (state.season.z && state.season.z[key]) || [];
