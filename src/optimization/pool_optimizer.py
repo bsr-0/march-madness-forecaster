@@ -167,6 +167,13 @@ class PoolOptimizer:
         model_round_probs: Pre-computed per-team per-round advancement
             probabilities from Monte Carlo simulation.  When provided,
             bypasses the heuristic fallback.
+        risk_level: UI risk slider, 0 = chalk, 1 = max contrarian. Default
+            None reproduces today's default pool-points/EV strategy build
+            exactly (the full Pareto risk sweep in
+            ``ParetoOptimizer.generate_pareto_brackets``, unchanged). When
+            set, ``pareto_brackets`` on the returned ``PoolResult`` becomes
+            a single bracket built at that risk level instead of the
+            frontier.
     """
 
     def __init__(
@@ -177,6 +184,7 @@ class PoolOptimizer:
         team_metadata: Optional[Dict[str, Any]] = None,
         construction_mode: str = "forward_greedy",
         include_champion_augmentation: bool = False,
+        risk_level: Optional[float] = None,
     ):
         environment.validate()
         # Deep-copy: mutations of the original dict are invisible.
@@ -205,6 +213,13 @@ class PoolOptimizer:
         # frontier contains only brackets produced organically by the risk
         # sweep, not post-hoc forced-champion variants.
         self._include_champion_augmentation: bool = include_champion_augmentation
+        # Risk slider for the pool-points/EV strategy build path. None
+        # (default) reproduces today's behavior exactly: leverage.analyze_pool
+        # runs its full Pareto risk sweep (0..1) and returns the whole
+        # frontier, unchanged. A float 0-1 switches ParetoOptimizer over to
+        # generating a single bracket at that risk level (0 = chalk, 1 = max
+        # contrarian) via the same _generate_bracket/_ev_score machinery.
+        self._risk_level: Optional[float] = risk_level
 
     @property
     def probabilities(self) -> Dict[Tuple[str, str], float]:
@@ -432,6 +447,7 @@ class PoolOptimizer:
                 team_metadata=self._team_metadata,
                 construction_mode=self._construction_mode,
                 include_champion_augmentation=self._include_champion_augmentation,
+                risk_level=self._risk_level,
             )
 
             leverage_picks = [
