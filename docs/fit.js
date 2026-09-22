@@ -822,6 +822,196 @@ function bracketAdvancementProbs(order, winProb) {
   return nodes[0].probs;
 }
 
+/* ---------------------------------------------------------------- risk-aware scoring & greedy fill
+ *
+ * JS port of `_make_ev_scorer` / `_decide_winner` / `_walk_bracket` (forward_greedy
+ * mode) in src/optimization/bracket_construction.py, for the one strategy that has
+ * no server-side risk grid: the fitted model. p1 and ev already ship a precomputed
+ * five-point `risk_variants` grid built by that same Python formula; the fitted
+ * board cannot be precomputed because it recomputes reactively as the user toggles
+ * variables, so this is the identical arithmetic, run here instead.
+ *
+ * FORWARD_GREEDY, NOT region_top_n's BEAM SEARCH. construct_bracket's modes all
+ * share this scorer and `_decide_winner`'s argmax-with-tiebreak; they differ only
+ * in which games get an anchor lock before the forward walk runs. region_top_n
+ * additionally replaces each region's forward walk with a beam search over whole-
+ * region EV (~2^15 outcomes per region) -- a global per-region optimisation, not a
+ * per-game decision, and re-running it here on every filter toggle would be a much
+ * larger reactive cost for a difference build_ui_payload.py's own ev_optimal comment
+ * describes as "the same bracket to within one game" for the EV case. forward_greedy
+ * has no anchor at all: every game, R64 through CHAMP, is decided by this scorer's
+ * argmax, with the same lexical tie-break, and nothing else. That is what is ported
+ * here: exactly `construct_bracket(mode="forward_greedy")`'s walk, which is directly
+ * checkable against the real Python function.
+ *
+ * ROUND_PROBS SHAPE MATCHES bracketAdvancementProbs()'s OUTPUT: {team: number[6]},
+ * index 0 = P(win the R64 game) ... index 5 = P(win the CHAMP game) -- so
+ * state.advancement in app.js is exactly this function's `roundProbs` input,
+ * already computed live from the fitted model. Its keys are whatever
+ * `first_round` (state.season.first_round) is keyed by -- in the current
+ * payload, integer indices into `teams`, not the string team_id.
+ *
+ * PUBLIC_PICKS SHAPE MATCHES THE SEASON PAYLOAD'S: {team_id: {round_name: pick_rate}},
+ * the same object build_ui_payload.py ships as the season's top-level
+ * `public_picks` field (real archived ESPN picks, the same source _make_ev_scorer's
+ * Python callers use). It is keyed by the STRING team_id, not the bracket-position
+ * index round_probs and first_round use -- see `teams` below for why every function
+ * here also takes the season's `teams` array: it is what resolves one key space
+ * into the other, exactly as build_ui_payload.py's own `seeds = {t["id"]: ...}`
+ * and this port's Python counterpart key everything by team_id.
+ */
+
+const RISK_ROUND_NAMES = ['R64', 'R32', 'S16', 'E8', 'F4', 'CHAMP'];
+
+/* ESPN standard scoring -- mirrors `_DEFAULT_SCORING` in bracket_construction.py. */
+const DEFAULT_SCORING = { R64: 10, R32: 20, S16: 40, E8: 80, F4: 160, CHAMP: 320 };
+
+/* Mirrors `POOL_FACTOR_THRESHOLD` in bracket_construction.py: at or below this
+ * entry count, in the default "threshold" mode, pool size does not affect the
+ * score at all. */
+const POOL_FACTOR_THRESHOLD = 50;
+
+/* Build a (teamId, roundIdx) -> score closure, the same formula as
+ * `_make_ev_scorer` in src/optimization/bracket_construction.py:
+ *
+ *   score = model_prob * pts * blended_diff
+ *   blended_diff = (1 - risk_level) * 1.0 + risk_level * diff
+ *   diff = uniqueness * pool_factor
+ *   uniqueness = max(0, 1 - public_prob)
+ *   pool_factor = 1 / max(1, log2(max(pool_size * public_prob, 1)))   (see modes below)
+ *
+ * roundProbs    {team: number[6]}            -- e.g. state.advancement, keyed
+ *               the same way `firstRound` is (bracket-position index)
+ * publicPicks   {team_id: {round_name: number}} -- the season payload's
+ *               public_picks, keyed by the STRING team_id
+ * teams         state.season.teams -- teams[index].id resolves a roundProbs/
+ *               firstRound key to the team_id publicPicks is keyed by
+ * riskLevel     0 (chalk) .. 1 (contrarian)
+ * poolSize      entries in the pool
+ * scoringSystem {round_name: points}, default DEFAULT_SCORING
+ * options.confidenceThreshold  same "lock high-certainty games to chalk" escape
+ *   hatch as the Python function; null/omitted disables it (this port's default,
+ *   and _make_ev_scorer's).
+ * options.poolFactorMode  "threshold" (default, matches every shipped bracket) |
+ *   "continuous" | "off" -- see _make_ev_scorer's docstring for what each does.
+ */
+function makeRiskScorer(roundProbs, publicPicks, teams, riskLevel, poolSize, scoringSystem, options) {
+  const opts = options || {};
+  const confidenceThreshold = opts.confidenceThreshold == null ? null : opts.confidenceThreshold;
+  const poolFactorMode = opts.poolFactorMode || 'threshold';
+  const scoring = scoringSystem || DEFAULT_SCORING;
+  if (poolFactorMode !== 'threshold' && poolFactorMode !== 'continuous' && poolFactorMode !== 'off') {
+    throw new Error(`makeRiskScorer: poolFactorMode must be 'threshold', 'continuous' or 'off', got ${poolFactorMode}`);
+  }
+
+  return function score(teamId, roundIdx) {
+    const roundName = RISK_ROUND_NAMES[roundIdx];
+    const rp = roundProbs[teamId];
+    const modelProb = rp && rp[roundIdx] != null ? Number(rp[roundIdx]) || 0 : 0;
+    const tid = teams && teams[teamId] ? teams[teamId].id : teamId;
+    const pp = publicPicks[tid];
+    const publicProb = pp && pp[roundName] != null ? Number(pp[roundName]) || 0 : 0;
+    const pts = scoring[roundName] != null ? Number(scoring[roundName]) : 10;
+
+    // Confidence routing: lock high-certainty games to chalk so the risk_level
+    // budget is concentrated on genuinely uncertain matchups.
+    if (confidenceThreshold !== null && modelProb >= confidenceThreshold) {
+      return modelProb * pts;
+    }
+
+    const uniqueness = Math.max(0, 1 - publicProb);
+    let poolFactor = 1.0;
+    if (poolFactorMode === 'threshold') {
+      if (poolSize > POOL_FACTOR_THRESHOLD) {
+        const expectedDups = poolSize * publicProb;
+        poolFactor = 1 / Math.max(1, Math.log2(Math.max(expectedDups, 1)));
+      }
+    } else if (poolFactorMode === 'continuous') {
+      const expectedDups = poolSize * publicProb;
+      poolFactor = 1 / Math.max(1, Math.log2(Math.max(expectedDups, 1)));
+    }
+    const diff = uniqueness * poolFactor;
+
+    const blendedDiff = (1 - riskLevel) * 1.0 + riskLevel * diff;
+    return modelProb * pts * blendedDiff;
+  };
+}
+
+/* One game's winner: argmax score(), lexical tie-break on the team_id STRING --
+ * mirrors the priority-3 fallback in `_decide_winner` exactly (the only priority
+ * that applies here: this port has no forced-champion or anchor-lock concept,
+ * matching construct_bracket's "forward_greedy" mode called with no
+ * forced_champion). `teams` resolves each bracket-position index to the team_id
+ * `_decide_winner` compares -- comparing the indices themselves would only agree
+ * with Python's tie-break by coincidence of the payload's team ordering. */
+function decideRiskWinner(t1, t2, roundIdx, scorer, teams) {
+  const s1 = scorer(t1, roundIdx);
+  const s2 = scorer(t2, roundIdx);
+  if (Math.abs(s1 - s2) > 1e-9) return s1 > s2 ? t1 : t2;
+  const id1 = teams && teams[t1] ? teams[t1].id : t1;
+  const id2 = teams && teams[t2] ? teams[t2].id : t2;
+  return id1 < id2 ? t1 : t2;
+}
+
+/* Forward-greedy fill of the whole bracket, R64 through CHAMP -- mirrors
+ * `_walk_bracket` with locked_teams=set(), lock_through_round=null, no
+ * forced_champion (construct_bracket's "forward_greedy" mode). No explicit
+ * region/seed bookkeeping is needed the way the Python version has it: the
+ * caller's `firstRound` is already the season's real bracket order (the same
+ * flat 64-team list decodeBracket() and solveBracket() in app.js walk), so
+ * pairing adjacent teams round over round reproduces the same region-by-region,
+ * round-by-round structure by construction.
+ *
+ * `teams` is state.season.teams, passed through to decideRiskWinner() for its
+ * team_id tie-break -- see makeRiskScorer()'s comment for why every function
+ * here needs it.
+ *
+ * Returns picks in decodeBracket()'s shape: an array of 6 round-lists of
+ * winners (32, 16, 8, 4, 2, 1 teams).
+ */
+function riskGreedyBracket(firstRound, scorer, teams) {
+  let current = firstRound.slice();
+  const rounds = [];
+  for (let r = 0; r < 6; r++) {
+    const next = [];
+    for (let g = 0; g < current.length; g += 2) {
+      next.push(decideRiskWinner(current[g], current[g + 1], r, scorer, teams));
+    }
+    rounds.push(next);
+    current = next;
+  }
+  return rounds;
+}
+
+/* Expected points and variance for a complete 6-round picks array, under the
+ * independent-pick approximation -- mirrors `_compute_expected_points`. `picks`
+ * is riskGreedyBracket()'s (or decodeBracket()'s) shape; `roundProbs` is the same
+ * {team: number[6]} the scorer above took. */
+function riskExpectedPoints(picks, roundProbs, scoringSystem) {
+  const scoring = scoringSystem || DEFAULT_SCORING;
+  let ev = 0, variance = 0;
+  for (let r = 0; r < picks.length; r++) {
+    const pts = scoring[RISK_ROUND_NAMES[r]] != null ? Number(scoring[RISK_ROUND_NAMES[r]]) : 0;
+    for (const team of picks[r]) {
+      const rp = roundProbs[team];
+      const p = rp && rp[r] != null ? Number(rp[r]) || 0 : 0;
+      ev += p * pts;
+      variance += p * (1 - p) * pts * pts;
+    }
+  }
+  return { ev, variance };
+}
+
+/* The whole job: fitted-model round probabilities + real public picks + a risk
+ * level -> a complete greedy-filled bracket, in the shape the rest of the page
+ * expects. Convenience wrapper around makeRiskScorer + riskGreedyBracket so a
+ * caller (app.js's slider wiring) does not have to build either closure itself.
+ * `teams` is state.season.teams -- see makeRiskScorer()'s comment. */
+function solveByRisk(firstRound, roundProbs, publicPicks, teams, riskLevel, poolSize, scoringSystem, options) {
+  const scorer = makeRiskScorer(roundProbs, publicPicks, teams, riskLevel, poolSize, scoringSystem, options);
+  return riskGreedyBracket(firstRound, scorer, teams);
+}
+
 /* What one variable predicts on its own, walk-forward.
  *
  * Two questions, both answered only from rows strictly before `asOf` -- the
@@ -1232,5 +1422,7 @@ if (typeof module !== 'undefined' && module.exports) {
     bracketAdvancementProbs, pairwiseCorrelations, trainingRows,
     reliabilityTable, RELIABILITY_EDGES, variableRecord, exclusionModels,
     rulePlay, ruleSequencesForSeason, ruleBracket, ruleReproduces, ruleComplexity, ruleComplexityOfCode, ruleGeneralCount, RULE_GENERAL_KEYS, decodeRule, ruleGeneralisation, RULE_GEN_DIRECT, ruleSearchJob, RULE_OFFERED, ruleRun, bitCount,
+    RISK_ROUND_NAMES, DEFAULT_SCORING, POOL_FACTOR_THRESHOLD, makeRiskScorer,
+    decideRiskWinner, riskGreedyBracket, riskExpectedPoints, solveByRisk,
   };
 }
