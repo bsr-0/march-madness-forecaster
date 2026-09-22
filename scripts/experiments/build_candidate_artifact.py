@@ -510,6 +510,43 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, ev_marginals) -> Dic
 # ---------------------------------------------------------------------------
 
 
+def _blend_region_probs(year, seeds):
+    """Fit the walk-forward seed/no-seed blend used by the p1 family, once.
+
+    THE SHARED, EXPENSIVE SEAM. ``train_noseed_model`` is a walk-forward model
+    fit -- the dominant cost of the whole p1 family -- and it does not depend
+    on risk at all, so it is extracted here and computed exactly once per
+    caller rather than once per risk level. ``_blend_region_bracket`` (the
+    single fixed-risk strategy) and ``_p1_risk_grid`` (the five-level grid)
+    both call this and then only vary the cheap, risk-parameterised
+    ``construct_bracket`` call downstream of it.
+
+    Walk-forward by construction: train_noseed_model(max_year=year) is asserted
+    to have seen only earlier seasons, and the assertion is kept here rather
+    than trusted because this function runs outside the backtest's own guards.
+    """
+    from scripts.mc_pool_backtest import _load_team_stats
+    from src.prediction.noseed_model import (
+        build_noseed_round_probabilities,
+        train_noseed_model,
+    )
+    from src.prediction.seed_probabilities import build_seed_round_probabilities
+
+    model = train_noseed_model(max_year=year)
+    if not all(y < year for y in model.train_years):
+        raise RuntimeError(f"walk-forward violation: noseed model for {year} trained on {model.train_years}")
+
+    stats = _load_team_stats(year)
+    seed_rp = build_seed_round_probabilities(seeds, as_of=year)
+    noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
+    # alpha=0.5 is PoolHyperparameters' default and what the backtest used to
+    # produce the numbers quoted in _blend_region_bracket's docstring;
+    # changing it would invalidate them.
+    return {
+        t: {r: 0.5 * seed_rp[t][r] + 0.5 * noseed_rp.get(t, seed_rp[t])[r] for r in seed_rp[t]} for t in seed_rp
+    }
+
+
 def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
     """region_top_n over a seed/no-seed blend at a fixed risk level.
 
@@ -527,30 +564,13 @@ def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
     noise, and 15 seasons cannot resolve differences this small. Same result as
     the feature-selection work on the game model.
 
-    Walk-forward by construction: train_noseed_model(max_year=year) is asserted
-    to have seen only earlier seasons, and the assertion is kept here rather
-    than trusted because this function runs outside the backtest's own guards.
+    The walk-forward model fit and seed/no-seed blend live in
+    ``_blend_region_probs``; this function's own job is just the
+    risk-parameterised construction on top of it.
     """
-    from scripts.mc_pool_backtest import _load_team_stats
     from src.optimization.bracket_construction import construct_bracket
-    from src.prediction.noseed_model import (
-        build_noseed_round_probabilities,
-        train_noseed_model,
-    )
-    from src.prediction.seed_probabilities import build_seed_round_probabilities
 
-    model = train_noseed_model(max_year=year)
-    if not all(y < year for y in model.train_years):
-        raise RuntimeError(f"walk-forward violation: noseed model for {year} trained on {model.train_years}")
-
-    stats = _load_team_stats(year)
-    seed_rp = build_seed_round_probabilities(seeds, as_of=year)
-    noseed_rp = build_noseed_round_probabilities(model, seeds, stats, as_of=year)
-    # alpha=0.5 is PoolHyperparameters' default and what the backtest used to
-    # produce the numbers quoted above; changing it would invalidate them.
-    blend_rp = {
-        t: {r: 0.5 * seed_rp[t][r] + 0.5 * noseed_rp.get(t, seed_rp[t])[r] for r in seed_rp[t]} for t in seed_rp
-    }
+    blend_rp = _blend_region_probs(year, seeds)
 
     picks, _champ, _, _, _ = construct_bracket(
         mode="region_top_n",
@@ -837,6 +857,83 @@ def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
     return out
 
 
+def _p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
+    """Risk-level variants of the p1 (win-the-pool) strategy, additive only.
+
+    ``named_strategies["blend_region_35"]`` (the fixed-risk shipped
+    recommendation -- see ``_blend_region_bracket``) is the strategy the UI
+    ships today and this function does not touch it or anything it depends
+    on.
+
+    What gets added: five more brackets at risk 0.1/0.3/0.5/0.7/0.9 (0=chalk,
+    1=max contrarian, same convention as ``_ev_risk_grid`` and
+    bracket_construction.py), built over the SAME walk-forward seed/no-seed
+    blend that ``blend_region_35`` uses.
+
+    THE EXPENSIVE PART RUNS ONCE, NOT FIVE TIMES. Unlike ``_ev_risk_grid``,
+    which reuses Torvik marginals already sitting in memory, the p1 family's
+    round probabilities come from ``_blend_region_probs``, which trains a
+    walk-forward model (``train_noseed_model``) -- the dominant cost of this
+    whole function. That fit (and the seed/no-seed blend on top of it) is
+    computed exactly once here and shared across all five risk levels; only
+    the risk-parameterised ``construct_bracket`` call at the end repeats, the
+    same way ``_blend_region_bracket`` itself does for its one fixed level.
+    Refitting per risk level would multiply the cost of this grid by five for
+    no benefit -- the fit does not depend on risk.
+
+    Named ``blend_region_NN`` (NN = risk*100), matching the convention
+    ``blend_region_35`` already established.
+    """
+    from src.optimization.bracket_construction import construct_bracket
+
+    try:
+        blend_rp = _blend_region_probs(year, seeds)
+    except Exception as exc:  # noqa: BLE001 - reported, not swallowed
+        print(f"  [warn] blend_region risk grid unavailable for {year}: {exc}")
+        return {}
+
+    pub = build_espn_pick_distribution(year, seeds) or {}
+    region_order = _bt.region_order_from_first_round(first_round, regions)
+
+    out: Dict[str, Dict] = {}
+    for risk in (0.1, 0.3, 0.5, 0.7, 0.9):
+        name = f"blend_region_{int(round(risk * 100)):02d}"
+        try:
+            picks, _c, _, _, _ = construct_bracket(
+                mode="region_top_n",
+                seeds=seeds,
+                regions=regions,
+                round_probs=blend_rp,
+                public_picks=pub,
+                risk_level=risk,
+                pool_size=DEFAULT_POOL_SIZE,
+                scoring_system=dict(ESPN_SCORING),
+                region_order=region_order,
+            )
+        except Exception as exc:  # noqa: BLE001 - one grid cell failing is not fatal
+            print(f"  [warn] {name} unavailable for {year}: {exc}")
+            continue
+        by_round = defaultdict(set)
+        for key, w in picks.items():
+            by_round[key.split("_")[0]].add(w)
+        winners: List[List[str]] = []
+        current = list(first_round)
+        for rname in ROUND_NAMES:
+            nxt = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                nxt.append(t1 if t1 in by_round[rname] else t2)
+            winners.append(nxt)
+            current = nxt
+        row = _encode_rows(winners, first_round)
+        out[name] = {
+            "w": winners,
+            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
+        }
+    return out
+
+
 def _rating_sources(year, seeds):
     """Barthag-equivalent ratings from every source available for this year.
 
@@ -1086,6 +1183,11 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     # named["ev_optimal"] or anything upstream of it -- see _ev_risk_grid's
     # docstring for why this is where it lives.
     named.update(_ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials))
+    # Additive risk grid for the p1 (win-the-pool) strategy. Does not touch
+    # named["blend_region_35"] or anything upstream of it -- see
+    # _p1_risk_grid's docstring for why the model fit runs once, not five
+    # times.
+    named.update(_p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials))
 
     print("[5/5] validating ...")
     checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg)
