@@ -1339,16 +1339,36 @@ function setRiskLevel(v) {
  * control) and the RULE card (disabled: a single-variable rule search has no
  * risk parameter to move -- confirmed in the methodology audit). Restyled to
  * reuse the same chalk-to-chaos gradient/labels the old decorative gauge
- * used, rather than a second visual language for the same idea. */
+ * used, rather than a second visual language for the same idea.
+ *
+ * onchange, not oninput: setRiskLevel() -> render() replaces this very input
+ * via innerHTML, and a slider dragged mid-drag does not survive its own DOM
+ * node being torn down underneath the pointer. onchange only fires once the
+ * drag/keypress commits, so the element is never replaced while the user is
+ * still moving it.
+ *
+ * The thumb sits at the middle stop (0.5) whenever state.riskLevel is null,
+ * for a slider that has to show SOME position -- but null means "the card
+ * above is the strategy's own un-risked baseline," not "risk 0.5 is
+ * applied," and the two must not look the same. The caption underneath says
+ * which one is actually true rather than letting the thumb imply a level
+ * that was never selected. */
 function riskSliderHTML(disabled) {
-  const val = state.riskLevel != null ? state.riskLevel : 0.5;
+  const level = state.riskLevel;
+  const val = level != null ? level : 0.5;
+  const status = disabled
+    ? 'No risk parameter: a single-variable rule search has nothing to dial.'
+    : level == null
+      ? 'Showing the baseline bracket. Move the slider to apply a risk level.'
+      : `Showing risk level ${level.toFixed(1)}.`;
   return `<div class="risk-gauge">
     <input type="range" class="risk-slider" min="0.1" max="0.9" step="0.2" value="${val}"
+      onclick="event.stopPropagation()" onkeydown="event.stopPropagation()"
       ${disabled
         ? 'disabled aria-label="Risk level (not applicable to this strategy)"'
-        : `oninput="setRiskLevel(this.value)" aria-label="Risk level, chalk to chaos"`}>
+        : `onchange="setRiskLevel(this.value)" aria-label="Risk level, chalk to chaos"`}>
     <div class="risk-label"><span>Chalk</span><span>Chaos</span></div>
-    ${disabled ? '<p class="risk-note">No risk parameter: a single-variable rule search has nothing to dial.</p>' : ''}
+    <p class="risk-note">${status}</p>
   </div>`;
 }
 
@@ -1363,7 +1383,7 @@ function renderCompare() {
   box.innerHTML = `
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
       <span class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</span>`).join('')}</div>` : ''}
-    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `<p class="risk-caveat">Risk slider: changes pick style (chalk vs. contrarian), not backtested win rate — varying this per season measured worse than fixing it.</p>` : ''}
+    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `<p class="risk-caveat">Risk slider: pick style, not backtested win rate. Tested only for "Win the pool" — there, varying it per season measured worse than fixing it. Not tested for the other two.</p>` : ''}
     <div class="strategy-grid">${shown.map(r => `
       <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
         ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
