@@ -317,6 +317,64 @@ def _unavailable_reason(year: int) -> str:
     return f"No candidate bracket has been generated for {year} yet."
 
 
+# Risk levels the artifact's grid functions (_ev_risk_grid / _p1_risk_grid in
+# build_candidate_artifact.py) build at, ascending chalk -> contrarian. Keys
+# in named_strategies are "<family>_<riskpct>", e.g. "blend_region_10" and
+# "ev_risk_10" for risk 0.1.
+_RISK_LEVELS = (0.1, 0.3, 0.5, 0.7, 0.9)
+
+
+def _risk_variants(named: Dict[str, Any], family: str) -> List[Dict[str, Any]]:
+    """Build the ``risk_variants`` list for a strategy from its risk grid.
+
+    ADDITIVE ONLY. The base ``picks``/``ev``/``p1`` fields on the strategy
+    entry stay sourced from ``blend_region_35``/``ev_optimal`` exactly as
+    before; this only adds the five-point grid alongside them. A grid entry
+    missing from an older cached artifact (built before the risk grid existed)
+    is skipped rather than raising, matching the warn-and-fallback pattern
+    used for the base lookups above -- risk_variants is never required for the
+    page to render.
+    """
+    variants: List[Dict[str, Any]] = []
+    for risk in _RISK_LEVELS:
+        key = f"{family}_{int(round(risk * 100)):02d}"
+        entry = named.get(key)
+        if entry is None:
+            print(f"  [warn] {key} missing from named_strategies; skipping risk_variants entry")
+            continue
+        variants.append(
+            {
+                "risk_level": risk,
+                "picks": [list(r) for r in entry["w"]],
+                "ev": entry["ev"],
+                "p1": entry["p1"],
+            }
+        )
+    return variants
+
+
+def _public_picks(year: int, teams: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
+    """Real ESPN public pick percentages, same computation the artifact's risk
+    grid feeds to ``construct_bracket`` (``build_espn_pick_distribution`` in
+    scripts/mc_pool_backtest.py, via ``load_historical_public_picks``).
+
+    Not stored in the candidate artifact itself -- only its provenance is --
+    so this recomputes it from the archived ESPN picks file, exactly as
+    build_candidate_artifact.py does for the same year. Missing archive ->
+    ``{}``, matching ``build_espn_pick_distribution``'s own contract (it
+    raises FileNotFoundError, which the artifact build's per-year try/except
+    also treats as "skip cleanly").
+    """
+    from scripts.mc_pool_backtest import build_espn_pick_distribution
+
+    seeds = {t["id"]: t["seed"] for t in teams}
+    try:
+        return build_espn_pick_distribution(year, seeds) or {}
+    except FileNotFoundError:
+        print(f"  [warn] no archived ESPN public picks for {year}; public_picks will be empty")
+        return {}
+
+
 def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     art_path = CANDIDATES_DIR / f"candidates_{year}.json"
     rows = stats_by_year.get(str(year))
@@ -423,6 +481,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             "picks": [list(r) for r in p1_src["w"]],
             "ev": p1_src["ev"],
             "p1": p1_src["p1"],
+            "risk_variants": _risk_variants(named, "blend_region"),
         }
     )
 
@@ -457,6 +516,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
             "picks": [list(r) for r in ev_src["w"]],
             "ev": ev_src["ev"],
             "p1": ev_src["p1"],
+            "risk_variants": _risk_variants(named, "ev_risk"),
         }
     )
 
@@ -692,6 +752,8 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
                 f"artifact with scripts/experiments/build_candidate_artifact.py."
             )
 
+    public_picks = _public_picks(year, teams)
+
     return {
         "year": year,
         "status": "ready",
@@ -712,6 +774,14 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "strategies": strategies,
         "filters": filters,
         "pool_optimized": picks,
+        # team_id -> {round_name: pick_pct in [0,1]}, the same real ESPN public
+        # pick distribution the risk grid's construct_bracket calls were fed
+        # (build_espn_pick_distribution, via load_historical_public_picks).
+        # For a client-side risk-aware scorer to judge how contrarian a bracket
+        # is without a round trip to Python. Empty ({}) when no archived ESPN
+        # picks file exists for this year -- same "absent, not faked" rule as
+        # everywhere else in this payload.
+        "public_picks": public_picks,
         # Two defects here, both shipped on all 14 seasons. "2005-2025" was
         # simply wrong: the pool method's evidence is 2011-2026 excluding 2020
         # (15 seasons, pool 30) -- see FINDINGS and build_candidate_artifact.
