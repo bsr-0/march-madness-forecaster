@@ -754,6 +754,89 @@ def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=Non
     return out
 
 
+def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
+    """Risk-level variants of the pool-points strategy, additive only.
+
+    ``named_strategies["ev_optimal"]`` (the exact DP maximum, no risk knob --
+    see ``_ev_optimal_bracket``) is the strategy the UI ships today and this
+    function does not touch it or anything it depends on.
+
+    What gets added: five more brackets built by ``construct_bracket``'s own
+    ``region_top_n`` mode at risk 0.1/0.3/0.5/0.7/0.9 (0=chalk, 1=max
+    contrarian -- same convention documented at the top of
+    bracket_construction.py), fed the SAME Torvik round marginals (``marg``)
+    that ``ev``/``ev_optimal`` are scored against. No refit, no new ratings
+    model: this reuses exactly what the DP already computed this run, just
+    routed through the risk-parameterised construction instead of the
+    unconstrained optimum, so a caller can trade a little expected score for
+    a more (or less) contrarian bracket without leaving the ev family.
+
+    NOTE ON THE ORIGINAL ASK: the brief that requested this grid pointed at
+    ``PoolOptimizer``/``leverage.analyze_pool``/``ParetoOptimizer.generate_
+    pareto_brackets`` (commit 656cea9's new ``risk_level`` param) as "the new
+    risk_level= single-bracket path." That class hierarchy is NOT part of
+    this artifact's build graph -- neither this module nor build_ui_payload.py
+    imports pool_optimizer.py or leverage.py; PoolOptimizer is wired up only
+    in src/cli/pool_cmds.py, a separate CLI tool. Wiring PoolOptimizer into
+    this pipeline would mean re-deriving a PoolEnvironment/model_round_probs
+    from this build's inputs, which is not a "cheap, no-refit" change. This
+    function instead reuses THIS FILE's own existing single-bracket risk
+    mechanism (bracket_construction.construct_bracket's risk_level, already
+    used by ``_blend_region_bracket`` and ``_constructed_candidates`` above)
+    at the requested five risk levels. Same 0..1 chalk/contrarian semantics,
+    same "reuse this run's probabilities, no refit" property, different
+    (but architecturally correct-for-this-file) call site.
+
+    Named ``ev_risk_NN`` (NN = risk*100), mirroring the ``<family>_<riskpct>``
+    convention ``blend_region_35`` already established for the p1 strategy.
+    """
+    from src.optimization.bracket_construction import construct_bracket
+
+    pub = build_espn_pick_distribution(year, seeds) or {}
+    region_order = _bt.region_order_from_first_round(first_round, regions)
+    # marg is round-index keyed ({0: {team: prob}, ...}); construct_bracket
+    # wants team-keyed ({team: {"R64": prob, ...}}). Same numbers, reshaped.
+    torvik_rp = {t: {ROUND_NAMES[ri]: marg[ri].get(t, 0.0) for ri in range(6)} for t in seeds}
+
+    out: Dict[str, Dict] = {}
+    for risk in (0.1, 0.3, 0.5, 0.7, 0.9):
+        name = f"ev_risk_{int(round(risk * 100)):02d}"
+        try:
+            picks, _c, _, _, _ = construct_bracket(
+                mode="region_top_n",
+                seeds=seeds,
+                regions=regions,
+                round_probs=torvik_rp,
+                public_picks=pub,
+                risk_level=risk,
+                pool_size=DEFAULT_POOL_SIZE,
+                scoring_system=dict(ESPN_SCORING),
+                region_order=region_order,
+            )
+        except Exception as exc:  # noqa: BLE001 - one grid cell failing is not fatal
+            print(f"  [warn] {name} unavailable for {year}: {exc}")
+            continue
+        by_round = defaultdict(set)
+        for key, w in picks.items():
+            by_round[key.split("_")[0]].add(w)
+        winners: List[List[str]] = []
+        current = list(first_round)
+        for rname in ROUND_NAMES:
+            nxt = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                nxt.append(t1 if t1 in by_round[rname] else t2)
+            winners.append(nxt)
+            current = nxt
+        row = _encode_rows(winners, first_round)
+        out[name] = {
+            "w": winners,
+            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
+        }
+    return out
+
+
 def _rating_sources(year, seeds):
     """Barthag-equivalent ratings from every source available for this year.
 
@@ -999,6 +1082,10 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     p1 = pool_p_first(bank[sel], p1_trials, first_round)
 
     named = _champion_equity_strategy(first_round, marg, p1_trials, year, seeds, regions)
+    # Additive risk grid for the ev/pool-points strategy. Does not touch
+    # named["ev_optimal"] or anything upstream of it -- see _ev_risk_grid's
+    # docstring for why this is where it lives.
+    named.update(_ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials))
 
     print("[5/5] validating ...")
     checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg)
