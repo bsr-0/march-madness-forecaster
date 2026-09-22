@@ -170,6 +170,17 @@ const state = {
   season: null,
   priors: null,        // historical seed-matchup upset rates, per season
   cache: {},
+  // Shared 0-1 risk level for the p1/ev/fitted-model cards' risk slider (see
+  // riskVariant() and the MODEL branch of strategyRows()). null, not a grid
+  // point, is the deliberate default: it means "show the strategy's own
+  // top-level picks/ev/p1 exactly as before this feature existed" rather than
+  // silently picking a grid point (e.g. 0.3) the user never chose. It also
+  // degrades correctly on a payload with no risk_variants grid at all (every
+  // season file as of this writing -- build_ui_payload.py emits the field but
+  // the cached artifacts it reads from have not been rebuilt with the grid).
+  // Once the user drags the slider this becomes 0.1/0.3/0.5/0.7/0.9, matching
+  // the precomputed grid and solveByRisk()'s step.
+  riskLevel: null,
 };
 
 /* ---------- data ---------- */
@@ -573,6 +584,20 @@ function filteredEntry() {
   };
 }
 
+/* Look up the risk_variants entry nearest state.riskLevel and splice its
+ * picks/ev/p1 over a p1/ev strategy's baseline fields. riskLevel === null
+ * (the pre-touch default -- see `state`) or a payload with no grid at all
+ * returns `st` unchanged, so nothing here can invent numbers a season's
+ * payload does not carry. */
+function riskVariant(st, riskLevel) {
+  if (riskLevel == null || !st || !Array.isArray(st.risk_variants) || !st.risk_variants.length) return st;
+  let best = st.risk_variants[0];
+  for (const rv of st.risk_variants) {
+    if (Math.abs(rv.risk_level - riskLevel) < Math.abs(best.risk_level - riskLevel)) best = rv;
+  }
+  return { ...st, picks: best.picks, ev: best.ev, p1: best.p1 };
+}
+
 function currentStrategy() {
   if (state.strategy === CUSTOM) {
     const { entry, scope, alts } = filteredEntry();
@@ -597,7 +622,8 @@ function currentStrategy() {
   }
   if (state.strategy === RULE) return ruleStrategy();
   const list = (state.season && state.season.strategies) || [];
-  return list.find(s => s.id === state.strategy) || null;
+  const found = list.find(s => s.id === state.strategy) || null;
+  return found ? riskVariant(found, state.riskLevel) : null;
 }
 
 /* The standard error on a P(1st) estimate AT THAT ESTIMATE'S OWN p.
@@ -1078,9 +1104,14 @@ function strategyRows() {
   const teams = s.teams;
   const filt = state.strategy === MODEL ? null : filteredEntry().entry;
   const rows = (s.strategies || []).map(st => {
-    const v = (filt && filt.by && filt.by[st.id]) || st;
-    const champIdx = filt && filt.by && filt.by[st.id] ? decodeBracket(v.b)[5][0] : st.picks[5][0];
-    const filtered = !!(filt && filt.by && filt.by[st.id]);
+    const filteredRow = filt && filt.by && filt.by[st.id];
+    // A filter takes priority over the risk slider: the two narrow different
+    // things (which candidates are eligible vs. which precomputed risk grid
+    // point to show), and filtering already returns a specific decoded
+    // bracket that has no risk_variants of its own to look up.
+    const v = filteredRow || riskVariant(st, state.riskLevel);
+    const champIdx = filteredRow ? decodeBracket(v.b)[5][0] : v.picks[5][0];
+    const filtered = !!filteredRow;
     return {
       id: st.id,
       label: st.id === 'ev' ? 'Most expected points' : 'Win the pool',
@@ -1105,19 +1136,45 @@ function strategyRows() {
     filtered: false, record: null,
     active: state.strategy === RULE,
   });
+
+  // The model card's own risk preview: solveByRisk() (fit.js) re-walks the
+  // bracket with the risk-aware scorer at state.riskLevel, live, rather than
+  // looking anything up -- the fitted model has no server-side risk grid (see
+  // fit.js's "risk-aware scoring & greedy fill" comment). This is a DIFFERENT
+  // bracket from plain solveByFit()'s argmax walk whenever riskLevel is set,
+  // so the server's fitted_eval (fittedEval()) no longer applies to it: P(1st)
+  // is not computable client-side (it needs a pool simulation this page does
+  // not run), and the card says so via the existing `stale` styling rather
+  // than inventing a number.
+  let modelChampion = live ? teams[live[5][0].win] : null;
+  let modelP1 = fe && !fe.stale ? fe.p1 : null;
+  let modelEv = fe && !fe.stale ? fe.ev : null;
+  let modelScored = !!(fe && !fe.stale);
+  let modelStale = !!(fe && fe.stale);
+  if (state.riskLevel != null && fitReady() && state.advancement) {
+    const publicPicks = s.public_picks || {};
+    const riskPicks = solveByRisk(s.first_round, state.advancement, publicPicks, teams,
+      state.riskLevel, s.p1_pool_size || 30, DEFAULT_SCORING);
+    modelChampion = teams[riskPicks[5][0]];
+    modelEv = riskExpectedPoints(riskPicks, state.advancement, DEFAULT_SCORING).ev;
+    modelP1 = null;
+    modelScored = false;
+    modelStale = true;
+  }
   rows.push({
     id: MODEL,
     label: 'Fitted model',
     kind: 'Evaluated, not selected',
-    p1: fe && !fe.stale ? fe.p1 : null,
-    ev: fe && !fe.stale ? fe.ev : null,
-    scored: !!(fe && !fe.stale),
-    stale: !!(fe && fe.stale),
-    champion: live ? teams[live[5][0].win] : null,
+    p1: modelP1,
+    ev: modelEv,
+    scored: modelScored,
+    stale: modelStale,
+    champion: modelChampion,
     filtered: false,
     // Only meaningful for the bracket the evaluation scored, which fittedEval()
-    // has just confirmed is the live one.
-    record: fe && !fe.stale ? trackRecord(MODEL) : null,
+    // has just confirmed is the live one -- never true once the risk slider
+    // has replaced that bracket with a risk-adjusted one.
+    record: modelScored ? trackRecord(MODEL) : null,
     active: state.strategy === MODEL,
   });
   return rows;
@@ -1269,6 +1326,32 @@ function setFamily(val) {
   renderCompare();
 }
 
+/* The risk slider's onchange. One global level shared by the p1/ev/model
+ * cards (see `state.riskLevel`'s comment) -- a full render(), not just
+ * renderCompare(), because currentStrategy() (and so the board and headline
+ * too) now reads it whenever the active strategy is p1 or ev. */
+function setRiskLevel(v) {
+  state.riskLevel = Number(v);
+  render();
+}
+
+/* The five-point 0.1-0.9 slider markup shared by the p1/ev/model cards (real
+ * control) and the RULE card (disabled: a single-variable rule search has no
+ * risk parameter to move -- confirmed in the methodology audit). Restyled to
+ * reuse the same chalk-to-chaos gradient/labels the old decorative gauge
+ * used, rather than a second visual language for the same idea. */
+function riskSliderHTML(disabled) {
+  const val = state.riskLevel != null ? state.riskLevel : 0.5;
+  return `<div class="risk-gauge">
+    <input type="range" class="risk-slider" min="0.1" max="0.9" step="0.2" value="${val}"
+      ${disabled
+        ? 'disabled aria-label="Risk level (not applicable to this strategy)"'
+        : `oninput="setRiskLevel(this.value)" aria-label="Risk level, chalk to chaos"`}>
+    <div class="risk-label"><span>Chalk</span><span>Chaos</span></div>
+    ${disabled ? '<p class="risk-note">No risk parameter: a single-variable rule search has nothing to dial.</p>' : ''}
+  </div>`;
+}
+
 function renderCompare() {
   const box = document.getElementById('compare');
   if (!box) return;
@@ -1280,6 +1363,7 @@ function renderCompare() {
   box.innerHTML = `
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
       <span class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</span>`).join('')}</div>` : ''}
+    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `<p class="risk-caveat">Risk slider: changes pick style (chalk vs. contrarian), not backtested win rate — varying this per season measured worse than fixing it.</p>` : ''}
     <div class="strategy-grid">${shown.map(r => `
       <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
         ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
@@ -1292,10 +1376,8 @@ function renderCompare() {
         <div class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></div>
         ${r.record ? `<div class="scard-row real"><span>Scored</span><b>${r.record.points.toLocaleString()}</b></div>
         <div class="scard-row real"><span>Finish</span><span>${finishText(r.record)}</span></div>` : ''}
-        ${r.id === 'p1' && !r.pending ? `<div class="risk-gauge">
-          <div class="risk-track"><span class="risk-mark" style="left:35%"></span></div>
-          <div class="risk-label"><span>Chalk</span><span>Chaos</span></div>
-        </div>` : ''}
+        ${(r.id === 'p1' || r.id === 'ev' || r.id === MODEL) && !r.pending ? riskSliderHTML(false)
+          : r.id === RULE ? riskSliderHTML(true) : ''}
       </div>`).join('')}
     </div>
     ${rows.some(r => r.record) ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
