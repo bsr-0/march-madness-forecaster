@@ -154,30 +154,19 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .hl-line { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); max-width: 86ch; }
 .hl-evidence { color: var(--ink-3); }
 
-/* ---------- comparison table ----------
+/* ---------- comparison cards ----------
  *
- * Four rows, the same numbers the cards show; first on the page. The row is the
- * selector; the cards moved into the methodology layer as explanations. */
+ * One card per strategy, the same numbers a table's rows would show; first
+ * on the page. The card is the selector; renderCompare() builds this from
+ * strategyRows() directly (see docs/index.html's comment on #compare), so
+ * nothing here can disagree with the headline or the board.
+ *
+ * This used to be an actual <table class="cmp">, with .cmp-row as the
+ * clickable row; that markup is gone (restyled into .scard cards), but
+ * .cmp-seed (still used by the team drawer, unrelated to this table) and
+ * .cmp-foot (still emitted by renderCompare()) are not dead and stay. */
 .compare { margin: 0 0 18px; overflow-x: auto; }
-.cmp { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-.cmp th { text-align: left; padding: 0 12px 6px 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
-.cmp td { padding: 9px 12px 9px 10px; border-top: 1px solid var(--line); color: var(--ink-2); vertical-align: middle; }
-.cmp .num { text-align: right; }
-.cmp-row { cursor: pointer; transition: background .1s; }
-.cmp-row:hover td { background: var(--panel); }
-.cmp-row.on td { background: var(--panel); color: var(--ink); }
-.cmp-row.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-.cmp-label { display: block; font-weight: 600; color: var(--ink); }
-.cmp-kind { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 .cmp-seed { display: inline-block; min-width: 18px; font-size: 11px; color: var(--ink-3); }
-/* Realisation columns (played seasons only): separated from the expectation
-   columns by a rule so the two are not read as one scale. */
-.cmp th.cmp-real:first-of-type, .cmp td.cmp-real:first-of-type { border-left: 1px solid var(--line-2); }
-.cmp-finish { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
-.cmp-row.on .cmp-finish { color: var(--ink-2); }
-/* Listed but not selectable: a strategy that needs the field before it exists. */
-.cmp-row.na { cursor: default; opacity: .5; }
-.cmp-row.na:hover td { background: none; }
 .cmp-foot { margin: 8px 0 0 10px; font-size: 11.5px; line-height: 1.5; color: var(--ink-3); max-width: 86ch; }
 .hl-went { margin-top: 4px; }
 .hl-went b { color: var(--ink); font-weight: 600; }
@@ -504,13 +493,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .round { display: none; }
   .board-nav:not([hidden]), .rnav-dots:not([hidden]) { display: flex !important; }
 
-  /* Comparison table at phone width: tighter cells, the champion column kept
-     on one line, the label column allowed to take what is left. */
-  .cmp { font-size: 12.5px; }
-  .cmp th, .cmp td { padding: 8px 6px 8px 4px; }
-  .cmp td:last-child, .cmp th:last-child { white-space: nowrap; padding-right: 0; }
-  .cmp-kind { font-size: 10.5px; }
-  .cmp-finish { white-space: normal; font-size: 11px; }
   .ex-grid { grid-template-columns: 1fr; }
   .ex-hinge { grid-template-columns: 60px 1fr; }
   .ex-hinge .ex-gap, .ex-hinge .ex-p { grid-column: 2; }
@@ -779,8 +761,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .bar, .board-tools, .drawer, .scrim, .panel, .tune, .why, #dropped-note,
   #equation, .note { display: none !important; }
   /* The headline and the comparison print: they are the summary a sheet
-     needs. The methodology layer does not. */
-  .cmp-row:not(.on) { display: none; }
+     needs. The methodology layer does not. .cmp-row was the old <table>
+     row class; renderCompare() has emitted .scard cards for a while now,
+     so this had stopped hiding anything and every strategy printed. */
+  .scard:not(.on) { display: none; }
+  /* Controls, not summary -- same "drop every control" rule as the rest of
+     this block. */
+  .family-chips, .risk-gauge, .risk-caveat { display: none !important; }
   #main { padding: 0; }
   .board { display: block !important; }
   .round { break-inside: avoid; page-break-inside: avoid; margin: 0 0 12px; }

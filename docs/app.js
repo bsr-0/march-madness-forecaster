@@ -710,6 +710,12 @@ function writeHash() {
     if (state.pick[k] !== null && state.pick[k] !== undefined) p.set(k, String(state.pick[k]));
   }
   if (state.alt) p.set('alt', String(state.alt));
+  // Not in HASH_KEYS: that loop round-trips state.pick[k] specifically, and
+  // these two live directly on state. Without them a shared risk-adjusted
+  // link silently reopened at the strategy's un-risked baseline -- exactly
+  // the failure this app's URL design exists to avoid.
+  if (state.riskLevel != null) p.set('risk', String(state.riskLevel));
+  if (state.family && state.family !== 'all') p.set('fam', state.family);
   if (state.strategy === RULE) writeRuleHash(p);
   // replaceState, not a hash assignment: every chip click would otherwise add a
   // history entry, and Back would walk the user through their own filtering
@@ -771,6 +777,15 @@ function readHash() {
   }
   const alt = parseInt(p.get('alt'), 10);
   if (Number.isFinite(alt)) state.alt = alt;
+
+  // Same pairing as writeHash(): risk/fam are not filter picks, so they are
+  // not in HASH_KEYS. A junk or out-of-grid `risk` is dropped rather than
+  // fed to riskVariant()/solveByRisk(), which would otherwise silently snap
+  // it to whatever grid point happens to be nearest.
+  const risk = parseFloat(p.get('risk'));
+  if ([0.1, 0.3, 0.5, 0.7, 0.9].includes(risk)) state.riskLevel = risk;
+  const fam = p.get('fam');
+  if (fam && Object.prototype.hasOwnProperty.call(FAMILY_LABEL, fam)) state.family = fam;
 
   // Restoring the filters is not enough: setFilter also switches the page into
   // CUSTOM, and without that the link came back with the chips lit and the
@@ -1382,7 +1397,7 @@ function renderCompare() {
   box.hidden = false;
   box.innerHTML = `
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
-      <span class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</span>`).join('')}</div>` : ''}
+      <button class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</button>`).join('')}</div>` : ''}
     ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `<p class="risk-caveat">Risk slider: pick style, not backtested win rate. Tested only for "Win the pool" — there, varying it per season measured worse than fixing it. Not tested for the other two.</p>` : ''}
     <div class="strategy-grid">${shown.map(r => `
       <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
