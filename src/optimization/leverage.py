@@ -1182,6 +1182,7 @@ class ParetoOptimizer:
         num_brackets: int = 5,
         construction_mode: str = "forward_greedy",
         include_champion_augmentation: bool = False,
+        risk_level: Optional[float] = None,
     ) -> List[BracketConfiguration]:
         """
         Generate brackets along the Pareto frontier with path protection filtering.
@@ -1234,6 +1235,15 @@ class ParetoOptimizer:
             List of bracket configurations, conservative to aggressive,
             each with a unique canonical picks dict and a strategy label
             that honestly describes its picks.
+            risk_level: When provided (not None), bypasses the risk sweep
+                (Phase 1 below) entirely and instead generates exactly one
+                bracket at this risk level (0 = chalk, 1 = max contrarian),
+                still routed through the same ``_generate_bracket`` /
+                ``_ev_score`` machinery and the same path-protection filter.
+                This is the single-value slider path: a caller that wants
+                "the bracket at risk X" rather than "the Pareto frontier"
+                sets this. Default None preserves all pre-existing sweep
+                behavior byte-for-byte.
         """
         from .bracket_construction import CONSTRUCTION_MODES
 
@@ -1250,6 +1260,27 @@ class ParetoOptimizer:
             )
 
         brackets: List[BracketConfiguration] = []
+
+        # Single-risk-level path: skip the sweep/dedup/augmentation phases
+        # entirely and just generate + filter one bracket. Only engaged when
+        # the caller explicitly passes a risk_level (the new slider path);
+        # default None keeps every existing caller on the sweep path below.
+        if risk_level is not None:
+            if risk_level < 0.2:
+                strategy = "chalk"
+            elif risk_level < 0.6:
+                strategy = "balanced"
+            else:
+                strategy = "contrarian"
+            single_mode = "champ_first" if construction_mode == "all" else construction_mode
+            single_bracket = self._generate_bracket(risk_level, strategy, construction_mode=single_mode)
+            filtered_single = _filter_brackets_by_path_protection(
+                [single_bracket],
+                model_probs=self.calculator.model_probs,
+                scoring_system=self.calculator.scoring_system,
+                min_score=0.85,
+            )
+            return filtered_single if filtered_single else [single_bracket]
 
         # Phase 1: risk sweep at higher resolution than the legacy 5 levels.
         # 2*num_brackets + 1 gives odd count so both endpoints (risk=0 and
@@ -2228,6 +2259,7 @@ def analyze_pool(
     archetype_picks: Optional[Dict[str, Dict[str, float]]] = None,
     construction_mode: str = "forward_greedy",
     include_champion_augmentation: bool = False,
+    risk_level: Optional[float] = None,
 ) -> PoolAnalysis:
     """
     Complete pool analysis.
@@ -2243,6 +2275,11 @@ def analyze_pool(
         archetype_picks: Blended opponent pick distribution from behavioral
             archetype modeling.  When provided, this replaces ``public_picks``
             for leverage calculations, producing more realistic field models.
+        risk_level: Passed through to ``ParetoOptimizer.generate_pareto_brackets``.
+            None (default) preserves the existing Pareto-frontier sweep
+            behavior byte-for-byte. A float 0-1 switches to generating a
+            single bracket at that risk level (0 = chalk, 1 = max
+            contrarian) instead of the frontier.
 
     Returns:
         PoolAnalysis with recommendations
@@ -2272,6 +2309,7 @@ def analyze_pool(
     pareto_brackets = optimizer.generate_pareto_brackets(
         construction_mode=construction_mode,
         include_champion_augmentation=include_champion_augmentation,
+        risk_level=risk_level,
     )
 
     # Generate or use provided strategy profile for recommendation
