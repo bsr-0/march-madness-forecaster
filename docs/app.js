@@ -1346,45 +1346,41 @@ function setFamily(val) {
  * renderCompare(), because currentStrategy() (and so the board and headline
  * too) now reads it whenever the active strategy is p1 or ev. */
 function setRiskLevel(v) {
-  state.riskLevel = Number(v);
+  state.riskLevel = v == null ? null : Number(v);
   render();
 }
 
-/* The five-point 0.1-0.9 slider markup shared by the p1/ev/model cards (real
- * control) and the RULE card (disabled: a single-variable rule search has no
- * risk parameter to move -- confirmed in the methodology audit). Restyled to
- * reuse the same chalk-to-chaos gradient/labels the old decorative gauge
- * used, rather than a second visual language for the same idea.
- *
- * onchange, not oninput: setRiskLevel() -> render() replaces this very input
- * via innerHTML, and a slider dragged mid-drag does not survive its own DOM
- * node being torn down underneath the pointer. onchange only fires once the
- * drag/keypress commits, so the element is never replaced while the user is
- * still moving it.
- *
- * The thumb sits at the middle stop (0.5) whenever state.riskLevel is null,
- * for a slider that has to show SOME position -- but null means "the card
- * above is the strategy's own un-risked baseline," not "risk 0.5 is
- * applied," and the two must not look the same. The caption underneath says
- * which one is actually true rather than letting the thumb imply a level
- * that was never selected. */
-function riskSliderHTML(disabled) {
+/* Risk is one shared preference, so it belongs above the strategy cards rather
+ * than being duplicated four times. Buttons deliberately replace the tiny
+ * five-stop range input: each available setting is directly tappable and its
+ * selected state is unambiguous. */
+function riskControlHTML() {
   const level = state.riskLevel;
-  const val = level != null ? level : 0.5;
-  const status = disabled
-    ? 'No risk parameter: a single-variable rule search has nothing to dial.'
-    : level == null
-      ? 'Showing the baseline bracket. Move the slider to apply a risk level.'
-      : `Showing risk level ${level.toFixed(1)}.`;
-  return `<div class="risk-gauge">
-    <input type="range" class="risk-slider" min="0.1" max="0.9" step="0.2" value="${val}"
-      onclick="event.stopPropagation()" onkeydown="event.stopPropagation()"
-      ${disabled
-        ? 'disabled aria-label="Risk level (not applicable to this strategy)"'
-        : `onchange="setRiskLevel(this.value)" aria-label="Risk level, chalk to chaos"`}>
-    <div class="risk-label"><span>Chalk</span><span>Chaos</span></div>
-    <p class="risk-note">${status}</p>
-  </div>`;
+  const levels = [0.1, 0.3, 0.5, 0.7, 0.9];
+  const status = level == null
+    ? 'Baseline brackets are shown. Choose a style to preview a risk-adjusted bracket.'
+    : `Risk ${level.toFixed(1)} is applied to compatible strategies.`;
+  return `<section class="risk-control" aria-label="Bracket risk style">
+    <div class="risk-control-head"><b>Pick style</b><span>${status}</span></div>
+    <div class="risk-options" role="group" aria-label="Risk level from chalk to chaos">
+      <button class="risk-option${level == null ? ' on' : ''}" onclick="setRiskLevel(null)">Baseline</button>
+      ${levels.map(n => `<button class="risk-option${level === n ? ' on' : ''}" onclick="setRiskLevel(${n})">${n.toFixed(1)}</button>`).join('')}
+    </div>
+    <div class="risk-label"><span>More chalk</span><span>More chaos</span></div>
+    <p class="risk-note">Works on <b>Win the pool</b>, <b>Expected points</b>, and <b>Fitted model</b>. Rule search cannot use it: that method selects one rating variable per round, not a probability-and-public-picks score.</p>
+  </section>`;
+}
+
+function riskCompatibilityHTML(r) {
+  if (r.id === RULE) return '<p class="risk-compat no">Risk unavailable — Rule search has no compatible risk score.</p>';
+  if (r.pending) return '';
+  if ((r.id === 'p1' || r.id === 'ev') && state.strategy === CUSTOM) {
+    return '<p class="risk-compat warn">Filters currently choose this card’s bracket, so risk does not replace it.</p>';
+  }
+  if (r.id === MODEL && state.riskLevel != null) {
+    return '<p class="risk-compat warn">Risk preview is live; its saved P(1st) evaluation does not apply to this changed bracket.</p>';
+  }
+  return '<p class="risk-compat yes">Risk compatible.</p>';
 }
 
 function renderCompare() {
@@ -1398,7 +1394,7 @@ function renderCompare() {
   box.innerHTML = `
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
       <button class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</button>`).join('')}</div>` : ''}
-    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `<p class="risk-caveat">Risk slider: pick style, not backtested win rate. Tested only for "Win the pool" — there, varying it per season measured worse than fixing it. Not tested for the other two.</p>` : ''}
+    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `${riskControlHTML()}<p class="risk-caveat">Risk changes pick style, not a backtested win-rate guarantee. It was tested only for “Win the pool”; the other two are previews.</p>` : ''}
     <div class="strategy-grid">${shown.map(r => `
       <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
         ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
@@ -1411,8 +1407,7 @@ function renderCompare() {
         <div class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></div>
         ${r.record ? `<div class="scard-row real"><span>Scored</span><b>${r.record.points.toLocaleString()}</b></div>
         <div class="scard-row real"><span>Finish</span><span>${finishText(r.record)}</span></div>` : ''}
-        ${(r.id === 'p1' || r.id === 'ev' || r.id === MODEL) && !r.pending ? riskSliderHTML(false)
-          : r.id === RULE ? riskSliderHTML(true) : ''}
+        ${riskCompatibilityHTML(r)}
       </div>`).join('')}
     </div>
     ${rows.some(r => r.record) ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
