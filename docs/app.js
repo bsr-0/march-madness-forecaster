@@ -212,9 +212,24 @@ const DATA_V = 22;
 
 async function loadTraining() {
   if (state.training) return state.training;
-  const res = await fetch(`data/training.json?v=${DATA_V}`);
-  state.training = await res.json();
-  return state.training;
+  if (state.trainingPromise) return state.trainingPromise;
+  state.trainingPromise = (async () => {
+    let res;
+    if ('DecompressionStream' in window) {
+      res = await fetch(`data/training.json.gz?v=${DATA_V}`);
+      if (res.ok) {
+        const stream = res.body.pipeThrough(new DecompressionStream('gzip'));
+        state.training = await new Response(stream).json();
+        return state.training;
+      }
+    }
+    res = await fetch(`data/training.json?v=${DATA_V}`);
+    if (!res.ok) throw new Error('training data unavailable');
+    state.training = await res.json();
+    return state.training;
+  })();
+  try { return await state.trainingPromise; }
+  finally { state.trainingPromise = null; }
 }
 
 async function loadSeason(year) {
@@ -1025,7 +1040,12 @@ function render() {
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Unavailable</span><span>The fitted model needs training data for seasons before ${state.year}.</span>`;
   } else {
-    const f = state.fit, o = f.oos;
+    const f = state.fit;
+    if (!f) {
+      note.innerHTML = `<span class="tag alt">Loading</span><span>Fitted-model analysis loads when selected.</span>`;
+      return;
+    }
+    const o = f.oos;
     // Lead with out-of-sample. In-sample is shown second and labelled, because
     // it always looks better and always will.
     note.innerHTML = `<span class="tag alt">Fitted</span><span>` +
@@ -1060,7 +1080,7 @@ function render() {
   const p1note = document.getElementById('p1-note');
   if (p1note) p1note.textContent = s.p1_assumption || '';
 
-  document.getElementById('equation').innerHTML = anyEnabled() ? equationHTML() : '';
+  document.getElementById('equation').innerHTML = anyEnabled() && fitReady() ? equationHTML() : '';
 
   if (state.strategy === RULE && !ruleStrategy()) {
     // Nothing to draw yet: the search is fetching prior seasons or found no
@@ -1078,7 +1098,10 @@ function render() {
     renderRulePanel();
     return;
   }
-  const rounds = usingOptimized() ? solveFromPicks() : solveByFit();
+  // Before the fitted matrix is requested, render the shipped bracket using
+  // the canonical picks. This keeps the first paint usable without invoking
+  // model code that requires state.fit.
+  const rounds = usingOptimized() || !fitReady() ? solveFromPicks() : solveByFit();
   const truth = solveActual();
   // Kept for the exporter. Presentation state only -- copyPicks() serialises
   // exactly what is on screen rather than re-deriving it, so the two can never
@@ -2974,6 +2997,10 @@ function setStrategy(id) {
     state.strategy = id;
   }
   state.notice = '';
+  if (id === MODEL && !state.training) {
+    loadTraining().then(() => { refit(); renderStrategies(); render(); })
+      .catch(() => { state.notice = 'Fitted-model analysis is temporarily unavailable.'; render(); });
+  }
   refit();
   writeHash();
   renderStrategies();
@@ -3293,6 +3320,9 @@ async function init() {
   document.getElementById('d-close').addEventListener('click', closeDrawer);
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  document.getElementById('explore')?.addEventListener('toggle', e => {
+    if (e.target.open) loadTraining().then(() => { refit(); renderStrategies(); render(); });
+  });
   wireBoardSwipe();
   initUsageInstrumentation();
 
@@ -3303,17 +3333,6 @@ async function init() {
   window.addEventListener('hashchange', () => location.reload());
 
   await setYear(state.year);
-
-  // Hydrate fitted-model-only features after the initial UI is visible. The
-  // first render remains useful without coefficients; once the matrix arrives
-  // the exact same refit path fills in model probabilities and diagnostics.
-  loadTraining().then(() => {
-    refit();
-    renderStrategies();
-    render();
-  }).catch(() => {
-    state.notice = 'Fitted-model analysis is temporarily unavailable.';
-  });
 
   // The row scrolls on a narrow viewport and the default season sits at the
   // far right of seventeen, so it would otherwise open out of view.
