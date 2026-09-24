@@ -59,6 +59,13 @@ def check(name: str, ok: bool, detail: str = "") -> None:
 def main() -> int:
     print(f"2026 INTEGRATION TEST (not an evaluation)\n{'=' * 70}")
 
+    # The raw Torvik snapshot is a local ingestion input and is gitignored.
+    # CI can still validate the frozen spec and code paths, but cannot make a
+    # provenance claim without this source file.
+    if not (Path(__file__).resolve().parents[2] / "data" / "raw" / "historical" / "torvik_2026.json").exists():
+        print("SKIP: torvik_2026.json is not present in this checkout")
+        return 0
+
     # --- frozen-spec integrity -------------------------------------------
     print("\nfrozen specification")
     # FROZEN_SPEC_PATH is the operative spec (2027.v2, methodology-scoped) and is

@@ -153,6 +153,10 @@ def test_covid_year_file_absent() -> None:
 def test_2026_has_canonical_counts() -> None:
     """Pinned O22-closure assertion so a regression on 2026 fails under a
     direct name rather than only inside the parametrized year matrix."""
+    ctx = _HIST_DIR / "tournament_context_2026.json"
+    results = _HIST_DIR / "tournament_results_2026.json"
+    if not results.exists() and not (ctx.exists() and json.loads(ctx.read_text()).get("results") is not None):
+        pytest.skip("2026 tournament results are not present in this checkout")
     games = _load(2026)
     assert len(games) == 67
     assert dict(Counter(g["round_name"] for g in games)) == CANONICAL_COUNTS_POST_2011

@@ -95,6 +95,9 @@ def main() -> int:
     payload = json.loads(MATRIX.read_text())
     keys = payload["keys"]
     games = payload["games"]
+    if not games:
+        print(f"SKIP: {MATRIX} contains no rows; point-in-time inputs are not present")
+        return 0
     X = np.array([g["x"] for g in games], dtype=float)
     m = np.array([g["m"] for g in games], dtype=float)
 
