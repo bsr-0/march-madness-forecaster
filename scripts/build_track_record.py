@@ -69,6 +69,7 @@ from scripts.experiments.build_candidate_artifact import DEFAULT_POOL_SIZE, _enc
 from scripts.mc_pool_backtest import ESPN_SCORING  # noqa: E402
 from src.optimization.payout import first_place_shares  # noqa: E402
 from src.simulation.pool_competition import ROUND_NAMES, actual_winners_by_round, score_brackets_team_identity  # noqa: E402
+from src.evaluation.pool_settings import resolve_pool_settings  # noqa: E402
 
 CANDIDATES_DIR = REPO / "artifacts" / "candidates"
 FITTED_DIR = REPO / "artifacts" / "fitted_eval"
@@ -109,8 +110,14 @@ def realised(winners: List[List[str]], actual: Dict[str, set], ref) -> Dict[str,
     }
 
 
-def build(year: int, seed: int) -> Dict[str, Any]:
-    art = json.loads((CANDIDATES_DIR / f"candidates_{year}.json").read_text())
+def build(year: int, seed: int, *, pool_size: int = DEFAULT_POOL_SIZE) -> Dict[str, Any]:
+    settings = resolve_pool_settings(pool_size, "espn_standard")
+    art_path = (CANDIDATES_DIR / f"candidates_{year}.json" if pool_size == 30
+                else CANDIDATES_DIR / f"pool{pool_size}" / f"candidates_{year}.json")
+    art = json.loads(art_path.read_text())
+    artifact_settings = art.get("meta", {}).get("pool_settings", {"pool_size": 30, "scoring_id": "espn_standard"})
+    if artifact_settings != {"pool_size": pool_size, "scoring_id": "espn_standard"}:
+        raise RuntimeError(f"artifact settings {artifact_settings} do not match requested pool {pool_size}")
     season = json.loads((DOCS / "data" / f"season_{year}.json").read_text())
     team_ids = [t["id"] for t in art["teams"]]
     if [t["id"] for t in season["teams"]] != team_ids:
@@ -130,7 +137,7 @@ def build(year: int, seed: int) -> Dict[str, Any]:
         if {team_ids[i] for i in idxs} != set(actual[r]):
             raise RuntimeError(f"{year}: payload `actual` disagrees with tournament results for {r}")
 
-    ref = rebuild_referee(year, n_sims=art["meta"]["n_sims"], trials=art["meta"]["p1_trials"], seed=seed)
+    ref = rebuild_referee(year, n_sims=art["meta"]["n_sims"], trials=art["meta"]["p1_trials"], seed=seed, pool_settings=settings)
     print("[3/3] parity against the shipped artifact, then the track record ...")
     parity = parity_check(art, team_ids, ref)
 
@@ -171,8 +178,9 @@ def build(year: int, seed: int) -> Dict[str, Any]:
         "scorer": {
             "field": "draw_selection_trials, same seed and count as the candidate artifact's P(1st)",
             "scoring": "score_brackets_team_identity under ESPN scoring; first_place_shares for ties",
-            "pool_size": DEFAULT_POOL_SIZE,
-            "n_opponents": DEFAULT_POOL_SIZE - 1,
+        "pool_size": settings.pool_size,
+                "pool_settings": {"pool_size": settings.pool_size, "scoring_id": settings.scoring_id},
+            "n_opponents": settings.n_opponents,
             "p1_trials": art["meta"]["p1_trials"],
             "seed": seed,
             "trials_seed": seed + 7,
@@ -180,7 +188,7 @@ def build(year: int, seed: int) -> Dict[str, Any]:
         "parity": parity,
         "inputs": {
             "outcome_sha256": outcome_hash(actual),
-            "candidates_artifact": f"artifacts/candidates/candidates_{year}.json",
+            "candidates_artifact": str(art_path.relative_to(REPO)),
             "candidates_generated_at": art["meta"].get("generated_at"),
             "training_sha256": sha256_file(DOCS / "data" / "training.json"),
         },
@@ -192,14 +200,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--year", type=int, required=True)
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    ap.add_argument("--pool-size", type=int, choices=(10, 30, 50, 100), default=30)
     a = ap.parse_args()
-    out = build(a.year, a.seed)
+    out = build(a.year, a.seed, pool_size=a.pool_size)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / f"track_record_{a.year}.json"
+    suffix = "" if a.pool_size == 30 else f"_pool{a.pool_size}"
+    path = OUT_DIR / f"track_record_{a.year}{suffix}.json"
     path.write_text(json.dumps(out, indent=2))
     print(f"\n  parity: {len(out['parity'])} shipped brackets reproduced exactly")
     for sid, r in out["strategies"].items():
-        print(f"  {sid:6s} {r['points']:5d} pts  won {r['won_share']*100:5.1f}% of pools  median finish {r['median_rank']:2d}/{DEFAULT_POOL_SIZE}")
+        print(f"  {sid:6s} {r['points']:5d} pts  won {r['won_share']*100:5.1f}% of pools  median finish {r['median_rank']:2d}/{a.pool_size}")
     print(f"  -> {path.relative_to(REPO)}")
     return 0
 

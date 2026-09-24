@@ -12,14 +12,14 @@ Manual review of the rendered site (`docs/index.html` + `app.js`/`fit.js`/data f
 ## Missing tools
 1. ~~**Game win probabilities on the board.** Also want each team's chance of reaching each round. Biggest gap: the board shows picks with no confidence attached.~~
    **Done 2026-09-16.** Per-game win % now shows on every strategy's board (not just "Fitted"), sourced from the live calibrated model via a new `fitReady()`/`winProb()` path in `app.js`. Added `bracketAdvancementProbs()` in `fit.js` — a recursive real-bracket round-survival calculation (not a seed base rate) — surfaced in the team drawer as "chance of reaching each round." Covered by `tests/test_advancement.js`. Found and fixed a related bug in passing: the team drawer never closed on a season change, so it could show a stale team's data under a reused slot index.
-2. **Leverage on the champion chips.** Each chip shows only P(1st). Want model's title odds and public pick % side by side.
-3. **Pool settings.** Pool size is fixed at 30, scoring is ESPN-only — no upset bonuses, seed multipliers, or payout structure.
+2. ~~**Leverage on the champion chips.** Each chip shows only P(1st). Want model's title odds and public pick % side by side.~~ **Done 2026-09-22.** Champion choices now show the live fitted model's title probability beside the public field's title share, using the same team-level public-pick payload and recursive bracket probabilities used elsewhere in the page. Missing source values stay blank rather than becoming false zeroes; the existing objective score remains separate and labelled.
+3. **Pool settings.** Pool size is configurable at 10, 30, 50, or 100 entries; the published scoring contract is ESPN standard only.
 4. **Lock a single game, then re-optimize.** Currently can only back a champion or apply shape filters.
 5. **Multiple-entry support** for people entering several brackets.
 6. ~~**Backtest results.** For past seasons, show each strategy's real ESPN points and finish, not just red/green picks.~~
    **Done 2026-09-16.** `scripts/build_track_record.py`: the P(1st) construction with the actual outcome substituted for the simulated one — same opponent draws, same scorer, exact parity first. Shown as Scored/Finish columns and a "How it went" line on played seasons, labelled as realisation beside expectation ("one season is one draw"). `tests/test_track_record.py`.
 8. **Explore a variable (added 2026-09-16, Phase A of the variable-lens design).** Fitted model only: field percentiles, where this bracket hinges on the variable, what it predicts on its own (better-value win rate overall and by round with SE, correlation with margin, one-variable model vs the full model on the same held-out games), and its weight/stability/collinearity in the model. Explain only — nothing edits the model. Training rows now carry `r` (round). Phase B (2026-09-16) **Model sensitivity**, preregistered in `artifacts/methodology_audit/ui_phase_b/PREREGISTRATION_MODEL_SENSITIVITY.md`: per canonical variable, the model *refit* without it (`fit.js exclusionModels()`), reported as "probability under a refit excluding X" — local (this bracket's games with the largest change; picks a re-solve would change, as a count only) and historical (held-out accuracy and Δ log loss on the same 693 games), with a conditional collinearity sentence. Never called contribution/importance (tested). Result note recorded: Overall rating and National rank behave as one difference feature — excluding either costs as much as excluding both. Phase C (Experiment) not built.
-7. **Data date and First Four handling.** Show when ratings were pulled. The 64-team payload needs a plan for play-in slots (undecided between Selection Sunday and the First Four).
+7. **Data date and First Four handling.** Show when ratings were pulled. The 64-team payload needs a plan for play-in slots (undecided between Selection Sunday and the First Four). The displayed 2026 payload has no authoritative rating-pull timestamp or play-in metadata yet, so this remains open pending a source contract rather than an inferred date.
 
 ## Problems
 - ~~**Outdated card text.** Fitted model card claims it's "the only strategy the variable weights apply to" — that control was removed. A code comment and `training.json` both describe leave-one-year-out training, while `fitLinear` actually trains only on earlier seasons.~~
@@ -59,7 +59,7 @@ Manual review of the rendered site (`docs/index.html` + `app.js`/`fit.js`/data f
   **Done 2026-09-16.** Under 720px the board now shows one round at a time (arrows + tappable dots + swipe), two games per row in a compact card. Desktop is untouched — gated entirely by a `@media (max-width: 720px)` rule plus a JS class toggle that is a no-op above that width.
 
 ## Priority for 2027
-Add game probabilities, fix the copy output and champion display, and remove the outdated text.
+The original launch checklist is complete: game probabilities, copy output, champion display, and outdated text were fixed in the 2026 closeout. Remaining 2027 product work is tracked above: pool/scoring settings, game locks with re-optimization, multiple entries, Phase C variable experiments, and an authoritative data-date/First Four source contract.
 
 ## Found during final regression (2026-09-16 closeout) — outside this review's scope
 
@@ -68,7 +68,7 @@ Full `pytest tests/` (2,258 passed, 43 min) surfaced two pre-existing defects in
 1. **Fixed (one-line, unambiguous):** `_rerank_brackets_by_p1st()` read `year` without receiving it — `NameError` on every call, i.e. `optimize_pool` could not complete in any mode. Added the parameter and passed the caller's existing `year` (`test_optimize_pool_e2e[torvik]` now passes).
 2. **Classified 2026-09-16 — isolated to non-production CLI code; not repaired by design.** Full trace: `run_optimize_pool` (single-mode, `construction_mode=forward_greedy`) → `PoolOptimizer.optimize()` → `leverage.py:2267 ParetoOptimizer.generate_pareto_brackets` → `leverage.py:1492 construct_bracket(...)` **without `region_order`** → `bracket_construction._build_seed_map` falls back to `_REGION_ORDER=("East","West","South","Midwest")`. The re-ranker (`pool_cmds._rerank_brackets_by_p1st`) then projects those picks onto the season's *real* F4 pairing from `resolve_region_order` (2026: `West/Midwest/East/South`) via the strict `picks_to_bool_vector`, which raises when the constructed semifinal winners are not one-per-real-semifinal. It is a residual of audit F3-1 in a caller the audit did not reach; `torvik` mode passes only by coincidence of which teams its round probabilities push through.
    **Dependency evidence (PASS gate):** `run_optimize_pool` is invoked only by the CLI subcommand and `tests/test_optimize_pool_e2e.py`; no production build, CI job, `build_candidate_artifact`, `build_ui_payload`, `evaluate_fitted_bracket`, `generate_poolaware_bracket`, Step 9 `referee_audit`, or audit Path 1/2/3 reaches `PoolOptimizer`/`ParetoOptimizer`. The only backtest-side route (`mc_pool_backtest.build_optimized_brackets`) has **no callers anywhere**. Every actual `construct_bracket` call on a production/validation path passes `region_order` (AST-verified), and the shared projection is strict, so a topology mismatch on those paths would raise rather than mis-score — none does (full suite, 14 fitted evaluations with exact parity). README's recommended CLI route (`auto`) and the `det_*` route both pass `region_order` and are clean. Guards: `tests/test_topology_isolation.py` (AST contract, pins the defect's location, asserts the dead helper stays dead); the `seed` e2e case is `xfail(strict=True)` with the classification as its reason; `AGENT_NOTES.md` updated. No methodology, referee, model, or topology behaviour changed.
-   **Two adjacent research scripts noted, not touched:** `scripts/retrospective_scorer.py:296` also omits `region_order` (would hit the same strict `TopologyMismatch` on affected seasons), and `scripts/rank_correlation_diagnostic.py:160` is stale — it calls `_build_first_round_matchups(seeds, regions)` against the post-audit 3-argument signature and cannot run. Neither is on a production path. `artifacts/rank_correlation_diagnostic.json` / `o6_winner_rank_diagnostic.json` (the O3/O6 council-lesson evidence consumed by `tests/test_pool_optimizer_calibration.py`) were generated 2026-04-12, before F3-1, on the mixed topology that finding describes; they are legacy gate evidence, not part of the Step 1–18 audit chain or any shipped number. Re-deriving them is a new experiment and was explicitly out of scope.
+   **Adjacent research scripts fixed 2026-09-22.** `scripts/retrospective_scorer.py` now passes the season's resolved `region_order` into `construct_bracket`, and `scripts/rank_correlation_diagnostic.py` uses the same resolved topology for construction, simulation, and scoring (including the post-audit three-argument helper). `tests/test_topology_isolation.py` remains green. `artifacts/rank_correlation_diagnostic.json` / `o6_winner_rank_diagnostic.json` (the O3/O6 council-lesson evidence consumed by `tests/test_pool_optimizer_calibration.py`) remain legacy gate evidence generated before F3-1; re-deriving them is still a separate experiment.
 
 ## Independent review of the 2026-09-17 rule-search / 2027 landing work
 
@@ -174,3 +174,112 @@ cap is applied inside the enumeration, so the heaviest offered search is
 Measured: 2027 Simple → 2026 only; Flexible → 2025–2026; 2025 has no rule
 in 2024–2021 at either cap and starts at 2019. Details and numbers in
 `artifacts/methodology_audit/ui_rule_search/RULE_SEARCH.md`.
+
+## 2026-09-22 partial reorder, per council review
+
+An LLM council (`council-report-20260922.md`) converged on one diagnosis:
+sequencing and surface count, not raw content volume, is the site's UI
+problem — a visitor is asked to choose a strategy before ever seeing a
+bracket. Rather than build the full "one tabbed Customize surface" the
+council's fuller reframe wanted (new JS state, a materially bigger regression
+surface), this pass did the subset that is pure DOM/CSS restructuring, no
+`render()` data-flow changes:
+
+1. **Mobile order bug, fixed.** Desktop's reading order was already
+   strategy cards → leaderboard → headline → board → accordions. Mobile's
+   `@media (max-width: 720px)` `order` block put three collapsed accordions
+   (Rule search, Explore a variable, Adjust, Why) *before* the board — the
+   exact "asked to choose before seeing the payoff" pattern the council
+   flagged, on the viewport where it costs the most. This was a deliberate
+   prior decision (its own comment explained the tradeoff explicitly), now
+   reversed to match desktop.
+2. **Rule search + Explore a variable merged** under one outer `#advanced`
+   ("Advanced") `<details>`, replacing two separate top-level accordions.
+   Required one small `app.js` addition beyond pure markup: `renderRulePanel()`
+   now also force-opens the new outer wrapper, since an inner `<details>`
+   being open does nothing while its parent is closed — a real regression
+   the merge would otherwise have introduced silently.
+3. **The five filter axes under "Adjust this bracket"** (`#champions`,
+   `#ones`, `#shapes`, `#dd16`, `#sources`) each now nest in their own small
+   `<details class="subpanel">` instead of rendering fully expanded — cuts
+   the chip-wall without a new tab-switching JS layer. `FILTER_ROWS` gained a
+   `wrap` field so `renderFilters()` mirrors each panel's data-driven
+   `hidden` onto its wrapper (an axis with nothing to offer collapses away
+   rather than showing an empty disclosure). `#alts` (near-tied alternatives)
+   stays a plain panel — it's filtered *output*, not a user-chosen axis.
+
+Verified: all four `tests/test_*.js` suites pass unchanged (120 checks) and
+`scripts/stamp_asset_versions.py` re-stamped `app.css`/`app.js`. Ran the
+Playwright smoke suite (`tests/e2e`) before and after on a clean stash diff —
+3 of 8 tests fail identically on both, all from a pre-existing stale
+`.cmp-row` selector (cards became `.scard` a while ago per `app.css`'s own
+comment on the dead class) unrelated to this change; the other 5, including
+the pending-state ordering assertion this reorder directly touches
+(`top(#empty) < top(#compare) < top(#rulepanel) < top(#board)`), pass.
+
+**Deferred at this point:** outcome-based strategy names,
+analytics/instrumentation on the accordions, and the stale `.cmp-row` selector
+in `tests/e2e/test_site_smoke.py`.
+
+**Follow-up 2026-09-22 — default bracket first and one Customize entry point.**
+The ready-season visual order puts the generated bracket (and its copy/print
+and mobile round controls) before the headline and strategy comparison on
+desktop and mobile. Strategy comparison, Adjust filters, Rule Search, and
+Explore a Variable now sit inside one collapsed **Customize this bracket**
+disclosure. The Rule Search path opens the containing disclosures so a direct
+link still reaches its controls; the pending-season view opens Customize
+because Rule Search is available before the field is announced. The existing
+default remains the pool-first strategy. This consolidates the entry point
+without removing controls or changing bracket-selection logic. The new
+sequence has not yet been evaluated with usage data.
+
+**Follow-up — names, controls, and mobile targets.** The four strategy choices
+now use outcome/action labels in the cards, headline, and leaderboard; method
+tags and explanations remain visible. The strategy cards are native buttons
+with selected state exposed through `aria-pressed`, and focus is restored to
+the chosen card after rendering. Disclosures have visible keyboard focus;
+the mobile round indicator announces the current step. On a 390px viewport,
+the round buttons, dots, season buttons, chips, and risk options measure at
+least 44px high, and the active board's team buttons measure over 44px high.
+The phone board no longer reserves an empty grid row for the second Final
+Four game after laying both games side by side; at 390px that reduced the
+board's height by about 105px and brought the bracket summary up into view.
+The unavailable-season renderer no longer erases the Customize markup. The
+stale `.cmp-row` smoke selectors now target the real strategy cards; the full
+browser smoke file passes, 8/8. Nested disclosures still warrant a dedicated
+screen-reader review. Usage instrumentation remains open because this static
+site has no collection endpoint or existing analytics service.
+
+**Follow-up — disclosure depth.** Customize is now the only outer disclosure.
+The Advanced and Adjust groups are labelled sections with real headings inside
+it, leaving Rule Search, Explore a Variable, and individual filter axes as the
+only remaining native disclosures. This cuts the deepest disclosure path from
+three levels to two, preserves keyboard behavior, and gives screen-reader
+users named sections instead of an otherwise redundant wrapper. Browser
+inspection confirmed the pending-season reading order and a maximum details
+nesting depth of two; `tests/e2e/test_site_smoke.py` remains 8/8 passing.
+
+**Follow-up — optional UX instrumentation.** Added dormant, endpoint-neutral
+measurement in `app.js` for disclosure opens, 25/50/75/90% scroll-depth
+milestones, and time to first bracket view. Events carry only coarse viewport
+class, new/returning visitor class, season, strategy, and the event payload.
+The page sends nothing unless a deployment defines
+`window.BRACKET_LAB_ANALYTICS_ENDPOINT`; setup and the payload contract are
+documented in `docs/ANALYTICS.md`. This completes the instrumentation work in
+the codebase while leaving endpoint selection and retention policy to
+deployment configuration.
+
+**Follow-up — accessibility naming.** The mobile round dots now live in a
+labelled navigation landmark, the bracket has an accessible section name, and
+the live round label announces the current round. Combined with the native
+strategy buttons, selected state, visible focus ring, labelled Customize
+sections, and reduced disclosure depth above, the keyboard and structural
+screen-reader path is now explicit. A device-level screen-reader session is
+still a useful release check.
+
+**Release audit 2026-09-22.** A Chromium accessibility-tree inspection now
+shows the bracket as a named region, Customize as a group, Advanced tools as a
+level-2 heading, strategy choices as native buttons with pressed state, and
+the round shortcuts as a labelled navigation landmark. The browser smoke
+suite remains 8/8 passing. A physical VoiceOver/NVDA run is still the only
+unverified layer.

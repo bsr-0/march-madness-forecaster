@@ -302,6 +302,7 @@ def run_retrospective():
                 risk_level=risk,
                 pool_size=POOL_SIZE,
                 scoring_system=ESPN_SCORING,
+                region_order=region_order,
             )
 
             bool_arr = _picks_dict_to_bool_array(picks, first_round)

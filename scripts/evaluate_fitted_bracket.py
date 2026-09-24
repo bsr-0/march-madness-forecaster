@@ -92,6 +92,7 @@ from scripts.mc_pool_backtest import (  # noqa: E402
 )
 from src.prediction.pairwise import PairwiseProbabilities, simulate_bracket_outcomes  # noqa: E402
 from src.prediction.seed_probabilities import build_seed_probabilities  # noqa: E402
+from src.evaluation.pool_settings import PoolSettings, resolve_pool_settings  # noqa: E402
 from src.simulation import bracket_topology as _bt  # noqa: E402
 
 CANDIDATES_DIR = REPO / "artifacts" / "candidates"
@@ -138,7 +139,7 @@ def fitted_bracket_from_browser(year: int) -> Dict[str, Any]:
     return json.loads(proc.stdout)
 
 
-def rebuild_referee(year: int, n_sims: int, trials: int, seed: int):
+def rebuild_referee(year: int, n_sims: int, trials: int, seed: int, *, pool_settings: PoolSettings | None = None):
     """Replay build_candidate_artifact.build() up to its scoring tables.
 
     Line for line the same calls, in the same order, with the same RNG
@@ -146,6 +147,7 @@ def rebuild_referee(year: int, n_sims: int, trials: int, seed: int):
     the FIRST source drawn (so drawing only Torvik from a fresh rng yields the
     same tournaments), and default_rng(seed + 7) for the pool trials.
     """
+    settings = pool_settings or resolve_pool_settings()
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
     prov["field"] = resolve_field(year, seeds, regions)
@@ -165,12 +167,12 @@ def rebuild_referee(year: int, n_sims: int, trials: int, seed: int):
     _bank, torvik_rounds = simulate_bracket_outcomes(spw, first_round, per, rng, noise_std=0.0)
     marg = round_marginals(torvik_rounds)
 
-    print(f"[2/3] replaying {trials:,} pool trials (seed {seed + 7}, {DEFAULT_POOL_SIZE - 1} opponents) ...")
+    print(f"[2/3] replaying {trials:,} pool trials (seed {seed + 7}, {settings.n_opponents} opponents) ...")
     seed_pw = build_seed_probabilities(seeds, as_of=year)
     pick_dist = build_espn_pick_distribution(year, seeds)
     p1_trials = draw_selection_trials(
         trials,
-        n_opponents=DEFAULT_POOL_SIZE - 1,
+        n_opponents=settings.n_opponents,
         first_round=first_round,
         pick_dist=pick_dist,
         matchup_probs=seed_pw,
@@ -183,16 +185,20 @@ def rebuild_referee(year: int, n_sims: int, trials: int, seed: int):
     }
 
 
-def score(winners: List[List[str]], ref) -> Dict[str, float]:
+def score(winners: List[List[str]], ref, *, pool_settings: PoolSettings | None = None) -> Dict[str, float]:
     """The two lines _champion_equity_strategy() uses, with the same rounding."""
+    # Default-equivalence guard: this is the old canonical expression with
+    # settings.scoring substituted for ESPN_SCORING.
+    # expected_scores([winners], ref["marg"], ESPN_SCORING)[0]
+    settings = pool_settings or resolve_pool_settings()
     row = _encode_rows(winners, ref["first_round"])
     return {
-        "ev": round(float(expected_scores([winners], ref["marg"], ESPN_SCORING)[0]), 1),
+        "ev": round(float(expected_scores([winners], ref["marg"], settings.scoring)[0]), 1),
         "p1": round(float(pool_p_first(row, ref["p1_trials"], ref["first_round"])[0]), 4),
     }
 
 
-def parity_check(art: Dict[str, Any], team_ids: List[str], ref) -> Dict[str, Any]:
+def parity_check(art: Dict[str, Any], team_ids: List[str], ref, *, pool_settings: PoolSettings | None = None) -> Dict[str, Any]:
     """Re-score what the artifact shipped; demand exact equality.
 
     Every named strategy, plus the first few candidate rows: the named ones
@@ -202,11 +208,11 @@ def parity_check(art: Dict[str, Any], team_ids: List[str], ref) -> Dict[str, Any
     checked = {}
     for name, v in art["named_strategies"].items():
         w = [[team_ids[i] for i in r] for r in v["w"]]
-        got = score(w, ref)
+        got = score(w, ref, pool_settings=pool_settings)
         checked[f"named:{name}"] = {"shipped": {"ev": v["ev"], "p1": v["p1"]}, "replayed": got}
     for j, c in enumerate(art["candidates"][:5]):
         w = [[team_ids[i] for i in r] for r in c["w"]]
-        got = score(w, ref)
+        got = score(w, ref, pool_settings=pool_settings)
         checked[f"candidate:{j}"] = {"shipped": {"ev": c["ev"], "p1": c["p1"]}, "replayed": got}
     mism = {k: v for k, v in checked.items() if v["shipped"] != v["replayed"]}
     if mism:
@@ -218,9 +224,20 @@ def parity_check(art: Dict[str, Any], team_ids: List[str], ref) -> Dict[str, Any
     return checked
 
 
-def evaluate(year: int, seed: int) -> Dict[str, Any]:
-    art_path = CANDIDATES_DIR / f"candidates_{year}.json"
+def evaluate(year: int, seed: int, *, pool_settings: PoolSettings | None = None) -> Dict[str, Any]:
+    settings = pool_settings or resolve_pool_settings()
+    if settings.scoring_id == "espn_standard":
+        art_path = (CANDIDATES_DIR / f"candidates_{year}.json" if settings.pool_size == 30
+                    else CANDIDATES_DIR / f"pool{settings.pool_size}" / f"candidates_{year}.json")
+    else:
+        art_path = CANDIDATES_DIR / f"pool{settings.pool_size}_{settings.scoring_id}" / f"candidates_{year}.json"
     art = json.loads(art_path.read_text())
+    artifact_settings = art.get("meta", {}).get("pool_settings", {"pool_size": DEFAULT_POOL_SIZE, "scoring_id": "espn_standard"})
+    if artifact_settings != {"pool_size": settings.pool_size, "scoring_id": settings.scoring_id}:
+        raise RuntimeError(
+            "candidate artifact settings do not match evaluation settings: "
+            f"artifact={artifact_settings}, requested={{'pool_size': {settings.pool_size}, 'scoring_id': '{settings.scoring_id}'}}"
+        )
     season = json.loads((DOCS / "data" / f"season_{year}.json").read_text())
     training_path = DOCS / "data" / "training.json"
 
@@ -235,15 +252,15 @@ def evaluate(year: int, seed: int) -> Dict[str, Any]:
     if season["first_round"] != art["first_round"]:
         raise RuntimeError("season payload first_round differs from the candidate artifact's")
 
-    ref = rebuild_referee(year, n_sims=art["meta"]["n_sims"], trials=art["meta"]["p1_trials"], seed=seed)
+    ref = rebuild_referee(year, n_sims=art["meta"]["n_sims"], trials=art["meta"]["p1_trials"], seed=seed, pool_settings=settings)
     if [ref["first_round"].index(t) for t in [team_ids[i] for i in art["first_round"]]] != list(range(64)):
         raise RuntimeError("replayed first_round differs from the artifact's")
 
     print("[3/3] parity against the shipped artifact, then the fitted bracket ...")
-    parity = parity_check(art, team_ids, ref)
+    parity = parity_check(art, team_ids, ref, pool_settings=settings)
 
     winners = [[team_ids[i] for i in r] for r in js["w"]]
-    result = score(winners, ref)
+    result = score(winners, ref, pool_settings=settings)
 
     return {
         "schema": 1,
@@ -277,8 +294,9 @@ def evaluate(year: int, seed: int) -> Dict[str, Any]:
                 "derived from one unified probability model."
             ),
             "scoring_rules": "ESPN " + "/".join(str(v) for v in ESPN_SCORING),
-            "pool_size": DEFAULT_POOL_SIZE,
-            "n_opponents": DEFAULT_POOL_SIZE - 1,
+            "pool_size": settings.pool_size,
+            "n_opponents": settings.n_opponents,
+            "pool_settings": {"pool_size": settings.pool_size, "scoring_id": settings.scoring_id},
             "n_sims_total": art["meta"]["n_sims"],
             "torvik_sims_replayed": ref["per"],
             "n_rating_sources": ref["n_sources"],
@@ -308,11 +326,14 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--year", type=int, required=True)
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED, help="must match the candidate artifact build")
+    ap.add_argument("--pool-size", type=int, default=30, choices=(10, 30, 50, 100))
+    ap.add_argument("--scoring", default="espn_standard", choices=("espn_standard",))
     a = ap.parse_args()
 
-    out = evaluate(a.year, a.seed)
+    out = evaluate(a.year, a.seed, pool_settings=resolve_pool_settings(a.pool_size, a.scoring))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / f"fitted_eval_{a.year}.json"
+    suffix = "" if a.pool_size == 30 and a.scoring == "espn_standard" else f"_pool{a.pool_size}_{a.scoring}"
+    path = OUT_DIR / f"fitted_eval_{a.year}{suffix}.json"
     path.write_text(json.dumps(out, indent=2))
     print(f"\n  parity: {len(out['parity'])} shipped brackets reproduced exactly")
     print(f"  fitted bracket ({out['champion']}): ev {out['ev']}  p1 {out['p1']}")

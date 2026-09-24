@@ -1,0 +1,7 @@
+# Static hosts such as Netlify apply Brotli/gzip automatically when the client
+# advertises it. Keep generated JSON cacheable until DATA_V changes in app.js.
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/app.js
+  Cache-Control: public, max-age=31536000, immutable

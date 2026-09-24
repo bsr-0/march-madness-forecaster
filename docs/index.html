@@ -7,12 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=a6c0ccde">
+<link rel="stylesheet" href="app.css?v=d43cc4c2">
 </head>
 <body>
 
-<!-- One destination. The board is the product: pick a season, choose what you
-     are optimising for, and read the bracket that falls out. Per-variable
+<!-- One destination. The board is the product: pick a season, see its default
+     bracket, and customize it if desired. Per-variable
      selection was removed 2026-08-29 (it measured null), and the Diagnostics
      workbench beside it went on 2026-08-27. -->
 <header class="bar">
@@ -29,19 +29,6 @@
 </header>
 
 <main id="main">
-
-  <!-- 1. WHICH STRATEGY. One card per strategy, same fields each; the card
-       you click is the bracket you get. First on the page (2026-09-17;
-       it sat under the headline before) so the choice comes before the
-       answer, and it stays up in every ready-season state -- including a
-       rule search with nothing found, where it used to vanish with the
-       board and leave no way back. The fitted model's card is labelled for
-       what it is: scored by the same referee as the pool strategies, never
-       selected by it. Restyled 2026-09-19 from a table into cards (see
-       docs/index2.html); renderCompare() in app.js still builds it from the
-       exact same strategyRows() data, so nothing here can disagree with the
-       headline or the board. -->
-  <section class="compare" id="compare" hidden></section>
 
   <!-- 1a. LEADERBOARD. Real per-strategy track record for the season on
        screen (trackRecord() in app.js) -- not a fabricated multi-year
@@ -78,10 +65,10 @@
        tear down when the viewport crosses the breakpoint. -->
   <nav class="board-nav" id="board-nav" hidden aria-label="Round">
     <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
-    <span class="rnav-label" id="rnav-label"></span>
+    <span class="rnav-label" id="rnav-label" aria-live="polite"></span>
     <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
   </nav>
-  <div class="rnav-dots" id="rnav-dots" hidden></div>
+  <nav class="rnav-dots" id="rnav-dots" hidden aria-label="Round shortcuts"></nav>
 
   <!-- Season unavailable / not started. With played seasons before it a
        not-started season is PENDING instead (fieldPending() in app.js): this
@@ -90,43 +77,86 @@
        counts under the chosen rule's criteria (pendingBoardHTML()). -->
   <section class="empty" id="empty" hidden></section>
 
-  <section class="board" id="board"></section>
+  <section class="board" id="board" aria-label="Bracket"></section>
 
-  <!-- 3a. RULE SEARCH (experimental strategy only). Fenced: its own panel,
-       orange, opened only while that strategy is selected. Asks how far
-       back one criterion-per-round rule can reproduce the chosen rounds
-       (Sweet 16 / Elite Eight / Final Four / Champion; Simple = at most two
-       variables, Flexible = three), growing the window back from the newest
-       played season and stopping at the first that leaves no rule. Offers
-       the simplest survivor and two alternatives, each with its matches in
-       the older seasons outside the run and its per-round record; the
-       one-variable table sits collapsed beneath. The criterion deciding
-       each round is printed under the board's round headers; the rounds,
-       complexity and chosen rule travel in the URL. Never scored, never fed
-       to anything else; the panel says so. -->
-  <details class="tune lab" id="rulepanel" hidden>
+  <!-- One entry point for changing how this bracket is built. The bracket
+       above remains the default view; strategy choice, filters, and advanced
+       exploration live together here. Native disclosure keeps the control
+       usable without requiring JavaScript. -->
+  <details class="customize" id="customize" hidden>
     <summary class="tune-head">
-      <span class="tune-title">Rule search — experimental</span>
-      <span class="tune-sub">How far back can one rule reproduce these rounds? Not part of the validated methodology: no chance of finishing first, no expected points, no claim of anything.</span>
+      <span class="tune-title">Customize this bracket</span>
+      <span class="tune-sub">Choose a strategy, adjust the picks, or explore the advanced tools.</span>
     </summary>
-    <div class="panel" id="rule-body"></div>
-  </details>
+    <section class="custom-section pool-settings" aria-labelledby="pool-settings-title">
+      <h2 id="pool-settings-title">Pool settings</h2>
+      <label for="pool-size">Pool size</label>
+      <select id="pool-size" onchange="setPoolSize(this.value)">
+        <option value="10">10 entries</option>
+        <option value="30">30 entries</option>
+        <option value="50">50 entries</option>
+        <option value="100">100 entries</option>
+      </select>
+      <p class="ex-sub">Scores and first-place odds use the selected pool variant. ESPN standard scoring is currently used.</p>
+    </section>
 
-  <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
-       on/off toggle was removed 2026-08-29 because measurement said choosing
-       bought nothing. This is what gives a single variable a purpose without
-       letting anyone edit the validated model: pick one and see where the
-       field ranks on it, where this bracket's games hinge on it, and what it
-       predicts on its own -- using only seasons before the one shown, from the
-       same training rows the model uses. The model, the board and every number above are untouched
-       by anything chosen here. -->
-  <details class="tune" id="explore" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Explore a variable</span>
-      <span class="tune-sub">Where the field stands on it, where this bracket hinges on it, and what it predicts on its own. Looking, not editing: the model does not change.</span>
-    </summary>
-    <div class="panel" id="explore-body"></div>
-  </details>
+  <!-- STRATEGY COMPARISON. One card per strategy, same fields each; the card
+       you click is the bracket you get. Kept after the default bracket in
+       the visual order so first-time visitors see the product before the
+       strategy choice; it stays available in every ready-season state -- including a
+       rule search with nothing found, where it used to vanish with the
+       board and leave no way back. The fitted model's card is labelled for
+       what it is: scored by the same referee as the pool strategies, never
+       selected by it. Restyled 2026-09-19 from a table into cards (see
+       docs/index2.html); renderCompare() in app.js still builds it from the
+       exact same strategyRows() data, so nothing here can disagree with the
+       headline or the board. -->
+  <section class="compare" id="compare" hidden></section>
+
+  <!-- Advanced tools are a labelled section inside Customize, rather than a
+       second disclosure wrapped around two more disclosures. -->
+  <section class="custom-section" id="advanced" aria-labelledby="advanced-title" hidden>
+    <div class="custom-section-head">
+      <h2 id="advanced-title">Advanced tools</h2>
+      <p>Rule search and the variable explorer. Neither edits the bracket above.</p>
+    </div>
+
+    <!-- 3a. RULE SEARCH (experimental strategy only). Fenced: its own panel,
+         orange, opened only while that strategy is selected. Asks how far
+         back one criterion-per-round rule can reproduce the chosen rounds
+         (Sweet 16 / Elite Eight / Final Four / Champion; Simple = at most two
+         variables, Flexible = three), growing the window back from the newest
+         played season and stopping at the first that leaves no rule. Offers
+         the simplest survivor and two alternatives, each with its matches in
+         the older seasons outside the run and its per-round record; the
+         one-variable table sits collapsed beneath. The criterion deciding
+         each round is printed under the board's round headers; the rounds,
+         complexity and chosen rule travel in the URL. Never scored, never fed
+         to anything else; the panel says so. -->
+    <details class="tune lab" id="rulepanel" hidden>
+      <summary class="tune-head">
+        <span class="tune-title">Rule search — experimental</span>
+        <span class="tune-sub">How far back can one rule reproduce these rounds? Not part of the validated methodology: no chance of finishing first, no expected points, no claim of anything.</span>
+      </summary>
+      <div class="panel" id="rule-body"></div>
+    </details>
+
+    <!-- 3b. EXPLORE A VARIABLE (Fitted model only). The old per-variable
+         on/off toggle was removed 2026-08-29 because measurement said choosing
+         bought nothing. This is what gives a single variable a purpose without
+         letting anyone edit the validated model: pick one and see where the
+         field ranks on it, where this bracket's games hinge on it, and what it
+         predicts on its own -- using only seasons before the one shown, from the
+         same training rows the model uses. The model, the board and every number above are untouched
+         by anything chosen here. -->
+    <details class="tune" id="explore" hidden>
+      <summary class="tune-head">
+        <span class="tune-title">Explore a variable</span>
+        <span class="tune-sub">Where the field stands on it, where this bracket hinges on it, and what it predicts on its own. Looking, not editing: the model does not change.</span>
+      </summary>
+      <div class="panel" id="explore-body"></div>
+    </details>
+  </section>
 
   <!-- 4. ADJUST. Three filter axes over the precomputed candidate pool. Each
        narrows WHICH brackets are eligible; the objective decides what is
@@ -139,45 +169,61 @@
        (render() sets `hidden`): the filters narrow the precomputed pool,
        which the fitted model and the rule search do not draw from, so under
        those two the panel would offer a control with nothing to act on. -->
-  <details class="tune" id="tune" hidden>
-    <summary class="tune-head">
-      <span class="tune-title">Adjust this bracket</span>
-      <span class="tune-sub">Back a team, or force a shape. The recommendation above already assumes none of it.</span>
-    </summary>
+  <section class="custom-section" id="tune" aria-labelledby="adjust-title" hidden>
+    <div class="custom-section-head">
+      <h2 id="adjust-title">Adjust this bracket</h2>
+      <p>Back a team, or force a shape. The recommendation above already assumes none of it.</p>
+    </div>
 
-  <section class="panel" id="champions" hidden>
-    <div class="panel-head"><p class="panel-title">Back a champion</p></div>
-    <div class="chips" id="champ-list"></div>
-    <p class="prior-note" id="champ-note"></p>
-  </section>
+  <!-- Each filter axis nests in its own small <details> (2026-09-22 merge)
+       so only a one-line title shows until tapped, instead of five panels'
+       worth of chips all expanded at once. renderFilters() mirrors each
+       inner .panel's `hidden` onto its wrapper (see the `wrap` field on
+       FILTER_ROWS in app.js) so an axis with nothing to offer collapses
+       away entirely rather than showing an empty disclosure. -->
+  <details class="subpanel" id="champions-wrap" hidden>
+    <summary class="subpanel-head">Back a champion</summary>
+    <section class="panel" id="champions" hidden>
+      <div class="chips" id="champ-list"></div>
+      <p class="prior-note" id="champ-note"></p>
+    </section>
+  </details>
 
-  <section class="panel" id="ones" hidden>
-    <div class="panel-head"><p class="panel-title">How many 1 seeds reach the Final Four</p></div>
-    <div class="chips" id="ones-list"></div>
-    <p class="prior-note" id="ones-note"></p>
-  </section>
+  <details class="subpanel" id="ones-wrap" hidden>
+    <summary class="subpanel-head">How many 1 seeds reach the Final Four</summary>
+    <section class="panel" id="ones" hidden>
+      <div class="chips" id="ones-list"></div>
+      <p class="prior-note" id="ones-note"></p>
+    </section>
+  </details>
 
-  <section class="panel" id="shapes" hidden>
-    <div class="panel-head"><p class="panel-title">The biggest upset in your Final Four</p></div>
-    <div class="chips" id="shape-list"></div>
-    <p class="prior-note" id="shape-note"></p>
-  </section>
+  <details class="subpanel" id="shapes-wrap" hidden>
+    <summary class="subpanel-head">The biggest upset in your Final Four</summary>
+    <section class="panel" id="shapes" hidden>
+      <div class="chips" id="shape-list"></div>
+      <p class="prior-note" id="shape-note"></p>
+    </section>
+  </details>
 
-  <section class="panel" id="dd16" hidden>
-    <div class="panel-head"><p class="panel-title">Well-known bracket patterns</p></div>
-    <div class="chips" id="dd-list"></div>
-    <p class="prior-note" id="dd-note"></p>
-  </section>
+  <details class="subpanel" id="dd16-wrap" hidden>
+    <summary class="subpanel-head">Well-known bracket patterns</summary>
+    <section class="panel" id="dd16" hidden>
+      <div class="chips" id="dd-list"></div>
+      <p class="prior-note" id="dd-note"></p>
+    </section>
+  </details>
 
   <!-- Provenance. The candidate pool is not one model's opinion: it is
        simulated from Torvik, Elo and the Massey composite, plus region_top_n
        constructions. Those disagree about real teams, and that disagreement is
        the point -- a bracket Torvik would never sample is reachable. -->
-  <section class="panel" id="sources" hidden>
-    <div class="panel-head"><p class="panel-title">Which rating system</p></div>
-    <div class="chips" id="src-list"></div>
-    <p class="prior-note" id="src-note"></p>
-  </section>
+  <details class="subpanel" id="sources-wrap" hidden>
+    <summary class="subpanel-head">Which rating system</summary>
+    <section class="panel" id="sources" hidden>
+      <div class="chips" id="src-list"></div>
+      <p class="prior-note" id="src-note"></p>
+    </section>
+  </details>
 
   <!-- Near-tied alternates. The referee's standard error is about half a point,
        so the top few in any filtered set are not meaningfully ranked. Offering
@@ -192,6 +238,7 @@
     </p>
   </section>
 
+  </section>
   </details>
 
   <!-- 5. HOW TRUSTWORTHY IS THIS. The methodology layer, collapsed: what the
@@ -250,6 +297,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=040142ee"></script>
-<script src="app.js?v=18bb389e"></script>
+<script src="app.js?v=2febbff3"></script>
 </body>
 </html>

@@ -87,8 +87,8 @@ def test_landing_opens_pending_with_orientation_first(site, page):
     assert visible(page, "#empty.wait")
     assert page.locator("#empty.wait").inner_text().startswith("2027 field not announced yet")
     assert top(page, "#empty") < top(page, "#compare") < top(page, "#rulepanel") < top(page, "#board")
-    assert page.locator("#compare .cmp-row").count() == 4
-    assert page.locator("#compare .cmp-row.na").count() == 3
+    assert page.locator("#compare .scard").count() == 4
+    assert page.locator("#compare .scard.na").count() == 3
     assert page.locator("#rule-body .rule-row").count() == 3
     assert page.locator("#board > .round").count() == 6
     counts = page.eval_on_selector_all("#board .r-count", "els => els.map(e => e.textContent)")
@@ -134,14 +134,29 @@ def test_one_variable_table_is_collapsed_after_the_alternatives(site, page):
 def test_filters_gate_per_strategy_on_2026(site, page):
     page.goto(site + "#y=2026")
     page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
-    page.click("#compare .cmp-row:has-text('Win the pool')")
+    page.locator("#customize > summary").click()
+    page.click("#compare .scard[data-strategy='p1']")
     assert visible(page, "#tune") and not visible(page, "#explore") and not visible(page, "#rulepanel")
-    page.click("#compare .cmp-row:has-text('Fitted model')")
+    page.click("#compare .scard[data-strategy='model']")
     page.wait_for_function("() => !document.getElementById('explore').hidden")
     assert not visible(page, "#tune") and not visible(page, "#rulepanel")
-    page.click("#compare .cmp-row:has-text('Rule search')")
+    page.click("#compare .scard[data-strategy='rule']")
     settle(page)
     assert visible(page, "#rulepanel") and not visible(page, "#tune") and not visible(page, "#explore")
+
+
+def test_pool_variant_selector_round_trips_and_changes_metrics(site, page):
+    page.goto(site + "#y=2026&pool=50")
+    page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
+    assert page.evaluate("state.poolSize") == 50
+    page.click("#customize > summary")
+    assert page.locator("#pool-size").input_value() == "50"
+    p1_50 = page.evaluate("strategyRows().find(x => x.id === 'p1').p1")
+    page.select_option("#pool-size", "10")
+    page.wait_for_function("() => state.poolSize === 10 && document.querySelectorAll('#board .side.picked').length === 63")
+    assert "pool=10" in page.evaluate("location.hash")
+    p1_10 = page.evaluate("strategyRows().find(x => x.id === 'p1').p1")
+    assert p1_10 != p1_50
 
 
 def test_checkpoint_guard_shows_its_message(site, page):

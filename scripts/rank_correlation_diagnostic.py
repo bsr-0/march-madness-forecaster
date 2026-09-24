@@ -63,7 +63,7 @@ CHALK_NOISE_STD = 0.4  # opponent correlation strength
 SCORING_VECTOR = build_scoring_vector(ESPN_SCORING)
 
 
-def generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, n_target=10):
+def generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, n_target=10, region_order=None):
     """Generate a portfolio of unique brackets via risk-level sweep."""
     scoring = dict(ESPN_SCORING)
     unique = {}
@@ -80,6 +80,7 @@ def generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, n_target=
                 risk_level=risk,
                 pool_size=CANONICAL_POOL_SIZE,
                 scoring_system=scoring,
+                region_order=region_order,
             )
             key = tuple(sorted(picks.items()))
             if key not in unique:
@@ -155,12 +156,13 @@ def run_year(year, rng):
     except FileNotFoundError:
         pick_dist = build_seed_pick_distribution(seeds)
 
-    # Also need first_round_matchups for P(1st) that uses default region order
-    # (the construct_bracket uses default order, not game-derived)
-    cli_first_round = _build_first_round_matchups(seeds, regions)
+    # Use the same season topology for construction, simulation, and scoring.
+    # Falling back to the historical East/West/South/Midwest order silently
+    # mismatches seasons whose announced Final Four pairing differs.
+    cli_first_round = _build_first_round_matchups(seeds, regions, region_order)
 
     # Generate bracket portfolio
-    brackets = generate_bracket_portfolio(seeds, regions, round_probs, pick_dist)
+    brackets = generate_bracket_portfolio(seeds, regions, round_probs, pick_dist, region_order=region_order)
     if len(brackets) < 3:
         print(f"  {year}: only {len(brackets)} unique brackets, SKIP")
         return None

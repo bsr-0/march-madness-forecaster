@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import hashlib
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -351,6 +352,101 @@ def _risk_variants(named: Dict[str, Any], family: str) -> List[Dict[str, Any]]:
             }
         )
     return variants
+
+
+def _pool_variant(year: int, size: int) -> Dict[str, Any] | None:
+    """Load one alternate artifact into the browser's additive variant schema."""
+    # Pool 30 is the canonical artifact; alternate sizes live in namespaced
+    # directories. Presenting both through one schema keeps browser selection
+    # uniform without removing the legacy top-level fields.
+    path = (CANDIDATES_DIR / f"candidates_{year}.json"
+            if size == 30 else CANDIDATES_DIR / f"pool{size}" / f"candidates_{year}.json")
+    if not path.exists():
+        return None
+    art = json.loads(path.read_text())
+    meta = art.get("meta", {})
+    expected = {"pool_size": size, "scoring_id": "espn_standard"}
+    if meta.get("pool_settings") not in (None, expected) or (size == 30 and meta.get("p1_pool_size") not in (None, 30)):
+        raise ValueError(f"{path} has pool_settings={meta.get('pool_settings')!r}, expected {expected!r}")
+    named = art.get("named_strategies", {})
+    teams = art.get("teams", [])
+    team_names = {i: t.get("name", str(i)) for i, t in enumerate(teams)}
+    seeds = {i: t.get("seed") for i, t in enumerate(teams)}
+    first_round = art.get("first_round", [])
+    from src.product.selection import preference_predicates
+    preds = {k: f for k, f in preference_predicates(art).items() if k != "none"}
+    pred_keys = sorted(preds)
+
+    def encode(w):
+        picked = [set(r) for r in w]
+        bits, cur = [], list(first_round)
+        for ri in range(6):
+            nxt = []
+            for g in range(0, len(cur), 2):
+                a, b = cur[g], cur[g + 1]
+                first = a in picked[ri]
+                bits.append("1" if first else "0")
+                nxt.append(a if first else b)
+            cur = nxt
+        return "".join(bits)
+
+    def row(c):
+        w = c["w"]
+        f4 = [seeds[i] for i in w[3]]
+        src = str(c.get("src", "?"))
+        return {"b": encode(w), "ev": c["ev"], "p1": c["p1"], "c": w[5][0],
+                "o": sum(x == 1 for x in f4), "d": max(f4),
+                "dd": min(2, sum(seeds[i] >= 10 for i in w[1])),
+                "s": "shipped" if src.startswith("shipped") else ("region_top_n" if src.startswith("region_top_n") else src),
+                "k": "".join("1" if preds[k](w) else "0" for k in pred_keys)}
+
+    cand_rows = [row(c) for c in art.get("candidates", [])]
+    counts = {}
+    for c in cand_rows: counts[c["c"]] = counts.get(c["c"], 0) + 1
+    filters = {"candidates": cand_rows,
+               "champions": sorted(({"team": i, "name": team_names[i], "seed": seeds[i], "n": n} for i, n in counts.items()), key=lambda x: (x["seed"], x["name"])),
+               "ones": sorted({c["o"] for c in cand_rows}), "depths": sorted({c["d"] for c in cand_rows}),
+               "dd16": sorted({c["dd"] for c in cand_rows}), "sources": sorted({c["s"] for c in cand_rows}),
+               "predicates": [{"i": i, "key": k, "label": k} for i, k in enumerate(pred_keys)]}
+
+    eval_suffix = "" if size == 30 else f"_pool{size}"
+    eval_path = FITTED_EVAL_DIR / f"fitted_eval_{year}{eval_suffix}.json"
+    fitted_eval = None
+    if eval_path.exists():
+        ev = json.loads(eval_path.read_text())
+        if ev.get("scorer", {}).get("pool_size") == size:
+            fitted_eval = {"ev": ev.get("ev"), "p1": ev.get("p1"),
+                           "generated_at": ev.get("generated_at"),
+                           "artifact": str(eval_path.relative_to(REPO))}
+    def strategy(key: str, label: str, family: str, public_id: str) -> Dict[str, Any] | None:
+        e = named.get(key)
+        if not e:
+            return None
+        return {"id": public_id, "label": label, "source_id": key, "picks": e["w"], "ev": e["ev"], "p1": e["p1"],
+                "risk_variants": _risk_variants(named, family)}
+    strategies = [x for x in (
+        strategy("blend_region_35", "Aim to win your pool", "blend_region", "p1"),
+        strategy("ev_optimal", "Maximize projected points", "ev_risk", "ev"),
+    ) if x]
+    return {
+        "schema": 1,
+        "pool_size": size,
+        "scoring_id": "espn_standard",
+        "artifact_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "artifact": str(path.relative_to(REPO)),
+        "p1_pool_size": meta.get("p1_pool_size"),
+        "p1_assumption": meta.get("p1_assumption"),
+        "p1_trials": meta.get("p1_trials"),
+        "n_sims": meta.get("n_sims"),
+        "generated_at": meta.get("generated_at"),
+        "fitted_eval": fitted_eval,
+        "strategies": strategies,
+        # Candidate rows and filter indexes are intentionally kept only on the
+        # canonical season payload. Alternate pool sizes change the production
+        # strategy metrics, but the browser's exploratory filter bank is a
+        # shared presentation index; duplicating it four times added ~3 MB to
+        # every season transfer without changing the displayed bracket.
+    }
 
 
 def _public_picks(year: int, teams: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
@@ -737,6 +833,11 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # "9.9% to win" with no qualifier anywhere near it.
     meta = art.get("meta", {})
 
+    # Advertise alternate, validated artifact variants without silently
+    # swapping the canonical strategy set. The browser can expose controls only
+    # for variants that are physically present and settings-matched.
+    variants = [v for size in (10, 30, 50, 100) if (v := _pool_variant(year, size)) is not None]
+
     # A season that ships without these degrades in silence: the browser reads
     # `p1_assumption || ''` and renders nothing, and `p1_trials` missing makes
     # the standard error fall back to the scalar computed at p=0.05 -- both
@@ -759,6 +860,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         "status": "ready",
         "p1_assumption": meta.get("p1_assumption"),
         "p1_pool_size": meta.get("p1_pool_size"),
+        "pool_variants": variants,
         # Per-round actual winners, or null for a season not yet played.
         "actual": actual,
         "teams": [
@@ -908,7 +1010,7 @@ def main() -> int:
         print(f"  {year}  {payload['status']:12} {size:7.1f} KB  -> {out.name}")
 
     (OUT_DIR / "seasons.json").write_text(
-        json.dumps({"seasons": index, "variables_excluded_as_leakage": list(EXCLUDED_AS_LEAKAGE)}, indent=2)
+        json.dumps({"seasons": index, "variables_excluded_as_leakage": list(EXCLUDED_AS_LEAKAGE)}, separators=(",", ":"))
     )
     print(f"\nwrote {OUT_DIR / 'seasons.json'}")
     return 0

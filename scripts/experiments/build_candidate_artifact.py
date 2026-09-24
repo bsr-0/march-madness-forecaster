@@ -81,6 +81,7 @@ from scripts.mc_pool_backtest import (  # noqa: E402
 )
 from src.prediction.pairwise import PairwiseProbabilities, simulate_bracket_outcomes  # noqa: E402
 from src.prediction.seed_probabilities import build_seed_probabilities  # noqa: E402
+from src.evaluation.pool_settings import PoolSettings, resolve_pool_settings  # noqa: E402
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
 DEFAULT_POOL_SIZE = 30  # ENTRIES in the pool assumed by every P(1st) in the artifact (us + 29 opponents)
@@ -425,7 +426,7 @@ def true_team_round_probabilities(rounds: List, team_ids: List[str]) -> List[Lis
 # ---------------------------------------------------------------------------
 
 
-def validate(bank, rounds, sel, ev, p1, first_round, seeds, ev_marginals) -> Dict:
+def validate(bank, rounds, sel, ev, p1, first_round, seeds, ev_marginals, scoring_system=None) -> Dict:
     """Checks that must pass before the artifact is fit to ship."""
     out: Dict[str, object] = {}
 
@@ -452,7 +453,7 @@ def validate(bank, rounds, sel, ev, p1, first_round, seeds, ev_marginals) -> Dic
     # built since the pool was broadened to three sources. Passing the
     # marginals rather than re-deriving them is what stops that recurring.
     marg = ev_marginals
-    pts = {r: ESPN_SCORING[r] for r in ROUND_NAMES}
+    pts = {r: (scoring_system or ESPN_SCORING)[r] for r in ROUND_NAMES}
     errs = []
     for i in sel[: min(200, len(sel))]:
         manual = sum(pts[rn] * sum(marg[ri].get(t, 0.0) for t in rounds[i][ri]) for ri, rn in enumerate(ROUND_NAMES))
@@ -547,7 +548,8 @@ def _blend_region_probs(year, seeds):
     }
 
 
-def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
+def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35, *, settings=None):
+    settings = settings or resolve_pool_settings()
     """region_top_n over a seed/no-seed blend at a fixed risk level.
 
     THE MEASURED RECOMMENDATION, and the reason it is fixed rather than chosen.
@@ -579,8 +581,8 @@ def _blend_region_bracket(year, seeds, regions, first_round, risk=0.35):
         round_probs=blend_rp,
         public_picks=build_espn_pick_distribution(year, seeds) or {},
         risk_level=risk,
-        pool_size=DEFAULT_POOL_SIZE,
-        scoring_system=dict(ESPN_SCORING),
+        pool_size=settings.pool_size,
+        scoring_system=settings.scoring,
         region_order=_bt.region_order_from_first_round(first_round, regions),
     )
 
@@ -699,7 +701,8 @@ def _champ_equity_rounds(first_round, marg):
     return winners
 
 
-def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=None, regions=None) -> Dict:
+def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=None, regions=None, *, settings=None) -> Dict:
+    settings = settings or resolve_pool_settings()
     """Decide every game by P(champion) rather than by P(winning that game).
 
     A RULE, NOT A SEARCH, which is what makes it worth shipping beside the two
@@ -739,7 +742,7 @@ def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=Non
     out = {
         "champ_equity": {
             "w": winners,
-            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "ev": round(float(expected_scores([winners], marg, settings.scoring)[0]), 1),
             "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
         }
     }
@@ -752,7 +755,7 @@ def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=Non
     ev_row = _encode_rows(ev_opt, first_round)
     out["ev_optimal"] = {
         "w": ev_opt,
-        "ev": round(float(expected_scores([ev_opt], marg, ESPN_SCORING)[0]), 1),
+        "ev": round(float(expected_scores([ev_opt], marg, settings.scoring)[0]), 1),
         "p1": round(float(pool_p_first(ev_row, p1_trials, first_round)[0]), 4),
     }
 
@@ -768,13 +771,14 @@ def _champion_equity_strategy(first_round, marg, p1_trials, year=None, seeds=Non
             row = _encode_rows(br, first_round)
             out["blend_region_35"] = {
                 "w": br,
-                "ev": round(float(expected_scores([br], marg, ESPN_SCORING)[0]), 1),
+                "ev": round(float(expected_scores([br], marg, settings.scoring)[0]), 1),
                 "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
             }
     return out
 
 
-def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
+def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials, *, settings=None) -> Dict:
+    settings = settings or resolve_pool_settings()
     """Risk-level variants of the pool-points strategy, additive only.
 
     ``named_strategies["ev_optimal"]`` (the exact DP maximum, no risk knob --
@@ -829,8 +833,8 @@ def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
                 round_probs=torvik_rp,
                 public_picks=pub,
                 risk_level=risk,
-                pool_size=DEFAULT_POOL_SIZE,
-                scoring_system=dict(ESPN_SCORING),
+                pool_size=settings.pool_size,
+                scoring_system=settings.scoring,
                 region_order=region_order,
             )
         except Exception as exc:  # noqa: BLE001 - one grid cell failing is not fatal
@@ -851,13 +855,14 @@ def _ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
         row = _encode_rows(winners, first_round)
         out[name] = {
             "w": winners,
-            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "ev": round(float(expected_scores([winners], marg, settings.scoring)[0]), 1),
             "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
         }
     return out
 
 
-def _p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
+def _p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials, *, settings=None) -> Dict:
+    settings = settings or resolve_pool_settings()
     """Risk-level variants of the p1 (win-the-pool) strategy, additive only.
 
     ``named_strategies["blend_region_35"]`` (the fixed-risk shipped
@@ -906,8 +911,8 @@ def _p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
                 round_probs=blend_rp,
                 public_picks=pub,
                 risk_level=risk,
-                pool_size=DEFAULT_POOL_SIZE,
-                scoring_system=dict(ESPN_SCORING),
+                pool_size=settings.pool_size,
+                scoring_system=settings.scoring,
                 region_order=region_order,
             )
         except Exception as exc:  # noqa: BLE001 - one grid cell failing is not fatal
@@ -928,7 +933,7 @@ def _p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials) -> Dict:
         row = _encode_rows(winners, first_round)
         out[name] = {
             "w": winners,
-            "ev": round(float(expected_scores([winners], marg, ESPN_SCORING)[0]), 1),
+            "ev": round(float(expected_scores([winners], marg, settings.scoring)[0]), 1),
             "p1": round(float(pool_p_first(row, p1_trials, first_round)[0]), 4),
         }
     return out
@@ -995,8 +1000,8 @@ def _constructed_candidates(year, seeds, regions, first_round, bases):
             try:
                 picks, _c, _, _, _ = construct_bracket(
                     mode="region_top_n", seeds=seeds, regions=regions, round_probs=rp,
-                    public_picks=pub, risk_level=risk, pool_size=DEFAULT_POOL_SIZE,
-                    scoring_system=dict(ESPN_SCORING),
+                    public_picks=pub, risk_level=risk, pool_size=settings.pool_size,
+                    scoring_system=settings.scoring,
                     region_order=_bt.region_order_from_first_round(first_round, regions),
                 )
             except Exception:  # noqa: BLE001 - one grid cell failing is not fatal
@@ -1084,7 +1089,10 @@ def resolve_field(year: int, seeds: Dict, regions: Dict) -> Dict:
     }
 
 
-def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
+def build(year: int, n_sims: int, target: int, trials: int, seed: int, *, pool_settings: PoolSettings | None = None) -> Dict:
+    settings = pool_settings or resolve_pool_settings()
+    pool_size = settings.pool_size
+    scoring = settings.scoring
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
     prov["field"] = resolve_field(year, seeds, regions)
@@ -1129,7 +1137,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     marg = round_marginals(
         [r for r, o in zip(rounds, origin) if o == "torvik"]
     )
-    ev = expected_scores(rounds, marg, ESPN_SCORING)
+    ev = expected_scores(rounds, marg, scoring)
 
     print(f"[3/5] diversity-preserving sample -> {target:,} ...")
     sel = stratified_sample(rounds, ev, target, rng)
@@ -1148,7 +1156,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     # winning" still could not be handed the bracket the product recommends.
     # They are appended here by the same path as any other candidate.
     for _lbl, _w in (
-        ("shipped(blend_region_35)", _blend_region_bracket(year, seeds, regions, first_round, 0.35)),
+        ("shipped(blend_region_35)", _blend_region_bracket(year, seeds, regions, first_round, 0.35, settings=settings)),
         ("shipped(ev_optimal)", _ev_optimal_bracket(first_round, marg)),
         ("shipped(champ_equity)", _champ_equity_rounds(first_round, marg)),
     ):
@@ -1160,7 +1168,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
         rounds = rounds + extra_rounds
         origin = origin + [lbl for lbl, _w in constructed]
         bank = np.vstack([bank, extra_bank])
-        ev = np.concatenate([ev, expected_scores(extra_rounds, marg, ESPN_SCORING)])
+        ev = np.concatenate([ev, expected_scores(extra_rounds, marg, scoring)])
         sel = np.concatenate([sel, np.arange(base_n, base_n + len(extra_rounds))])
         print(f"      + {len(extra_rounds)} constructed (region_top_n) candidates")
 
@@ -1169,7 +1177,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     pick_dist = build_espn_pick_distribution(year, seeds)
     p1_trials = draw_selection_trials(
         trials,
-        n_opponents=DEFAULT_POOL_SIZE - 1,  # 30-entry pool = 29 opponents (audit F4-8; was 30 -> a 31-entry pool)
+        n_opponents=settings.n_opponents,
         first_round=first_round,
         pick_dist=pick_dist,
         matchup_probs=seed_pw,
@@ -1178,19 +1186,19 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
     )
     p1 = pool_p_first(bank[sel], p1_trials, first_round)
 
-    named = _champion_equity_strategy(first_round, marg, p1_trials, year, seeds, regions)
+    named = _champion_equity_strategy(first_round, marg, p1_trials, year, seeds, regions, settings=settings)
     # Additive risk grid for the ev/pool-points strategy. Does not touch
     # named["ev_optimal"] or anything upstream of it -- see _ev_risk_grid's
     # docstring for why this is where it lives.
-    named.update(_ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials))
+    named.update(_ev_risk_grid(year, seeds, regions, first_round, marg, p1_trials, settings=settings))
     # Additive risk grid for the p1 (win-the-pool) strategy. Does not touch
     # named["blend_region_35"] or anything upstream of it -- see
     # _p1_risk_grid's docstring for why the model fit runs once, not five
     # times.
-    named.update(_p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials))
+    named.update(_p1_risk_grid(year, seeds, regions, first_round, marg, p1_trials, settings=settings))
 
     print("[5/5] validating ...")
-    checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg)
+    checks = validate(bank, rounds, sel, ev, p1, first_round, seeds, marg, scoring)
     true_probs = true_constraint_probabilities(sim_rounds, seeds)
     team_f4 = true_team_f4_probabilities(sim_rounds, seeds)
 
@@ -1276,11 +1284,12 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int) -> Dict:
             "n_sims": n_sims,
             "n_candidates": len(candidates),
             "p1_trials": trials,
-            "p1_pool_size": DEFAULT_POOL_SIZE,
+            "p1_pool_size": pool_size,
+            "pool_settings": {"pool_size": pool_size, "scoring_id": settings.scoring_id},
             "p1_assumption": (
                 f"P(1st) is the expected share of first place (a tie for the top score is "
-                f"split among the tied entries) in a {DEFAULT_POOL_SIZE}-entry pool "
-                f"(you plus {DEFAULT_POOL_SIZE - 1} opponents) with ESPN public pick "
+                f"split among the tied entries) in a {pool_size}-entry pool "
+                f"(you plus {pool_size - 1} opponents) with ESPN public pick "
                 f"behaviour. It is NOT a universal probability of winning any pool."
             ),
             "p1_se_estimate": round(float(np.sqrt(0.05 * 0.95 / trials)), 5),
@@ -1345,6 +1354,8 @@ def main() -> None:
     ap.add_argument("--target", type=int, default=3000)
     ap.add_argument("--trials", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=20260820)
+    ap.add_argument("--pool-size", type=int, default=30, choices=(10, 30, 50, 100))
+    ap.add_argument("--scoring", default="espn_standard", choices=("espn_standard",))
     ap.add_argument("--out", type=str, default="artifacts/candidates")
     ap.add_argument(
         "--force",
@@ -1357,7 +1368,8 @@ def main() -> None:
     path = out_dir / f"candidates_{args.year}.json"
     _refuse_to_overwrite(path, args.year, force=args.force)
 
-    art = build(args.year, args.n_sims, args.target, args.trials, args.seed)
+    settings = resolve_pool_settings(args.pool_size, args.scoring)
+    art = build(args.year, args.n_sims, args.target, args.trials, args.seed, pool_settings=settings)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(art, separators=(",", ":")).encode()

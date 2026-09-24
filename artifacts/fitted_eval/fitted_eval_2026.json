@@ -91,6 +91,10 @@
     "scoring_rules": "ESPN R64/R32/S16/E8/F4/CHAMP",
     "pool_size": 30,
     "n_opponents": 29,
+    "pool_settings": {
+      "pool_size": 30,
+      "scoring_id": "espn_standard"
+    },
     "n_sims_total": 150000,
     "torvik_sims_replayed": 50000,
     "n_rating_sources": 3,
@@ -223,11 +227,11 @@
   "inputs": {
     "fit_inputs_hash": "6e2e33356a041ca829477382002b953435c3a2c51e11c92b142b0aafc4ab5bbe",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
-    "fit_js_sha256": "ee39dd862d13eb7f08837f4abb8e9af7fa732eab4ac74baa53cb12073a7ceaa3",
-    "app_js_sha256": "0f6ce560614aa4427c325f8fe77bf554edbfd917c53d97b26b70ea54c907b6df",
+    "fit_js_sha256": "040142ee94f6a7cf4827b548a8b149d874af9de7bce2a0cf5a5911fac3671618",
+    "app_js_sha256": "2e88e5a90f6198f5ce5eff4437feb86951f308a5e4f8f47daee7ab567fcf5790",
     "candidates_artifact": "artifacts/candidates/candidates_2026.json",
     "candidates_generated_at": "2026-09-16T04:03:24.516315+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-16T23:21:19.374267+00:00"
+  "generated_at": "2026-09-23T04:47:00.477285+00:00"
 }

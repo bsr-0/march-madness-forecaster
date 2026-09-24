@@ -39,6 +39,9 @@ body {
 }
 
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
 
 /* ---------- top bar ---------- */
 
@@ -90,6 +93,21 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- layout ---------- */
 
 #main { padding: 22px 24px 80px; max-width: 1400px; margin: 0 auto; }
+/* A ready season opens on the bracket the default strategy already produced.
+   The strategy comparison remains immediately below it for people who want
+   to change the objective. Keep tools and the mobile round controls ahead of
+   the board they operate on. */
+#main { display: flex; flex-direction: column; }
+#board-tools { order: 0; }
+#board-nav { order: 1; }
+#rnav-dots { order: 2; }
+#board { order: 3; }
+#headline { order: 4; }
+#dropped-note { order: 5; }
+#customize { order: 6; }
+#leaderboard { order: 7; }
+#empty { order: 8; }
+#why { order: 11; }
 
 .note {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -363,7 +381,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   gap: 10px; margin: 0 0 10px;
 }
 .rnav-btn {
-  width: 32px; height: 32px; border-radius: 8px; font-size: 18px; line-height: 1;
+  width: 44px; height: 44px; border-radius: 8px; font-size: 18px; line-height: 1;
   color: var(--ink-2); background: var(--panel); border: 1px solid var(--line);
 }
 .rnav-btn:disabled { opacity: .35; }
@@ -372,12 +390,16 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
   color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
-.rnav-dots { display: flex; justify-content: center; gap: 6px; margin: 0 0 14px; }
+.rnav-dots { display: flex; justify-content: center; gap: 0; margin: 0 0 14px; }
 .rnav-dot {
-  width: 6px; height: 6px; border-radius: 50%; padding: 0;
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 50%; padding: 0;
+}
+.rnav-dot::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
   background: var(--line-2); transition: background .1s, transform .1s;
 }
-.rnav-dot.on { background: var(--accent); transform: scale(1.3); }
+.rnav-dot.on::before { background: var(--accent); transform: scale(1.3); }
 
 /* ---------- empty season ---------- */
 
@@ -447,8 +469,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
    single-id rules. */
 #main.pending { display: flex; flex-direction: column; }
 #main.pending #empty { order: -4; }
-#main.pending #compare { order: -3; }
-#main.pending #rulepanel { order: -2; }
+/* In a pending season the customize disclosure opens to expose the available
+   rule search and the strategy comparison for the seasons that have data. */
+#main.pending #customize { order: -3; }
 /* The placeholder board: header and count only, one row tall. */
 #main.pending .round { grid-template-rows: auto auto; align-content: start; }
 .r-count { margin: 0; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -456,27 +479,21 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- small screens ---------- */
 
 @media (max-width: 720px) {
-  /* On a phone the collapsed panels (Explore, Adjust, Why) sit ABOVE the
-     bracket rather than after 32 games of it. Reordered here, not in the
-     DOM, so the desktop reading order (table, headline, bracket, then the
-     panels) is untouched. Every child of #main gets an explicit order so a
-     future section cannot land somewhere by default. */
+  /* Match the bracket-first reading order on narrow screens too. */
   #main { display: flex; flex-direction: column; }
-  #compare { order: 0; }
-  #headline { order: 1; }
-  #dropped-note { order: 2; }
-  #rulepanel { order: 3; }
-  #explore { order: 4; }
-  #tune { order: 5; }
-  #why { order: 6; }
-  #board-tools { order: 7; }
-  #board-nav { order: 8; }
-  #rnav-dots { order: 9; }
-  #board { order: 10; }
-  #empty { order: 11; }
+  #board-tools { order: 0; }
+  #board-nav { order: 1; }
+  #rnav-dots { order: 2; }
+  #board { order: 3; }
+  #headline { order: 4; }
+  #dropped-note { order: 5; }
+  #customize { order: 6; }
+  #leaderboard { order: 7; }
+  #empty { order: 8; }
+  #why { order: 9; }
   /* Under #main.pending three of these are overridden (see that block). */
   #main.pending .round.active { grid-template-columns: 1fr; }
-  #tune, #why, #explore, #rulepanel { margin-bottom: 12px; }
+  #customize, #why { margin-bottom: 12px; }
   .bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
   .bar-l { justify-content: space-between; }
   .modes { justify-content: stretch; }
@@ -506,6 +523,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      inside room to shrink along with them, below. */
   .round.active {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto; grid-auto-rows: auto;
     gap: 8px 8px; align-items: start;
   }
   .round.active .r-label { grid-column: 1 / -1; }
@@ -517,8 +535,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
      badge still aligns its score under the one above it that has one. */
   .side {
     grid-template-columns: 16px 1fr auto auto; gap: 4px;
-    min-height: 30px; padding: 6px 7px; font-size: 12px;
+    min-height: 44px; padding: 6px 7px; font-size: 12px;
   }
+  .yr, .chip, .risk-option, .tool, .x { min-height: 44px; }
+  .subpanel-head { min-height: 44px; display: flex; align-items: center; }
   .sc { font-size: 10px; }
   .seed { font-size: 10px; }
   /* The upset badge's full text ("UPSET") no longer fits next to a seed,
@@ -721,6 +741,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .chip.on .chip-seed { color: var(--accent); }
 .chip-stat { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .chip.on .chip-stat { color: var(--ink-2); }
+.chip-leverage { display: block; color: var(--ink-3); font-size: 11px; line-height: 1.2; margin-top: 2px; }
 
 /* Filter chips the current pairing cannot satisfy. Dimmed rather than removed:
    a chip that vanishes reads as a bug, a dimmed one reads as a constraint. */
@@ -780,21 +801,54 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- adjust (the collapsed filter stack) ----------
    Closed by default. The bracket is the product; the filters are an
    affordance most users will never open, and they used to sit on top of it. */
-.tune, .why {
+.customize, .tune, .why {
   margin: 0 0 18px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--panel);
 }
-.tune > summary, .why > summary {
+.customize > summary, .tune > summary, .why > summary {
   cursor: pointer; padding: 14px 16px; list-style: none;
   display: flex; flex-direction: column; gap: 3px;
 }
-.tune > summary::-webkit-details-marker, .why > summary::-webkit-details-marker { display: none; }
+.customize > summary::-webkit-details-marker, .tune > summary::-webkit-details-marker, .why > summary::-webkit-details-marker { display: none; }
 .tune-title { font-size: 14px; font-weight: 600; color: var(--ink); }
 .tune-title::after { content: ' ▸'; color: var(--ink-3); }
-.tune[open] .tune-title::after, .why[open] .tune-title::after { content: ' ▾'; }
+.customize[open] .tune-title::after, .tune[open] .tune-title::after, .why[open] .tune-title::after { content: ' ▾'; }
 .tune-sub { font-size: 12px; color: var(--ink-3); }
 .tune > .panel, .why > .panel { border: 0; background: none; margin: 0; }
-.tune > .panel:first-of-type { padding-top: 0; }
+/* :first-child, not :first-of-type -- the latter matches by tag name only,
+   so once #alts became the sole remaining direct <section class="panel">
+   child of #tune (2026-09-22, the other five moved into .subpanel wrappers
+   below) it would still match "first <section>" and wrongly lose its top
+   padding despite no longer being visually first. :first-child correctly
+   matches nothing now (a .subpanel is always first), which is right: the
+   double-padding this rule guarded against only happens when a .panel sits
+   directly under the summary, and that is no longer the case here. */
+.tune > .panel:first-child { padding-top: 0; }
+
+/* The outer Customize disclosure is the only wrapper for these tool groups.
+   Each group has a real heading; Rule Search and Explore retain their own
+   native disclosures when they are relevant. */
+.custom-section { padding: 0 16px 16px; }
+.custom-section + .custom-section { border-top: 1px solid var(--line); padding-top: 16px; }
+.custom-section-head { margin: 0 0 10px; }
+.custom-section-head h2 { margin: 0; font-size: 14px; color: var(--ink); }
+.custom-section-head p { margin: 3px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); }
+#advanced > .tune { margin: 0; }
+#advanced > .tune + .tune { margin-top: 10px; }
+
+/* Each filter axis's own disclosure inside #tune (2026-09-22 merge): a
+   plainer treatment than .tune itself, since this nests one level deeper and
+   does not need its own box -- just a row that expands into the chips. */
+.subpanel { border-top: 1px solid var(--line); }
+.custom-section > .subpanel:first-of-type { border-top: 0; }
+.subpanel-head {
+  cursor: pointer; padding: 12px 0; list-style: none;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+.subpanel-head::-webkit-details-marker { display: none; }
+.subpanel-head::after { content: ' ▸'; color: var(--ink-3); font-weight: 400; }
+.subpanel[open] > .subpanel-head::after { content: ' ▾'; }
+.subpanel > .panel { border: 0; background: none; margin: 0; padding: 0 0 14px; }
 /* The methodology layer's loose sections (note, equation) get the panel's
    horizontal padding so they line up with the strategy cards below them. */
 .why > .note, .why > #equation { padding: 0 18px; }
@@ -835,6 +889,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   gap: 12px; margin: 0 0 22px;
 }
 .scard {
+  display: block; width: 100%;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
   padding: 14px 16px; cursor: pointer; text-align: left; transition: border-color .1s, background .1s;
 }
@@ -847,8 +902,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   letter-spacing: .05em; color: var(--accent-2); margin-bottom: 6px;
 }
 .scard-tag.alt { color: var(--up); }
-.scard h4 { margin: 0 0 6px; font-size: 15px; color: var(--ink); }
-.scard-note { margin: 0 0 6px; color: var(--ink-3); font-size: 12px; line-height: 1.4; }
+.scard-name { display: block; margin: 0 0 6px; font-size: 15px; font-weight: 700; color: var(--ink); }
+.scard-note { display: block; margin: 0 0 6px; color: var(--ink-3); font-size: 12px; line-height: 1.4; }
 .scard-note.stale { color: var(--up); }
 .scard-row {
   display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
@@ -883,7 +938,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .risk-note { margin: 4px 0 0; font-size: 11px; color: var(--ink-3); line-height: 1.3; }
 .risk-note b { color: var(--ink-2); }
-.risk-compat { margin: 8px 0 0; font-size: 11px; line-height: 1.35; }
+.risk-compat { display: block; margin: 8px 0 0; font-size: 11px; line-height: 1.35; }
 .risk-compat.yes { color: var(--ink-3); }
 .risk-compat.no { color: var(--ink-3); font-style: italic; }
 .risk-compat.warn { color: var(--up); }
@@ -891,6 +946,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   .risk-control-head { display: block; }
   .risk-control-head span { display: block; margin-top: 2px; }
   .risk-options { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 720px) {
+  .risk-option { min-height: 44px; }
 }
 
 /* ---------- leaderboard ----------

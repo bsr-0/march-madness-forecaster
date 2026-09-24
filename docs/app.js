@@ -81,6 +81,14 @@ const MODEL = 'model';
  * by the pool referee, fenced on the page; see ruleRun() in fit.js and
  * the RULE SEARCH section below. */
 const RULE = 'rule';
+/* Outcome-first names for the four visible choices. Methodology remains in
+ * each card's tag and explanation, where visitors can inspect it by choice. */
+const STRATEGY_LABELS = {
+  p1: 'Aim to win your pool',
+  ev: 'Maximize projected points',
+  [RULE]: 'Explore past-result patterns',
+  [MODEL]: 'Predict each game',
+};
 const RULE_CHECKPOINTS = [
   { r: 1, label: 'Sweet 16' }, { r: 2, label: 'Elite Eight' }, { r: 3, label: 'Final Four' }, { r: 5, label: 'Champion' },
 ];
@@ -116,6 +124,7 @@ const state = {
   // bracket with 2027 greyed out beside it -- a launch-day failure on the one
   // season the system was frozen to be judged on.
   year: 2026,
+  poolSize: 30,
   strategy: 'p1',       // 'p1' | 'ev' | MODEL | CUSTOM
   /* CUSTOM is driven by this pair rather than by an id. Champion and depth are
    * independent properties of a bracket, so they filter JOINTLY: either alone
@@ -199,7 +208,7 @@ const state = {
  * BUMP THIS WHENEVER ANYTHING UNDER docs/data/ CHANGES. Over-bumping costs one
  * refetch of a few hundred KB; under-bumping ships wrong numbers to anyone who
  * visited before. */
-const DATA_V = 21;
+const DATA_V = 22;
 
 async function loadTraining() {
   if (state.training) return state.training;
@@ -704,6 +713,7 @@ function writeHash() {
   const p = new URLSearchParams();
   p.set('y', String(state.year));
   p.set('o', state.objective);
+  if (state.poolSize !== 30) p.set('pool', String(state.poolSize));
   if (state.strategy === MODEL) p.set('s', 'model');
   if (state.strategy === RULE) p.set('s', 'rule');
   for (const k of HASH_KEYS) {
@@ -759,6 +769,8 @@ function readHash() {
   if (!raw) return null;
   const p = new URLSearchParams(raw);
   const year = parseInt(p.get('y'), 10);
+  const pool = parseInt(p.get('pool'), 10);
+  if ([10, 30, 50, 100].includes(pool)) state.poolSize = pool;
   if (p.get('o') === 'ev' || p.get('o') === 'p1') {
     state.objective = p.get('o');
     state.strategy = state.objective;
@@ -797,8 +809,8 @@ function readHash() {
   // And show the controls that are evidently active, or the filtering looks
   // like the site's own opinion.
   if (anyFilter()) {
-    const tune = document.getElementById('tune');
-    if (tune) tune.open = true;
+    const custom = document.getElementById('customize');
+    if (custom) custom.open = true;
   }
   return Number.isFinite(year) ? year : null;
 }
@@ -924,6 +936,10 @@ function render() {
     // the methodology layer -- stays hidden.
     state.rounds = null;
     for (const id of ['headline', 'board-tools', 'board-nav', 'rnav-dots', 'explore', 'tune', 'why']) { const el = document.getElementById(id); if (el) el.hidden = true; }
+    { const custom = document.getElementById('customize'); if (custom) { custom.hidden = false; custom.open = true; } }
+    // Rule search runs on prior seasons before the field is announced, so its
+    // labelled section stays available. Explore remains hidden above.
+    { const adv = document.getElementById('advanced'); if (adv) adv.hidden = false; }
     weights.hidden = true;
     note.innerHTML = '';
     { const el = document.getElementById('dropped-note'); if (el) el.textContent = ''; }
@@ -937,7 +953,7 @@ function render() {
     // it cannot go stale against the payload's own message.
     empty.className = 'empty wait';
     empty.hidden = false;
-    empty.innerHTML = `<p class="e-sub">${s.year} field not announced yet. Find a rule from the most recent completed tournaments. The field is announced on Selection Sunday ${s.year}; Win the pool, Most expected points and the fitted model appear then, and the rule you choose fills the bracket.</p>`;
+    empty.innerHTML = `<p class="e-sub">${s.year} field not announced yet. Find a rule from the most recent completed tournaments. The field is announced on Selection Sunday ${s.year}; ${STRATEGY_LABELS.p1}, ${STRATEGY_LABELS.ev}, and ${STRATEGY_LABELS[MODEL]} appear then, and the rule you choose fills the bracket.</p>`;
     board.innerHTML = pendingBoardHTML();
     return;
   }
@@ -948,12 +964,14 @@ function render() {
     { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
     { const nav = document.getElementById('board-nav'); if (nav) nav.hidden = true; }
     { const dots = document.getElementById('rnav-dots'); if (dots) dots.hidden = true; }
-    { for (const id of ['headline', 'compare', 'leaderboard', 'why']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why') el.innerHTML = ''; } } }
+    { for (const id of ['headline', 'compare', 'leaderboard', 'why', 'customize']) { const el = document.getElementById(id); if (el) { el.hidden = true; if (id !== 'why' && id !== 'customize') el.innerHTML = ''; } } }
     { const ex = document.getElementById('explore'); if (ex) ex.hidden = true; }
     { const rp = document.getElementById('rulepanel'); if (rp) rp.hidden = true; }
     { const tune = document.getElementById('tune'); if (tune) tune.hidden = true; }
+    { const adv = document.getElementById('advanced'); if (adv) adv.hidden = true; }
     weights.hidden = true;
-    { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts']) {
+    { for (const id of ['champions', 'ones', 'shapes', 'dd16', 'sources', 'alts',
+                        'champions-wrap', 'ones-wrap', 'shapes-wrap', 'dd16-wrap', 'sources-wrap']) {
         const el = document.getElementById(id); if (el) el.hidden = true; } }
     note.innerHTML = '';
     // Both of these belong to a bracket. Leaving them up under "the 2027 season
@@ -971,6 +989,7 @@ function render() {
   }
 
   empty.hidden = true;
+  { const custom = document.getElementById('customize'); if (custom) custom.hidden = false; }
   weights.hidden = false;   // the panel is the only control surface
   // The filters narrow the precomputed pool. The fitted model and the rule
   // search do not draw from it, so under those two the Adjust panel is not
@@ -978,6 +997,9 @@ function render() {
   // it used to stay up, dimmed under the model and live under the rule
   // search, where a click silently switched strategy).
   { const tune = document.getElementById('tune'); if (tune) tune.hidden = !usingFilters(); }
+  // #advanced (rule search + explore-a-variable) is relevant under exactly
+  // the strategies #tune is not -- same usingFilters() split, negated.
+  { const adv = document.getElementById('advanced'); if (adv) adv.hidden = usingFilters(); }
   // The prior blend applies to the fitted board only. The Optimized picks are
   // precomputed and are not a regression, so there is nothing to blend into.
 
@@ -1110,10 +1132,10 @@ function strategyRows() {
     // Listed for what they will be, selectable when the field is.
     const wait = `Awaiting the ${s.year} field`;
     return [
-      { id: 'p1', label: 'Win the pool', kind: `Backtested rule · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
-      { id: 'ev', label: 'Most expected points', kind: `Exact optimum · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
-      { id: RULE, label: 'Rule search', kind: 'Experimental — fit after the fact, not scored', p1: null, ev: null, champion: null, filtered: false, record: null, active: state.strategy === RULE },
-      { id: MODEL, label: 'Fitted model', kind: `Evaluated, not selected · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+      { id: 'p1', label: STRATEGY_LABELS.p1, kind: `Backtested rule · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+      { id: 'ev', label: STRATEGY_LABELS.ev, kind: `Exact optimum · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
+      { id: RULE, label: STRATEGY_LABELS[RULE], kind: 'Experimental — fit after the fact, not scored', p1: null, ev: null, champion: null, filtered: false, record: null, active: state.strategy === RULE },
+      { id: MODEL, label: STRATEGY_LABELS[MODEL], kind: `Evaluated, not selected · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
     ];
   }
   const teams = s.teams;
@@ -1129,7 +1151,7 @@ function strategyRows() {
     const filtered = !!filteredRow;
     return {
       id: st.id,
-      label: st.id === 'ev' ? 'Most expected points' : 'Win the pool',
+      label: STRATEGY_LABELS[st.id],
       kind: st.id === 'ev' ? 'Exact optimum' : 'Backtested rule',
       p1: v.p1, ev: v.ev, champion: teams[champIdx],
       filtered,
@@ -1144,7 +1166,7 @@ function strategyRows() {
   const live = fitReady() ? solveByFit() : null;
   rows.push({
     id: RULE,
-    label: 'Rule search',
+    label: STRATEGY_LABELS[RULE],
     kind: 'Experimental — fit after the fact, not scored',
     p1: null, ev: null,
     champion: rs ? teams[rs.picks[5][0]] : null,
@@ -1178,7 +1200,7 @@ function strategyRows() {
   }
   rows.push({
     id: MODEL,
-    label: 'Fitted model',
+    label: STRATEGY_LABELS[MODEL],
     kind: 'Evaluated, not selected',
     p1: modelP1,
     ev: modelEv,
@@ -1233,13 +1255,16 @@ function renderHeadline(rounds) {
   const st = usingOptimized() ? currentStrategy() : null;
   const fe = !st ? fittedEval() : null;
   const nOpp = (s.p1_pool_size || 30) - 1;
+  const variant = (s.pool_variants || []).find(v => v.pool_size === state.poolSize);
+  const provenance = variant
+    ? `Pool ${variant.pool_size}; ESPN standard; ${variant.n_sims ? variant.n_sims.toLocaleString() : '—'} simulations · ${variant.p1_trials ? variant.p1_trials.toLocaleString() : '—'} trials · artifact ${variant.artifact_sha256.slice(0, 12)}… · generated ${variant.generated_at ? variant.generated_at.slice(0, 10) : '—'}`
+    : `Pool ${nOpp + 1}; ESPN standard`;
 
   const rr = state.strategy === RULE ? state.rule.result : null;
-  const objective = !st ? 'Fitted model'
-    : st.id === RULE ? 'Rule search (experimental)'
-    : st.id === CUSTOM ? (state.objective === 'ev' ? 'Most expected points, with your filters' : 'Win the pool, with your filters')
-    : st.id === 'ev' ? 'Most expected points'
-    : 'Win the pool';
+  const objective = !st ? STRATEGY_LABELS[MODEL]
+    : st.id === RULE ? `${STRATEGY_LABELS[RULE]} (experimental)`
+    : st.id === CUSTOM ? `${STRATEGY_LABELS[state.objective]}, with your filters`
+    : STRATEGY_LABELS[st.id];
   const kind = !st ? 'Evaluated, not selected'
     : st.id === RULE ? 'Experimental, not scored'
     : st.id === CUSTOM ? 'Your pick'
@@ -1312,6 +1337,7 @@ function renderHeadline(rounds) {
     </div>
     <p class="hl-estimand">${estimand}</p>
     <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>
+    <p class="hl-line hl-evidence">${provenance}</p>
     ${went}`;
 }
 
@@ -1330,10 +1356,10 @@ const FAMILY_LABEL = { all: 'All', backtested: 'Backtested rule', optimal: 'Exac
  * for each strategy is renderStrategies()'s cards in the "why" panel below;
  * this is the glance, not the methodology. */
 function scardNote(id) {
-  if (id === 'p1') return 'Fixed contrarian-risk rule, backtested across played seasons: takes upsets the field will not because second place pays nothing.';
-  if (id === 'ev') return 'The exact expected-points maximum over the candidate pool, solved by dynamic programming.';
-  if (id === MODEL) return 'A ridge regression fitted in your browser on seasons before this one, never on the one shown.';
-  return 'One variable per round, searched for how far back it reproduces the chosen rounds. Found after the fact -- never scored.';
+  if (id === 'p1') return 'Targets first place in your pool, even when that means fewer projected points. Backtested on past seasons.';
+  if (id === 'ev') return 'Targets the highest average score, even when that lowers the chance of finishing first.';
+  if (id === MODEL) return 'Uses past tournament games to predict the winner of each game in this bracket.';
+  return 'Finds a rule that matches past tournament results. Experimental and not scored against a pool.';
 }
 
 function setFamily(val) {
@@ -1367,20 +1393,20 @@ function riskControlHTML() {
       ${levels.map(n => `<button class="risk-option${level === n ? ' on' : ''}" onclick="setRiskLevel(${n})">${n.toFixed(1)}</button>`).join('')}
     </div>
     <div class="risk-label"><span>More chalk</span><span>More chaos</span></div>
-    <p class="risk-note">Works on <b>Win the pool</b>, <b>Expected points</b>, and <b>Fitted model</b>. Rule search cannot use it: that method selects one rating variable per round, not a probability-and-public-picks score.</p>
+    <p class="risk-note">Works on <b>${STRATEGY_LABELS.p1}</b>, <b>${STRATEGY_LABELS.ev}</b>, and <b>${STRATEGY_LABELS[MODEL]}</b>. Rule search cannot use it: that method selects one rating variable per round, not a probability-and-public-picks score.</p>
   </section>`;
 }
 
 function riskCompatibilityHTML(r) {
-  if (r.id === RULE) return '<p class="risk-compat no">Risk unavailable — Rule search has no compatible risk score.</p>';
+  if (r.id === RULE) return '<span class="risk-compat no">Risk unavailable — Rule search has no compatible risk score.</span>';
   if (r.pending) return '';
   if ((r.id === 'p1' || r.id === 'ev') && state.strategy === CUSTOM) {
-    return '<p class="risk-compat warn">Filters currently choose this card’s bracket, so risk does not replace it.</p>';
+    return '<span class="risk-compat warn">Filters currently choose this card’s bracket, so risk does not replace it.</span>';
   }
   if (r.id === MODEL && state.riskLevel != null) {
-    return '<p class="risk-compat warn">Risk preview is live; its saved P(1st) evaluation does not apply to this changed bracket.</p>';
+    return '<span class="risk-compat warn">Risk preview is live; its saved P(1st) evaluation does not apply to this changed bracket.</span>';
   }
-  return '<p class="risk-compat yes">Risk compatible.</p>';
+  return '<span class="risk-compat yes">Risk compatible.</span>';
 }
 
 function renderCompare() {
@@ -1394,21 +1420,20 @@ function renderCompare() {
   box.innerHTML = `
     ${families.length > 2 ? `<div class="family-chips">${families.map(f => `
       <button class="chip${state.family === f ? ' on' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f] || f}</button>`).join('')}</div>` : ''}
-    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `${riskControlHTML()}<p class="risk-caveat">Risk changes pick style, not a backtested win-rate guarantee. It was tested only for “Win the pool”; the other two are previews.</p>` : ''}
+    ${shown.some(r => r.id === 'p1' || r.id === 'ev' || r.id === MODEL || r.id === RULE) ? `${riskControlHTML()}<p class="risk-caveat">Risk changes pick style, not a backtested win-rate guarantee. It was tested only for “${STRATEGY_LABELS.p1}”; the other two are previews.</p>` : ''}
     <div class="strategy-grid">${shown.map(r => `
-      <div class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
-        ${r.pending ? 'aria-disabled="true"' : `onclick="setStrategy('${r.id}')" role="button" tabindex="0"
-          onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setStrategy('${r.id}'); }"`}>
+      <button type="button" class="scard${r.pending ? ' na' : r.active ? ' on' : ''}"
+        data-strategy="${r.id}" aria-pressed="${!!r.active}" ${r.pending ? 'disabled' : `onclick="setStrategy('${r.id}')"`}>
         <span class="scard-tag${r.family === 'experimental' ? ' alt' : ''}">${r.kind}${r.filtered ? ' · filtered' : ''}</span>
-        <h4>${r.label}</h4>
-        <p class="scard-note${r.stale ? ' stale' : ''}">${r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</p>
-        <div class="scard-row"><span>Chance of 1st</span><b>${cell(r.p1, p1Pct)}</b></div>
-        <div class="scard-row"><span>Exp. points</span><b>${cell(r.ev, v => v.toFixed(0))}</b></div>
-        <div class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></div>
-        ${r.record ? `<div class="scard-row real"><span>Scored</span><b>${r.record.points.toLocaleString()}</b></div>
-        <div class="scard-row real"><span>Finish</span><span>${finishText(r.record)}</span></div>` : ''}
+        <span class="scard-name">${r.label}</span>
+        <span class="scard-note${r.stale ? ' stale' : ''}">${r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</span>
+        <span class="scard-row"><span>Chance of 1st</span><b>${cell(r.p1, p1Pct)}</b></span>
+        <span class="scard-row"><span>Exp. points</span><b>${cell(r.ev, v => v.toFixed(0))}</b></span>
+        <span class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></span>
+        ${r.record ? `<span class="scard-row real"><span>Scored</span><b>${r.record.points.toLocaleString()}</b></span>
+        <span class="scard-row real"><span>Finish</span><span>${finishText(r.record)}</span></span>` : ''}
         ${riskCompatibilityHTML(r)}
-      </div>`).join('')}
+      </button>`).join('')}
     </div>
     ${rows.some(r => r.record) ? `<p class="cmp-foot">Chance and expected points are what the model expected before the tournament;
       Scored and Finish are what happened, against the same simulated 30-entry fields the chance was measured in.
@@ -1428,7 +1453,7 @@ function renderLeaderboard() {
   const s = state.season;
   const tr = s && s.track_record;
   if (!tr || !tr.strategies) { box.hidden = true; box.innerHTML = ''; return; }
-  const LABEL = { p1: 'Win the pool', ev: 'Most expected points', model: 'Fitted model' };
+  const LABEL = { p1: STRATEGY_LABELS.p1, ev: STRATEGY_LABELS.ev, model: STRATEGY_LABELS[MODEL] };
   const rows = Object.entries(tr.strategies)
     .filter(([id]) => LABEL[id])
     .map(([id, r]) => ({ id, label: LABEL[id], ...r }))
@@ -2076,6 +2101,9 @@ function renderRulePanel() {
   if (!host || !body) return;
   if (state.strategy !== RULE || !state.season || !(state.season.status === 'ready' || fieldPending())) { host.hidden = true; return; }
   host.hidden = false; host.open = true;
+  // Open Customize so a direct Rule Search link or selection reveals the
+  // active controls. Advanced is a labelled section, not another disclosure.
+  { const custom = document.getElementById('customize'); if (custom) { custom.hidden = false; custom.open = true; } }
   // Only a result for the inputs on the panel; a held one for other inputs
   // (or another season) is not shown while the new search runs.
   const r = state.rule.result && state.rule.result.key === ruleKey() ? state.rule.result : null;
@@ -2136,13 +2164,16 @@ function renderRulePanel() {
     // warning, not the count.
     const g = r.gen;
     let check = '';
+    const abundance = r.nRules > 1000
+      ? `<p class="ex-line"><span class="ex-warn">Many matches: ${r.nRules.toLocaleString()} rules fit this recent run. Treat the result as a broad descriptive search, not evidence that one rule is uniquely supported.</span></p>`
+      : '';
     if (r.nOutside > 0 && g) {
       const short = n <= RULE_SHORT_RUN && g.any * 2 < g.checked;
       check = short
         ? `<p class="ex-line"><span class="ex-warn">Short history: ${r.nRules.toLocaleString()} rules fit ${n === 1 ? 'this one recent season' : `these ${n} recent seasons`}; ${g.any} of the ${g.checked.toLocaleString()} checked repeat in any older tournament.</span></p>`
         : `<p class="ex-line">${r.nRules.toLocaleString()} rules fit ${ruleYearsText(r.run)}; ${g.checked < g.n ? `of the ${g.checked.toLocaleString()} simplest, ` : ''}${g.any === 0 ? 'none' : g.any.toLocaleString()} reproduce${g.any === 1 ? 's' : ''} ${target} in at least one of the ${r.nOutside} older seasons${g.best > 1 ? ` (at most ${g.best})` : ''}.</p>`;
     }
-    results = skipped + missed + head + list + record + check;
+    results = skipped + missed + head + list + record + abundance + check;
   }
 
   // One variable in every round, scored on every played season before this
@@ -2192,7 +2223,7 @@ function updateMobileNav() {
   document.getElementById('rnav-prev').disabled = state.mobileRound === 0;
   document.getElementById('rnav-next').disabled = state.mobileRound === ROUNDS.length - 1;
   dots.innerHTML = ROUNDS.map((r, ri) => `
-    <button class="rnav-dot${ri === state.mobileRound ? ' on' : ''}" aria-label="${r}"
+    <button type="button" class="rnav-dot${ri === state.mobileRound ? ' on' : ''}" aria-label="${r}"${ri === state.mobileRound ? ' aria-current="step"' : ''}
             onclick="jumpMobileRound(${ri})"></button>`).join('');
 }
 
@@ -2489,7 +2520,7 @@ function renderStrategies() {
   // one of them being wrong rather than as two different scopes.
   const filt = state.strategy === MODEL ? null : filteredEntry().entry;
   const opts = (s.strategies || []).map(st => ({
-    id: st.id, label: st.label, sub: st.note,
+    id: st.id, label: STRATEGY_LABELS[st.id], sub: st.note,
     tag: st.id === 'ev' ? 'exact' : 'backtested',
     // With filters active the strategy cards show which QUESTION is being
     // asked, so the objective stays lit rather than every card going dark.
@@ -2502,7 +2533,7 @@ function renderStrategies() {
   }));
   opts.push({
     id: RULE,
-    label: 'Rule search',
+    label: STRATEGY_LABELS[RULE],
     sub: 'Experimental. One criterion per round — every game in that round goes to the team '
        + 'better on one variable — searched for how far back it can reproduce the rounds you pick, '
        + 'over the played seasons before this one. Found after the fact, not validated, '
@@ -2512,7 +2543,7 @@ function renderStrategies() {
   });
   opts.push({
     id: MODEL,
-    label: 'Fitted model',
+    label: STRATEGY_LABELS[MODEL],
     // Used to end "...This is the only strategy the variable weights apply
     // to" -- a control that was removed 2026-08-29 (see the file header: it
     // measured null). What actually still sets this card apart from the
@@ -2614,11 +2645,11 @@ function renderFilterNotes() {
  * reads as a bug; a dimmed one reads as a constraint.
  */
 const FILTER_ROWS = [
-  { kind: 'champ', host: 'champ-list', panel: 'champions' },
-  { kind: 'ones', host: 'ones-list', panel: 'ones' },
-  { kind: 'depth', host: 'shape-list', panel: 'shapes' },
-  { kind: 'pred', host: 'dd-list', panel: 'dd16' },
-  { kind: 'src', host: 'src-list', panel: 'sources' },
+  { kind: 'champ', host: 'champ-list', panel: 'champions', wrap: 'champions-wrap' },
+  { kind: 'ones', host: 'ones-list', panel: 'ones', wrap: 'ones-wrap' },
+  { kind: 'depth', host: 'shape-list', panel: 'shapes', wrap: 'shapes-wrap' },
+  { kind: 'pred', host: 'dd-list', panel: 'dd16', wrap: 'dd16-wrap' },
+  { kind: 'src', host: 'src-list', panel: 'sources', wrap: 'sources-wrap' },
 ];
 
 function renderFilters() {
@@ -2630,8 +2661,13 @@ function renderFilters() {
   for (const row of FILTER_ROWS) {
     const host = document.getElementById(row.host);
     const panel = document.getElementById(row.panel);
+    // Each filter panel now nests inside its own <details class="subpanel">
+    // (2026-09-22 merge) so its one-line title can collapse; the wrapper has
+    // to mirror the panel's hidden state or it shows an expandable header
+    // for an axis with nothing in it.
+    const wrap = row.wrap ? document.getElementById(row.wrap) : null;
     if (!host || !panel) continue;
-    if (!f) { panel.hidden = true; continue; }
+    if (!f) { panel.hidden = true; if (wrap) wrap.hidden = true; continue; }
 
     const values = row.kind === 'champ' ? f.champions.map(c => c.team)
                  : row.kind === 'ones' ? f.ones
@@ -2639,6 +2675,7 @@ function renderFilters() {
                  : row.kind === 'pred' ? (f.predicates || []).map(x => x.i)
                  : f.sources;
     panel.hidden = !values || values.length === 0;
+    if (wrap) wrap.hidden = panel.hidden;
     if (panel.hidden) continue;
 
     let unavailable = 0;
@@ -2652,6 +2689,20 @@ function renderFilters() {
       const best = ok ? rows.reduce((a, b) => (b[obj] > a[obj] ? b : a)) : null;
       const stat = !best ? '—'
         : obj === 'ev' ? `${best.ev.toFixed(0)} pts` : p1Pct(best.p1);
+
+      // Put the two numbers a pool entrant needs beside the champion choice:
+      // the live model's title probability and the public field's title share.
+      // Both are tournament-level probabilities (not candidate-bank counts),
+      // and the public number is deliberately omitted when the source has no
+      // value rather than implying zero support.
+      const team = s.teams && s.teams[v];
+      const publicTitle = team && s.public_picks && s.public_picks[team.id]
+        ? s.public_picks[team.id].CHAMP : null;
+      const modelTitle = state.advancement && state.advancement[v]
+        ? state.advancement[v][5] : null;
+      const leverage = row.kind === 'champ' && (modelTitle !== null || publicTitle !== null)
+        ? `<span class="chip-leverage">Model ${modelTitle !== null ? p1Pct(modelTitle) : '—'} · public ${publicTitle !== null ? p1Pct(publicTitle) : '—'}</span>`
+        : '';
 
       let lead = '', name = '';
       if (row.kind === 'champ') {
@@ -2690,6 +2741,7 @@ function renderFilters() {
           ${lead ? `<span class="chip-seed">${lead}</span>` : ''}
           <span class="chip-name">${name}</span>
           ${freqText ? `<span class="chip-freq">${freqText}</span>` : ''}
+          ${leverage}
           <span class="chip-stat">${stat}</span>
         </button>`;
     }).join('');
@@ -2907,6 +2959,7 @@ function setFilter(kind, value) {
 }
 
 function setStrategy(id) {
+  const restoreCardFocus = document.activeElement?.closest?.('#compare .scard') != null;
   // Without a field there is nothing for the pool strategies or the fitted
   // model to show; their rows are listed and not selectable.
   if (fieldPending() && id !== RULE) return;
@@ -2925,6 +2978,7 @@ function setStrategy(id) {
   writeHash();
   renderStrategies();
   render();
+  if (restoreCardFocus) document.querySelector(`#compare .scard[data-strategy="${id}"]`)?.focus({ preventScroll: true });
   if (id === RULE) ensureRuleSearch();
 }
 
@@ -3060,6 +3114,81 @@ function closeDrawer() {
   document.getElementById('scrim').hidden = true;
 }
 
+/* ---------- optional, privacy-preserving UX measurement ----------
+ * The static site has no analytics vendor or server endpoint by default.
+ * A deployment can opt in by defining window.BRACKET_LAB_ANALYTICS_ENDPOINT
+ * before app.js loads. Events contain only the event name, coarse viewport
+ * class, visitor type, season, and current strategy; no URL, IP, team, or
+ * persistent identifier is sent. Keeping the hook dormant locally makes the
+ * instrumentation safe to ship before an endpoint is chosen. */
+function usageEndpoint() {
+  return typeof window.BRACKET_LAB_ANALYTICS_ENDPOINT === 'string'
+    ? window.BRACKET_LAB_ANALYTICS_ENDPOINT.trim() : '';
+}
+let usageVisitor = null;
+
+function usageEvent(event, extra = {}) {
+  const endpoint = usageEndpoint();
+  if (!endpoint) return;
+  const payload = {
+    event,
+    viewport: matchMedia('(max-width: 720px)').matches ? 'mobile' : 'desktop',
+    visitor: usageVisitor || (usageVisitor = (() => {
+      try {
+        const key = 'bracket-lab-visited';
+        const returning = localStorage.getItem(key) === '1';
+        localStorage.setItem(key, '1');
+        return returning ? 'returning' : 'new';
+      } catch { return 'unknown'; }
+    })()),
+    year: state.year || null,
+    strategy: state.strategy || null,
+    ...extra,
+  };
+  const body = JSON.stringify(payload);
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
+    } else {
+      fetch(endpoint, { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
+    }
+  } catch { /* measurement must never affect the product */ }
+}
+
+function initUsageInstrumentation() {
+  if (!usageEndpoint()) return;
+  let firstBracketSent = false;
+  let maxDepth = 0;
+  document.addEventListener('toggle', e => {
+    if (e.target instanceof HTMLDetailsElement) {
+      usageEvent('disclosure_toggle', { id: e.target.id || null, open: e.target.open });
+    }
+  }, true);
+  const depth = () => Math.min(100, Math.round(((scrollY + innerHeight) / Math.max(document.documentElement.scrollHeight, innerHeight)) * 100));
+  const recordDepth = () => {
+    const now = depth();
+    for (const mark of [25, 50, 75, 90]) {
+      if (now >= mark && maxDepth < mark) {
+        maxDepth = mark;
+        usageEvent('scroll_depth', { depth: mark });
+      }
+    }
+  };
+  addEventListener('scroll', recordDepth, { passive: true });
+  addEventListener('resize', recordDepth, { passive: true });
+  const board = document.getElementById('board');
+  if (board && 'IntersectionObserver' in window) {
+    const started = performance.now();
+    new IntersectionObserver(entries => {
+      if (!firstBracketSent && entries.some(e => e.isIntersecting)) {
+        firstBracketSent = true;
+        usageEvent('first_bracket_view', { seconds: Math.round((performance.now() - started) / 100) / 10 });
+      }
+    }, { threshold: 0.1 }).observe(board);
+  }
+  recordDepth();
+}
+
 /* ---------- controls ---------- */
 
 async function setYear(year) {
@@ -3084,6 +3213,9 @@ async function setYear(year) {
   } catch {
     state.season = null;
   }
+  applyPoolVariant();
+  const poolSelect = document.getElementById('pool-size');
+  if (poolSelect) poolSelect.value = String(state.poolSize);
   if (fieldPending()) {
     // Only the rule search works without a field, and it reads keys and
     // labels from the latest played season; loaded before anything renders.
@@ -3104,10 +3236,35 @@ async function setYear(year) {
   if (state.strategy === RULE) ensureRuleSearch();
 }
 
+function applyPoolVariant() {
+  const s = state.season;
+  if (!s || s.status !== 'ready') return;
+  const variant = (s.pool_variants || []).find(v => v.pool_size === state.poolSize);
+  if (!variant) { state.poolSize = 30; return; }
+  if (state.poolSize === 30) return;
+  // Variant strategies use the same browser bracket shape as the canonical
+  // payload. The filter bank is shared and remains canonical; alternate
+  // payloads deliberately omit duplicated candidate rows to reduce transfer.
+  s.strategies = variant.strategies;
+  s.p1_pool_size = variant.p1_pool_size;
+  s.p1_assumption = variant.p1_assumption;
+}
+
+function setPoolSize(size) {
+  const n = Number(size);
+  if (![10, 30, 50, 100].includes(n)) return;
+  state.poolSize = n;
+  writeHash();
+  // Reloading keeps all dependent fit/filter/evaluation state coherent.
+  location.reload();
+}
+
 async function init() {
+  // The season payload is enough to paint the bracket and strategy cards.
+  // Training data is fetched after that first render so a slow 260 KB model
+  // matrix never blocks the board or pool controls from becoming usable.
   const [idx] = await Promise.all([
     fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
-    loadTraining(),
   ]);
   // Open on the newest listed season once it can show something (see
   // pickDefaultSeason(): its bracket, or the rule search with a blank
@@ -3137,6 +3294,7 @@ async function init() {
   document.getElementById('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
   wireBoardSwipe();
+  initUsageInstrumentation();
 
   // Pasting a link into the address bar of the page you are already on is a
   // same-document navigation: nothing reloads and, without this, nothing
@@ -3145,6 +3303,17 @@ async function init() {
   window.addEventListener('hashchange', () => location.reload());
 
   await setYear(state.year);
+
+  // Hydrate fitted-model-only features after the initial UI is visible. The
+  // first render remains useful without coefficients; once the matrix arrives
+  // the exact same refit path fills in model probabilities and diagnostics.
+  loadTraining().then(() => {
+    refit();
+    renderStrategies();
+    render();
+  }).catch(() => {
+    state.notice = 'Fitted-model analysis is temporarily unavailable.';
+  });
 
   // The row scrolls on a narrow viewport and the default season sits at the
   // far right of seventeen, so it would otherwise open out of view.
