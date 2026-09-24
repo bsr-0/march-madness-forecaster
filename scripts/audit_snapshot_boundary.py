@@ -117,6 +117,13 @@ def torvik(year: int) -> dict | None:
 
 
 def main() -> int:
+    # Raw Torvik snapshots are local ingestion inputs and are intentionally
+    # gitignored. Keep the code audit strict when they are available, but do
+    # not turn a clean source checkout into a false CI failure.
+    required = HIST / "torvik_2025.json"
+    if not required.exists():
+        print(f"SKIP: boundary audit inputs are not present ({required})")
+        return 0
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
     years = sorted(int(y) for y in stats)
 

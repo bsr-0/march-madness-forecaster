@@ -73,7 +73,12 @@ def _available_years() -> list[int]:
         except ValueError:
             continue
         with p.open() as f:
-            if "results" in json.load(f):
+            # A context record may intentionally carry results=null while the
+            # tournament is still being assembled. Treat that as unavailable;
+            # otherwise _load() falls through to a file that is not present in
+            # a clean CI checkout and the taxonomy gate fails before testing
+            # any data.
+            if json.load(f).get("results") is not None:
                 years.add(year)
     for p in _HIST_DIR.glob("tournament_results_*.json"):
         try:
