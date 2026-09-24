@@ -32,6 +32,15 @@ build/
 Thumbs.db
 
 # Data caches (large / regenerable)
+# data/raw/ and data/processed/ used to be committed wholesale as a
+# git-as-database pattern by scheduled CI (data-ingestion.yml,
+# rescrape-torvik.yml, repair-dates.yml, espn-picks-ingestion.yml). That grew
+# .git unboundedly since every scrape produced new full-size blobs that never
+# got pruned. They're local/regenerable working data now; the workflows'
+# existing "git add / diff --quiet / commit" steps no-op gracefully once these
+# paths are untracked and ignored, so no workflow edits were needed.
+data/raw/
+data/processed/
 data/raw/cache/
 data/raw/prospective_eval_*.json
 data/raw/betting_odds/
@@ -50,6 +59,10 @@ data/governance/
 # Logs
 *.log
 artifacts/backtest_runs/
+
+# Live datastore committed daily by outcome-logging.yml -- same unbounded
+# git-as-database growth as data/raw/ above. Untracked/local now.
+artifacts/outcome_log_*.json
 
 # Generated candidate artifacts (~770 KB per season, 14 seasons).
 # These are build inputs, not build outputs: docs/data/season_*.json is what
