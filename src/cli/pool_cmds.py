@@ -64,9 +64,17 @@ def _write_submission(bracket: dict, year: int, submission_path: str) -> None:
         "construction_mode": bracket.get("construction_mode"),
         "risk_level": bracket.get("risk_level"),
     }
+    Path(submission_path).parent.mkdir(parents=True, exist_ok=True)
     with open(submission_path, "w") as f:
         json.dump(submission, f, indent=2, default=str)
     print(f"\nSubmission bracket saved to {submission_path}")
+
+
+def _write_report(report: dict, output_path: str) -> None:
+    """Write a generated report, creating its output directory if needed."""
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
 
 
 def run_optimize_pool(args):
@@ -294,8 +302,7 @@ def run_optimize_pool(args):
         "sensitivity": sensitivity.to_dict(),
     }
 
-    with open(output_path, "w") as f:
-        json.dump(report, f, indent=2, default=str)
+    _write_report(report, output_path)
 
     # Print summary
     print(f"\n{'=' * 60}")
@@ -594,8 +601,7 @@ def _run_det_construction(
         "brackets": brackets,
     }
 
-    with open(output_path, "w") as f:
-        json.dump(report, f, indent=2, default=str)
+    _write_report(report, output_path)
 
     # Print summary
     print(f"\n{'=' * 60}")
@@ -757,8 +763,7 @@ def _run_auto_mode(
         "brackets": brackets,
     }
 
-    with open(output_path, "w") as f:
-        json.dump(report, f, indent=2, default=str)
+    _write_report(report, output_path)
 
     # Print summary
     print(f"\n{'=' * 60}")
@@ -1232,14 +1237,17 @@ def register(subparsers):
     parser.add_argument(
         "--output",
         "-o",
-        default="pool_report.json",
-        help="Output report path (default: pool_report.json)",
+        default="artifacts/local_reports/pool_report.json",
+        help="Output report path (default: artifacts/local_reports/pool_report.json)",
     )
     parser.add_argument(
         "--submission",
         "-s",
         default=None,
-        help="Write the #1 ranked bracket as a standalone submission JSON (e.g. bracket_2027_submission.json)",
+        help=(
+            "Write the #1 ranked bracket as a standalone submission JSON "
+            "(e.g. artifacts/local_reports/bracket_2027_submission.json)"
+        ),
     )
     parser.add_argument(
         "--no-walk-forward",

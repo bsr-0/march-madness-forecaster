@@ -59,6 +59,7 @@ data/governance/
 # Logs
 *.log
 artifacts/backtest_runs/
+artifacts/local_reports/
 
 # Live datastore committed daily by outcome-logging.yml -- same unbounded
 # git-as-database growth as data/raw/ above. Untracked/local now.

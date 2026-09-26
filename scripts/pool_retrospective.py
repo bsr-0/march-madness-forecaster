@@ -8,6 +8,7 @@ Re-ranks the model's 2026 bracket portfolio under two opponent models:
 Then computes P(1st) for each model bracket against each opponent model.
 """
 
+import argparse
 import json
 from src.evaluation.canonical_contract import CANONICAL_N_OPPONENTS
 import numpy as np
@@ -21,9 +22,9 @@ SCORING = {"r64": 10, "r32": 20, "s16": 40, "e8": 80, "f4": 160, "champ": 320}
 ROUND_KEYS = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 
 
-def load_model_brackets():
-    """Load model's 2026 bracket portfolio (torvik mode — the one with Michigan champ)."""
-    with open(ROOT / "pool_report_n31_torvik.json") as f:
+def load_model_brackets(report_path: Path):
+    """Load a model bracket portfolio report supplied by the caller."""
+    with report_path.open() as f:
         data = json.load(f)
     return data["pareto_brackets"]
 
@@ -120,14 +121,14 @@ def score_pool_bracket(bracket, actual_results, abbrev_to_id):
     return total
 
 
-def main():
+def main(model_report_path: Path):
     from scripts.pool_correlation_analysis import (
         load_actual_results,
         abbrev_to_bracket_id,
     )
 
     actual = load_actual_results()
-    model_brackets = load_model_brackets()
+    model_brackets = load_model_brackets(model_report_path)
     pool_brackets = load_pool_brackets()
     espn_picks = load_espn_picks()
 
@@ -326,4 +327,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Retrospectively score model brackets against the 2026 pool.")
+    parser.add_argument(
+        "--model-report",
+        type=Path,
+        required=True,
+        help="Path to a pool report containing pareto_brackets.",
+    )
+    main(parser.parse_args().model_report)
