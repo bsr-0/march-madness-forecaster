@@ -87,8 +87,8 @@ def test_landing_opens_pending_with_orientation_first(site, page):
     assert visible(page, "#empty.wait")
     assert page.locator("#empty.wait").inner_text().startswith("2027 field not announced yet")
     assert top(page, "#empty") < top(page, "#compare") < top(page, "#rulepanel") < top(page, "#board")
-    assert page.locator("#compare .scard").count() == 4
-    assert page.locator("#compare .scard.na").count() == 3
+    assert page.locator("#compare .scard").count() == 5
+    assert page.locator("#compare .scard.na").count() == 4
     assert page.locator("#rule-body .rule-row").count() == 3
     assert page.locator("#board > .round").count() == 6
     counts = page.eval_on_selector_all("#board .r-count", "els => els.map(e => e.textContent)")
@@ -97,6 +97,31 @@ def test_landing_opens_pending_with_orientation_first(site, page):
     assert page.locator("#board .r-sub").count() == 6
     for hidden in ("#headline", "#tune", "#explore", "#why", "#board-tools"):
         assert not visible(page, hidden), hidden
+
+
+def test_missing_recommended_payload_does_not_render_p1_under_its_name(site, page):
+    page.goto(site + "#y=2026&s=recommended")
+    page.wait_for_function("state.season && state.season.status === 'ready'", timeout=SEARCH_TIMEOUT)
+    page.evaluate("""
+      state.season.strategies = state.season.strategies.filter(s => s.id !== 'recommended');
+      state.season.year = 2027;
+      state.year = 2027;
+      state.strategy = 'recommended';
+      render();
+    """)
+    assert page.evaluate("""() => {
+      const rows = strategyRows();
+      const rec = rows.find(row => row.id === RECOMMENDED);
+      const p1 = rows.find(row => row.id === 'p1');
+      return !currentStrategy()
+        && !state.rounds
+        && rec && rec.unavailable && rec.pending && !rec.active
+        && p1 && !p1.active;
+    }""")
+    assert "No verified Recommended bracket is present" in page.locator("#compare").text_content()
+    assert page.locator("#board > .round").count() == 0
+    assert page.locator("#compare .scard[data-strategy='recommended'].na").count() == 1
+    assert page.locator("#compare .scard[data-strategy='p1']").get_attribute("aria-pressed") == "false"
 
 
 def test_a_chosen_rule_travels_in_rq_and_is_said_when_2026_lacks_it(site, page):

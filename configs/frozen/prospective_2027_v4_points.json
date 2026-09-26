@@ -1,0 +1,167 @@
+{
+  "candidate_generation": {
+    "candidate_count_target": 3000,
+    "candidate_universe": "all generated and constructed candidates in the season candidate artifact",
+    "command": "python -m scripts.build_season --year 2027",
+    "defaults": {
+      "n_sims_total": 150000,
+      "p1_trials": 2000,
+      "pool_size": 30,
+      "rng_seed": 20260820,
+      "scoring_id": "espn_standard"
+    },
+    "first_four": {
+      "resolve_from_recorded_results": true,
+      "required_explicit_f4_pairing": true
+    },
+    "rating_sources": {
+      "mandatory": [
+        "torvik"
+      ],
+      "optional": [
+        "massey_avg",
+        "elo"
+      ],
+      "optional_source_absence": "record source availability; bank narrows",
+      "missing_torvik_team_rating": "existing seed-based estimate; enumerate affected teams"
+    },
+    "superseded_v3_settings_retained": true
+  },
+  "freeze_date": "2026-09-25",
+  "provenance": {
+    "required_build_state": "clean committed Git tree",
+    "required_records": [
+      "freeze_version_and_hash",
+      "git_commit_sha",
+      "python_and_dependency_versions_or_lockfile_hash",
+      "each_consumed_source_role_path_capture_or_cutoff_and_sha256",
+      "exact_command_settings_and_rng_seeds",
+      "artifact_generated_at_utc",
+      "candidate_artifact_sha256_and_matching_sidecar",
+      "seed_only_bracket_sha256",
+      "production_payload_sha256",
+      "selected_rule_and_rule_selection_table",
+      "paired_season_scores_and_uncertainty_results",
+      "replay_checksum_and_production_payload_bracket_parity"
+    ],
+    "2027_run_values": "pending until the 2027 sources and artifact exist"
+  },
+  "release": {
+    "fallback_on_fail_or_indeterminate": "seed_only",
+    "historical_gate": {
+      "bootstrap": {
+        "method": "paired percentile bootstrap over target seasons",
+        "resamples": 5000,
+        "seed": 42
+      },
+      "decision": "PASS only when mean paired ESPN-point gain is positive and the primary 95% interval lower bound is above zero",
+      "sensitivity": "paired t-interval over target seasons",
+      "disagreement_at_zero": "INDETERMINATE",
+      "primary_interval": "95% paired percentile bootstrap",
+      "target_seasons": [
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    "primary_pool": {
+      "pool_size": 30,
+      "scoring_id": "espn_standard"
+    },
+    "prospective_season": 2027
+  },
+  "scoring": {
+    "missing_or_incomplete_results": "no score; do not impute missing games or count them as zero points",
+    "required_game_counts": {
+      "E8": 4,
+      "F4": 2,
+      "FF": 4,
+      "NCG": 1,
+      "R32": 16,
+      "R64": 32,
+      "S16": 8
+    },
+    "required_winner_counts": {
+      "CHAMP": 1,
+      "E8": 4,
+      "F4": 2,
+      "R32": 16,
+      "R64": 32,
+      "S16": 8
+    },
+    "round_points": {
+      "CHAMP": 320,
+      "E8": 80,
+      "F4": 160,
+      "R32": 20,
+      "R64": 10,
+      "S16": 40
+    },
+    "scoring_unit": "team identity",
+    "first_four_points": 0
+  },
+  "selector": {
+    "candidate_rules": {
+      "blend_region_35": {
+        "kind": "named_strategy",
+        "artifact_path": "named_strategies.blend_region_35"
+      },
+      "ev_optimal": {
+        "kind": "named_strategy",
+        "artifact_path": "named_strategies.ev_optimal"
+      },
+      "highest_p1": {
+        "kind": "highest_p1_candidate",
+        "implementation": "src.product.selection.select_diverse(artifact, objective='p1', k=1)",
+        "tie_break": "lowest candidate index in artifact order"
+      }
+    },
+    "inner_metric": "mean paired actual ESPN-point gain over the seed-only bracket",
+    "inner_training_window": "earlier eligible target seasons only; 2020 excluded",
+    "inter_rule_tie_break": "rule ID ascending alphabetically",
+    "no_prior_eligible_seasons": "seed_only",
+    "production_training_seasons": "2011-2025 inclusive, excluding 2020",
+    "target_rule": "apply the selected reusable rule to the target season's complete candidate bank"
+  },
+  "source_cutoffs": {
+    "field": {
+      "selection_sunday": "2027-03-14",
+      "topology": "announced field and explicit f4_pairing; First Four outcomes may resolve slots only before R64 lock"
+    },
+    "public_picks": {
+      "capture_at_or_before": "2027-03-18T12:00:00-04:00",
+      "capture_must_be_timezone_aware": true,
+      "recapture_after_cutoff_allowed": false,
+      "timezone": "America/New_York"
+    },
+    "seed_referee": {
+      "as_of": 2027,
+      "eligible_results": "seasons strictly before 2027"
+    },
+    "torvik": {
+      "data_type": "pre_tournament",
+      "cutoff_date_exclusive_before": "2027-03-16",
+      "latest_eligible_cutoff_date": "2027-03-15",
+      "tournament_start": "2027-03-16"
+    }
+  },
+  "spec_version": "2027.v4",
+  "supersedes": {
+    "scope": "production bracket selection and historical promotion gate",
+    "spec_hash": "183f90796d527f0f254cc087c349bd72852c43865676d5d175d79a122e89974a",
+    "spec_path": "configs/frozen/prospective_2027_v3_audited.json",
+    "version": "2027.v3"
+  },
+  "spec_hash": "797aba3e8db5a2b23cecbc0efa359445255bf5430f872d5b4eb393089bd28ee3"
+}

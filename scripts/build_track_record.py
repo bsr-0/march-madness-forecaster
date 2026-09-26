@@ -48,9 +48,10 @@ import argparse
 import hashlib
 import json
 import sys
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 import numpy as np
 
@@ -81,6 +82,103 @@ KIND = "track_record"
 # Payload strategy id -> candidate-artifact named strategy. The payload copies
 # these verbatim (build_ui_payload.py); asserted below rather than assumed.
 NAMED = {"p1": "blend_region_35", "ev": "ev_optimal"}
+EXPECTED_OUTCOME_GAMES = {
+    "FF": 4,
+    "R64": 32,
+    "R32": 16,
+    "S16": 8,
+    "E8": 4,
+    "F4": 2,
+    "NCG": 1,
+}
+EXPECTED_WINNERS = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
+OUTCOME_ROUNDS = ("R64", "R32", "S16", "E8", "F4", "NCG")
+
+
+def _require_complete_outcome(year: int, games: List[dict]) -> None:
+    game_counts = Counter(game.get("round_name") for game in games if isinstance(game, dict))
+    participants: Dict[str, List[str]] = defaultdict(list)
+    winners_by_round: Dict[str, Set[str]] = defaultdict(set)
+    seen_matchups: Set[tuple[str, frozenset[str]]] = set()
+    problems = [f"game {index} is not an object" for index, game in enumerate(games) if not isinstance(game, dict)]
+
+    for index, game in enumerate(games):
+        if not isinstance(game, dict):
+            continue
+        round_name = game.get("round_name")
+        if round_name not in EXPECTED_OUTCOME_GAMES:
+            problems.append(f"game {index} has unexpected round {round_name!r}")
+            continue
+        if type(game.get("year")) is not int or game["year"] != year:
+            problems.append(f"game {index} is labeled year {game.get('year')!r}, expected integer {year}")
+
+        team1, team2 = game.get("team1_id"), game.get("team2_id")
+        if not isinstance(team1, str) or not team1 or not isinstance(team2, str) or not team2:
+            problems.append(f"{round_name} game {index} has missing or invalid team IDs")
+            continue
+        if team1 == team2:
+            problems.append(f"{round_name} game {index} has the same team on both sides: {team1}")
+            continue
+        if type(game.get("team1_won")) is not bool:
+            problems.append(f"{round_name} game {index} has invalid team1_won value")
+            continue
+
+        matchup = (round_name, frozenset((team1, team2)))
+        if matchup in seen_matchups:
+            problems.append(f"{round_name} contains a duplicate game: {team1} vs {team2}")
+        seen_matchups.add(matchup)
+        participants[round_name].extend((team1, team2))
+
+        winner = team1 if game["team1_won"] else team2
+        winners_by_round[round_name].add(winner)
+
+        scores = (game.get("team1_score"), game.get("team2_score"))
+        if any(type(score) is not int or score < 0 for score in scores):
+            problems.append(f"{round_name} game {index} has missing or invalid scores")
+        elif scores[0] == scores[1] or (scores[0] > scores[1]) != game["team1_won"]:
+            problems.append(f"{round_name} game {index} winner disagrees with the recorded scores")
+
+    problems = [
+        f"{rnd} has {game_counts[rnd]} games, expected {expected}"
+        for rnd, expected in EXPECTED_OUTCOME_GAMES.items()
+        if game_counts[rnd] != expected
+    ] + problems
+    unexpected_rounds = sorted(set(game_counts) - set(EXPECTED_OUTCOME_GAMES), key=str)
+    if unexpected_rounds:
+        problems.append(f"unexpected rounds {unexpected_rounds}")
+
+    for rnd, expected in EXPECTED_OUTCOME_GAMES.items():
+        if len(participants[rnd]) != 2 * expected:
+            continue
+        unique_participants = set(participants[rnd])
+        if len(unique_participants) != 2 * expected:
+            problems.append(f"{rnd} repeats a team across games")
+
+    if len(set(participants["FF"])) == 8 and len(winners_by_round["FF"]) == 4:
+        first_four_losers = set(participants["FF"]) - winners_by_round["FF"]
+        if not winners_by_round["FF"].issubset(set(participants["R64"])):
+            problems.append("First Four winners are absent from the Round of 64")
+        if first_four_losers & set(participants["R64"]):
+            problems.append("First Four losers appear in the Round of 64")
+
+    previous_winners: Set[str] | None = None
+    for rnd in OUTCOME_ROUNDS:
+        round_participants = set(participants[rnd])
+        if rnd == "R64":
+            if len(round_participants) != 64:
+                problems.append(f"R64 has {len(round_participants)} distinct participants, expected 64")
+        elif previous_winners is not None and round_participants != previous_winners:
+            problems.append(f"{rnd} participants do not equal the previous round's winners")
+        winners = winners_by_round[rnd]
+        if len(winners) != EXPECTED_WINNERS.get(rnd, EXPECTED_WINNERS["CHAMP"]):
+            problems.append(
+                f"{rnd} has {len(winners)} distinct winners, expected "
+                f"{EXPECTED_WINNERS.get(rnd, EXPECTED_WINNERS['CHAMP'])}"
+            )
+        previous_winners = winners
+
+    if problems:
+        raise RuntimeError(f"{year}: tournament outcome incomplete or malformed: {'; '.join(problems)}")
 
 
 def outcome_hash(actual: Dict[str, set]) -> str:
@@ -127,9 +225,9 @@ def build(year: int, seed: int, *, pool_size: int = DEFAULT_POOL_SIZE) -> Dict[s
     # and checked against the payload's `actual`, which is what the board
     # grades with, so the tally and the red/green cannot describe different
     # tournaments.
-    actual = actual_winners_by_round(load_tournament_results(year))
-    if not all(actual.get(r) for r in ROUND_NAMES) or len(actual["CHAMP"]) != 1:
-        raise RuntimeError(f"{year}: tournament outcome incomplete; no track record to build")
+    outcome_games = load_tournament_results(year)
+    _require_complete_outcome(year, outcome_games)
+    actual = actual_winners_by_round(outcome_games)
     payload_actual = season.get("actual")
     if not payload_actual:
         raise RuntimeError(f"{year}: payload carries no actual results")
@@ -149,6 +247,45 @@ def build(year: int, seed: int, *, pool_size: int = DEFAULT_POOL_SIZE) -> Dict[s
             raise RuntimeError(f"{year}: payload strategy {sid} picks differ from artifact {named}")
         winners = [[team_ids[i] for i in r] for r in w_idx]
         strategies[sid] = {"w": w_idx, "source": f"named_strategies.{named}", **realised(winners, actual, ref)}
+
+    recommended = next((s for s in season["strategies"] if s["id"] == "recommended"), None)
+    if recommended is not None:
+        w_idx = recommended["picks"]
+        if len(w_idx) != 6 or any(any(type(i) is not int or not 0 <= i < len(team_ids) for i in rnd) for rnd in w_idx):
+            raise RuntimeError(f"{year}: payload Recommended bracket has invalid team indices")
+        from src.evaluation.prospective_2027_points import build_seed_only_bracket, candidate_bracket
+
+        selector_meta = recommended.get("selector")
+        if not isinstance(selector_meta, dict):
+            raise RuntimeError(f"{year}: payload Recommended bracket has no selector metadata")
+        if selector_meta.get("candidate_artifact_sha256") != hashlib.sha256(art_path.read_bytes()).hexdigest():
+            raise RuntimeError(f"{year}: Recommended bracket metadata references a different candidate artifact")
+        rule_id = selector_meta.get("rule_id")
+        if rule_id != "seed_only" and (
+            selector_meta.get("source_gate") != "PASS"
+            or selector_meta.get("promotion_gate") != "PASS"
+        ):
+            raise RuntimeError(f"{year}: candidate rule cannot be recommended before both frozen gates pass")
+        if year == 2027 and rule_id != "seed_only" and (
+            selector_meta.get("prospective_artifact_gate", {}).get("status") != "PASS"
+        ):
+            raise RuntimeError(f"{year}: prospective candidate artifact gate did not pass")
+        expected = (
+            build_seed_only_bracket(art, year)
+            if rule_id == "seed_only"
+            else candidate_bracket(art, rule_id)
+        )
+        if w_idx != expected:
+            raise RuntimeError(
+                f"{year}: payload Recommended picks do not match the frozen selector rule {rule_id!r}"
+            )
+        winners = [[team_ids[i] for i in rnd] for rnd in w_idx]
+        strategies["recommended"] = {
+            "w": w_idx,
+            "source": selector_meta.get("source", "seed_only"),
+            "selector": selector_meta,
+            **realised(winners, actual, ref),
+        }
 
     fitted_path = FITTED_DIR / f"fitted_eval_{year}.json"
     if fitted_path.exists():

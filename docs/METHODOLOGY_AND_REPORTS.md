@@ -1,10 +1,12 @@
-# Final Methodology & Validation Audit
+# Methodology, validation, and reports
+
+This is the canonical methodology and report-governance document. The audit protocol below defines how model and bracket claims are validated; the final sections define where current and historical project documentation belongs.
 
 ## Exact Execution & Failure Protocols
 
-### A. Execution order is mandatory
+### A. Execution order for a complete foundational audit
 
-Execute checklist items 1→18 sequentially. Do not skip, reorder, combine, or proceed past a failed foundational gate without recording the failure and obtaining an explicit decision.
+When conducting a complete foundational audit, execute checklist items 1→18 sequentially. Do not skip, reorder, or combine items within that audit. For a season-specific release, [the project roadmap](./PROJECT_ROADMAP_2027.md) defines scope and identifies which protocol checks are required for each phase; unchecked items outside that scope are not automatic release blockers.
 
 ### B. Existing implementation is not ground truth
 
@@ -16,14 +18,20 @@ Do not tune models, hyperparameters, referee choice, weighting, candidate genera
 
 ### D. Evidence requirement
 
-Every PASS/FAIL must be supported by:
+Every reported result or gate decision must have an evidence record. Include:
 
-* exact code/data path inspected;
-* quantitative test where feasible;
-* reproducible command/test;
-* artifact documenting the result.
+| Field | Required content |
+|---|---|
+| Status | PASS, FAIL, or INDETERMINATE; label descriptive/historical results as such |
+| Question and decision | What was tested and what decision the result informs |
+| Code and data identity | Commit/revision, data versions or source provenance, and point-in-time cutoff |
+| Evaluation design | Target seasons, baseline/comparison set, metric, and scoring/settings |
+| Uncertainty and run settings | Statistical method, random seeds, simulation/trial counts, and configuration, where applicable |
+| Reproduction | Exact command/procedure and required versioned inputs |
+| Result and impact | Estimate, uncertainty, limitations, affected conclusions/downstream gates |
+| Evidence location and currency | Artifact/report path and whether current, superseded, or historical |
 
-"Looks correct" is not a PASS.
+For fields that do not apply, state N/A rather than silently omitting them. A PASS/FAIL must cite the exact code/data path and include a quantitative check where feasible. "Looks correct" is not evidence.
 
 ### E. Bug protocol
 
@@ -91,7 +99,18 @@ At completion, produce a gate table:
 | # | Gate | PASS/FAIL/INDETERMINATE | Evidence | Downstream impact |
 |---|------|--------------------------|----------|--------------------|
 
-The project may proceed to final optimization only when all foundational gates PASS or an explicit decision documents why an INDETERMINATE item is acceptable. Any unresolved foundational FAIL blocks retirement of the methodology.
+For a complete foundational audit, proceed to final optimization only when all foundational gates PASS or an explicit decision documents why an INDETERMINATE item is acceptable; any unresolved foundational FAIL blocks that audit's optimization decision. For the 2027 prospective release, the active gate and release fallback in [the roadmap](./PROJECT_ROADMAP_2027.md) control.
+
+### N. Investigation record
+
+Before a non-routine audit or roadmap investigation, record:
+
+1. Question and decision it will inform.
+2. Relevance to the active roadmap gate; if none, put it in the parking lot.
+3. Predeclared method, comparison, data window, and metrics.
+4. Timebox and exit criterion.
+
+At completion, use the evidence fields above and record the decision. Routine edits and simple lookups do not require a separate investigation record.
 
 ## Final Methodology & Validation Audit
 
@@ -223,3 +242,24 @@ Report separately:
 4. prospective real-world performance.
 
 Never convert simulated P(1st) into a claim of equivalent real-world improvement without evidence.
+
+## Documentation governance
+
+### Active documentation
+
+- [../README.md](../README.md) — project overview and quick start
+- [../CLAUDE.md](../CLAUDE.md) — repository instructions and guardrails
+- [PROJECT_ROADMAP_2027.md](./PROJECT_ROADMAP_2027.md) — controlling release phases and decision log
+- [METHODOLOGY_AND_REPORTS.md](./METHODOLOGY_AND_REPORTS.md) — this document
+- [OPERATIONS.md](./OPERATIONS.md) — analytics, pool settings, storage, delivery, and site-review notes
+
+### Archived documentation
+
+Historical notes and superseded project documents are preserved under [archive/README.md](./archive/README.md). They provide context but are not current operational truth.
+
+### Documentation rules
+
+- Keep current operating guidance in the root docs and the three canonical files in `docs/`.
+- Put dated research notes, superseded plans, and historical reports in `docs/archive/`.
+- Keep generated evidence and audit outputs under `artifacts/`, with provenance and checksums where applicable.
+- Do not duplicate the same policy or methodology claim across multiple active documents.

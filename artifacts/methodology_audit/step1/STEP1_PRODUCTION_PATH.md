@@ -1,6 +1,6 @@
 # Step 1 — Trace the actual production path
 
-Protocol: `FINAL_METHODOLOGY_AUDIT_PROTOCOL.md`, item 1.
+Protocol: `docs/METHODOLOGY_AND_REPORTS.md`, item 1.
 Run: 2026-09-15, commit `3e9dbcd` (working tree clean apart from untracked
 `data/raw/external_ratings_*.json` and the protocol file), Python 3.11.15,
 numpy 1.26.3, scipy 1.16.3, macOS (Darwin 25.3.0).

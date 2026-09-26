@@ -1,6 +1,6 @@
 # Step 4 — Scoring and objective mathematics: findings, recorded before fixing
 
-Protocol: `FINAL_METHODOLOGY_AUDIT_PROTOCOL.md` item 4, executed under the
+Protocol: `docs/METHODOLOGY_AND_REPORTS.md` item 4, executed under the
 22-item Step 4 directive of 2026-09-15. Base commit `0931de3` plus the Step 1–3
 working tree. Inventory: one exhaustive read-only sweep of every point table,
 scorer, P(1st) site, opponent draw, RNG seed and exception handler in

@@ -98,7 +98,7 @@ function loadApp(hash, opts = {}) {
   // Top-level `const` lives in the script's lexical scope, not on the context
   // object, so reach it by evaluating in that same scope.
   vm.runInContext(
-    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, solveFromPicks, '
+    'globalThis.__api = { state, picksAsText, ROUNDS, readHash, writeHash, CUSTOM, MODEL, RECOMMENDED, solveFromPicks, '
     + 'pickDefaultSeason, p1Pct, refit, percentileInField, ordinal, fittedEval, solveByFit, solveBracket, sensitivity, winProb, RULE, ruleStrategy, strategyRows, currentStrategy, '
     + 'ensureRuleSearch, ruleAllKeys, ruleKey, ruleRoundLabel, setRuleCheckpoint, setRuleComplexity, setRuleChosen, setStrategy, fieldPending, ruleChosen, pendingBoardHTML, RULE_FLEXIBLE_MAX, RULE_SIMPLE_MAX, renders: () => globalThis.__renders };', ctx);
   ctx.__api.__worker = wk;
@@ -135,6 +135,65 @@ check('every winner is named, none undefined', () => {
   assert.ok(!/undefined/.test(text), 'export contains "undefined":\n' + text);
   assert.ok(text.includes('1 Duke'), 'missing the round-1 winner');
   assert.ok(text.includes('9 Utah'), 'missing the upset winner');
+});
+
+check('Recommended is the default and survives a shared-link round trip', () => {
+  const app = loadApp();
+  assert.strictEqual(app.state.strategy, app.RECOMMENDED);
+  fixture(app);
+  app.state.strategy = app.RECOMMENDED;
+  app.writeHash();
+  assert.ok(ctxHash.value.includes('s=recommended'), 'recommended selection missing from the URL');
+  const restored = loadApp('#y=2027&s=recommended');
+  assert.strictEqual(restored.state.strategy, restored.RECOMMENDED);
+});
+
+check('a payload without Recommended never substitutes the P(1st) bracket', () => {
+  const app = fixture(loadApp());
+  app.state.season.year = 2027;
+  app.state.season.strategies = [{
+    id: 'p1',
+    label: 'Maximise chance of winning',
+    p1: 0.099,
+    ev: 874,
+    picks: [32, 16, 8, 4, 2, 1].map(count => Array(count).fill(0)),
+  }];
+  app.state.strategy = app.RECOMMENDED;
+  assert.strictEqual(app.currentStrategy(), null);
+  assert.throws(() => app.solveFromPicks(), /No verified Recommended bracket/);
+  const rows = app.strategyRows();
+  const recommended = rows.find(row => row.id === app.RECOMMENDED);
+  const p1 = rows.find(row => row.id === 'p1');
+  assert.ok(recommended && recommended.unavailable && recommended.pending);
+  assert.strictEqual(recommended.active, false);
+  assert.strictEqual(p1.active, false);
+});
+
+check('a pre-2027 legacy payload retains its prior P(1st) default compatibility', () => {
+  const app = fixture(loadApp());
+  app.state.season.strategies[0].picks = [32, 16, 8, 4, 2, 1].map(count => Array(count).fill(0));
+  app.state.season.year = 2026;
+  app.state.year = 2026;
+  app.state.strategy = app.RECOMMENDED;
+  assert.strictEqual(app.currentStrategy().id, 'p1');
+  const p1 = app.strategyRows().find(row => row.id === 'p1');
+  assert.strictEqual(p1.active, true);
+  assert.strictEqual(app.strategyRows().some(row => row.id === app.RECOMMENDED), false);
+});
+
+check('seed-only Recommended export states the fallback without inventing pool scores', () => {
+  const app = fixture(loadApp());
+  app.state.season.strategies = [{
+    id: 'recommended',
+    label: 'Recommended',
+    p1: null,
+    ev: null,
+    selector: { fallback: true, status: 'INDETERMINATE', fallback_reason: 'source evidence missing' },
+  }];
+  app.state.strategy = app.RECOMMENDED;
+  const text = app.picksAsText();
+  assert.ok(text.includes('Seed-only fallback (INDETERMINATE)'), 'missing explicit fallback status');
+  assert.ok(!text.includes('undefined'), 'export must not print placeholder metrics');
 });
 
 check('winners are resolved by index, not by id', () => {
@@ -1045,7 +1104,7 @@ check('a listed season with played seasons before it is pending, not empty; the 
   assert.strictEqual(app.fieldPending(), false, 'nothing played before it: nothing to search');
   app.state.seasonsIndex = pendingApp().state.seasonsIndex;
   const rows = app.strategyRows();
-  assert.strictEqual(JSON.stringify(rows.map(r => [r.id, !!r.pending, r.active])), JSON.stringify([['p1', true, false], ['ev', true, false], ['rule', false, true], ['model', true, false]]));
+  assert.strictEqual(JSON.stringify(rows.map(r => [r.id, !!r.pending, r.active])), JSON.stringify([['recommended', true, false], ['p1', true, false], ['ev', true, false], ['rule', false, true], ['model', true, false]]));
   assert.ok(rows.every(r => r.p1 === null && r.ev === null && r.champion === null));
   app.setStrategy('p1');
   assert.strictEqual(app.state.strategy, app.RULE, 'the pool strategies are not selectable without a field');

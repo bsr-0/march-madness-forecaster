@@ -22,6 +22,9 @@ Runs, in order:
                                                 keeps every season's payload current, not just
                                                 the one just built.
 
+Pass `--generated-at` only for an artifact replay; it pins the original
+timezone-aware timestamp so the candidate JSON checksum can match.
+
 Deliberately does NOT commit or push. docs/data/*.json is the only output
 this script changes that belongs in git (artifacts/candidates/*.json is
 gitignored except its .sha256), and putting a live pool bracket in front of
@@ -69,6 +72,10 @@ def main() -> int:
     ap.add_argument("--trials", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=20260820)
     ap.add_argument(
+        "--generated-at",
+        help="timezone-aware ISO timestamp to preserve when replaying an existing artifact",
+    )
+    ap.add_argument(
         "--force",
         action="store_true",
         help="allow overwriting an existing candidate artifact for this year "
@@ -99,6 +106,8 @@ def main() -> int:
         "--seed",
         str(args.seed),
     ]
+    if args.generated_at is not None:
+        build_cmd.extend(["--generated-at", args.generated_at])
     if args.force:
         build_cmd.append("--force")
     _run(f"2/3  Building candidate artifact for {args.year}", build_cmd)

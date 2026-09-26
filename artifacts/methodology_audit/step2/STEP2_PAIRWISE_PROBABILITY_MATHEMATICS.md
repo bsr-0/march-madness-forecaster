@@ -1,6 +1,6 @@
 # Step 2 — Pairwise probability mathematics
 
-Protocol: `FINAL_METHODOLOGY_AUDIT_PROTOCOL.md`, item 2, executed under the
+Protocol: `docs/METHODOLOGY_AND_REPORTS.md`, item 2, executed under the
 21-item Step 2 directive of 2026-09-15. Base commit `0931de3`; Python 3.11.15,
 numpy 1.26.3, scipy 1.16.3, node (see `node --version`). Three paths audited
 separately; nothing collapsed into one "probability model".

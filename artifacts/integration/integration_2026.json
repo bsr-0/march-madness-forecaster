@@ -4,9 +4,9 @@
   "total": 32,
   "checks": [
     {
-      "check": "system matches the 2027.v2 freeze",
+      "check": "system matches the 2027.v3 freeze",
       "pass": true,
-      "detail": "2027.v2"
+      "detail": "2027.v3"
     },
     {
       "check": "pre-tournament gate accepts 2026 inputs",
@@ -26,7 +26,7 @@
     {
       "check": "artifact produced candidates",
       "pass": true,
-      "detail": "1,501"
+      "detail": "1,488"
     },
     {
       "check": "every candidate path-consistent",
@@ -41,17 +41,17 @@
     {
       "check": "champion diversity preserved",
       "pass": true,
-      "detail": "64 -> 64"
+      "detail": "63 -> 63"
     },
     {
       "check": "bracket diversity preserved",
       "pass": true,
-      "detail": "Hamming 25.04 -> 26.43"
+      "detail": "Hamming 25.31 -> 26.27"
     },
     {
       "check": "objective-disagreement region retained",
       "pass": true,
-      "detail": "46 low-EV/high-P1 candidates"
+      "detail": "52 low-EV/high-P1 candidates"
     },
     {
       "check": "P(1st) computed for every candidate",
@@ -61,7 +61,7 @@
     {
       "check": "preference coverage non-thin",
       "pass": true,
-      "detail": "min 222"
+      "detail": "min 221"
     },
     {
       "check": "predicates reproduce on the decoded artifact",
@@ -71,7 +71,7 @@
     {
       "check": "frequencies sourced from full bank, not artifact",
       "pass": true,
-      "detail": "bias recorded: -0.055..+0.056"
+      "detail": "bias recorded: -0.052..+0.058"
     },
     {
       "check": "top-level key 'schema'",
@@ -151,12 +151,12 @@
     {
       "check": "Python/browser agree on 'ev' selection",
       "pass": true,
-      "detail": "py=[1499, 483, 419] js=[1499, 483, 419]"
+      "detail": "py=[1486, 51, 787] js=[1486, 51, 787]"
     },
     {
       "check": "Python/browser agree on 'p1' selection",
       "pass": true,
-      "detail": "py=[1498, 633, 611] js=[1498, 633, 611]"
+      "detail": "py=[769, 289, 714] js=[769, 289, 714]"
     },
     {
       "check": "artifact size acceptable for the browser",

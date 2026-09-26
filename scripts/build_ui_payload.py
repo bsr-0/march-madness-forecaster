@@ -4,9 +4,9 @@
 ONE PAYLOAD PER SEASON. The browser renders; it does not model. Two things are
 precomputed here so the client only ever does arithmetic it can be trusted with:
 
-  pool_optimized   the LOYO-validated bracket, chosen by the canonical
-                   product.v3 selector in src/product/selection.py. Selection is
-                   a modelling decision and stays in Python.
+  pool_optimized   the frozen v4 Recommended bracket. Python selects it from
+                   the eligible nested-evaluation result, or constructs the
+                   seed-only fallback when a release gate is not PASS.
 
   z-scores         each stat standardised within that season's 68-team field,
                    already sign-corrected so HIGHER IS ALWAYS BETTER. The
@@ -402,7 +402,8 @@ def _pool_variant(year: int, size: int) -> Dict[str, Any] | None:
 
     cand_rows = [row(c) for c in art.get("candidates", [])]
     counts = {}
-    for c in cand_rows: counts[c["c"]] = counts.get(c["c"], 0) + 1
+    for c in cand_rows:
+        counts[c["c"]] = counts.get(c["c"], 0) + 1
     filters = {"candidates": cand_rows,
                "champions": sorted(({"team": i, "name": team_names[i], "seed": seeds[i], "n": n} for i, n in counts.items()), key=lambda x: (x["seed"], x["name"])),
                "ones": sorted({c["o"] for c in cand_rows}), "depths": sorted({c["d"] for c in cand_rows}),
@@ -417,7 +418,7 @@ def _pool_variant(year: int, size: int) -> Dict[str, Any] | None:
         if ev.get("scorer", {}).get("pool_size") == size:
             fitted_eval = {"ev": ev.get("ev"), "p1": ev.get("p1"),
                            "generated_at": ev.get("generated_at"),
-                           "artifact": str(eval_path.relative_to(REPO))}
+                           "artifact": _artifact_display_path(eval_path)}
     def strategy(key: str, label: str, family: str, public_id: str) -> Dict[str, Any] | None:
         e = named.get(key)
         if not e:
@@ -433,7 +434,7 @@ def _pool_variant(year: int, size: int) -> Dict[str, Any] | None:
         "pool_size": size,
         "scoring_id": "espn_standard",
         "artifact_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        "artifact": str(path.relative_to(REPO)),
+        "artifact": _artifact_display_path(path),
         "p1_pool_size": meta.get("p1_pool_size"),
         "p1_assumption": meta.get("p1_assumption"),
         "p1_trials": meta.get("p1_trials"),
@@ -447,6 +448,13 @@ def _pool_variant(year: int, size: int) -> Dict[str, Any] | None:
         # shared presentation index; duplicating it four times added ~3 MB to
         # every season transfer without changing the displayed bracket.
     }
+
+
+def _artifact_display_path(path: Path) -> str:
+    try:
+        return path.relative_to(REPO).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _public_picks(year: int, teams: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
@@ -471,7 +479,129 @@ def _public_picks(year: int, teams: List[Dict[str, Any]]) -> Dict[str, Dict[str,
         return {}
 
 
-def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
+def _recommended_strategy(
+    year: int,
+    art: Dict[str, Any],
+    selector_result: Dict[str, Any] | None,
+    artifact_sha256: str,
+    artifact_path: Path,
+) -> Dict[str, Any]:
+    """Resolve the frozen selector choice, using an explicit seed-only fallback."""
+    from src.evaluation.prospective_2027_points import (
+        RULE_IDS,
+        build_seed_only_bracket,
+        candidate_bracket,
+        load_spec,
+        validate_prospective_artifact,
+    )
+
+    spec = load_spec()
+    source_gate = (selector_result or {}).get("source_gate", {}).get("status", "INDETERMINATE")
+    promotion_gate = (selector_result or {}).get("promotion_gate", {}).get("status", "INDETERMINATE")
+    release_artifact_gate = None
+    fallback_reason = None
+    if (
+        selector_result is not None
+        and source_gate == "PASS"
+        and promotion_gate == "PASS"
+        and year == spec["release"]["prospective_season"]
+    ):
+        release_artifact_gate = validate_prospective_artifact(art, artifact_path, year, spec)
+        if release_artifact_gate["status"] != "PASS":
+            source_gate = release_artifact_gate["status"]
+            details = release_artifact_gate["failures"] + release_artifact_gate["unknowns"]
+            fallback_reason = "; ".join(details) or "Prospective artifact release checks did not pass."
+        else:
+            fallback_reason = None
+    selected_rule = "seed_only"
+    if fallback_reason is not None:
+        pass
+    elif selector_result is None:
+        fallback_reason = "No current, hash-verified v4 evaluation is available."
+    elif source_gate != "PASS":
+        detail = selector_result.get("reason")
+        fallback_reason = f"Historical source eligibility is {source_gate}."
+        if detail:
+            fallback_reason += f" {detail}"
+    elif promotion_gate != "PASS":
+        fallback_reason = f"The historical promotion gate is {promotion_gate}."
+    elif year == spec["release"]["prospective_season"]:
+        selected_rule = selector_result.get("release", {}).get("selected_rule", "seed_only")
+    elif str(year) in selector_result.get("nested_folds", {}):
+        selected_rule = selector_result["nested_folds"][str(year)].get("selected_rule", "seed_only")
+    else:
+        fallback_reason = f"No frozen nested selector decision exists for {year}."
+
+    if selected_rule not in (*RULE_IDS, "seed_only"):
+        raise ValueError(f"v4 result selects unknown rule {selected_rule!r} for {year}")
+    no_history_baseline = (
+        selected_rule == "seed_only"
+        and source_gate == "PASS"
+        and promotion_gate == "PASS"
+        and fallback_reason is not None
+        and fallback_reason.startswith("No earlier eligible target seasons")
+    )
+    if selected_rule == "seed_only":
+        picks = build_seed_only_bracket(art, year)
+        values = {"ev": None, "p1": None}
+        source = "seed_only"
+        if fallback_reason is None:
+            fallback_reason = (
+                "No earlier eligible target seasons exist; the frozen 2011 rule is seed-only."
+                if year == spec["release"]["historical_gate"]["target_seasons"][0]
+                else "The frozen v4 decision for this season is seed-only."
+            )
+    else:
+        picks = candidate_bracket(art, selected_rule)
+        if selected_rule in ("blend_region_35", "ev_optimal"):
+            values = art["named_strategies"][selected_rule]
+        else:
+            values = art["candidates"][select_diverse(art, objective="p1", k=1)[0]]
+        source = selected_rule
+
+    status = "PASS" if source_gate == "PASS" and promotion_gate == "PASS" else (
+        source_gate if source_gate != "PASS" else promotion_gate
+    )
+    return {
+        "id": "recommended",
+        "label": "Recommended",
+        "kind": (
+            f"Frozen v4 selector · {selected_rule}"
+            if selected_rule != "seed_only" else (
+                "Seed-only · no prior eligible seasons"
+                if no_history_baseline else f"Seed-only fallback · {status}"
+            )
+        ),
+        "note": (
+            f"Selected by the frozen v4 nested ESPN-points selector ({selected_rule})."
+            if selected_rule != "seed_only" else
+            f"Seed-only bracket. {fallback_reason or 'The frozen selector specifies seed-only.'} "
+            "No candidate superiority is claimed."
+        ),
+        "picks": picks,
+        "ev": values.get("ev"),
+        "p1": values.get("p1"),
+        "selector": {
+            "spec_version": spec["spec_version"],
+            "spec_hash": spec["spec_hash"],
+            "rule_id": selected_rule,
+            "source_gate": source_gate,
+            "promotion_gate": promotion_gate,
+            "status": status,
+            "fallback": selected_rule == "seed_only" and not no_history_baseline,
+            "fallback_reason": fallback_reason,
+            "candidate_artifact_sha256": artifact_sha256,
+            "prospective_artifact_gate": release_artifact_gate,
+            "source": source,
+        },
+    }
+
+
+def build_season(
+    year: int,
+    stats_by_year: Dict[str, Any],
+    selector_result: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     art_path = CANDIDATES_DIR / f"candidates_{year}.json"
     rows = stats_by_year.get(str(year))
 
@@ -535,7 +665,10 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
     # objectives happen to select strategies that agree on which is best, but
     # that is an empirical fact about a particular table, not a guarantee, and a
     # bracket that wins on one axis can sit well down the other.
-    strategies = []
+    recommended = _recommended_strategy(
+        year, art, selector_result, hashlib.sha256(art_path.read_bytes()).hexdigest(), art_path
+    )
+    strategies = [recommended]
 
     # THE WIN-MAXIMISING STRATEGY IS A FIXED RULE, NOT A SEARCH, and that is a
     # deliberate change from selecting the best-scoring candidate.
@@ -756,6 +889,15 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     cand_rows = [_attrs(c) for c in chosen]
+    recommended_candidate = {
+        "w": recommended["picks"],
+        "ev": recommended["ev"],
+        "p1": recommended["p1"],
+        "src": "shipped(recommended)",
+    }
+    recommendation_bits = _encode(recommended_candidate["w"])
+    if all(recommendation_bits != _encode(c["w"]) for c in chosen):
+        cand_rows.append(_attrs(recommended_candidate))
     champ_counts: Dict[int, int] = {}
     for r in cand_rows:
         champ_counts[r["c"]] = champ_counts.get(r["c"], 0) + 1
@@ -874,6 +1016,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         ],
         "first_round": art["first_round"],
         "strategies": strategies,
+        "recommendation": recommended["selector"],
         "filters": filters,
         "pool_optimized": picks,
         # team_id -> {round_name: pick_pct in [0,1]}, the same real ESPN public
@@ -890,11 +1033,7 @@ def build_season(year: int, stats_by_year: Dict[str, Any]) -> Dict[str, Any]:
         # A wrong provenance claim on the headline recommendation is worse than
         # the jargon beside it. And "leave-one-year-out backtesting" is a term
         # for people who already know what it means.
-        "pool_optimized_note": (
-            "Built to win a 30-person pool outright, not to score well on average. "
-            "The method was tested on 15 past tournaments (2011-2026, no 2020), "
-            "each time using only what was known before that tournament started."
-        ),
+        "pool_optimized_note": recommended["note"],
         "z": z,
         "raw": raw,
         "variables": [
@@ -977,6 +1116,8 @@ def _track_record(year: int, payload: Dict[str, Any]) -> Dict[str, Any] | None:
     for st in payload["strategies"]:
         rec = tr["strategies"].get(st["id"])
         if rec is None:
+            if st["id"] == "recommended":
+                print(f"  [warn] {path.name}: Recommended bracket has no track-record score; re-run scripts/build_track_record.py --year {year}")
             continue
         if rec["w"] != st["picks"]:
             print(f"  [warn] {path.name}: {st['id']} picks differ from this payload; row dropped")
@@ -992,10 +1133,29 @@ def _track_record(year: int, payload: Dict[str, Any]) -> Dict[str, Any] | None:
             "pool_size": tr["scorer"]["pool_size"], "generated_at": tr["generated_at"]}
 
 def main() -> int:
+    from src.evaluation.prospective_2027_points import (
+        inspect_historical_sources,
+        load_current_result,
+        load_spec,
+    )
+
     stats = json.loads(STATS_PATH.read_text())["stats_by_year"]
+    selector_result = load_current_result()
+    if selector_result is None:
+        source_gate = inspect_historical_sources(load_spec(), CANDIDATES_DIR)
+        detail = source_gate["issues"][0]["reason"] if source_gate["issues"] else "No frozen selector result is available."
+        selector_result = {
+            "source_gate": source_gate,
+            "promotion_gate": {"status": "INDETERMINATE"},
+            "reason": detail,
+        }
+        print(
+            f"  [warn] no current PASS v4 selector result "
+            f"(source gate {source_gate['status']}); Recommended uses the seed-only fallback: {detail}"
+        )
     index = []
     for year in _seasons():
-        payload = build_season(year, stats)
+        payload = build_season(year, stats, selector_result)
         if payload["status"] == "ready":
             fe = _fitted_eval(year, payload)
             if fe is not None:

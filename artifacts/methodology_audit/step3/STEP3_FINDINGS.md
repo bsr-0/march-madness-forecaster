@@ -1,6 +1,6 @@
 # Step 3 — Tournament propagation: findings, recorded before fixing
 
-Protocol: `FINAL_METHODOLOGY_AUDIT_PROTOCOL.md` item 3; plan of record
+Protocol: `docs/METHODOLOGY_AND_REPORTS.md` item 3; plan of record
 `~/.claude/plans/got-to-step-3-robust-sutherland.md` (approved 2026-09-15).
 Base commit `0931de3` plus the uncommitted Step 1–2 working tree.
 

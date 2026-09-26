@@ -76,6 +76,8 @@ const MOBILE_ROUND_DEFAULT = ROUNDS.indexOf('Final Four');
 /* The browser-fitted strategy. Anything else is a precomputed bracket read out
  * of the season payload by id. */
 const MODEL = 'model';
+const RECOMMENDED = 'recommended';
+const RECOMMENDED_REQUIRED_FROM_YEAR = 2027;
 
 /* The experimental rule-search strategy. Found after the fact, never scored
  * by the pool referee, fenced on the page; see ruleRun() in fit.js and
@@ -84,6 +86,7 @@ const RULE = 'rule';
 /* Outcome-first names for the four visible choices. Methodology remains in
  * each card's tag and explanation, where visitors can inspect it by choice. */
 const STRATEGY_LABELS = {
+  [RECOMMENDED]: 'Recommended',
   p1: 'Aim to win your pool',
   ev: 'Maximize projected points',
   [RULE]: 'Explore past-result patterns',
@@ -125,7 +128,7 @@ const state = {
   // season the system was frozen to be judged on.
   year: 2026,
   poolSize: 30,
-  strategy: 'p1',       // 'p1' | 'ev' | MODEL | CUSTOM
+  strategy: RECOMMENDED, // RECOMMENDED | 'p1' | 'ev' | MODEL | CUSTOM
   /* CUSTOM is driven by this pair rather than by an id. Champion and depth are
    * independent properties of a bracket, so they filter JOINTLY: either alone
    * narrows the pool and both together narrow it further. They were previously
@@ -415,6 +418,9 @@ function solveBracket(pFn) {
 /* Expand a precomputed strategy's picks into the same shape as the fitted board. */
 function solveFromPicks() {
   const s = currentStrategy();
+  if (!s && state.strategy === RECOMMENDED) {
+    throw new Error('No verified Recommended bracket is present in this season payload.');
+  }
   const src = s ? s.picks : state.season.pool_optimized;
   const picks = src.map(r => new Set(r));
   let current = state.season.first_round.slice();
@@ -646,7 +652,12 @@ function currentStrategy() {
   }
   if (state.strategy === RULE) return ruleStrategy();
   const list = (state.season && state.season.strategies) || [];
-  const found = list.find(s => s.id === state.strategy) || null;
+  const hasRecommended = list.some(s => s.id === RECOMMENDED);
+  const useLegacyP1 = state.strategy === RECOMMENDED
+      && !hasRecommended
+      && state.year < RECOMMENDED_REQUIRED_FROM_YEAR;
+  const wanted = useLegacyP1 ? 'p1' : state.strategy;
+  const found = list.find(s => s.id === wanted) || null;
   return found ? riskVariant(found, state.riskLevel) : null;
 }
 
@@ -731,6 +742,7 @@ function writeHash() {
   if (state.poolSize !== 30) p.set('pool', String(state.poolSize));
   if (state.strategy === MODEL) p.set('s', 'model');
   if (state.strategy === RULE) p.set('s', 'rule');
+  if (state.strategy === RECOMMENDED) p.set('s', RECOMMENDED);
   for (const k of HASH_KEYS) {
     if (state.pick[k] !== null && state.pick[k] !== undefined) p.set(k, String(state.pick[k]));
   }
@@ -792,6 +804,7 @@ function readHash() {
   }
   if (p.get('s') === 'model') state.strategy = MODEL;
   if (p.get('s') === 'rule') { state.strategy = RULE; readRuleHash(p); }
+  if (p.get('s') === RECOMMENDED) state.strategy = RECOMMENDED;
   for (const k of HASH_KEYS) {
     const v = p.get(k);
     if (v === null) continue;
@@ -819,7 +832,11 @@ function readHash() {
   // board still showing the UNFILTERED bracket -- Florida selected, Michigan on
   // screen. A shared link that shows a different bracket than it promised is
   // worse than one that shows nothing.
-  if (state.strategy !== MODEL && state.strategy !== RULE) state.strategy = anyFilter() ? CUSTOM : state.objective;
+  if (state.strategy !== MODEL && state.strategy !== RULE && state.strategy !== RECOMMENDED) {
+    state.strategy = anyFilter() ? CUSTOM : state.objective;
+  } else if (state.strategy === RECOMMENDED && anyFilter()) {
+    state.strategy = CUSTOM;
+  }
 
   // And show the controls that are evidently active, or the filtering looks
   // like the site's own opinion.
@@ -846,7 +863,7 @@ function readHash() {
  */
 function reconcileFiltersWithSeason() {
   if (!state.season || state.season.status !== 'ready') return;
-  if (!anyFilter() || state.strategy === MODEL || state.strategy === RULE) return;
+  if (!anyFilter() || state.strategy === MODEL || state.strategy === RULE || state.strategy === RECOMMENDED) return;
   if (matching().length) return;
 
   state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
@@ -1021,6 +1038,7 @@ function render() {
 
   if (usingOptimized()) {
     const st = currentStrategy();
+    const recommendationUnavailable = state.strategy === RECOMMENDED && !st;
     // Both scores, always, for whichever strategy is showing. A bracket built to
     // win outright gives up real expected points to do it, and stating only the
     // number its own objective optimises would hide exactly that cost.
@@ -1029,13 +1047,20 @@ function render() {
     // points bracket is an exact solution; a champion pick is the best-scoring
     // member of the candidate pool for a belief the USER supplied, which is not
     // a validated recommendation at all.
-    const kind = !st ? 'Tested on past seasons'
+    const kind = recommendationUnavailable ? 'Unavailable'
+      : !st ? 'Tested on past seasons'
       : st.id === RULE ? 'Experimental'
+      : st.id === RECOMMENDED ? st.kind
       : st.id === CUSTOM ? 'Your pick'
       : st.id === 'ev' ? 'Exact optimum'
       : 'Backtested rule';
-    note.innerHTML = `<span class="tag${st && st.id === RULE ? ' alt' : ''}">${kind}</span><span>${st ? st.note : s.pool_optimized_note}` +
-      (st && st.id !== RULE ? ` <strong>${p1Pct(st.p1)}</strong> chance of finishing first, ` +
+    const scored = st && st.p1 != null && st.ev != null;
+    const tagAlt = recommendationUnavailable || (st && (st.id === RULE || (st.id === RECOMMENDED && st.selector && st.selector.fallback)));
+    const noteText = recommendationUnavailable
+      ? 'No verified Recommended bracket is present. Choose another strategy; none is substituted.'
+      : st ? st.note : s.pool_optimized_note;
+    note.innerHTML = `<span class="tag${tagAlt ? ' alt' : ''}">${kind}</span><span>${noteText}` +
+      (scored ? ` <strong>${p1Pct(st.p1)}</strong> chance of finishing first, ` +
             `<strong>${st.ev.toFixed(0)}</strong> expected points.` : '') + `</span>`;
   } else if (!anyEnabled()) {
     note.innerHTML = `<span class="tag alt">Unavailable</span><span>The fitted model needs training data for seasons before ${state.year}.</span>`;
@@ -1081,6 +1106,18 @@ function render() {
   if (p1note) p1note.textContent = s.p1_assumption || '';
 
   document.getElementById('equation').innerHTML = anyEnabled() && fitReady() ? equationHTML() : '';
+
+  if (usingOptimized() && state.strategy === RECOMMENDED && !currentStrategy()) {
+    state.rounds = null;
+    board.innerHTML = '';
+    { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = true; }
+    { const el = document.getElementById('headline'); if (el) el.hidden = true; }
+    { const tune = document.getElementById('tune'); if (tune) tune.hidden = true; }
+    renderCompare();
+    renderLeaderboard();
+    updateMobileNav();
+    return;
+  }
 
   if (state.strategy === RULE && !ruleStrategy()) {
     // Nothing to draw yet: the search is fetching prior seasons or found no
@@ -1155,6 +1192,7 @@ function strategyRows() {
     // Listed for what they will be, selectable when the field is.
     const wait = `Awaiting the ${s.year} field`;
     return [
+      { id: RECOMMENDED, label: STRATEGY_LABELS[RECOMMENDED], kind: `Frozen v4 selector · awaiting the ${s.year} field`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
       { id: 'p1', label: STRATEGY_LABELS.p1, kind: `Backtested rule · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
       { id: 'ev', label: STRATEGY_LABELS.ev, kind: `Exact optimum · ${wait}`, p1: null, ev: null, champion: null, filtered: false, record: null, active: false, pending: true },
       { id: RULE, label: STRATEGY_LABELS[RULE], kind: 'Experimental — fit after the fact, not scored', p1: null, ev: null, champion: null, filtered: false, record: null, active: state.strategy === RULE },
@@ -1162,7 +1200,10 @@ function strategyRows() {
     ];
   }
   const teams = s.teams;
-  const filt = state.strategy === MODEL ? null : filteredEntry().entry;
+  const filt = state.strategy === MODEL || state.strategy === RECOMMENDED ? null : filteredEntry().entry;
+  const useLegacyP1 = state.strategy === RECOMMENDED
+      && !(s.strategies || []).some(st => st.id === RECOMMENDED)
+      && s.year < RECOMMENDED_REQUIRED_FROM_YEAR;
   const rows = (s.strategies || []).map(st => {
     const filteredRow = filt && filt.by && filt.by[st.id];
     // A filter takes priority over the risk slider: the two narrow different
@@ -1174,16 +1215,32 @@ function strategyRows() {
     const filtered = !!filteredRow;
     return {
       id: st.id,
-      label: STRATEGY_LABELS[st.id],
-      kind: st.id === 'ev' ? 'Exact optimum' : 'Backtested rule',
+      label: STRATEGY_LABELS[st.id] || st.label,
+      kind: st.kind || (st.id === 'ev' ? 'Exact optimum' : 'Backtested rule'),
       p1: v.p1, ev: v.ev, champion: teams[champIdx],
       filtered,
       // The realised result is for the STRATEGY's bracket; a filtered row is
       // a different bracket, so it carries none.
       record: filtered ? null : trackRecord(st.id),
-      active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
+      active: (state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id))
+          || (useLegacyP1 && st.id === 'p1'),
     };
   });
+  if (!rows.some(row => row.id === RECOMMENDED) && s.year >= RECOMMENDED_REQUIRED_FROM_YEAR) {
+    rows.unshift({
+      id: RECOMMENDED,
+      label: STRATEGY_LABELS[RECOMMENDED],
+      kind: 'Unavailable — this payload has no verified recommendation',
+      p1: null,
+      ev: null,
+      champion: null,
+      filtered: false,
+      record: null,
+      active: false,
+      pending: true,
+      unavailable: true,
+    });
+  }
   const rs = ruleStrategy();
   const fe = fittedEval();
   const live = fitReady() ? solveByFit() : null;
@@ -1290,6 +1347,7 @@ function renderHeadline(rounds) {
     : STRATEGY_LABELS[st.id];
   const kind = !st ? 'Evaluated, not selected'
     : st.id === RULE ? 'Experimental, not scored'
+    : st.id === RECOMMENDED ? st.kind
     : st.id === CUSTOM ? 'Your pick'
     : st.id === 'ev' ? 'Exact optimum'
     : 'Backtested rule';
@@ -1300,6 +1358,10 @@ function renderHeadline(rounds) {
     ? `The fitted model’s own game-by-game picks. Scored by the same pool referee as the other rows — evaluated, never selected.`
     : st.id === RULE
       ? `A rule found after the fact: in each round, every game goes to the team better on one chosen variable. It was kept because it reproduces ${ruleTargetText()} in ${rr && rr.run && rr.run.length ? ruleYearsText(rr.run) : 'the most recent seasons'} — as far back as any rule can — which is what it was searched for, not evidence about this season.`
+    : st.id === RECOMMENDED && st.selector && st.selector.fallback
+      ? `A deterministic seed-only bracket. The v4 historical source and promotion gates have not both passed, so no candidate bracket is recommended.`
+    : st.id === RECOMMENDED
+      ? `Selected by the frozen v4 nested procedure using paired ESPN points from earlier eligible seasons.`
     : st.id === CUSTOM
       ? `The best bracket in the candidate pool under your filters, ranked by ${state.objective === 'ev' ? 'expected points' : 'chance of finishing first'}. A belief you supplied, not a validated recommendation.`
     : st.id === 'ev'
@@ -1310,16 +1372,23 @@ function renderHeadline(rounds) {
   // audit's numbers live in artifacts/methodology_audit/step18.
   const evidence = !st
     ? `Fitted only on tournaments before ${state.year} — never on this one.`
+    : st.id === RECOMMENDED
+      ? st.selector && st.selector.fallback
+        ? `Fallback reason: ${st.selector.fallback_reason || st.selector.status}.`
+        : `Frozen source and promotion gates passed; selected rule: ${st.selector && st.selector.rule_id}.`
     : st.id === RULE ? (st.prior && st.prior.m
         ? `On the ${st.prior.m} played seasons outside that run it reproduces ${ruleTargetText()} in ${st.prior.k}.`
         : '')
     : st.id === CUSTOM ? ''
     : st.id === 'ev'
       ? `The exact expected-points maximum on this bracket; not a pool backtest.`
-      : `Backtested on 15 tournaments (2011–2026, no 2020); the edge over a seed bracket held under an independent market referee.`;
+      : `P(1st) and expected points are the model’s pre-tournament pool estimates.`;
 
   const nums = st && st.id === RULE
     ? `<span class="hl-num muted">Not scored against the pool: no chance of finishing first, no expected points</span>`
+    : st && st.id === RECOMMENDED && st.selector
+        && (st.selector.fallback || st.p1 == null || st.ev == null)
+      ? `<span class="hl-num muted">Seed-only bracket · pool metrics are not included in the frozen points comparison.</span>`
     : st
     ? `<span class="hl-num"><b>${p1Pct(st.p1)}</b> chance of finishing first</span>` +
       `<span class="hl-num"><b>${st.ev.toFixed(0)}</b> expected points</span>`
@@ -1345,7 +1414,7 @@ function renderHeadline(rounds) {
     <div class="hl-top">
       <span class="hl-season">${state.year} bracket</span>
       <span class="hl-obj">${objective}</span>
-      <span class="tag${st && st.id !== CUSTOM && st.id !== RULE ? '' : ' alt'}${st && st.id === RULE ? ' warn-tag' : ''}">${kind}</span>
+      <span class="tag${st && st.id !== CUSTOM && st.id !== RULE && !(st.id === RECOMMENDED && st.selector && st.selector.fallback) ? '' : ' alt'}${st && (st.id === RULE || (st.id === RECOMMENDED && st.selector && st.selector.fallback)) ? ' warn-tag' : ''}">${kind}</span>
     </div>
     <div class="champ-card hl-champ">
       <span class="champ-seed">${champ.seed}</span>
@@ -1356,7 +1425,9 @@ function renderHeadline(rounds) {
       <span class="champ-region">${champ.region}</span>
     </div>
     <div class="hl-nums">${nums}
-      <span class="hl-meta">${st && st.id === RULE ? '63 picks · not simulated against any pool' : `63 picks · simulated against ${nOpp} modelled opponents`}</span>
+      <span class="hl-meta">${st && st.id === RULE ? '63 picks · not simulated against any pool'
+        : st && st.id === RECOMMENDED && st.selector && st.selector.fallback ? '63 picks · seed-only baseline; no pool metrics claimed'
+        : `63 picks · simulated against ${nOpp} modelled opponents`}</span>
     </div>
     <p class="hl-estimand">${estimand}</p>
     <p class="hl-line">${devText}${evidence ? ` <span class="hl-evidence">${evidence}</span>` : ''}</p>
@@ -1379,6 +1450,7 @@ const FAMILY_LABEL = { all: 'All', backtested: 'Backtested rule', optimal: 'Exac
  * for each strategy is renderStrategies()'s cards in the "why" panel below;
  * this is the glance, not the methodology. */
 function scardNote(id) {
+  if (id === RECOMMENDED) return 'The frozen v4 ESPN-points selection; uses the seed-only bracket unless every release gate passes.';
   if (id === 'p1') return 'Targets first place in your pool, even when that means fewer projected points. Backtested on past seasons.';
   if (id === 'ev') return 'Targets the highest average score, even when that lowers the chance of finishing first.';
   if (id === MODEL) return 'Uses past tournament games to predict the winner of each game in this bracket.';
@@ -1422,6 +1494,7 @@ function riskControlHTML() {
 
 function riskCompatibilityHTML(r) {
   if (r.id === RULE) return '<span class="risk-compat no">Risk unavailable — Rule search has no compatible risk score.</span>';
+  if (r.id === RECOMMENDED) return '<span class="risk-compat no">Risk unavailable — this frozen bracket is fixed.</span>';
   if (r.pending) return '';
   if ((r.id === 'p1' || r.id === 'ev') && state.strategy === CUSTOM) {
     return '<span class="risk-compat warn">Filters currently choose this card’s bracket, so risk does not replace it.</span>';
@@ -1449,7 +1522,7 @@ function renderCompare() {
         data-strategy="${r.id}" aria-pressed="${!!r.active}" ${r.pending ? 'disabled' : `onclick="setStrategy('${r.id}')"`}>
         <span class="scard-tag${r.family === 'experimental' ? ' alt' : ''}">${r.kind}${r.filtered ? ' · filtered' : ''}</span>
         <span class="scard-name">${r.label}</span>
-        <span class="scard-note${r.stale ? ' stale' : ''}">${r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</span>
+        <span class="scard-note${r.stale ? ' stale' : ''}">${r.unavailable ? 'No verified Recommended bracket is present. No other strategy is substituted.' : r.stale ? 'Not scored: the evaluation on file is for a different bracket.' : scardNote(r.id)}</span>
         <span class="scard-row"><span>Chance of 1st</span><b>${cell(r.p1, p1Pct)}</b></span>
         <span class="scard-row"><span>Exp. points</span><b>${cell(r.ev, v => v.toFixed(0))}</b></span>
         <span class="scard-row"><span>Champion</span><b>${r.champion ? `${r.champion.seed} ${r.champion.name}` : '—'}</b></span>
@@ -2868,8 +2941,11 @@ function picksAsText() {
 
   const head = [
     `${state.year} bracket — ${st ? st.label : 'Fitted model'}`,
-    st && st.p1 !== undefined
+    st && st.p1 != null && st.ev != null
       ? `${p1Pct(st.p1)} to finish first, ${st.ev.toFixed(0)} expected points`
+      : '',
+    st && st.id === RECOMMENDED && st.selector && st.selector.fallback
+      ? `Seed-only fallback (${st.selector.status}); ${st.selector.fallback_reason || 'promotion gate not passed'}.`
       : '',
     st && st.id === RULE ? `Experimental rule search — not scored against the pool. ${st.note}` : '',
     // The fitted bracket's numbers travel too, labelled for what they are.
@@ -2992,6 +3068,9 @@ function setStrategy(id) {
   if (id === 'p1' || id === 'ev') {
     state.objective = id;
     state.strategy = anyFilter() ? CUSTOM : id;
+  } else if (id === RECOMMENDED) {
+    state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
+    state.strategy = RECOMMENDED;
   } else {
     if (id === MODEL || id === RULE) state.pick = { champ: null, ones: null, depth: null, pred: null, src: null };
     state.strategy = id;

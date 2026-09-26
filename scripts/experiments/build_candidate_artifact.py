@@ -56,7 +56,7 @@ import hashlib
 import json
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -81,6 +81,7 @@ from scripts.mc_pool_backtest import (  # noqa: E402
 )
 from src.prediction.pairwise import PairwiseProbabilities, simulate_bracket_outcomes  # noqa: E402
 from src.prediction.seed_probabilities import build_seed_probabilities  # noqa: E402
+from src.data.season_calendar import TOURNAMENT_START_DATES  # noqa: E402
 from src.evaluation.pool_settings import PoolSettings, resolve_pool_settings  # noqa: E402
 
 ROUND_NAMES = ("R64", "R32", "S16", "E8", "F4", "CHAMP")
@@ -111,6 +112,39 @@ def _parse_capture_time(raw: str, path: Path) -> datetime:
             f"against it without a guess worth four hours."
         )
     return ts
+
+
+def _normalize_generated_at(raw: str) -> str:
+    """Normalize a replay timestamp to UTC and reject ambiguous local times."""
+    try:
+        timestamp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("--generated-at must be an ISO-8601 datetime with a timezone") from exc
+    if timestamp.tzinfo is None:
+        raise ValueError("--generated-at must include a timezone")
+    return timestamp.astimezone(timezone.utc).isoformat()
+
+
+def _source_record(path: Path) -> Dict:
+    resolved = path.resolve()
+    repo_root = Path(__file__).resolve().parents[2]
+    try:
+        display_path = resolved.relative_to(repo_root).as_posix()
+    except ValueError:
+        display_path = str(resolved)
+    return {
+        "file": display_path,
+        "sha256": hashlib.sha256(resolved.read_bytes()).hexdigest(),
+    }
+
+
+def _context_source_path(year: int, subkey: str, fallback_filename: str) -> Path | None:
+    hist_dir = Path("data/raw/historical")
+    context_path = hist_dir / f"tournament_context_{year}.json"
+    if context_path.exists() and subkey in json.loads(context_path.read_text()):
+        return context_path
+    fallback_path = hist_dir / fallback_filename
+    return fallback_path if fallback_path.exists() else None
 
 
 def _public_picks_provenance(year: int) -> Dict:
@@ -170,6 +204,7 @@ def _public_picks_provenance(year: int) -> Dict:
     raw_ts = payload.get("captured_at") or payload.get("timestamp")
     prov: Dict = {
         "file": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "source": payload.get("source"),
         "declared_cutoff": declared.isoformat() if declared else None,
     }
@@ -216,22 +251,51 @@ def _public_picks_provenance(year: int) -> Dict:
     return prov
 
 
+def _torvik_provenance(year: int, path: Path, data: Dict) -> Dict:
+    """Require a dated Torvik snapshot strictly before the authoritative start date."""
+    if data.get("data_type") != "pre_tournament":
+        raise RuntimeError(f"{path}: data_type={data.get('data_type')!r}, refusing to build.")
+    tournament_start = TOURNAMENT_START_DATES.get(year)
+    if tournament_start is None:
+        raise RuntimeError(f"{path}: no authoritative tournament-start date for {year}.")
+    try:
+        cutoff_date = date.fromisoformat(data["cutoff_date"])
+        declared_start = date.fromisoformat(data["tournament_start"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError(
+            f"{path}: cutoff_date and tournament_start must be ISO dates so the "
+            "point-in-time boundary can be verified."
+        ) from exc
+    if cutoff_date >= tournament_start:
+        raise RuntimeError(
+            f"{path}: cutoff_date={cutoff_date} must be strictly before "
+            f"{year} tournament start {tournament_start}."
+        )
+    if declared_start != tournament_start:
+        raise RuntimeError(
+            f"{path}: tournament_start={declared_start} disagrees with the "
+            f"authoritative {year} date {tournament_start}."
+        )
+    return {
+        "file": str(path),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "data_type": data["data_type"],
+        "cutoff_date": cutoff_date.isoformat(),
+        "tournament_start": tournament_start.isoformat(),
+    }
+
+
 def assert_pretournament_inputs(year: int) -> Dict:
     """Fail before any compute if an input is not knowable at bracket release."""
+    from src.data.season_calendar import get_public_picks_cutoff
+
     prov = {}
     for prefix in (Path("data/raw/historical"), Path("data/raw")):
         p = prefix / f"torvik_{year}.json"
         if p.exists():
             with open(p) as f:
                 d = json.load(f)
-            if d.get("data_type") != "pre_tournament":
-                raise RuntimeError(f"{p}: data_type={d.get('data_type')!r}, refusing to build.")
-            prov["torvik"] = {
-                "file": str(p),
-                "data_type": d.get("data_type"),
-                "cutoff_date": d.get("cutoff_date"),
-                "tournament_start": d.get("tournament_start"),
-            }
+            prov["torvik"] = _torvik_provenance(year, p, d)
             break
     if "torvik" not in prov:
         raise RuntimeError(f"no torvik_{year}.json found; cannot verify provenance")
@@ -244,6 +308,7 @@ def assert_pretournament_inputs(year: int) -> Dict:
             f"seed_pick_model._win_rate(window={OUTCOME_WINDOW!r}) "
             f"— seed-vs-seed rates computed from Kaggle results, {RECENT_FIRST_SEASON}+"
         ),
+        "as_of": year,
         "clean_for_forward_looking": True,
         # POINT-IN-TIME, NOT "INCLUDES THE TARGET SEASON". This caveat used to
         # say the table includes the target season's own ~63 games. It did
@@ -269,6 +334,22 @@ def assert_pretournament_inputs(year: int) -> Dict:
             "between the two, so moving both together would cancel it exactly."
         ),
     }
+
+    kaggle_dir = Path(__file__).resolve().parents[2] / "data" / "kaggle"
+    seed_inputs = [
+        kaggle_dir / "MNCAATourneySeeds.csv",
+        kaggle_dir / "MNCAATourneyCompactResults.csv",
+    ]
+    missing_seed_inputs = [path for path in seed_inputs if not path.exists()]
+    if missing_seed_inputs and get_public_picks_cutoff(year) is not None:
+        raise RuntimeError(
+            f"missing required Kaggle seed-referee inputs for official season {year}: "
+            f"{', '.join(str(path) for path in missing_seed_inputs)}"
+        )
+    prov["seed_head_to_head"]["input_files"] = [
+        _source_record(path) if path.exists() else {"file": str(path), "sha256": None, "status": "missing"}
+        for path in seed_inputs
+    ]
     prov["public_picks"] = _public_picks_provenance(year)
     return prov
 
@@ -1089,17 +1170,61 @@ def resolve_field(year: int, seeds: Dict, regions: Dict) -> Dict:
     }
 
 
-def build(year: int, n_sims: int, target: int, trials: int, seed: int, *, pool_settings: PoolSettings | None = None) -> Dict:
+def build(
+    year: int,
+    n_sims: int,
+    target: int,
+    trials: int,
+    seed: int,
+    *,
+    pool_settings: PoolSettings | None = None,
+    generated_at: str | None = None,
+) -> Dict:
     settings = pool_settings or resolve_pool_settings()
+    frozen_generated_at = _normalize_generated_at(generated_at) if generated_at is not None else None
     pool_size = settings.pool_size
     scoring = settings.scoring
     prov = assert_pretournament_inputs(year)
     seeds, regions = load_seeds_and_regions(year)
     prov["field"] = resolve_field(year, seeds, regions)
+    context_inputs = []
+    for subkey, fallback in (
+        ("seeds", f"tournament_seeds_{year}.json"),
+        ("results", f"tournament_results_{year}.json"),
+    ):
+        path = _context_source_path(year, subkey, fallback)
+        if path is None:
+            raise RuntimeError(f"missing {subkey} input for {year}; cannot record field provenance")
+        record = _source_record(path)
+        if record not in context_inputs:
+            context_inputs.append(record)
+    prov["field"]["input_files"] = context_inputs
     region_order = _bt.resolve_region_order(year, games=load_tournament_results(year), regions=regions, seeds_block=load_seeds_block(year))
     prov["f4_pairing"] = list(region_order)
     first_round = build_bracket_order(seeds, regions, region_order=region_order)
     sources = _rating_sources(year, seeds)
+    source_names = [name for name, _ratings in sources]
+    rating_inputs = {
+        "torvik": Path(prov["torvik"]["file"]),
+        "massey_avg": Path("data/raw/historical") / f"external_ratings_{year}.json",
+        "elo": Path("data/raw/historical") / f"historical_games_{year}.json",
+    }
+    prov["rating_sources"] = {
+        "used": source_names,
+        "inputs": {
+            name: _source_record(path)
+            if path.exists()
+            else {"file": str(path), "sha256": None, "status": "unavailable"}
+            for name, path in rating_inputs.items()
+        },
+    }
+    torvik_payload = json.loads(Path(prov["torvik"]["file"]).read_text())
+    torvik_ids = {
+        team["team_id"]
+        for team in torvik_payload.get("teams", [])
+        if team.get("team_id") and team.get("barthag") is not None
+    }
+    prov["rating_sources"]["missing_torvik_team_ratings"] = sorted(set(seeds) - torvik_ids)
     barthag = sources[0][1]
     rng = np.random.default_rng(seed)
 
@@ -1282,8 +1407,12 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int, *, pool_s
         },
         "meta": {
             "n_sims": n_sims,
+            "rng_seed": seed,
+            "candidate_target": target,
             "n_candidates": len(candidates),
             "p1_trials": trials,
+            "simulations_per_rating_source": per,
+            "rating_sources": source_names,
             "p1_pool_size": pool_size,
             "pool_settings": {"pool_size": pool_size, "scoring_id": settings.scoring_id},
             "p1_assumption": (
@@ -1300,7 +1429,7 @@ def build(year: int, n_sims: int, target: int, trials: int, seed: int, *, pool_s
             ),
             "objectives": ["ev", "p1"],
             "source": pw.source,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": frozen_generated_at or datetime.now(timezone.utc).isoformat(),
         },
         "constraint_probabilities": true_probs,
         "team_final_four_probabilities": team_f4,
@@ -1354,6 +1483,10 @@ def main() -> None:
     ap.add_argument("--target", type=int, default=3000)
     ap.add_argument("--trials", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=20260820)
+    ap.add_argument(
+        "--generated-at",
+        help="timezone-aware ISO timestamp to preserve when replaying an existing artifact",
+    )
     ap.add_argument("--pool-size", type=int, default=30, choices=(10, 30, 50, 100))
     ap.add_argument("--scoring", default="espn_standard", choices=("espn_standard",))
     ap.add_argument("--out", type=str, default="artifacts/candidates")
@@ -1369,7 +1502,15 @@ def main() -> None:
     _refuse_to_overwrite(path, args.year, force=args.force)
 
     settings = resolve_pool_settings(args.pool_size, args.scoring)
-    art = build(args.year, args.n_sims, args.target, args.trials, args.seed, pool_settings=settings)
+    art = build(
+        args.year,
+        args.n_sims,
+        args.target,
+        args.trials,
+        args.seed,
+        pool_settings=settings,
+        generated_at=args.generated_at,
+    )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(art, separators=(",", ":")).encode()

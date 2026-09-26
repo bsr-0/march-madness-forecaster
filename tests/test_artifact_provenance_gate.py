@@ -20,8 +20,10 @@ from datetime import datetime, timedelta
 import pytest
 
 from scripts.experiments.build_candidate_artifact import (
+    _normalize_generated_at,
     _public_picks_provenance,
     _refuse_to_overwrite,
+    _torvik_provenance,
 )
 from src.data.season_calendar import (
     EASTERN,
@@ -165,6 +167,58 @@ class TestTheGateChecksTheFileTheBuildReads:
         assert _public_picks_provenance(UNDECLARED_SEASON)["file"] == str(expected)
 
 
+class TestTorvikCutoffIsStrictlyPreTournament:
+    def test_day_before_start_is_accepted(self, tmp_path):
+        path = tmp_path / "torvik_2027.json"
+        snapshot = {
+            "data_type": "pre_tournament",
+            "cutoff_date": "2027-03-15",
+            "tournament_start": "2027-03-16",
+        }
+        path.write_text(json.dumps(snapshot))
+        prov = _torvik_provenance(
+            2027,
+            path,
+            snapshot,
+        )
+        assert prov["cutoff_date"] == "2027-03-15"
+        assert len(prov["sha256"]) == 64
+
+    @pytest.mark.parametrize(
+        "snapshot",
+        [
+            {"data_type": "pre_tournament", "cutoff_date": "2027-03-16", "tournament_start": "2027-03-16"},
+            {"data_type": "pre_tournament", "cutoff_date": "2027-03-15", "tournament_start": "2027-03-17"},
+            {"data_type": "pre_tournament", "tournament_start": "2027-03-16"},
+        ],
+    )
+    def test_missing_or_inconsistent_cutoff_is_rejected(self, tmp_path, snapshot):
+        with pytest.raises(RuntimeError):
+            _torvik_provenance(2027, tmp_path / "torvik_2027.json", snapshot)
+
+
+class TestCandidateArtifactTimestampCanBeReplayed:
+    def test_timestamp_is_normalized_to_utc(self):
+        assert _normalize_generated_at("2027-03-14T12:00:00-04:00") == "2027-03-14T16:00:00+00:00"
+
+    @pytest.mark.parametrize("timestamp", ["2027-03-14T12:00:00", "not-a-timestamp"])
+    def test_ambiguous_or_invalid_timestamp_is_rejected(self, timestamp):
+        with pytest.raises(ValueError, match="--generated-at"):
+            _normalize_generated_at(timestamp)
+
+
+def test_historical_input_provenance_contains_source_hashes():
+    from scripts.experiments.build_candidate_artifact import assert_pretournament_inputs
+
+    prov = assert_pretournament_inputs(2026)
+    assert len(prov["torvik"]["sha256"]) == 64
+    assert len(prov["public_picks"]["sha256"]) == 64
+    assert prov["seed_head_to_head"]["point_in_time"] is True
+    assert prov["seed_head_to_head"]["as_of"] == 2026
+    for source in prov["seed_head_to_head"]["input_files"]:
+        assert source.get("sha256") is None or len(source["sha256"]) == 64
+
+
 class TestOfficialArtifactsAreImmutable:
     def test_official_season_is_never_overwritten(self, tmp_path):
         path = tmp_path / f"candidates_{DECLARED_SEASON}.json"
@@ -213,9 +267,9 @@ class TestEVIsCheckedAgainstItsOwnDistribution:
         from scripts.experiments.build_candidate_artifact import validate
 
         params = list(inspect.signature(validate).parameters)
-        assert params[-1] == "ev_marginals", (
-            "validate's last parameter must be the marginals EV used, not a rounds "
-            f"list to re-derive them from; got {params[-1]!r}"
+        assert params[-2:] == ["ev_marginals", "scoring_system"], (
+            "validate must accept the exact marginals and scoring system used to "
+            f"compute EV; got final parameters {params[-2:]!r}"
         )
 
     def test_the_call_site_passes_the_ev_marginals(self):
@@ -228,7 +282,8 @@ class TestEVIsCheckedAgainstItsOwnDistribution:
         calls = re.findall(r"(?<!def )validate\(\s*bank[^)]*\)", src.read_text())
         assert calls, "no validate(...) call site found"
         for call in calls:
-            last_arg = call.rstrip(")").split(",")[-1].strip()
-            assert last_arg == "marg", (
-                f"validate() must be called with the EV marginals (`marg`); got {last_arg!r}"
+            final_args = [arg.strip() for arg in call.rstrip(")").split(",")[-2:]]
+            assert final_args == ["marg", "scoring"], (
+                "validate() must receive the EV marginals and matching scoring "
+                f"system; got {final_args!r}"
             )

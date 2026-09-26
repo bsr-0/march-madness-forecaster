@@ -56,6 +56,61 @@ def test_track_record_scores_with_the_p1_referees_own_functions():
     assert tr.parity_check is ev.parity_check
 
 
+def test_track_record_rejects_incomplete_tournament_results():
+    from scripts._common import load_tournament_results
+    from src.simulation.pool_competition import actual_winners_by_round
+
+    games = load_tournament_results(2026)
+    tr._require_complete_outcome(2026, games)
+
+    incomplete = games.copy()
+    incomplete.pop(next(i for i, game in enumerate(incomplete) if game["round_name"] == "R64"))
+    with pytest.raises(RuntimeError, match="R64 has 31 games, expected 32"):
+        tr._require_complete_outcome(2026, incomplete)
+
+    assert actual_winners_by_round(games)["CHAMP"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("non_object_game", "game 0 is not an object"),
+        ("missing_year", "expected integer 2026"),
+        ("boolean_score", "has missing or invalid scores"),
+        ("duplicate_game", "duplicate game"),
+        ("broken_advancement", "participants do not equal the previous round's winners"),
+        ("wrong_winner", "winner disagrees with the recorded scores"),
+    ],
+)
+def test_track_record_rejects_malformed_tournament_results(mutation, message):
+    from scripts._common import load_tournament_results
+
+    games = [dict(game) for game in load_tournament_results(2026)]
+    if mutation == "non_object_game":
+        games[0] = None
+    elif mutation == "missing_year":
+        games[0].pop("year")
+    elif mutation == "boolean_score":
+        games[0]["team1_score"] = True
+    elif mutation == "duplicate_game":
+        r64_indices = [i for i, game in enumerate(games) if game["round_name"] == "R64"]
+        games[r64_indices[-1]] = dict(games[r64_indices[0]])
+    elif mutation == "broken_advancement":
+        r64_losers = {
+            game["team2_id"] if game["team1_won"] else game["team1_id"]
+            for game in games
+            if game["round_name"] == "R64"
+        }
+        r32_game = next(game for game in games if game["round_name"] == "R32")
+        r32_game["team1_id"] = next(iter(r64_losers))
+    else:
+        r64_game = next(game for game in games if game["round_name"] == "R64")
+        r64_game["team1_won"] = not r64_game["team1_won"]
+
+    with pytest.raises(RuntimeError, match=message):
+        tr._require_complete_outcome(2026, games)
+
+
 @pytest.mark.parametrize("path", RECORDS, ids=[p.stem for p in RECORDS])
 def test_recorded_parity_holds_against_the_artifact_on_disk(path: Path):
     rec = json.loads(path.read_text())
@@ -83,6 +138,11 @@ def test_strategy_picks_are_the_artifacts_and_the_fitted_evaluations(path: Path)
         fe = json.loads((REPO / rec["strategies"]["model"]["source"]).read_text())
         assert rec["strategies"]["model"]["w"] == fe["w"]
         assert rec["strategies"]["model"]["fitted_eval_generated_at"] == fe["generated_at"]
+    if "recommended" in rec["strategies"]:
+        season = json.loads((REPO / "docs" / "data" / f"season_{_year(path)}.json").read_text())
+        recommended = next(s for s in season["strategies"] if s["id"] == "recommended")
+        assert rec["strategies"]["recommended"]["w"] == recommended["picks"]
+        assert rec["strategies"]["recommended"]["selector"] == recommended["selector"]
 
 
 @pytest.mark.parametrize("path", RECORDS, ids=[p.stem for p in RECORDS])
