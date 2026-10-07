@@ -75,6 +75,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts._common import HIST_DIR, load_seeds_and_regions, load_torvik_and_ff, load_tournament_results
 from src.data.normalize import load_d1_team_ids
+from src.data.json_io import load_json, resolve_json
 from src.data.kaggle_loader import KaggleDataLoader
 from src.data.normalize import resolve_cbbpy_bridge
 
@@ -290,14 +291,13 @@ def build_roster_minutes(year: int, canonical_ids):
     (athlete_id == player_id, 100% overlap where teams match), so the join is
     safe once the team side is canonicalised.
     """
-    box_path = HIST_DIR / f"boxscores_{year}.json"
+    box_path = resolve_json(HIST_DIR / f"boxscores_{year}.json")
     roster_path = HIST_DIR / f"cbbpy_rosters_{year}.json"
     prev_path = HIST_DIR / f"cbbpy_rosters_{year - 1}.json"
     if not box_path.exists() or not roster_path.exists():
         return {}
 
-    with open(box_path) as f:
-        games = json.load(f).get("games", [])
+    games = load_json(box_path).get("games", [])
     if not games:
         return {}
 
@@ -418,11 +418,10 @@ def build_scoring_depth(year: int, canonical_ids):
     seasons return {} and the field reads None, same convention as every other
     partially-backfilled column here.
     """
-    path = HIST_DIR / f"boxscores_{year}.json"
+    path = resolve_json(HIST_DIR / f"boxscores_{year}.json")
     if not path.exists():
         return {}
-    with open(path) as f:
-        payload = json.load(f)
+    payload = load_json(path)
     games = payload.get("games", [])
     if not games:
         return {}

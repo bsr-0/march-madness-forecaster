@@ -45,7 +45,6 @@ shooting splits (the reason this module exists) reconcile exactly.
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -53,6 +52,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..normalize import load_d1_team_ids, resolve_cbbpy_bridge
+from ..json_io import load_json, resolve_json
 
 logger = logging.getLogger(__name__)
 
@@ -234,11 +234,10 @@ def build_season_shooting_features(
 
     data_root = Path(data_root)
     if pbp_payload is None:
-        pbp_path = data_root / "raw" / "historical" / f"pbp_{year}.json"
+        pbp_path = resolve_json(data_root / "raw" / "historical" / f"pbp_{year}.json")
         if not pbp_path.exists():
             return {}
-        with open(pbp_path) as f:
-            pbp_payload = json.load(f)
+        pbp_payload = load_json(pbp_path)
 
     games = pbp_payload.get("games", [])
     if not games:

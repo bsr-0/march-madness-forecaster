@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from ..normalize import load_d1_team_ids, resolve_cbbpy_bridge
+from ..json_io import load_json, resolve_json
 from ..scrapers.cbbpy_rosters import CBBpyRosterScraper
 from ..scrapers.espn_boxscore import validate_boxscore_minutes
 
@@ -173,15 +174,14 @@ def build_season_roster_payload(year: int, data_root: Path | str = "data") -> Di
     ``ValueError`` if the season has no tournament start date to cut off at.
     """
     data_root = Path(data_root)
-    path = data_root / "raw" / "historical" / f"boxscores_{year}.json"
+    path = resolve_json(data_root / "raw" / "historical" / f"boxscores_{year}.json")
     if not path.exists():
         raise FileNotFoundError(f"{path} not found -- run scripts/backfill_pbp_history.py boxscore stage first")
     cutoff = _tournament_start(year)
     if cutoff is None:
         raise ValueError(f"no TOURNAMENT_START_DATES entry for {year}; cannot define a pre-tournament cutoff")
 
-    with open(path) as f:
-        payload = json.load(f)
+    payload = load_json(path)
 
     rows, games_by_raw, stats = boxscore_rows_for_season(payload, cutoff)
 

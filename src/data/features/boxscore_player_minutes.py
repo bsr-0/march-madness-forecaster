@@ -27,12 +27,12 @@ version — that join is player-level.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from ..scrapers.espn_boxscore import validate_boxscore_minutes
+from ..json_io import load_json, resolve_json
 
 
 class MinutesCoverageError(RuntimeError):
@@ -72,7 +72,7 @@ def build_season_minutes_features(
 
     data_root = Path(data_root)
     if boxscore_payload is None:
-        path = data_root / "raw" / "historical" / f"boxscores_{year}.json"
+        path = resolve_json(data_root / "raw" / "historical" / f"boxscores_{year}.json")
         if not path.exists():
             if strict:
                 raise MinutesCoverageError(
@@ -80,8 +80,7 @@ def build_season_minutes_features(
                     f"EspnBoxscoreScraper for {year} before building minutes features."
                 )
             return {}
-        with open(path) as f:
-            boxscore_payload = json.load(f)
+        boxscore_payload = load_json(path)
 
     games = boxscore_payload.get("games", [])
     if not games:

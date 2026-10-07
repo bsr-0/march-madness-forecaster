@@ -14,6 +14,7 @@ Usage:
 """
 
 import argparse
+import gzip
 import json
 from pathlib import Path
 
@@ -22,13 +23,16 @@ CACHE_DIR = Path("data/raw/historical")
 
 def season_status(year: int) -> dict:
     pbp_path = CACHE_DIR / f"pbp_{year}.json"
+    if not pbp_path.exists() and pbp_path.with_name(pbp_path.name + ".gz").exists():
+        pbp_path = pbp_path.with_name(pbp_path.name + ".gz")
     clutch_path = CACHE_DIR / f"clutch_features_{year}.json"
 
     if not pbp_path.exists():
         return {"year": year, "state": "not started"}
 
     try:
-        with open(pbp_path) as f:
+        opener = gzip.open if pbp_path.suffix == ".gz" else open
+        with opener(pbp_path, "rt") as f:
             pbp = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         return {"year": year, "state": f"UNREADABLE ({e})"}

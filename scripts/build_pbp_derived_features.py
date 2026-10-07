@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.data.features.clutch_metrics import build_season_clutch_features  # noqa: E402
+from src.data.json_io import load_json, resolve_json  # noqa: E402
 from src.data.features.pbp_box_scores import build_season_shooting_features  # noqa: E402
 from src.data.features.pbp_player_minutes import build_season_minutes_features  # noqa: E402
 
@@ -50,12 +51,11 @@ BUILDERS = [
 
 
 def build_year(year: int, include_incomplete: bool) -> None:
-    pbp_path = CACHE_DIR / f"pbp_{year}.json"
+    pbp_path = resolve_json(CACHE_DIR / f"pbp_{year}.json")
     if not pbp_path.exists():
         return
 
-    with open(pbp_path) as f:
-        payload = json.load(f)
+    payload = load_json(pbp_path)
 
     meta = payload.get("metadata", {})
     if not meta.get("complete") and not include_incomplete:
