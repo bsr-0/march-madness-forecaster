@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=d43cc4c2">
+<link rel="stylesheet" href="app.css?v=df584189">
 </head>
 <body>
 
@@ -45,6 +45,13 @@
        they do not. Filled by renderHeadline() from the same payload fields
        the comparison table and the board use, so the three cannot disagree. -->
   <section class="headline" id="headline" hidden></section>
+
+  <!-- 2a. SCORECARD. Does the bracket beat "always pick the better seed"?
+       As played (points and games against the all-chalk bracket, since ESPN
+       points mostly reward chalk) for a played season, and held-out R2 and
+       accuracy against seeds for the fitted model. renderScorecard() in
+       app.js hides it when neither applies. -->
+  <section class="panel" id="scorecard" hidden></section>
 
   <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
   <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
@@ -296,7 +303,7 @@
      file sits on the server, and returning browsers keep running the old one
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
-<script src="fit.js?v=040142ee"></script>
-<script src="app.js?v=00be0447"></script>
+<script src="fit.js?v=7554f046"></script>
+<script src="app.js?v=029e8c78"></script>
 </body>
 </html>

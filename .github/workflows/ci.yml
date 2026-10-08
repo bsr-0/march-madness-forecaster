@@ -184,6 +184,12 @@ jobs:
         # Sweet 16" in the team drawer is wrong with nothing else noticing.
         run: node tests/test_advancement.js
 
+      - name: Scorecard arithmetic
+        # Chalk baseline, ESPN points and underdog picks (fit.js bracketScore),
+        # cross-checked against the payloads' independently computed
+        # track_record. Wrong here means the page's "points against chalk" is.
+        run: node tests/test_scorecard.js
+
       - name: Collinearity marking
         # pairwiseCorrelations over the walk-forward rows: the check the
         # sign-flip marker cannot make (Overall rating vs National rank, r~0.99).

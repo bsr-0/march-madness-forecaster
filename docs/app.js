@@ -967,7 +967,7 @@ function render() {
     // Everything that needs a field -- headline, tools, filters, explore,
     // the methodology layer -- stays hidden.
     state.rounds = null;
-    for (const id of ['headline', 'board-tools', 'board-nav', 'rnav-dots', 'explore', 'tune', 'why']) { const el = document.getElementById(id); if (el) el.hidden = true; }
+    for (const id of ['headline', 'scorecard', 'board-tools', 'board-nav', 'rnav-dots', 'explore', 'tune', 'why']) { const el = document.getElementById(id); if (el) el.hidden = true; }
     { const custom = document.getElementById('customize'); if (custom) { custom.hidden = false; custom.open = true; } }
     // Rule search runs on prior seasons before the field is announced, so its
     // labelled section stays available. Explore remains hidden above.
@@ -1146,6 +1146,7 @@ function render() {
   state.rounds = rounds;
   { const tools = document.getElementById('board-tools'); if (tools) tools.hidden = false; }
   renderHeadline(rounds);
+  renderScorecard(rounds);
   renderCompare();
   renderLeaderboard();
   renderExplore();
@@ -1571,6 +1572,79 @@ function renderLeaderboard() {
     <p class="lb-foot">Points scored against the real ${s.year} outcome; won share and finish are across the same
       ${tr.n_trials ? tr.n_trials.toLocaleString() : ''} simulated ${tr.pool_size || 30}-entry pools P(1st) is measured
       against. One season is one draw, so this is not a multi-year average. The rule search is not scored and has no row here.</p>`;
+}
+
+/* Scorecard: the test metrics a visitor needs to judge the bracket on screen
+ * against seeds. Two independent blocks, each shown only when it is true:
+ *
+ *   As played     a played season, any bracket except the rule search (which
+ *                 was fit to the outcomes, so scoring it would be circular).
+ *                 Compares the bracket with the all-chalk bracket on the real
+ *                 results. ESPN points alone mostly measure how chalky the
+ *                 tournament was -- most games go to the better seed -- so the
+ *                 number that says something is the gap to chalk, plus how the
+ *                 bracket's underdog picks fared.
+ *   Held out      the fitted model only: R2, and games called right against
+ *                 "the better seed wins", over the same unseen games.
+ *
+ * Computed here from the payload and the live fit rather than shipped, so it
+ * cannot disagree with the board; the arithmetic is in fit.js and tested. */
+function renderScorecard(rounds) {
+  const box = document.getElementById('scorecard');
+  if (!box) return;
+  const s = state.season;
+  const pct = v => `${Math.round(v * 100)}%`;
+  const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toLocaleString();
+  const parts = [];
+
+  const complete = s.actual && s.actual.length === 6 && s.actual.every((r, i) => r.length === 32 >> i);
+  if (complete && state.strategy !== RULE) {
+    const seeds = s.teams.map(t => t.seed);
+    const mine = bracketScore(rounds, s.actual, seeds);
+    const chalk = bracketScore(chalkRounds(s.first_round, seeds), s.actual, seeds);
+    const ups = actualUpsets(s.first_round, s.actual, seeds);
+    const gap = mine.points - chalk.points;
+    const upText = mine.upsetPicks
+      ? `It picked <b>${mine.upsetPicks}</b> underdog${mine.upsetPicks > 1 ? 's' : ''} and <b>${mine.upsetRight}</b> won, worth ${mine.upsetPoints.toLocaleString()} points; chalk makes none of those picks.`
+      : 'It picked no underdogs, so it is chalk.';
+    parts.push(`
+      <p class="sc-title">As played, against the all-chalk bracket</p>
+      <table class="rel-table sc-table"><thead><tr><th></th>${ROUND_KEYS.map(k => `<th class="num">${ROUND_SHORT[k]}</th>`).join('')}
+        <th class="num">Games right</th><th class="num">ESPN points</th></tr></thead>
+        <tbody>
+          <tr><td>This bracket</td>${mine.rounds.map(x => `<td class="num">${x.right}/${x.n}</td>`).join('')}
+            <td class="num"><b>${mine.right}/${mine.n}</b></td><td class="num"><b>${mine.points.toLocaleString()}</b></td></tr>
+          <tr><td>Always the better seed</td>${chalk.rounds.map(x => `<td class="num">${x.right}/${x.n}</td>`).join('')}
+            <td class="num">${chalk.right}/${chalk.n}</td><td class="num">${chalk.points.toLocaleString()}</td></tr>
+        </tbody></table>
+      <p class="sc-line"><b>${signed(gap)} points</b> against chalk, ${signed(mine.right - chalk.right)} game${Math.abs(mine.right - chalk.right) === 1 ? '' : 's'}.
+        ${ups ? `${ups.upsets} of ${ups.games} games went to the lower seed this year, which is what chalk gives up. ` : ''}${upText}</p>`);
+  }
+
+  const f = state.strategy === MODEL ? state.fit : null;
+  const o = f && f.oos;
+  const vs = o && modelVsSeed(o.pooled);
+  if (vs) {
+    const se = Math.round(vs.se * 100);
+    parts.push(`
+      <p class="sc-title">Held out: ${o.seasons} unseen seasons, ${vs.n.toLocaleString()} games</p>
+      <table class="rel-table sc-table"><thead><tr><th></th><th class="num">Games right</th>
+        <th class="num">R²</th></tr></thead>
+        <tbody>
+          <tr><td>Fitted model</td><td class="num"><b>${pct(vs.model)}</b></td>
+            <td class="num"><b>${o.r2 === null ? '—' : o.r2.toFixed(2)}</b></td></tr>
+          <tr><td>Always the better seed</td><td class="num">${pct(vs.seed)}</td><td class="num muted">—</td></tr>
+        </tbody></table>
+      <p class="sc-line">The model is ${vs.diff >= 0 ? 'ahead of' : 'behind'} the seed by <b>${Math.abs(Math.round(vs.diff * 100))} point${Math.abs(Math.round(vs.diff * 100)) === 1 ? '' : 's'}</b>
+        (±${se}, same games; they disagree on ${vs.modelOnly + vs.seedOnly}).
+        R² is for the final scoring margin and is measured against calling every game even, not against the average margin.
+        Seeds predict no margin, so they have no R².</p>`);
+  }
+
+  box.hidden = !parts.length;
+  box.innerHTML = parts.length
+    ? `<div class="panel-head"><p class="panel-title">Scorecard: does it beat seeds?</p></div>${parts.join('')}`
+    : '';
 }
 
 /* Header countdown, shown only while the newest listed season is

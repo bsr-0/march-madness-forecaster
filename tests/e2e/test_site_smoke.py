@@ -156,6 +156,25 @@ def test_one_variable_table_is_collapsed_after_the_alternatives(site, page):
     assert page.locator("#rule-body .one-tbl tbody tr").count() >= 30
 
 
+def test_scorecard_scores_against_chalk_and_gates_the_held_out_block(site, page):
+    # 2025 had 9 upsets in 63 games, so the all-chalk bracket (1,790) out-scored
+    # every strategy: raw points alone would read as "all three are bad".
+    page.goto(site + "#y=2025&s=p1")
+    page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
+    assert visible(page, "#scorecard")
+    text = page.locator("#scorecard").inner_text()
+    assert "1,790" in text and "9 of 63 games went to the lower seed" in text
+    assert "HELD OUT" not in text.upper(), "held-out block belongs to the fitted model only"
+    page.locator("#customize > summary").click()
+    page.click("#compare .scard[data-strategy='model']")
+    page.wait_for_function("() => state.fit && state.fit.oos && document.getElementById('scorecard').innerText.includes('R\u00b2')")
+    text = page.locator("#scorecard").inner_text()
+    assert "Always the better seed" in text and "unseen seasons" in text.lower()
+    page.click("#compare .scard[data-strategy='rule']")
+    settle(page)
+    assert not visible(page, "#scorecard"), "the rule search is fit to the outcomes; it is never scored"
+
+
 def test_filters_gate_per_strategy_on_2026(site, page):
     page.goto(site + "#y=2026")
     page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")

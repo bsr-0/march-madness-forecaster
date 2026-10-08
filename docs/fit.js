@@ -1414,8 +1414,112 @@ function ruleSearchJob({ played, here, keys, checkpoints, maxCriteria, want }) {
   return { run: res.run, skipped: res.skipped, stoppedAt: res.stoppedAt, nRules: res.rules.length, entries: offered, chosen, wantMissed, gen, nOutside: outside.length };
 }
 
+/* ---------- scorecard arithmetic (renderScorecard() in app.js) ----------
+ *
+ * ESPN points are dominated by chalk: in a typical season roughly three games
+ * in four go to the better seed, so a bracket that just picks the better seed
+ * everywhere already banks most of the points on offer. A raw total therefore
+ * cannot say whether a bracket added anything. These helpers score the bracket
+ * on screen and the pure-chalk bracket on the SAME real outcome with the SAME
+ * rules, so the page can print the difference instead of the total alone.
+ */
+
+/* The all-chalk bracket on a season's tree: the better (lower-numbered) seed
+ * wins every game. Equal seeds -- Final Four and later -- go to the team in the
+ * earlier bracket slot, which is arbitrary but fixed, so the baseline is
+ * deterministic. Same {a, b, win} shape as the board's rounds. */
+function chalkRounds(firstRound, seeds) {
+  let current = firstRound.slice();
+  const rounds = [];
+  for (let r = 0; r < 6; r++) {
+    const games = [], next = [];
+    for (let g = 0; g < current.length; g += 2) {
+      const a = current[g], b = current[g + 1];
+      const win = seeds[b] < seeds[a] ? b : a;
+      games.push({ a, b, win });
+      next.push(win);
+    }
+    rounds.push(games);
+    current = next;
+  }
+  return rounds;
+}
+
+/* Score a bracket against what happened. `actual[r]` lists the team indices
+ * that won round r. A pick is right when that team really won that round,
+ * whether or not it met the opponent the bracket expected -- the ESPN rule.
+ * An "underdog pick" is a game the bracket sent the worse seed through, judged
+ * by the bracket's own matchup; `upsetRight` counts those that came true. */
+function bracketScore(rounds, actual, seeds, scoring) {
+  const pts = scoring || DEFAULT_SCORING;
+  const won = actual.map(r => new Set(r));
+  const out = { rounds: [], right: 0, n: 0, points: 0, upsetPicks: 0, upsetRight: 0, upsetPoints: 0 };
+  rounds.forEach((games, r) => {
+    let right = 0, points = 0;
+    for (const g of games) {
+      const ok = won[r].has(g.win);
+      const underdog = seeds[g.win] > seeds[g.win === g.a ? g.b : g.a];
+      if (ok) { right++; points += pts[RISK_ROUND_NAMES[r]]; }
+      if (underdog) {
+        out.upsetPicks++;
+        if (ok) { out.upsetRight++; out.upsetPoints += pts[RISK_ROUND_NAMES[r]]; }
+      }
+    }
+    out.rounds.push({ n: games.length, right, points });
+    out.n += games.length; out.right += right; out.points += points;
+  });
+  return out;
+}
+
+/* How many of a played season's games went to the worse seed. Walks the real
+ * results down the real tree, so a game is judged on its actual matchup. */
+function actualUpsets(firstRound, actual, seeds) {
+  const won = actual.map(r => new Set(r));
+  let current = firstRound.slice();
+  let upsets = 0, games = 0;
+  for (let r = 0; r < 6; r++) {
+    const next = [];
+    for (let g = 0; g < current.length; g += 2) {
+      const a = current[g], b = current[g + 1];
+      const win = won[r].has(a) ? a : won[r].has(b) ? b : null;
+      if (win === null) return null;   // an unplayed or malformed season
+      games++;
+      if (seeds[win] > seeds[win === a ? b : a]) upsets++;
+      next.push(win);
+    }
+    current = next;
+  }
+  return { upsets, games };
+}
+
+/* Held-out games called right by the model against by the better seed, over
+ * exactly the same games. Rows are stored better-seed-first (see
+ * training.json's `orientation`), so "the seed's pick" is team 1 and it is
+ * right when m > 0. The difference is paired: only games where the two
+ * disagree can move it, which is why its standard error is much smaller than
+ * the gap between two independent accuracy figures' error bars. */
+function modelVsSeed(pooled) {
+  let n = 0, model = 0, seed = 0, modelOnly = 0, seedOnly = 0;
+  for (const r of pooled || []) {
+    if (r.m === 0) continue;
+    n++;
+    const m = (r.p > 0) === (r.m > 0), s = r.m > 0;
+    if (m) model++;
+    if (s) seed++;
+    if (m && !s) modelOnly++;
+    if (s && !m) seedOnly++;
+  }
+  if (!n) return null;
+  const diff = (model - seed) / n;
+  return {
+    n, model: model / n, seed: seed / n, diff, modelOnly, seedOnly,
+    se: Math.sqrt(Math.max(0, modelOnly + seedOnly - (modelOnly - seedOnly) ** 2 / n)) / n,
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    chalkRounds, bracketScore, actualUpsets, modelVsSeed,
     fitLinear, fitQuality, crossValidate, scoreSpread, predictMargin,
     winProbFromMargin, knnPredict, normalCdf, studentTCdf, calibrate, clipProb, logLossFor,
     solve, stability, FIT, PROB_CLIP, causalWalkForward, CAL_PRIOR_STRENGTH,
