@@ -1,0 +1,414 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://www.facebook.com/2008/fbml">
+
+
+<head>
+
+	<title>ESPN - Tournament Challenge - ESPN's NCAA Men's Bracket Game - Who Picked Whom</title>
+		<link rel="canonical" href="http://games.espn.go.com/tournament-challenge-bracket/en/" />
+	
+
+	<!-- Page Served by Machine N7ESPNAPP256.mgmt.prod on Port 2495 -->
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<meta http-equiv="Content-Script-Type" content="text/javascript">
+	<meta name="title" content="ESPN Tournament Challenge" />
+	<meta name="description" content="Get in on the excitement of this year's NCAA Men's Basketball Tournament. Compete against other fans as you fill out a bracket and earn points for every correct pick!  Come out on top and you could win a $10,000 Best Buy gift card. Get a group together and earn plenty of bragging rights amongst your friends by winning it all. Best of all, it's free to play and win." />
+	
+	<link class='touch-icon' rel="apple-touch-icon" href="http://g.espncdn.com/s/tcmen/img/touch.png" />
+	<link class='touch-icon' rel="apple-touch-icon-precomposed" href="http://g.espncdn.com/s/tcmen/img/touch.png">
+	<link class='touch-icon' rel="apple-touch-icon-precomposed" sizes="72x72" href="http://g.espncdn.com/s/tcmen/img/touch.png">
+	<link class='touch-icon' rel="apple-touch-icon-precomposed" sizes="114x114" href="http://g.espncdn.com/s/tcmen/img/touch.png">
+<link rel="image_src" href="http://games-ak.espn.go.com/banners/11/img/TCM11_134x75.jpg" />
+<link rel="stylesheet" href="http://a.espncdn.com/combiner/c?css=fantasy_reset.r1.css,base.r234.css,modules.r422.css,global_header.r38.css,modules/global_nav.r47.css,espn.teams.r3.css,modules/insider_enhanced.200910131831.css" type="text/css" media="screen" charset="utf-8" />
+
+<link rel="stylesheet" href="http://g.espncdn.com/tournament-challenge-bracket/en/static/css/views/web?_=18" type="text/css" media="screen" charset="utf-8" /><script type="text/javascript" src="http://a.espncdn.com/combiner/c?js=/games/libs/jquery/1.4.2/jquery.min.jsonpfix.js,plugins/json2.r3.js,plugins/teacrypt.js,plugins/jquery.metadata.js,plugins/jquery.bgiframe.js,plugins/jquery.easing.1.3.js,plugins/jquery.hoverIntent.js,plugins/jquery.jcarousel.js,plugins/jquery.tinysort.r3.js,plugins/jquery.pubsub.r5.js,ui/1.8.2/jquery.ui.core.js,ui/1.8.2/jquery.ui.widget.js,ui/1.8.2/jquery.ui.tabs.js,ui/1.8.2/jquery.ui.mouse.js,ui/1.8.2/jquery.ui.sortable.js,ui/1.8.2/jquery.ui.draggable.js,ui/1.8.2/jquery.ui.droppable.js,ui/1.8.2/jquery.effects.core.js,ui/1.8.2/jquery.effects.slide.js,plugins/ba-debug-0.4.js,espn.l10n.r10.js,flashObjWrapper.r7.js,espn.core.duo.r52.js,stub.search.r6.js,espn.nav.mega.r31.js,espn.storage.r6.js,espn.p13n.r15.js,espn.video.r32.js,registration/staticLogin.r10-26.js,registration/espn.overlay.stub.r3-16.js,espn.insider.r5.js,espn.espn360.stub.r9.js,espn.myHeadlines.stub.r4.js,espn.gallery.0628.js,mbox.20.js&minify=true"></script>
+
+<script src="http://g.espncdn.com/tournament-challenge-bracket/en/static/js/main?v=web&_=8" type="text/javascript" charset="utf-8"></script>	
+</head><body class="trans-fantasy en ctxt-whopickedwhom">
+<!--[if IE 6]><div class="ie ie6"><![endif]-->
+<!--[if IE 7]><div class="ie ie7"><![endif]-->
+<!--[if IE 8]><div class="ie ie8"><![endif]-->
+<!--[if IE 9]><div class="ie ie9"><![endif]-->
+<div class="wide-background"><div class="main">
+<div class="transitional-elements">
+<div id="header" class="container">
+<div class="top-bar"><!-- begin uni login -->
+<script type="text/javascript">
+var returnURL = document.location.href;
+var anCV = "";
+var myEspnText = {'welcometext':'Welcome','register':'Register','signin':'Sign In','signout':'Sign Out','heliumdown':'Login Temporarily Unavailable','connectedfacebook':'Connected to Facebook','connectfacebook':'Connect with Facebook','activateinsider':'Activate Insider'};
+</script>
+<form id="form-memberarea">
+<input type="hidden" name="language" id="language" value="en"/>
+<input type="hidden" name="affiliateName" id="memberAreaAffiliateName" value="espn_fantgames"/>
+<input type="hidden" name="regFormId" id="regFormId" value="espn_tcmen"/>
+</form>
+<div class="signin" id="signin"></div>
+<script>espn.memberservices.welcome();</script>
+<div class="nav-edition editions">
+<label>EDITIONS:</label>
+<ul class="main">
+	<li class="e-usa"><a href="http://espn.go.com/" name="&amp;lpos=editionsnav&amp;lid=usa">USA</a></li>
+	<li class="e-deportes"><a href="http://espndeportes.espn.go.com/" name="&amp;lpos=editionsnav&amp;lid=deportes">DEPORTES</a></li>
+	<li class="last dropdown">
+	<ul class="">
+	<li class="selected">More</li>
+	<li><a href="http://www.espnstar.com/" name="&amp;lpos=editionsnav&amp;lid=asia">Asia</a></li>
+	<li><a href="http://www.espn.com.au" name="&amp;lpos=editionsnav&amp;lid=australia">Australia</a></li>
+	<li><a href="http://www.espn.com.br" name="&amp;lpos=editionsnav&amp;lid=brazil">Brazil</a></li>
+	<li><a href="http://www.espn.co.uk/" name="&amp;lpos=editionsnav&amp;lid=uk">United Kingdom</a></li>
+	</ul>
+	</li>
+</ul>
+</div>
+
+<div class="nav-edition">
+<label>CITIES:</label>
+<ul class="main">
+	<li class="e-boston"><a href="http://espn.go.com/boston/" name="&amp;lpos=citynav&amp;lid=boston">BOSTON</a></li>
+	<li class="e-chicago"><a href="http://espn.go.com/chicago/" name="&amp;lpos=citynav&amp;lid=chicago">CHICAGO</a></li>
+	<li class="e-dallas"><a href="http://espn.go.com/dallas/" name="&amp;lpos=citynav&amp;lid=dallas">DALLAS</a></li>
+	<li class="e-losangeles"><a href="http://espn.go.com/los-angeles/" name="&amp;lpos=citynav&amp;lid=losangeles">LOS ANGELES</a></li>
+	<li class="last e-newyork"><a href="http://espn.go.com/new-york/" name="&amp;lpos=citynav&amp;lid=newyork">NEW YORK</a></li>
+</ul>
+</div></div><div class="bottom-bar"><div class="espn-logo"><a class="espn espn-logo" href="http://espn.go.com"><h1>ESPN</h1></a></div><a class="game-logo" href="http://games.espn.go.com/tournament-challenge-bracket/en/"><img src="http://g.espncdn.com/s/tcmen/12/logo.png"></a><div class="presby">
+
+<!-- begin ad tag (tile=1) -->
+<script type="text/javascript">
+	var swid = "null";
+	var adSegments = espn.core.ad_segments();
+
+	var adMap = {
+tile: "1", ord: "259825024", sz: "150x45,1x1"
+	};
+
+	var trackingMap = {
+gm: "tcmen", pgn: "whopickedwhom", lang: "en", pos: "SponsoredByLogoHeader"
+	};
+
+	var adUri = "espn.us.com.games/basketball;";
+
+	for (var trackingMapKey in trackingMap) {
+		adUri += trackingMapKey + "=" + trackingMap[trackingMapKey] + ";";
+	}
+
+	adUri += adSegments;
+	adUri += "u=swid=" + swid + "|";
+
+	for (var trackingMapKey in trackingMap) {
+		adUri += trackingMapKey + "=" + trackingMap[trackingMapKey] + "|";
+	}
+
+	adUri += adSegments.replace(/;/g, "|") + ";";
+
+	for (var adMapKey in adMap) {
+		adUri += adMapKey + "=" + adMap[adMapKey] + ";";
+	}
+
+	var doubleclickOrdValue;
+
+	if (!doubleclickOrdValue) {
+		doubleclickOrdValue = Math.floor(Math.random() * 10000000000);
+	}
+
+	ordReplacePattern = /ord=(\d+)/i;
+	adUri = adUri.replace(ordReplacePattern, "ord=" + doubleclickOrdValue);
+
+	document.write('<script type="text/javascript" src="http://ad.doubleclick.net/adj/' + adUri + '"><\/script>');
+</script>
+<noscript>
+	<a href="http://ad.doubleclick.net/jump/espn.us.com.games/basketball;sz=150x45,1x1;" target="_blank"><img src="http://ad.doubleclick.net/ad/espn.us.com.games/basketball;sz=150x45,1x1;" border="0" alt=""></a>
+</noscript>
+<!-- end ad tag --></div><div class="shopButton">	  <div id="shop">
+	  	<a class="shop-btn" href="http://espnshop.com/entry.point?target=Z&amp;source=ESPN_HPHEADERLINK:SHOPBUTTONHEADER:6_1_10" name="&lpos=sitenavdefault&lid=sitenav_shopbutton">Shop</a>
+	  </div>
+	  </div><div id="nav-main-search">
+<form id="searchBox" name="searchBox" action="http://search.espn.go.com/results" method="get" accept-charset="utf-8">
+<div class="inputWrapper">
+<input autocomplete="off" class="text" type="text" placeholder="Search" name="searchString" id="searchString" />
+<input type="hidden" name="page" id="page" value="null" />
+<input type="hidden" name="fromForm" value="true" />
+<input class="submit" type="submit" value="" />
+</div>
+</form>
+</div>
+<div class="clear"></div></div></div><div id="nav-wrapper" class="container"><div id="nav-wrapper-container">
+<div id="nav-main">
+<!-- begin site nav -->
+<ul id="nav-main-list" class="top">
+	<!-- start: Menuitem :: MyTAB -->
+	<li id="menu-myespn" class="last myespn">
+		<a class="myespn" ref="#">MyESPN</a>
+	</li>
+	<!-- start: Menuitem :: NFL -->
+	<li id="menu-nfl" class="sport-menu default t-nfl" data-sportid="28">
+		<a href="http://espn.go.com/nfl/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_nfl">NFL</a>
+	</li>
+	<!-- start: Menuitem :: MLB -->
+	<li id="menu-mlb" class="sport-menu default t-mlb" data-sportid="10">
+		<a href="http://espn.go.com/mlb/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_mlb">MLB</a>
+	</li>
+	<!-- start: Menuitem :: NBA -->
+	<li id="menu-nba" class="sport-menu default t-nba" data-sportid="46">
+		<a href="http://espn.go.com/nba/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_nba">NBA</a>
+	</li>
+	<!-- start: Menuitem :: NHL -->
+	<li id="menu-nhl" class="sport-menu default t-nhl" data-sportid="90">
+		<a href="http://espn.go.com/nhl/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_nhl">NHL</a>
+	</li>
+	<!-- start: Menuitem :: NCAA FB -->
+	<li id="menu-ncf" class="sport-menu default t-ncf" data-sportid="23">
+		<a href="http://espn.go.com/college-football/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_ncf">NCAA FB</a>
+	</li>
+	<!-- start: Menuitem :: NCAA BB -->
+	<li id="menu-ncb" class="sport-menu default t-ncb" data-sportid="41">
+		<a href="http://espn.go.com/mens-college-basketball/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_ncb">NCAA BB</a>
+	</li>
+	<!-- start: Menuitem :: NASCAR -->
+	<li id="menu-nascar" class="sport-menu default t-nascar" data-sportid="2020">
+		<a href="http://espn.go.com/racing/nascar/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_nascar">NASCAR</a>
+	</li>
+	<!-- start: Menuitem :: SOCCER -->
+	<li id="menu-soccer" class="sport-menu default t-soccer" data-sportid="600">
+		<a href="http://espn.go.com/sports/soccer/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_soccer">SOCCER</a>
+	</li>
+	<!-- start: Menuitem :: GOLF -->
+	<li id="menu-golf" class="sport-menu t-golf" data-sportid="1106" style="display: none;">
+		<a href="http://espn.go.com/golf/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_golfl">GOLF</a>
+	</li>
+	<!-- start: Menuitem :: TENNIS -->
+	<li id="menu-tennis" class="sport-menu t-tennis" data-sportid="850" style="display: none;">
+		<a href="http://espn.go.com/tennis/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_tennis">TENNIS</a>
+	</li>
+	<!-- start: Menuitem :: BOXING-->
+	<li id="menu-boxing" class="sport-menu t-boxing" data-sportid="1000" style="display: none;">
+		<a href="http://espn.go.com/boxing/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_boxing">BOXING</a>
+	</li>
+	<!-- start: Menuitem :: MMA -->
+	<li id="menu-mma" class="sport-menu t-mma" data-sportid="3301" style="display: none;">
+		<a href="http://espn.go.com/mma/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_mma">MMA</a>
+	</li>
+	<!-- start: Menuitem :: ALL SPORTS -->
+	<li id="menu-allsports" class="nav-allsports t-allsports">
+		<a href="http://espn.go.com/sports/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_allsports">MORE SPORTS</a>
+	</li>
+	<!-- start: Menuitem :: INSIDER -->
+	<li id="menu-insider" class="sport-menu t-insider" style="display: none;">
+		<a href="http://insider.espn.go.com/insider/index" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_insider">INSIDER</a>
+	</li>
+	<!-- start: Menuitem :: SPORTSNATION -->
+	<li id="menu-sportsnation" class="sport-menu t-sportsnation" style="display: none;">
+		<a href="http://espn.go.com/sportsnation/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_sportsnation">SN</a>
+	</li>
+	<!-- start: Menuitem :: RADIO & MORE -->
+	<li id="menu-radio" class="right-menu two-line last t-radio">
+	<a href="http://espn.go.com/espnradio/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_radioandmore">RADIO<span>& MORE</span></a>
+	</li>
+	<!-- start: Menuitem :: espnW & P2 -->
+	<li id="menu-page2" class="right-menu two-line t-page2">
+	<a href="http://espn.go.com/espnw/" name="&lpos=sitenavdefault&lid=sitenav_espnwandp2" target="_blank">espnW<span>& PAGE 2</span></a>
+	</li>
+	<!-- start: Menuitem :: FANTASY & GAMES -->
+	<li id="menu-fantasy" class="right-menu two-line t-fantasy selected">
+		<a href="http://games.espn.go.com/frontpage" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_fantasy">FANTASY<span>& GAMES</span></a>
+	</li>
+	<!-- start: Menuitem :: WATCH -->
+	<li id="menu-watch" class="right-menu t-watch">
+		<a href="http://espn.go.com/video/" name="&amp;lpos=sitenavdefault&amp;lid=sitenav_watch">WATCH</a>
+	</li>
+</ul>
+<!-- end site nav --></div><div class="nav-main-secondary"><ul><li class="active"><a href="http://games.espn.go.com/tournament-challenge-bracket/frontpage" style="text-decoration:none">Tournament Challenge:</a><li><a href="story?pageName=tcmen\rules">Rules</a></li><li><a href="story?pageName=tcmen\howtoplay">How To Play</a></li><li><a href="story?pageName=tcmen\faq">FAQ</a></li><li><a href="story?pageName=tcmen\prizes">Prizes</a></li><li><a href="forum">Forum</a></li></ul></div><div class="nav-main-breadcrumbs"><div class="breadcrumbs"><a class="breadcrumb" style="color:#D3D5D6;" href="http://espn.go.com/">ESPN</a><span style="color:#D3D5D6;"> &#187; </span><a href="http://games.espn.go.com/frontpage/basketball" class="breadcrumb" style="color:#D3D5D6;">Fantasy Basketball</a><span style="color:#D3D5D6;"> &#187; </span><a href="http://games.espn.go.com/tournament-challenge-bracket/en/frontpage" style="color:#D3D5D6" class="breadcrumb">Tournament Challenge</a></div><div class="games-lang-wrap"><ul class="games-lang-selector"><li class="title">Language:</li><li class="language language-usa">English (US)</li></ul></div></div></div></div><div class="impact">
+
+<!-- begin ad tag (tile=2) -->
+<script type="text/javascript">
+	var swid = "null";
+	var adSegments = espn.core.ad_segments();
+
+	var adMap = {
+tile: "2", ord: "259825024", sz: "960x40,1x1"
+	};
+
+	var trackingMap = {
+gm: "tcmen", pgn: "whopickedwhom", lang: "en", pos: "ImpactLogo"
+	};
+
+	var adUri = "espn.us.com.games/basketball;";
+
+	for (var trackingMapKey in trackingMap) {
+		adUri += trackingMapKey + "=" + trackingMap[trackingMapKey] + ";";
+	}
+
+	adUri += adSegments;
+	adUri += "u=swid=" + swid + "|";
+
+	for (var trackingMapKey in trackingMap) {
+		adUri += trackingMapKey + "=" + trackingMap[trackingMapKey] + "|";
+	}
+
+	adUri += adSegments.replace(/;/g, "|") + ";";
+
+	for (var adMapKey in adMap) {
+		adUri += adMapKey + "=" + adMap[adMapKey] + ";";
+	}
+
+	var doubleclickOrdValue;
+
+	if (!doubleclickOrdValue) {
+		doubleclickOrdValue = Math.floor(Math.random() * 10000000000);
+	}
+
+	ordReplacePattern = /ord=(\d+)/i;
+	adUri = adUri.replace(ordReplacePattern, "ord=" + doubleclickOrdValue);
+
+	document.write('<script type="text/javascript" src="http://ad.doubleclick.net/adj/' + adUri + '"><\/script>');
+</script>
+<noscript>
+	<a href="http://ad.doubleclick.net/jump/espn.us.com.games/basketball;sz=960x40,1x1;" target="_blank"><img src="http://ad.doubleclick.net/ad/espn.us.com.games/basketball;sz=960x40,1x1;" border="0" alt=""></a>
+</noscript>
+<!-- end ad tag --></div><div id="game-container" class="gamesmain container">
+<!--[if lte IE 6]><link rel="stylesheet" charset="utf-8" media="screen" href="http://a.espncdn.com/combiner/c?css=modules/browser-alert.r7.css" type="text/css" /><div class="span-6" id="browser-alert-wrapper" style="display: none; float: none; margin-left: auto; margin-right: auto;"><div class="mod-container mod-no-header-footer browser-alert"><div class="mod-content"><div class="gradient-container"><h1><span>Your Web Browser</span> is no longer supported</h1><p>To experience everything that ESPN.com has to offer, we recommend that you upgrade to a newer version of your web browser. Click the upgrade button to the right or <a href="http://espn.go.com/espn/news/story?id=5630562">learn more</a>.</p><ul><li><a class="btn-upgrade" href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Upgrade</a></li><li><a class="btn-faq" href="http://espn.go.com/espn/news/story?id=5630562">FAQs</a></li></ul></div></div></div></div><script>(function(b){setTimeout(function(){var a=b("#browser-alert-wrapper");if(espn.cookie.get("browseralert")!="true"){b('<a class="btn-close" href="#">Close</a>').bind("click",function(){a.hide();espn.cookie.set("browseralert","true",30);return false}).appendTo(a.find(".gradient-container"));a.show();espn.cookie.set("browseralert","true")}},100)})(jQuery);</script><![endif]-->
+<div id="subNavTabs" class="games-nav container"><div class="navigation"><ul><li class="tab-frontpage"><a href="frontpage" ><div class="downArrow">Game Home</div></a></li><li class="tab-leaderboard"><a href="leaderboard" ><div class="downArrow">Leaderboard</div></a></li><li class="tab-friends"><a href="friends" ><div class="downArrow"><div class="facebook"><div class="icon"></div></div>Friends</div></a></li><li><a href="groupfind" class="multiple" id="groupsLink" href="#"><div class="downArrow">My Groups</div></a><div><div id="groupDropDown"><div style="margin-top:6px;"><div class="groupsMenuItem" style="padding-bottom:12px;"><a style="text-align:left;" href="groupfind">Join a Group</a></div></div></div><div style="clear:both;"></div></div></li></ul></div><div class="subNavTabsExtras"><div class="mailbag email"><a href="http://proxy.espn.go.com/chat/mailbagESPN?event_id=19541" target="_blank"><div class="icon"></div></a><a href="http://proxy.espn.go.com/chat/mailbagESPN?event_id=19541" target="_blank"><div class="label">Send us your Feedback</div></a></div><div class="socialRevealWrapper"><div class="socialReveal jsRequired"><a class="reveal" href="#"><div class="revealContentWrapper"><div class="icons"><div class="facebook"><div class="icon"></div></div><div class="twitter"><div class="icon"></div></div><!--[if (gt IE 7) | !(IE)]><!--><div class="googlePlus"><div class="icon"></div></div><!--<![endif]--></div>Share Game</div></a><div class="socialButtons"><div class="listWrapper"><ul><li><div id="shareGame_Facebook"><a href="#" class="facebookShareButton jsRequired" title="Publish this to Facebook!" data-name="  ESPN Tournament Challenge" data-link="http://games.espn.go.com/tournament-challenge-bracket/en/" data-description="Get in on the excitement of this year's NCAA Men's Basketball Tournament. Compete against other fans as you fill out a bracket and earn points for every correct pick!  Come out on top and you could win a $10,000 Best Buy gift card. Get a group together and earn plenty of bragging rights amongst your friends by winning it all. Best of all, it's free to play and win." data-picture="http://g.espncdn.com/s/tcmen/12/logo.png" ><div class="icon"></div></a></div></li><li><div id="shareGame_Twitter" class="twitter"><a target="_blank" href="http://button.topsy.com/retweet?nick=TopsyRT&amp;url=http%3A%2F%2Fgames.espn.go.com%2Ftournament-challenge-bracket%2Fen%2F&amp;title=++ESPN+Tournament+Challenge"><div class="icon"></div></a></div></li><!--[if (gt IE 7) | !(IE)]><!--><li><div id="shareGame_GooglePlus" class="googlePlus"><g:plusone size="small" href="http://games.espn.go.com/tournament-challenge-bracket/en/" count="false"></g:plusone></div></li><!--<![endif]--></ul></div></div></div></div></div></div><div class="games-innercol" id="innercol"><div id="subNavText" class="games-nav subnav"><ul><li><a href="entry" >Bracket</a></li><li><a href="nationalBracket?entryID=0" >National Bracket</a></li><li  class="selected"><a href="whopickedwhom?entryID=0" >Who Picked Whom</a></li></div><div class="games-fullcol fullcol-bottomPG one_col_no_ad" id="mgmain"><h1>Who Picked Whom</h1><span class="body">This page shows you how the rest of the  players have made their picks. Below is a list of the percentage of participants who selected each team to win in each respective round.<br /><br /></span><br/>	
+	<table class="wpw-table" cellpadding="2" cellspacing="1">
+		<thead>
+			<tr class="table-header">
+				<td align="center" colspan="6">2012 NCAA Men's Tournament</td>
+			</tr>
+			<tr class="table-subheader">
+				<td>Round of 64</td>
+				<td>Round of 32</td>
+				<td>Sweet 16</td>
+				<td>Elite Eight</td>
+				<td>Final Four</td>
+				<td>Championship</td>
+			</tr>
+		</thead>
+		<tbody>
+<tr class="oddrow"><td class="seed1_round0"><span>1</span> <b>Kentucky</b> - 99.3%</td><td class="seed1_round 1"><span>1</span> <b>North Carolina</b> - 94.8%</td><td class="seed1_round2"><span>1</span> <b>North Carolina</b> - 85.2%</td><td class="seed1_round3"><span>1</span> <b>Kentucky</b> - 68.1%</td><td class="seed1_round4"><span>1</span> <b>Kentucky</b> - 51.8%</td><td class="seed1_round5"><span>1</span> <b>Kentucky</b> - 35.1%</td></tr><tr class="evenrow"><td class="seed1_round0"><span>1</span> <b>North Carolina</b> - 99.3%</td><td class="seed1_round 1"><span>1</span> <b>Kentucky</b> - 92.1%</td><td class="seed1_round2"><span>1</span> <b>Kentucky</b> - 84.2%</td><td class="seed1_round3"><span>1</span> <b>North Carolina</b> - 56.2%</td><td class="seed1_round4"><span>1</span> <b>North Carolina</b> - 38.8%</td><td class="seed1_round5"><span>1</span> <b>North Carolina</b> - 17.3%</td></tr><tr class="oddrow"><td class="seed1_round0"><span>1</span> <b>Michigan State</b> - 99.1%</td><td class="seed2_round 1"><span>2</span> <b>Kansas</b> - 90.6%</td><td class="seed2_round2"><span>2</span> <b>Kansas</b> - 72.1%</td><td class="seed2_round3"><span>2</span> <b>Missouri</b> - 40.8%</td><td class="seed2_round4"><span>2</span> <b>Kansas</b> - 18.3%</td><td class="seed1_round5"><span>1</span> <b>Michigan State</b> - 7.5%</td></tr><tr class="evenrow"><td class="seed2_round0"><span>2</span> <b>Duke</b> - 98.8%</td><td class="seed1_round 1"><span>1</span> <b>Michigan State</b> - 90.4%</td><td class="seed1_round2"><span>1</span> <b>Michigan State</b> - 70.5%</td><td class="seed1_round3"><span>1</span> <b>Michigan State</b> - 35.7%</td><td class="seed2_round4"><span>2</span> <b>Missouri</b> - 13.6%</td><td class="seed2_round5"><span>2</span> <b>Missouri</b> - 7.2%</td></tr><tr class="oddrow"><td class="seed2_round0"><span>2</span> <b>Missouri</b> - 98.8%</td><td class="seed2_round 1"><span>2</span> <b>Ohio State</b> - 87.5%</td><td class="seed2_round2"><span>2</span> <b>Missouri</b> - 64.6%</td><td class="seed2_round3"><span>2</span> <b>Ohio State</b> - 33.1%</td><td class="seed1_round4"><span>1</span> <b>Michigan State</b> - 13.1%</td><td class="seed2_round5"><span>2</span> <b>Kansas</b> - 6.2%</td></tr><tr class="evenrow"><td class="seed1_round0"><span>1</span> <b>Syracuse</b> - 98.7%</td><td class="seed2_round 1"><span>2</span> <b>Duke</b> - 86.4%</td><td class="seed1_round2"><span>1</span> <b>Syracuse</b> - 50.2%</td><td class="seed2_round3"><span>2</span> <b>Kansas</b> - 30.6%</td><td class="seed1_round4"><span>1</span> <b>Syracuse</b> - 12.1%</td><td class="seed1_round5"><span>1</span> <b>Syracuse</b> - 5.7%</td></tr><tr class="oddrow"><td class="seed2_round0"><span>2</span> <b>Ohio State</b> - 98.6%</td><td class="seed2_round 1"><span>2</span> <b>Missouri</b> - 84.7%</td><td class="seed2_round2"><span>2</span> <b>Ohio State</b> - 49.5%</td><td class="seed3_round3"><span>3</span> <b>Florida State</b> - 26.0%</td><td class="seed2_round4"><span>2</span> <b>Ohio State</b> - 12.0%</td><td class="seed2_round5"><span>2</span> <b>Ohio State</b> - 4.7%</td></tr><tr class="evenrow"><td class="seed2_round0"><span>2</span> <b>Kansas</b> - 97.6%</td><td class="seed1_round 1"><span>1</span> <b>Syracuse</b> - 81.9%</td><td class="seed2_round2"><span>2</span> <b>Duke</b> - 45.8%</td><td class="seed1_round3"><span>1</span> <b>Syracuse</b> - 24.6%</td><td class="seed3_round4"><span>3</span> <b>Florida State</b> - 8.9%</td><td class="seed2_round5"><span>2</span> <b>Duke</b> - 3.8%</td></tr><tr class="oddrow"><td class="seed3_round0"><span>3</span> <b>Baylor</b> - 96.1%</td><td class="seed3_round 1"><span>3</span> <b>Baylor</b> - 80.3%</td><td class="seed3_round2"><span>3</span> <b>Baylor</b> - 44.3%</td><td class="seed2_round3"><span>2</span> <b>Duke</b> - 13.0%</td><td class="seed2_round4"><span>2</span> <b>Duke</b> - 7.5%</td><td class="seed3_round5"><span>3</span> <b>Florida State</b> - 2.9%</td></tr><tr class="evenrow"><td class="seed3_round0"><span>3</span> <b>Florida State</b> - 96.0%</td><td class="seed3_round 1"><span>3</span> <b>Florida State</b> - 76.3%</td><td class="seed3_round2"><span>3</span> <b>Florida State</b> - 40.1%</td><td class="seed3_round3"><span>3</span> <b>Baylor</b> - 10.5%</td><td class="seed3_round4"><span>3</span> <b>Baylor</b> - 4.3%</td><td class="seed3_round5"><span>3</span> <b>Baylor</b> - 1.7%</td></tr><tr class="oddrow"><td class="seed3_round0"><span>3</span> <b>Marquette</b> - 93.6%</td><td class="seed4_round 1"><span>4</span> <b>Louisville</b> - 64.8%</td><td class="seed5_round2"><span>5</span> <b>Vanderbilt</b> - 27.0%</td><td class="seed3_round3"><span>3</span> <b>Marquette</b> - 7.7%</td><td class="seed3_round4"><span>3</span> <b>Georgetown</b> - 2.0%</td><td class="seed4_round5"><span>4</span> <b>Louisville</b> - 0.8%</td></tr><tr class="evenrow"><td class="seed4_round0"><span>4</span> <b>Wisconsin</b> - 89.4%</td><td class="seed4_round 1"><span>4</span> <b>Michigan</b> - 63.0%</td><td class="seed4_round2"><span>4</span> <b>Louisville</b> - 19.3%</td><td class="seed4_round3"><span>4</span> <b>Louisville</b> - 6.9%</td><td class="seed4_round4"><span>4</span> <b>Louisville</b> - 1.8%</td><td class="seed3_round5"><span>3</span> <b>Marquette</b> - 0.7%</td></tr><tr class="oddrow"><td class="seed4_round0"><span>4</span> <b>Louisville</b> - 89.2%</td><td class="seed3_round 1"><span>3</span> <b>Marquette</b> - 61.5%</td><td class="seed3_round2"><span>3</span> <b>Marquette</b> - 19.0%</td><td class="seed5_round3"><span>5</span> <b>Vanderbilt</b> - 6.9%</td><td class="seed5_round4"><span>5</span> <b>Vanderbilt</b> - 1.8%</td><td class="seed4_round5"><span>4</span> <b>Indiana</b> - 0.6%</td></tr><tr class="evenrow"><td class="seed4_round0"><span>4</span> <b>Michigan</b> - 88.4%</td><td class="seed3_round 1"><span>3</span> <b>Georgetown</b> - 59.4%</td><td class="seed3_round2"><span>3</span> <b>Georgetown</b> - 16.8%</td><td class="seed3_round3"><span>3</span> <b>Georgetown</b> - 5.0%</td><td class="seed3_round4"><span>3</span> <b>Marquette</b> - 1.8%</td><td class="seed3_round5"><span>3</span> <b>Georgetown</b> - 0.6%</td></tr><tr class="oddrow"><td class="seed4_round0"><span>4</span> <b>Indiana</b> - 86.7%</td><td class="seed4_round 1"><span>4</span> <b>Indiana</b> - 53.4%</td><td class="seed4_round2"><span>4</span> <b>Wisconsin</b> - 15.9%</td><td class="seed4_round3"><span>4</span> <b>Wisconsin</b> - 3.7%</td><td class="seed4_round4"><span>4</span> <b>Michigan</b> - 1.3%</td><td class="seed4_round5"><span>4</span> <b>Michigan</b> - 0.6%</td></tr><tr class="evenrow"><td class="seed6_round0"><span>6</span> <b>Murray State</b> - 85.2%</td><td class="seed5_round 1"><span>5</span> <b>Vanderbilt</b> - 52.7%</td><td class="seed4_round2"><span>4</span> <b>Michigan</b> - 8.7%</td><td class="seed4_round3"><span>4</span> <b>Michigan</b> - 3.2%</td><td class="seed4_round4"><span>4</span> <b>Indiana</b> - 1.2%</td><td class="seed5_round5"><span>5</span> <b>Vanderbilt</b> - 0.6%</td></tr><tr class="oddrow"><td class="seed3_round0"><span>3</span> <b>Georgetown</b> - 85.0%</td><td class="seed4_round 1"><span>4</span> <b>Wisconsin</b> - 40.9%</td><td class="seed6_round2"><span>6</span> <b>Murray State</b> - 7.7%</td><td class="seed6_round3"><span>6</span> <b>Murray State</b> - 3.1%</td><td class="seed4_round4"><span>4</span> <b>Wisconsin</b> - 1.0%</td><td class="seed9_round5"><span>9</span> <b>Connecticut</b> - 0.4%</td></tr><tr class="evenrow"><td class="seed5_round0"><span>5</span> <b>Vanderbilt</b> - 84.0%</td><td class="seed6_round 1"><span>6</span> <b>Murray State</b> - 33.8%</td><td class="seed4_round2"><span>4</span> <b>Indiana</b> - 7.0%</td><td class="seed4_round3"><span>4</span> <b>Indiana</b> - 2.9%</td><td class="seed6_round4"><span>6</span> <b>Murray State</b> - 0.8%</td><td class="seed4_round5"><span>4</span> <b>Wisconsin</b> - 0.4%</td></tr><tr class="oddrow"><td class="seed8_round0"><span>8</span> <b>Kansas State</b> - 77.3%</td><td class="seed5_round 1"><span>5</span> <b>Wichita State</b> - 31.1%</td><td class="seed7_round2"><span>7</span> <b>Florida</b> - 6.5%</td><td class="seed7_round3"><span>7</span> <b>Florida</b> - 2.4%</td><td class="seed9_round4"><span>9</span> <b>Connecticut</b> - 0.8%</td><td class="seed7_round5"><span>7</span> <b>Florida</b> - 0.3%</td></tr><tr class="evenrow"><td class="seed5_round0"><span>5</span> <b>Temple</b> - 77.2%</td><td class="seed5_round 1"><span>5</span> <b>Temple</b> - 27.2%</td><td class="seed6_round2"><span>6</span> <b>Cincinnati</b> - 5.1%</td><td class="seed6_round3"><span>6</span> <b>Cincinnati</b> - 2.1%</td><td class="seed7_round4"><span>7</span> <b>Florida</b> - 0.7%</td><td class="seed6_round5"><span>6</span> <b>Murray State</b> - 0.3%</td></tr><tr class="oddrow"><td class="seed6_round0"><span>6</span> <b>UNLV</b> - 76.9%</td><td class="seed5_round 1"><span>5</span> <b>New Mexico</b> - 23.0%</td><td class="seed6_round2"><span>6</span> <b>UNLV</b> - 5.0%</td><td class="seed9_round3"><span>9</span> <b>Connecticut</b> - 1.5%</td><td class="seed6_round4"><span>6</span> <b>Cincinnati</b> - 0.6%</td><td class="seed6_round5"><span>6</span> <b>Cincinnati</b> - 0.2%</td></tr><tr class="evenrow"><td class="seed6_round0"><span>6</span> <b>Cincinnati</b> - 73.2%</td><td class="seed11_round 1"><span>11</span> <b>North Carolina State</b> - 18.2%</td><td class="seed8_round2"><span>8</span> <b>Kansas State</b> - 4.7%</td><td class="seed5_round3"><span>5</span> <b>Wichita State</b> - 1.1%</td><td class="seed5_round4"><span>5</span> <b>Wichita State</b> - 0.4%</td><td class="seed5_round5"><span>5</span> <b>Wichita State</b> - 0.2%</td></tr><tr class="oddrow"><td class="seed8_round0"><span>8</span> <b>Memphis</b> - 72.1%</td><td class="seed6_round 1"><span>6</span> <b>Cincinnati</b> - 17.7%</td><td class="seed5_round2"><span>5</span> <b>New Mexico</b> - 3.8%</td><td class="seed11_round3"><span>11</span> <b>North Carolina State</b> - 1.0%</td><td class="seed11_round4"><span>11</span> <b>North Carolina State</b> - 0.3%</td><td class="seed11_round5"><span>11</span> <b>North Carolina State</b> - 0.2%</td></tr><tr class="evenrow"><td class="seed7_round0"><span>7</span> <b>Florida</b> - 71.8%</td><td class="seed6_round 1"><span>6</span> <b>San Diego State</b> - 16.5%</td><td class="seed9_round2"><span>9</span> <b>Connecticut</b> - 3.7%</td><td class="seed8_round3"><span>8</span> <b>Kansas State</b> - 1.0%</td><td class="seed8_round4"><span>8</span> <b>Kansas State</b> - 0.3%</td><td class="seed8_round5"><span>8</span> <b>Memphis</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed5_round0"><span>5</span> <b>New Mexico</b> - 71.4%</td><td class="seed8_round 1"><span>8</span> <b>Kansas State</b> - 15.4%</td><td class="seed8_round2"><span>8</span> <b>Memphis</b> - 3.7%</td><td class="seed8_round3"><span>8</span> <b>Memphis</b> - 0.9%</td><td class="seed8_round4"><span>8</span> <b>Memphis</b> - 0.3%</td><td class="seed7_round5"><span>7</span> <b>Notre Dame</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed9_round0"><span>9</span> <b>Connecticut</b> - 67.8%</td><td class="seed6_round 1"><span>6</span> <b>UNLV</b> - 15.2%</td><td class="seed11_round2"><span>11</span> <b>North Carolina State</b> - 3.3%</td><td class="seed5_round3"><span>5</span> <b>New Mexico</b> - 0.8%</td><td class="seed5_round4"><span>5</span> <b>Temple</b> - 0.3%</td><td class="seed8_round5"><span>8</span> <b>Kansas State</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed5_round0"><span>5</span> <b>Wichita State</b> - 62.9%</td><td class="seed12_round 1"><span>12</span> <b>Virginia Commonwealth</b> - 12.1%</td><td class="seed6_round2"><span>6</span> <b>San Diego State</b> - 2.9%</td><td class="seed5_round3"><span>5</span> <b>Temple</b> - 0.8%</td><td class="seed7_round4"><span>7</span> <b>Gonzaga</b> - 0.3%</td><td class="seed7_round5"><span>7</span> <b>Gonzaga</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed7_round0"><span>7</span> <b>Notre Dame</b> - 57.1%</td><td class="seed7_round 1"><span>7</span> <b>Florida</b> - 12.0%</td><td class="seed5_round2"><span>5</span> <b>Wichita State</b> - 2.8%</td><td class="seed7_round3"><span>7</span> <b>Gonzaga</b> - 0.8%</td><td class="seed7_round4"><span>7</span> <b>Notre Dame</b> - 0.2%</td><td class="seed10_round5"><span>10</span> <b>West Virginia</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed8_round0"><span>8</span> <b>Creighton</b> - 56.5%</td><td class="seed12_round 1"><span>12</span> <b>Long Beach State</b> - 8.2%</td><td class="seed5_round2"><span>5</span> <b>Temple</b> - 2.7%</td><td class="seed6_round3"><span>6</span> <b>UNLV</b> - 0.7%</td><td class="seed6_round4"><span>6</span> <b>San Diego State</b> - 0.2%</td><td class="seed11_round5"><span>11</span> <b>Texas</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed7_round0"><span>7</span> <b>Saint Mary's</b> - 52.7%</td><td class="seed7_round 1"><span>7</span> <b>Notre Dame</b> - 8.1%</td><td class="seed7_round2"><span>7</span> <b>Notre Dame</b> - 2.5%</td><td class="seed6_round3"><span>6</span> <b>San Diego State</b> - 0.7%</td><td class="seed6_round4"><span>6</span> <b>UNLV</b> - 0.2%</td><td class="seed5_round5"><span>5</span> <b>New Mexico</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed7_round0"><span>7</span> <b>Gonzaga</b> - 51.5%</td><td class="seed8_round 1"><span>8</span> <b>Memphis</b> - 7.6%</td><td class="seed7_round2"><span>7</span> <b>Gonzaga</b> - 2.2%</td><td class="seed7_round3"><span>7</span> <b>Notre Dame</b> - 0.5%</td><td class="seed5_round4"><span>5</span> <b>New Mexico</b> - 0.2%</td><td class="seed5_round5"><span>5</span> <b>Temple</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed11_round0"><span>11</span> <b>North Carolina State</b> - 50.3%</td><td class="seed7_round 1"><span>7</span> <b>Gonzaga</b> - 6.6%</td><td class="seed7_round2"><span>7</span> <b>Saint Mary's</b> - 2.1%</td><td class="seed8_round3"><span>8</span> <b>Creighton</b> - 0.5%</td><td class="seed8_round4"><span>8</span> <b>Creighton</b> - 0.2%</td><td class="seed6_round5"><span>6</span> <b>UNLV</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed6_round0"><span>6</span> <b>San Diego State</b> - 49.7%</td><td class="seed9_round 1"><span>9</span> <b>Connecticut</b> - 6.1%</td><td class="seed8_round2"><span>8</span> <b>Creighton</b> - 1.5%</td><td class="seed10_round3"><span>10</span> <b>West Virginia</b> - 0.5%</td><td class="seed10_round4"><span>10</span> <b>West Virginia</b> - 0.2%</td><td class="seed9_round5"><span>9</span> <b>Alabama</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed10_round0"><span>10</span> <b>West Virginia</b> - 48.5%</td><td class="seed14_round 1"><span>14</span> <b>Belmont</b> - 5.9%</td><td class="seed10_round2"><span>10</span> <b>Purdue</b> - 1.4%</td><td class="seed7_round3"><span>7</span> <b>Saint Mary's</b> - 0.4%</td><td class="seed12_round4"><span>12</span> <b>Virginia Commonwealth</b> - 0.2%</td><td class="seed12_round5"><span>12</span> <b>Virginia Commonwealth</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed10_round0"><span>10</span> <b>Purdue</b> - 47.3%</td><td class="seed12_round 1"><span>12</span> <b>South Florda</b> - 5.6%</td><td class="seed10_round2"><span>10</span> <b>West Virginia</b> - 1.4%</td><td class="seed12_round3"><span>12</span> <b>Virginia Commonwealth</b> - 0.4%</td><td class="seed9_round4"><span>9</span> <b>Alabama</b> - 0.2%</td><td class="seed6_round5"><span>6</span> <b>San Diego State</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed9_round0"><span>9</span> <b>Alabama</b> - 43.5%</td><td class="seed10_round 1"><span>10</span> <b>West Virginia</b> - 5.4%</td><td class="seed12_round2"><span>12</span> <b>Long Beach State</b> - 1.3%</td><td class="seed11_round3"><span>11</span> <b>Texas</b> - 0.4%</td><td class="seed11_round4"><span>11</span> <b>Texas</b> - 0.2%</td><td class="seed8_round5"><span>8</span> <b>Iowa State</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed10_round0"><span>10</span> <b>Xavier</b> - 42.9%</td><td class="seed10_round 1"><span>10</span> <b>Xavier</b> - 5.0%</td><td class="seed10_round2"><span>10</span> <b>Xavier</b> - 1.2%</td><td class="seed9_round3"><span>9</span> <b>Alabama</b> - 0.4%</td><td class="seed7_round4"><span>7</span> <b>Saint Mary's</b> - 0.1%</td><td class="seed8_round5"><span>8</span> <b>Creighton</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed12_round0"><span>12</span> <b>Virginia Commonwealth</b> - 37.1%</td><td class="seed7_round 1"><span>7</span> <b>Saint Mary's</b> - 4.8%</td><td class="seed12_round2"><span>12</span> <b>Virginia Commonwealth</b> - 1.1%</td><td class="seed10_round3"><span>10</span> <b>Purdue</b> - 0.4%</td><td class="seed10_round4"><span>10</span> <b>Purdue</b> - 0.1%</td><td class="seed16_round5"><span>16</span> <b>Western Kentucky</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed8_round0"><span>8</span> <b>Iowa State</b> - 32.2%</td><td class="seed11_round 1"><span>11</span> <b>Texas</b> - 4.6%</td><td class="seed11_round2"><span>11</span> <b>Texas</b> - 1.0%</td><td class="seed10_round3"><span>10</span> <b>Virginia</b> - 0.3%</td><td class="seed8_round4"><span>8</span> <b>Iowa State</b> - 0.1%</td><td class="seed16_round5"><span>16</span> <b>UNC-Asheville</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed12_round0"><span>12</span> <b>Long Beach State</b> - 28.6%</td><td class="seed12_round 1"><span>12</span> <b>Harvard</b> - 4.5%</td><td class="seed10_round2"><span>10</span> <b>Virginia</b> - 1.0%</td><td class="seed12_round3"><span>12</span> <b>Long Beach State</b> - 0.3%</td><td class="seed16_round4"><span>16</span> <b>UNC-Asheville</b> - 0.1%</td><td class="seed10_round5"><span>10</span> <b>Purdue</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed10_round0"><span>10</span> <b>Virginia</b> - 28.2%</td><td class="seed13_round 1"><span>13</span> <b>Ohio</b> - 4.2%</td><td class="seed12_round2"><span>12</span> <b>Harvard</b> - 0.9%</td><td class="seed12_round3"><span>12</span> <b>Harvard</b> - 0.3%</td><td class="seed12_round4"><span>12</span> <b>Harvard</b> - 0.1%</td><td class="seed11_round5"><span>11</span> <b>Colorado</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed9_round0"><span>9</span> <b>Saint Louis</b> - 27.9%</td><td class="seed13_round 1"><span>13</span> <b>Davidson</b> - 3.9%</td><td class="seed9_round2"><span>9</span> <b>Alabama</b> - 0.9%</td><td class="seed10_round3"><span>10</span> <b>Xavier</b> - 0.3%</td><td class="seed16_round4"><span>16</span> <b>Western Kentucky</b> - 0.1%</td><td class="seed12_round5"><span>12</span> <b>Harvard</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed11_round0"><span>11</span> <b>Texas</b> - 26.8%</td><td class="seed10_round 1"><span>10</span> <b>Purdue</b> - 3.5%</td><td class="seed14_round2"><span>14</span> <b>Belmont</b> - 0.9%</td><td class="seed16_round3"><span>16</span> <b>UNC-Asheville</b> - 0.3%</td><td class="seed16_round4"><span>16</span> <b>LIU</b> - 0.1%</td><td class="seed14_round5"><span>14</span> <b>Brigham Young</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed11_round0"><span>11</span> <b>Colorado</b> - 23.1%</td><td class="seed13_round 1"><span>13</span> <b>New Mexico State</b> - 3.4%</td><td class="seed8_round2"><span>8</span> <b>Iowa State</b> - 0.7%</td><td class="seed8_round3"><span>8</span> <b>Iowa State</b> - 0.3%</td><td class="seed10_round4"><span>10</span> <b>Xavier</b> - 0.1%</td><td class="seed7_round5"><span>7</span> <b>Saint Mary's</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed12_round0"><span>12</span> <b>South Florda</b> - 22.8%</td><td class="seed11_round 1"><span>11</span> <b>Colorado</b> - 3.0%</td><td class="seed11_round2"><span>11</span> <b>Colorado</b> - 0.6%</td><td class="seed16_round3"><span>16</span> <b>LIU</b> - 0.3%</td><td class="seed10_round4"><span>10</span> <b>Virginia</b> - 0.1%</td><td class="seed10_round5"><span>10</span> <b>Xavier</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed9_round0"><span>9</span> <b>Southern Miss</b> - 22.7%</td><td class="seed8_round 1"><span>8</span> <b>Creighton</b> - 2.8%</td><td class="seed15_round2"><span>15</span> <b>Detroit</b> - 0.6%</td><td class="seed16_round3"><span>16</span> <b>Western Kentucky</b> - 0.2%</td><td class="seed12_round4"><span>12</span> <b>Long Beach State</b> - 0.1%</td><td class="seed10_round5"><span>10</span> <b>Virginia</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed12_round0"><span>12</span> <b>Harvard</b> - 16.0%</td><td class="seed10_round 1"><span>10</span> <b>Virginia</b> - 2.8%</td><td class="seed9_round2"><span>9</span> <b>Saint Louis</b> - 0.6%</td><td class="seed14_round3"><span>14</span> <b>Belmont</b> - 0.2%</td><td class="seed11_round4"><span>11</span> <b>Colorado</b> - 0.1%</td><td class="seed12_round5"><span>12</span> <b>Long Beach State</b> - 0.1%</td></tr><tr class="evenrow"><td class="seed14_round0"><span>14</span> <b>Belmont</b> - 15.0%</td><td class="seed14_round 1"><span>14</span> <b>Brigham Young</b> - 2.5%</td><td class="seed13_round2"><span>13</span> <b>Davidson</b> - 0.5%</td><td class="seed16_round3"><span>16</span> <b>Vermont</b> - 0.2%</td><td class="seed14_round4"><span>14</span> <b>Brigham Young</b> - 0.1%</td><td class="seed16_round5"><span>16</span> <b>LIU</b> - 0.1%</td></tr><tr class="oddrow"><td class="seed11_round0"><span>11</span> <b>Colorado State</b> - 14.9%</td><td class="seed11_round 1"><span>11</span> <b>Colorado State</b> - 2.2%</td><td class="seed9_round2"><span>9</span> <b>Southern Miss</b> - 0.5%</td><td class="seed14_round3"><span>14</span> <b>Brigham Young</b> - 0.2%</td><td class="seed15_round4"><span>15</span> <b>Detroit</b> - 0.1%</td><td class="seed15_round5"><span>15</span> <b>Detroit</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed13_round0"><span>13</span> <b>New Mexico State</b> - 13.3%</td><td class="seed9_round 1"><span>9</span> <b>Southern Miss</b> - 2.2%</td><td class="seed14_round2"><span>14</span> <b>Brigham Young</b> - 0.5%</td><td class="seed11_round3"><span>11</span> <b>Colorado</b> - 0.2%</td><td class="seed16_round4"><span>16</span> <b>Vermont</b> - 0.1%</td><td class="seed16_round5"><span>16</span> <b>Vermont</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed13_round0"><span>13</span> <b>Ohio</b> - 11.6%</td><td class="seed9_round 1"><span>9</span> <b>Alabama</b> - 2.0%</td><td class="seed12_round2"><span>12</span> <b>South Florda</b> - 0.4%</td><td class="seed15_round3"><span>15</span> <b>Detroit</b> - 0.2%</td><td class="seed14_round4"><span>14</span> <b>Belmont</b> - 0.1%</td><td class="seed12_round5"><span>12</span> <b>South Florda</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed13_round0"><span>13</span> <b>Davidson</b> - 10.8%</td><td class="seed13_round 1"><span>13</span> <b>Montana</b> - 1.9%</td><td class="seed13_round2"><span>13</span> <b>Ohio</b> - 0.4%</td><td class="seed9_round3"><span>9</span> <b>Saint Louis</b> - 0.2%</td><td class="seed12_round4"><span>12</span> <b>South Florda</b> - 0.1%</td><td class="seed14_round5"><span>14</span> <b>South Dakota State</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed13_round0"><span>13</span> <b>Montana</b> - 10.6%</td><td class="seed9_round 1"><span>9</span> <b>Saint Louis</b> - 1.6%</td><td class="seed13_round2"><span>13</span> <b>Montana</b> - 0.4%</td><td class="seed13_round3"><span>13</span> <b>Ohio</b> - 0.2%</td><td class="seed9_round4"><span>9</span> <b>Saint Louis</b> - 0.1%</td><td class="seed14_round5"><span>14</span> <b>St. Bonaventure</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed14_round0"><span>14</span> <b>Brigham Young</b> - 6.4%</td><td class="seed8_round 1"><span>8</span> <b>Iowa State</b> - 1.5%</td><td class="seed11_round2"><span>11</span> <b>Colorado State</b> - 0.4%</td><td class="seed12_round3"><span>12</span> <b>South Florda</b> - 0.1%</td><td class="seed9_round4"><span>9</span> <b>Southern Miss</b> - 0.1%</td><td class="seed14_round5"><span>14</span> <b>Belmont</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed14_round0"><span>14</span> <b>St. Bonaventure</b> - 4.0%</td><td class="seed14_round 1"><span>14</span> <b>South Dakota State</b> - 1.5%</td><td class="seed15_round2"><span>15</span> <b>Lehigh</b> - 0.4%</td><td class="seed13_round3"><span>13</span> <b>Davidson</b> - 0.1%</td><td class="seed13_round4"><span>13</span> <b>Davidson</b> - 0.1%</td><td class="seed9_round5"><span>9</span> <b>Saint Louis</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed14_round0"><span>14</span> <b>South Dakota State</b> - 3.9%</td><td class="seed14_round 1"><span>14</span> <b>St. Bonaventure</b> - 1.5%</td><td class="seed15_round2"><span>15</span> <b>Norfolk State</b> - 0.3%</td><td class="seed9_round3"><span>9</span> <b>Southern Miss</b> - 0.1%</td><td class="seed13_round4"><span>13</span> <b>Montana</b> - 0.1%</td><td class="seed9_round5"><span>9</span> <b>Southern Miss</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed15_round0"><span>15</span> <b>Detroit</b> - 2.4%</td><td class="seed15_round 1"><span>15</span> <b>Detroit</b> - 1.2%</td><td class="seed15_round2"><span>15</span> <b>Loyola (MD)</b> - 0.3%</td><td class="seed11_round3"><span>11</span> <b>Colorado State</b> - 0.1%</td><td class="seed13_round4"><span>13</span> <b>Ohio</b> - 0.1%</td><td class="seed11_round5"><span>11</span> <b>Colorado State</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed15_round0"><span>15</span> <b>Loyola (MD)</b> - 1.4%</td><td class="seed15_round 1"><span>15</span> <b>Loyola (MD)</b> - 0.6%</td><td class="seed16_round2"><span>16</span> <b>UNC-Asheville</b> - 0.3%</td><td class="seed13_round3"><span>13</span> <b>Montana</b> - 0.1%</td><td class="seed14_round4"><span>14</span> <b>South Dakota State</b> - 0.1%</td><td class="seed13_round5"><span>13</span> <b>Davidson</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed16_round0"><span>16</span> <b>UNC-Asheville</b> - 1.3%</td><td class="seed15_round 1"><span>15</span> <b>Lehigh</b> - 0.6%</td><td class="seed16_round2"><span>16</span> <b>LIU</b> - 0.3%</td><td class="seed14_round3"><span>14</span> <b>St. Bonaventure</b> - 0.1%</td><td class="seed14_round4"><span>14</span> <b>St. Bonaventure</b> - 0.1%</td><td class="seed13_round5"><span>13</span> <b>Montana</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed15_round0"><span>15</span> <b>Norfolk State</b> - 1.2%</td><td class="seed16_round 1"><span>16</span> <b>UNC-Asheville</b> - 0.5%</td><td class="seed14_round2"><span>14</span> <b>South Dakota State</b> - 0.3%</td><td class="seed13_round3"><span>13</span> <b>New Mexico State</b> - 0.1%</td><td class="seed11_round4"><span>11</span> <b>Colorado State</b> - 0.0%</td><td class="seed13_round5"><span>13</span> <b>Ohio</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed15_round0"><span>15</span> <b>Lehigh</b> - 1.2%</td><td class="seed15_round 1"><span>15</span> <b>Norfolk State</b> - 0.5%</td><td class="seed14_round2"><span>14</span> <b>St. Bonaventure</b> - 0.3%</td><td class="seed14_round3"><span>14</span> <b>South Dakota State</b> - 0.1%</td><td class="seed15_round4"><span>15</span> <b>Lehigh</b> - 0.0%</td><td class="seed15_round5"><span>15</span> <b>Lehigh</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed16_round0"><span>16</span> <b>LIU</b> - 0.9%</td><td class="seed16_round 1"><span>16</span> <b>LIU</b> - 0.5%</td><td class="seed16_round2"><span>16</span> <b>Western Kentucky</b> - 0.3%</td><td class="seed15_round3"><span>15</span> <b>Lehigh</b> - 0.1%</td><td class="seed13_round4"><span>13</span> <b>New Mexico State</b> - 0.0%</td><td class="seed15_round5"><span>15</span> <b>Loyola (MD)</b> - 0.0%</td></tr><tr class="oddrow"><td class="seed16_round0"><span>16</span> <b>Vermont</b> - 0.7%</td><td class="seed16_round 1"><span>16</span> <b>Vermont</b> - 0.4%</td><td class="seed16_round2"><span>16</span> <b>Vermont</b> - 0.3%</td><td class="seed15_round3"><span>15</span> <b>Norfolk State</b> - 0.1%</td><td class="seed15_round4"><span>15</span> <b>Norfolk State</b> - 0.0%</td><td class="seed13_round5"><span>13</span> <b>New Mexico State</b> - 0.0%</td></tr><tr class="evenrow"><td class="seed16_round0"><span>16</span> <b>Western Kentucky</b> - 0.7%</td><td class="seed16_round 1"><span>16</span> <b>Western Kentucky</b> - 0.4%</td><td class="seed13_round2"><span>13</span> <b>New Mexico State</b> - 0.3%</td><td class="seed15_round3"><span>15</span> <b>Loyola (MD)</b> - 0.1%</td><td class="seed15_round4"><span>15</span> <b>Loyola (MD)</b> - 0.0%</td><td class="seed15_round5"><span>15</span> <b>Norfolk State</b> - 0.0%</td></tr></tbody></table></div></div></div>
+
+<div id="errorBox" style="display:none;">
+<div class="thickbox-wrap1 error-wrap1">
+	<a href="#" class="TB_closeWindowButton"><div class="thickbox-closebtn errorbtn"></div></a>
+	<div class="thickbox-wrap2">
+		<div class="thickbox-content error">
+			<h2 class="error-header">There has been an error.</h2>	
+			<p class="help-text">Please try your request again.</p>
+		</div>
+		<div class="thickbox-foot error-foot"></div>
+	</div>
+</div>
+</div></div><!-- begin footer -->
+<div id="footer" class="container">
+<script type="text/javascript">//<![CDATA[
+var link = window.location;
+var bugText = '<a href="#" onclick="window.open(\'http://dynamic.espn.go.com/espn/bugs?url=' + escape(link) + '\', \'Bugs\',\'noresizable,noscrollbars,height=400,width=400\');">Report a Bug</a> | ';
+//]]>
+</script>
+<span style="font-weight:bold;">ESPN.com:</span> <a href="http://sports.espn.go.com/espn/news/story?page=help/index">Help</a> | <a href="http://www.espnmediazone3.com/us/category/releases/" rel="nofollow">PR Media Kit</a> | <a href="http://www.espncms.com/Advertise-on-ESPN.aspx" rel="nofollow">Advertise on ESPN.com</a> | <a href="http://www.espncms.com" rel="nofollow">Sales Media Kit</a> | <a href="http://preferences.truste.com/2.0/?type=espn&affiliateId=148" onclick="window.open('http://preferences.truste.com/2.0/?type=espn&affiliateId=148','popup','width=986,height=878,scrollbars=yes,resizable=no,toolbar=no,directories=no,location=no,menubar=no,status=no,left=0,top=0'); return false">Interest-Based Ads</a> | <script type="text/javascript">document.write(bugText);</script><a href="http://espn.go.com/espn/corrections">Corrections</a> | <a href="http://sports.espn.go.com/espn/news/story?page=contact/index">Contact Us</a> | <a href="http://espn.go.com/espn/sitemap">Site Map</a> | <a href="http://espn.go.com/espn/news/story?page=patents">Patents</a> | <a href="http://espncareers.com">Jobs at ESPN</a> | <a href="http://corporate.disney.go.com/corporate/sourcing.html" rel="nofollow"><span style="font-weight:bold;">Supplier Information</span></a><br/>&copy;2012 ESPN Internet Ventures. <a href="http://disney.go.com/corporate/legal/terms.html" rel="nofollow">Terms of Use</a> and <a href="http://disney.go.com/corporate/privacy/pp_espn.html" rel="nofollow">Privacy Policy and Safety Information/Your California Privacy Rights</a> are applicable to you.  All rights reserved.
+
+<!--
+<a href="http://www.espnshop.com/" onClick="location.href('http://log.go.com/log?srvc=sz&guid=73B641A0-6660-4EFC-B8FF-9DE23E8CD9BD&drop=0&addata=3374:65:478847:65&a=1&goto=http://www.espnshop.com/');return false">Shop</a>
+-->
+</div>
+<!-- end footer -->
+</div>
+</div></div>
+
+
+<!-- SiteCatalyst code version: H.21.3 Copyright 1997-2010 Omniture, Inc. http://www.omniture.com -->
+<script type="text/javascript">
+	var s_account="wdgespfantasy";
+	var omniPageName = "fantasy:basketball:tcmen:whopickedwhom";
+	
+	var insiderStatus = "",
+	anGen = "",
+	anYear = "",
+	anDateString = "",
+	anLoginStatus = "",
+	undef = 'undefined',
+	callOmniture = function(){
+		if (typeof anCV != "undefined"){anParseLoginBarInfo(anCV);}
+		s_omni.pageName="basketball:tcmen:whopickedwhom";
+		s_omni.server = window.location.host; // Server from the Host
+		s_omni.channel = "basketball";
+		s_omni.prop1 = "fantasy";
+		s_omni.prop4 = "index";
+		s_omni.prop5 = "basketball:tcmen";
+		s_omni.prop11 = (insiderStatus !== null) ? insiderStatus + ":premium-no" : "premium-no";
+		s_omni.prop17 = "en";
+		s_omni.prop21 = anDateString;
+		s_omni.prop22 = anGen;
+		s_omni.prop25 = "basketball";
+		s_omni.prop29 = anLoginStatus;
+		s_omni.prop30 = "n";
+		s_omni.hier1 = "basketball:tcmen:whopickedwhom";
+		s_omni.eVar7 = anYear + ":" + anGen + ":" + anLoginStatus + ":" + s_omni.prop11 + ":";
+		s_omni.eVar9 = "en";
+		s_omni.eVar13 = "basketball:tcmen:whopickedwhom";
+		s_omni.eVar19 = "basketball";
+		
+		if (s_omni.prop11=="anonymous:premium-yes" || s_omni.prop11=="insider-no:premium-yes" && typeof s_omni.prop4!="undefined" &&
+			(s_omni.prop4=="story" || s_omni.prop4=="blog")) {
+			if (typeof s_omni.events != "undefined" && s_omni.events!="") {
+				s_omni.events = s_omni.events+",event8" }
+			else { s_omni.events="event8" }
+		}
+		anDebugCase = "ver_15Feb11_0_";
+		/************* DO NOT ALTER ANYTHING BELOW THIS LINE ! **************/
+		var s_code=s_omni.t();
+		if(s_code) {
+			//document.write(s_code);
+			jQuery('body').append(s_code);
+		}
+	};
+	
+
+
+	jQuery(function($) {
+		// we want to load the analytics files from the cache if possible - so, let's use full $.ajax() calls
+		$.ajax({
+			type:'GET',
+			url: 'http://a.espncdn.com/combiner/c?js=analytics/sOmni.js,analytics/analytics.js,analytics/zf.js,analytics/externalnielsen.js',
+			dataType: 'script',
+			cache: true,
+			success: function() {
+				var lgSrc;
+				if(typeof anCV !== undef && anCV === '' && document.getElementById('form-memberarea') != null) {
+					lgSrc = ('https:' === document.location.protocol) ? 'https://r.espn.go.com/members/util/getUserInfo?cb=runOmnitureIndependently' : 'http://sports.espn.go.com/espn/js/uniloginInLineReplace?cb=runOmnitureIndependently';
+					$.getScript(lgSrc); // we don't want this to be cached - so we'll use the $.getScript() method
+				} else {
+					callOmniture();
+					if (typeof(zf) != "undefined") zf("http://espn.zoomflow.com/zf", "ZoomFlow");
+				}
+			}
+		});
+	});
+
+</script>
+<!-- End SiteCatalyst code version: H.21. -->
+<script>
+
+// Core maxpart structure
+espn.fantasy.maxpart.config.User = {};
+espn.fantasy.maxpart.config.Entry = {};
+espn.fantasy.maxpart.config.Group = {};
+espn.fantasy.maxpart.config.baseURL = "http://games.espn.go.com/tournament-challenge-bracket/en/";
+espn.fantasy.maxpart.config.context = "whopickedwhom";
+espn.fantasy.maxpart.config.modules = [mp_modules.core['socialReveal'],mp_modules.core['menuDropdowns'],mp_modules.core['sponsoredLinks']];
+espn.fantasy.maxpart.config.translatedText = {};
+espn.fantasy.maxpart.config.gameProperties = {playerLinkURLTeam:'http://a.espncdn.com/i/teamlogos/ncaa/sml/trans/<ID>.gif',gameName:'Tournament Challenge',yearFull:'2012'};
+espn.fantasy.maxpart.config.teamData = {teams: [{id:1,eid:96,n:'Kentucky',s:'1',a:'UK'},{id:2,eid:98,n:'W Kentucky',s:'16',a:'WKY'},{id:3,eid:66,n:'Iowa St',s:'8',a:'ISU'},{id:4,eid:41,n:'UConn',s:'9',a:'CONN'},{id:5,eid:2724,n:'Wichita St',s:'5',a:'WICH'},{id:6,eid:2670,n:'VCU',s:'12',a:'VCU'},{id:7,eid:84,n:'Indiana',s:'4',a:'IND'},{id:8,eid:166,n:'New Mex St',s:'13',a:'NMSU'},{id:9,eid:2439,n:'UNLV',s:'6',a:'UNLV'},{id:10,eid:38,n:'Colorado',s:'11',a:'COLO'},{id:11,eid:239,n:'Baylor',s:'3',a:'BAY'},{id:12,eid:2571,n:'S Dakota St',s:'14',a:'SDST'},{id:13,eid:87,n:'N Dame',s:'7',a:'ND'},{id:14,eid:2752,n:'Xavier',s:'10',a:'XAV'},{id:15,eid:150,n:'Duke',s:'2',a:'DUKE'},{id:16,eid:2329,n:'Lehigh',s:'15',a:'LEH'},{id:17,eid:127,n:'Mich St',s:'1',a:'MSU'},{id:18,eid:2341,n:'LIU',s:'16',a:'LIU'},{id:19,eid:235,n:'Memphis',s:'8',a:'MEM'},{id:20,eid:139,n:'Saint Louis',s:'9',a:'SLU'},{id:21,eid:167,n:'New Mexico',s:'5',a:'UNM'},{id:22,eid:299,n:'L Beach St',s:'12',a:'LBSU'},{id:23,eid:97,n:'Louisville',s:'4',a:'LOU'},{id:24,eid:2166,n:'Davidson',s:'13',a:'DAV'},{id:25,eid:93,n:'Murray St',s:'6',a:'MURR'},{id:26,eid:36,n:'Colo St',s:'11',a:'CSU'},{id:27,eid:269,n:'Marquette',s:'3',a:'MARQ'},{id:28,eid:252,n:'BYU',s:'14',a:'BYU'},{id:29,eid:57,n:'Florida',s:'7',a:'FLA'},{id:30,eid:258,n:'Virginia',s:'10',a:'UVA'},{id:31,eid:142,n:'Missouri',s:'2',a:'MIZZ'},{id:32,eid:2450,n:'Norfolk St',s:'15',a:'NORF'},{id:33,eid:183,n:'Syracuse',s:'1',a:'SYR'},{id:34,eid:2427,n:'UNC-Ash',s:'16',a:'UNCA'},{id:35,eid:2306,n:'Kansas St',s:'8',a:'KSU'},{id:36,eid:2572,n:'So Miss',s:'9',a:'USM'},{id:37,eid:238,n:'Vanderbilt',s:'5',a:'VAN'},{id:38,eid:108,n:'Harvard',s:'12',a:'HARV'},{id:39,eid:275,n:'Wisconsin',s:'4',a:'WIS'},{id:40,eid:149,n:'Montana',s:'13',a:'MONT'},{id:41,eid:2132,n:'Cincy',s:'6',a:'CIN'},{id:42,eid:251,n:'Texas',s:'11',a:'TEX'},{id:43,eid:52,n:'Florida St',s:'3',a:'FSU'},{id:44,eid:179,n:'St B\'nvntre',s:'14',a:'SBON'},{id:45,eid:2250,n:'Gonzaga',s:'7',a:'GONZ'},{id:46,eid:277,n:'W Virginia',s:'10',a:'WVU'},{id:47,eid:194,n:'Ohio St',s:'2',a:'OSU'},{id:48,eid:2352,n:'Loyola MD',s:'15',a:'L-MD'},{id:49,eid:153,n:'UNC',s:'1',a:'UNC'},{id:50,eid:261,n:'Vermont',s:'16',a:'UVM'},{id:51,eid:156,n:'Creighton',s:'8',a:'CREI'},{id:52,eid:333,n:'Alabama',s:'9',a:'ALA'},{id:53,eid:218,n:'Temple',s:'5',a:'TEM'},{id:54,eid:58,n:'USF',s:'12',a:'USF'},{id:55,eid:130,n:'Michigan',s:'4',a:'MICH'},{id:56,eid:195,n:'Ohio',s:'13',a:'OHIO'},{id:57,eid:21,n:'SDSU',s:'6',a:'SDSU'},{id:58,eid:152,n:'NC State',s:'11',a:'NCST'},{id:59,eid:46,n:'G\'town',s:'3',a:'GTWN'},{id:60,eid:2057,n:'Belmont',s:'14',a:'BEL'},{id:61,eid:2608,n:'St Mary\'s',s:'7',a:'SMC'},{id:62,eid:2509,n:'Purdue',s:'10',a:'PUR'},{id:63,eid:2305,n:'Kansas',s:'2',a:'KU'},{id:64,eid:2174,n:'Detroit',s:'15',a:'DET'}]};
+espn.fantasy.maxpart.config.locale = 'en';
+espn.fantasy.maxpart.config.service = 'tcmen';
+espn.fantasy.maxpart.config.savedPicks = '';
+espn.fantasy.maxpart.config.pickString = '';
+espn.fantasy.maxpart.config.rounds = 6;
+espn.fantasy.maxpart.config.entryID = 0;
+espn.fantasy.maxpart.config.teamsInBracket = 64;
+espn.fantasy.maxpart.config.ajax = false;
+espn.fantasy.maxpart.config.isModule = false;
+espn.fantasy.maxpart.config.premium = false;
+espn.fantasy.maxpart.config.User.swid = 'null';
+
+</script><!--[if lte IE 9]></div><![endif]-->
+</body></html>

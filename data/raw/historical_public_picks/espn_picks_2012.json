@@ -1,0 +1,623 @@
+{
+  "year": 2012,
+  "source": "ESPN Tournament Challenge Who Picked Whom (Internet Archive capture of ESPN's page)",
+  "_data_quality": "real_espn",
+  "captured_at": "2012-03-15T07:25:51+00:00",
+  "capture_evidence": {
+    "method": "Pick shares transcribed from the Internet Archive capture below; the capture time is the archive's own timestamp.",
+    "selection_rule": "latest pre-tip capture showing all 64 teams x 6 rounds (decided before the values were read)",
+    "round_of_64_tip_bound": "2012-03-15T12:00:00-04:00",
+    "capture": {
+      "archive_url": "https://web.archive.org/web/20120315072551/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom",
+      "raw_url": "https://web.archive.org/web/20120315072551id_/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom",
+      "archive_timestamp_utc": "2012-03-15T07:25:51+00:00",
+      "original_url": "http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom",
+      "evidence_file": "data/raw/historical_public_picks/evidence/wayback_2012_20120315072551.html.bin",
+      "evidence_sha256": "35bcd469c8bb5e175843fe5e85e5b3b039205e1a3360dd962acd9a96f22613e8"
+    },
+    "other_pre_tip_captures": [
+      {
+        "archive_url": "https://web.archive.org/web/20120314033150/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?",
+        "raw_url": "https://web.archive.org/web/20120314033150id_/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?",
+        "archive_timestamp_utc": "2012-03-14T03:31:50+00:00",
+        "original_url": "http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?",
+        "evidence_file": "data/raw/historical_public_picks/evidence/wayback_2012_20120314033150.html.bin",
+        "evidence_sha256": "780d519ea9ab8a9821dd29623c02b059bc8cd1cec477c791fa4f08af204cc2c6"
+      },
+      {
+        "archive_url": "https://web.archive.org/web/20120315060740/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?entryID=0",
+        "raw_url": "https://web.archive.org/web/20120315060740id_/http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?entryID=0",
+        "archive_timestamp_utc": "2012-03-15T06:07:40+00:00",
+        "original_url": "http://games.espn.go.com:80/tournament-challenge-bracket/en/whopickedwhom?entryID=0",
+        "evidence_file": "data/raw/historical_public_picks/evidence/wayback_2012_20120315060740.html.bin",
+        "evidence_sha256": "6d3634399a8b715079ec7f855186a1b32cfb109285e2c46975f71fce1d91a5e8"
+      }
+    ],
+    "name_mapping_notes": {
+      "South Florda": "south_florida (spelling as shown on ESPN's page)",
+      "Detroit": "detroit_mercy",
+      "North Carolina State": "nc_state",
+      "Southern Miss": "southern_miss"
+    },
+    "checks": "64 page teams equal the 2012 Round-of-64 field after the First Four; per-round shares sum to 32/16/8/4/2/1 within display rounding.",
+    "recorded_on": "2026-10-11"
+  },
+  "teams": {
+    "kentucky": {
+      "seed": 1,
+      "R64": 0.993,
+      "R32": 0.921,
+      "S16": 0.842,
+      "E8": 0.681,
+      "F4": 0.518,
+      "CHAMP": 0.351
+    },
+    "michigan_state": {
+      "seed": 1,
+      "R64": 0.991,
+      "R32": 0.904,
+      "S16": 0.705,
+      "E8": 0.357,
+      "F4": 0.131,
+      "CHAMP": 0.075
+    },
+    "north_carolina": {
+      "seed": 1,
+      "R64": 0.993,
+      "R32": 0.948,
+      "S16": 0.852,
+      "E8": 0.562,
+      "F4": 0.389,
+      "CHAMP": 0.173
+    },
+    "syracuse": {
+      "seed": 1,
+      "R64": 0.987,
+      "R32": 0.818,
+      "S16": 0.501,
+      "E8": 0.245,
+      "F4": 0.121,
+      "CHAMP": 0.056
+    },
+    "duke": {
+      "seed": 2,
+      "R64": 0.988,
+      "R32": 0.864,
+      "S16": 0.457,
+      "E8": 0.13,
+      "F4": 0.075,
+      "CHAMP": 0.038
+    },
+    "kansas": {
+      "seed": 2,
+      "R64": 0.976,
+      "R32": 0.906,
+      "S16": 0.721,
+      "E8": 0.306,
+      "F4": 0.183,
+      "CHAMP": 0.062
+    },
+    "missouri": {
+      "seed": 2,
+      "R64": 0.988,
+      "R32": 0.847,
+      "S16": 0.647,
+      "E8": 0.408,
+      "F4": 0.136,
+      "CHAMP": 0.072
+    },
+    "ohio_state": {
+      "seed": 2,
+      "R64": 0.986,
+      "R32": 0.875,
+      "S16": 0.496,
+      "E8": 0.332,
+      "F4": 0.12,
+      "CHAMP": 0.047
+    },
+    "baylor": {
+      "seed": 3,
+      "R64": 0.961,
+      "R32": 0.803,
+      "S16": 0.443,
+      "E8": 0.105,
+      "F4": 0.043,
+      "CHAMP": 0.017
+    },
+    "florida_state": {
+      "seed": 3,
+      "R64": 0.96,
+      "R32": 0.763,
+      "S16": 0.401,
+      "E8": 0.26,
+      "F4": 0.089,
+      "CHAMP": 0.029
+    },
+    "georgetown": {
+      "seed": 3,
+      "R64": 0.85,
+      "R32": 0.593,
+      "S16": 0.168,
+      "E8": 0.05,
+      "F4": 0.02,
+      "CHAMP": 0.006
+    },
+    "marquette": {
+      "seed": 3,
+      "R64": 0.936,
+      "R32": 0.615,
+      "S16": 0.19,
+      "E8": 0.077,
+      "F4": 0.018,
+      "CHAMP": 0.007
+    },
+    "indiana": {
+      "seed": 4,
+      "R64": 0.866,
+      "R32": 0.534,
+      "S16": 0.07,
+      "E8": 0.029,
+      "F4": 0.012,
+      "CHAMP": 0.006
+    },
+    "louisville": {
+      "seed": 4,
+      "R64": 0.892,
+      "R32": 0.648,
+      "S16": 0.193,
+      "E8": 0.069,
+      "F4": 0.018,
+      "CHAMP": 0.008
+    },
+    "michigan": {
+      "seed": 4,
+      "R64": 0.884,
+      "R32": 0.63,
+      "S16": 0.086,
+      "E8": 0.032,
+      "F4": 0.013,
+      "CHAMP": 0.006
+    },
+    "wisconsin": {
+      "seed": 4,
+      "R64": 0.894,
+      "R32": 0.409,
+      "S16": 0.159,
+      "E8": 0.037,
+      "F4": 0.01,
+      "CHAMP": 0.004
+    },
+    "new_mexico": {
+      "seed": 5,
+      "R64": 0.714,
+      "R32": 0.231,
+      "S16": 0.038,
+      "E8": 0.008,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "temple": {
+      "seed": 5,
+      "R64": 0.771,
+      "R32": 0.272,
+      "S16": 0.027,
+      "E8": 0.008,
+      "F4": 0.003,
+      "CHAMP": 0.001
+    },
+    "vanderbilt": {
+      "seed": 5,
+      "R64": 0.84,
+      "R32": 0.527,
+      "S16": 0.27,
+      "E8": 0.069,
+      "F4": 0.018,
+      "CHAMP": 0.006
+    },
+    "wichita_state": {
+      "seed": 5,
+      "R64": 0.629,
+      "R32": 0.311,
+      "S16": 0.028,
+      "E8": 0.011,
+      "F4": 0.004,
+      "CHAMP": 0.002
+    },
+    "cincinnati": {
+      "seed": 6,
+      "R64": 0.732,
+      "R32": 0.177,
+      "S16": 0.051,
+      "E8": 0.021,
+      "F4": 0.006,
+      "CHAMP": 0.002
+    },
+    "murray_state": {
+      "seed": 6,
+      "R64": 0.852,
+      "R32": 0.338,
+      "S16": 0.077,
+      "E8": 0.031,
+      "F4": 0.008,
+      "CHAMP": 0.003
+    },
+    "san_diego_state": {
+      "seed": 6,
+      "R64": 0.497,
+      "R32": 0.165,
+      "S16": 0.029,
+      "E8": 0.007,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "nevada_las_vegas": {
+      "seed": 6,
+      "R64": 0.769,
+      "R32": 0.152,
+      "S16": 0.05,
+      "E8": 0.007,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "florida": {
+      "seed": 7,
+      "R64": 0.718,
+      "R32": 0.12,
+      "S16": 0.065,
+      "E8": 0.024,
+      "F4": 0.007,
+      "CHAMP": 0.003
+    },
+    "gonzaga": {
+      "seed": 7,
+      "R64": 0.515,
+      "R32": 0.066,
+      "S16": 0.022,
+      "E8": 0.008,
+      "F4": 0.003,
+      "CHAMP": 0.001
+    },
+    "notre_dame": {
+      "seed": 7,
+      "R64": 0.57,
+      "R32": 0.081,
+      "S16": 0.025,
+      "E8": 0.005,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "saint_mary_s__ca": {
+      "seed": 7,
+      "R64": 0.527,
+      "R32": 0.048,
+      "S16": 0.021,
+      "E8": 0.004,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "creighton": {
+      "seed": 8,
+      "R64": 0.565,
+      "R32": 0.028,
+      "S16": 0.015,
+      "E8": 0.005,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "iowa_state": {
+      "seed": 8,
+      "R64": 0.322,
+      "R32": 0.015,
+      "S16": 0.007,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "kansas_state": {
+      "seed": 8,
+      "R64": 0.773,
+      "R32": 0.155,
+      "S16": 0.047,
+      "E8": 0.01,
+      "F4": 0.003,
+      "CHAMP": 0.001
+    },
+    "memphis": {
+      "seed": 8,
+      "R64": 0.721,
+      "R32": 0.076,
+      "S16": 0.037,
+      "E8": 0.009,
+      "F4": 0.003,
+      "CHAMP": 0.001
+    },
+    "alabama": {
+      "seed": 9,
+      "R64": 0.435,
+      "R32": 0.02,
+      "S16": 0.009,
+      "E8": 0.004,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "connecticut": {
+      "seed": 9,
+      "R64": 0.678,
+      "R32": 0.061,
+      "S16": 0.037,
+      "E8": 0.015,
+      "F4": 0.008,
+      "CHAMP": 0.004
+    },
+    "saint_louis": {
+      "seed": 9,
+      "R64": 0.279,
+      "R32": 0.016,
+      "S16": 0.006,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "southern_miss": {
+      "seed": 9,
+      "R64": 0.227,
+      "R32": 0.022,
+      "S16": 0.005,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "purdue": {
+      "seed": 10,
+      "R64": 0.473,
+      "R32": 0.035,
+      "S16": 0.014,
+      "E8": 0.004,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "virginia": {
+      "seed": 10,
+      "R64": 0.282,
+      "R32": 0.028,
+      "S16": 0.01,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "west_virginia": {
+      "seed": 10,
+      "R64": 0.485,
+      "R32": 0.054,
+      "S16": 0.014,
+      "E8": 0.005,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "xavier": {
+      "seed": 10,
+      "R64": 0.43,
+      "R32": 0.05,
+      "S16": 0.012,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "colorado": {
+      "seed": 11,
+      "R64": 0.231,
+      "R32": 0.03,
+      "S16": 0.006,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "colorado_state": {
+      "seed": 11,
+      "R64": 0.148,
+      "R32": 0.022,
+      "S16": 0.004,
+      "E8": 0.001,
+      "F4": 0.0,
+      "CHAMP": 0.0
+    },
+    "nc_state": {
+      "seed": 11,
+      "R64": 0.503,
+      "R32": 0.182,
+      "S16": 0.033,
+      "E8": 0.01,
+      "F4": 0.003,
+      "CHAMP": 0.002
+    },
+    "texas": {
+      "seed": 11,
+      "R64": 0.268,
+      "R32": 0.046,
+      "S16": 0.01,
+      "E8": 0.004,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "harvard": {
+      "seed": 12,
+      "R64": 0.16,
+      "R32": 0.045,
+      "S16": 0.009,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "long_beach_state": {
+      "seed": 12,
+      "R64": 0.286,
+      "R32": 0.083,
+      "S16": 0.013,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "south_florida": {
+      "seed": 12,
+      "R64": 0.229,
+      "R32": 0.056,
+      "S16": 0.004,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "virginia_commonwealth": {
+      "seed": 12,
+      "R64": 0.371,
+      "R32": 0.121,
+      "S16": 0.011,
+      "E8": 0.004,
+      "F4": 0.002,
+      "CHAMP": 0.001
+    },
+    "davidson": {
+      "seed": 13,
+      "R64": 0.108,
+      "R32": 0.039,
+      "S16": 0.005,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "montana": {
+      "seed": 13,
+      "R64": 0.106,
+      "R32": 0.019,
+      "S16": 0.004,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "new_mexico_state": {
+      "seed": 13,
+      "R64": 0.134,
+      "R32": 0.034,
+      "S16": 0.003,
+      "E8": 0.001,
+      "F4": 0.0,
+      "CHAMP": 0.0
+    },
+    "ohio": {
+      "seed": 13,
+      "R64": 0.116,
+      "R32": 0.042,
+      "S16": 0.004,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "belmont": {
+      "seed": 14,
+      "R64": 0.15,
+      "R32": 0.059,
+      "S16": 0.009,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "brigham_young": {
+      "seed": 14,
+      "R64": 0.064,
+      "R32": 0.025,
+      "S16": 0.005,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "south_dakota_state": {
+      "seed": 14,
+      "R64": 0.039,
+      "R32": 0.015,
+      "S16": 0.003,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "st_bonaventure": {
+      "seed": 14,
+      "R64": 0.04,
+      "R32": 0.015,
+      "S16": 0.003,
+      "E8": 0.001,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "detroit_mercy": {
+      "seed": 15,
+      "R64": 0.024,
+      "R32": 0.012,
+      "S16": 0.006,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "lehigh": {
+      "seed": 15,
+      "R64": 0.012,
+      "R32": 0.005,
+      "S16": 0.004,
+      "E8": 0.001,
+      "F4": 0.0,
+      "CHAMP": 0.0
+    },
+    "loyola_md": {
+      "seed": 15,
+      "R64": 0.014,
+      "R32": 0.006,
+      "S16": 0.003,
+      "E8": 0.001,
+      "F4": 0.0,
+      "CHAMP": 0.0
+    },
+    "norfolk_state": {
+      "seed": 15,
+      "R64": 0.012,
+      "R32": 0.005,
+      "S16": 0.003,
+      "E8": 0.001,
+      "F4": 0.0,
+      "CHAMP": 0.0
+    },
+    "long_island_university": {
+      "seed": 16,
+      "R64": 0.009,
+      "R32": 0.005,
+      "S16": 0.003,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "unc_asheville": {
+      "seed": 16,
+      "R64": 0.013,
+      "R32": 0.005,
+      "S16": 0.003,
+      "E8": 0.003,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    },
+    "vermont": {
+      "seed": 16,
+      "R64": 0.007,
+      "R32": 0.004,
+      "S16": 0.003,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.0
+    },
+    "western_kentucky": {
+      "seed": 16,
+      "R64": 0.007,
+      "R32": 0.004,
+      "S16": 0.003,
+      "E8": 0.002,
+      "F4": 0.001,
+      "CHAMP": 0.001
+    }
+  }
+}

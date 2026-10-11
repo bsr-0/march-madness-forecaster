@@ -1,0 +1,1351 @@
+{
+ "generated": "2026-10-11",
+ "rule": "pre-registered in docs/PROJECT_ROADMAP_2027.md decision log (2026-10-11)",
+ "seasons": {
+  "2011": {
+   "verdict": "NO EVIDENCE",
+   "tip_bound": "2011-03-17T12:00:00-04:00",
+   "pre_tip_readable_captures": 0,
+   "best_pre_tip": null,
+   "post_tip_exact_matches": [
+    "2011-03-19T02:03:59+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2011-03-19T02:03:59+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com/tcmen/en/whopickedwhom",
+     "sha256": "c40f8467d8a0ec8c04e2a4801a555296a2ce80a2352e5be3a3266bfc87a4d584",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2013": {
+   "verdict": "NO EVIDENCE",
+   "tip_bound": "2013-03-21T12:00:00-04:00",
+   "pre_tip_readable_captures": 0,
+   "best_pre_tip": null,
+   "post_tip_exact_matches": [
+    "2014-03-21T23:52:57+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2014-03-21T23:52:57+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2013/en/whopickedwhom",
+     "sha256": "6f3acb8868286648b3d9ec52ad25b3aa24b549b3d03b298f0734d73e69fc1f81",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 342,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2014": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2014-03-20T12:00:00-04:00",
+   "pre_tip_readable_captures": 1,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2014-03-19T03:15:27+00:00",
+    "pre_tip": true,
+    "url": "http://games.espn.go.com/tournament-challenge-bracket/2014/en/whopickedwhom?entryID=6122803",
+    "sha256": "d577dc97941ec94f3363fa7947b2e02a146b5778a3df46aeb3246b86e1f2008f",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 336,
+    "cells_differing": 166,
+    "max_abs_diff_pp": 6.3
+   },
+   "post_tip_exact_matches": [
+    "2014-03-21T03:58:44+00:00",
+    "2014-03-21T03:58:44+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2014-03-19T03:15:27+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2014/en/whopickedwhom?entryID=6122803",
+     "sha256": "d577dc97941ec94f3363fa7947b2e02a146b5778a3df46aeb3246b86e1f2008f",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 336,
+     "cells_differing": 166,
+     "max_abs_diff_pp": 6.3
+    },
+    {
+     "archive_timestamp_utc": "2014-03-21T03:58:44+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2014/en/whopickedwhom?",
+     "sha256": "adb2523f63c5502e2f6af00f57b5d2b8490a7c446fa5ebc4a8f6a268ffb33b2a",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2014-03-21T03:58:44+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2014/en/whopickedwhom",
+     "sha256": "adb2523f63c5502e2f6af00f57b5d2b8490a7c446fa5ebc4a8f6a268ffb33b2a",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2015": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2015-03-19T12:00:00-04:00",
+   "pre_tip_readable_captures": 2,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2015-03-17T14:01:00+00:00",
+    "pre_tip": true,
+    "url": "http://games.espn.go.com/tournament-challenge-bracket/2015/en/whopickedwhom",
+    "sha256": "8adb4183a7bdc95c8e5fd1ad82444c10496323cdbe7a96332f8809ce051c6755",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 336,
+    "cells_differing": 182,
+    "max_abs_diff_pp": 5.2
+   },
+   "post_tip_exact_matches": [
+    "2015-03-20T06:07:59+00:00",
+    "2015-04-10T17:09:44+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2015-03-17T14:01:00+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2015/en/whopickedwhom",
+     "sha256": "8adb4183a7bdc95c8e5fd1ad82444c10496323cdbe7a96332f8809ce051c6755",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 336,
+     "cells_differing": 182,
+     "max_abs_diff_pp": 5.2
+    },
+    {
+     "archive_timestamp_utc": "2015-03-17T14:01:29+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2015/en/whopickedwhom",
+     "sha256": "238e9d1044e58580e821d4aed04e11bece2842f77d1cd477d4b4701a7601abf3",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 336,
+     "cells_differing": 182,
+     "max_abs_diff_pp": 5.2
+    },
+    {
+     "archive_timestamp_utc": "2015-03-20T06:07:59+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2015/en/whopickedwhom?entryID=2106464",
+     "sha256": "82a8633e0c58b612d2fbe0911f5a5834a3e04ffc15721d27cf6dc15735e8c103",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2015-04-10T17:09:44+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2015/en/whopickedwhom",
+     "sha256": "4b3084b5c8bebb0c54b1e1b2a4f61c8aa3ad057ea3f364061927b18d32f8e9e4",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2016": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2016-03-17T12:00:00-04:00",
+   "pre_tip_readable_captures": 3,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2016-03-15T05:12:16+00:00",
+    "pre_tip": true,
+    "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2016/en/whopickedwhom",
+    "sha256": "d950474532f36b70daeb2d456200b103f499d11af544bdccbc9390832ed01092",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 348,
+    "cells_differing": 296,
+    "max_abs_diff_pp": 45.9
+   },
+   "post_tip_exact_matches": [
+    "2017-03-17T07:22:44+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2016-03-15T05:12:16+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2016/en/whopickedwhom",
+     "sha256": "d950474532f36b70daeb2d456200b103f499d11af544bdccbc9390832ed01092",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 348,
+     "cells_differing": 296,
+     "max_abs_diff_pp": 45.9
+    },
+    {
+     "archive_timestamp_utc": "2016-03-15T10:43:07+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2016/en/whopickedwhom",
+     "sha256": "d368625cd535ff13a9c6ee2395dd8cb7b15d7d717d127cf59515460eda918724",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 348,
+     "cells_differing": 296,
+     "max_abs_diff_pp": 45.9
+    },
+    {
+     "archive_timestamp_utc": "2016-03-17T04:31:17+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.go.com:80/tournament-challenge-bracket/2016/en/whopickedwhom",
+     "sha256": "1aa5efa471036b55cc5e64efa2b6b23ff0b828feecd426d4506349ec7f110355",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 315,
+     "max_abs_diff_pp": 46.9
+    },
+    {
+     "archive_timestamp_utc": "2016-03-19T05:41:38+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.go.com/tournament-challenge-bracket/2016/en/whopickedwhom",
+     "sha256": "a974fb1cc7a17f7827486202f0e1342fbe37514309c874bcc87405ab4f4b00fb",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 315,
+     "max_abs_diff_pp": 46.7
+    },
+    {
+     "archive_timestamp_utc": "2017-03-17T07:22:44+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2016/en/whopickedwhom",
+     "sha256": "717b99c33c8df3b2bbe0df2ce2a6ba1421b1ae25d286533d3d1269d55af1d942",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2017": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2017-03-16T12:00:00-04:00",
+   "pre_tip_readable_captures": 3,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2017-03-15T00:31:08+00:00",
+    "pre_tip": true,
+    "url": "http://games.espn.com/tournament-challenge-bracket/2017/en/whopickedwhom",
+    "sha256": "46ba7343f4beac202f83b391c056602d585e3df8df4ce0a809b2917434cd61dd",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 354,
+    "cells_differing": 180,
+    "max_abs_diff_pp": 2.3
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2017-03-13T17:08:44+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2017/en/whopickedwhom",
+     "sha256": "9a45113cd3d1e43cb1b39f9ab02b9384875eb1a8f39d375669e25bbe3545bc60",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 234,
+     "max_abs_diff_pp": 4.8
+    },
+    {
+     "archive_timestamp_utc": "2017-03-14T06:43:15+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2017/en/whopickedwhom",
+     "sha256": "33d6d42238db04c75327a67181feef9c2e7fdf460680d7d6c7b3ca605fccce2a",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 209,
+     "max_abs_diff_pp": 2.4
+    },
+    {
+     "archive_timestamp_utc": "2017-03-15T00:31:08+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2017/en/whopickedwhom",
+     "sha256": "46ba7343f4beac202f83b391c056602d585e3df8df4ce0a809b2917434cd61dd",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 180,
+     "max_abs_diff_pp": 2.3
+    },
+    {
+     "archive_timestamp_utc": "2017-03-18T11:33:37+00:00",
+     "pre_tip": false,
+     "url": "http://www.games.espn.com:80/tournament-challenge-bracket/2017/en/whopickedwhom",
+     "sha256": "2b68a2509819602cac775c448d9242f0917caaa23da4468e61e0ba05d3884df1",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 226,
+     "max_abs_diff_pp": 3.6
+    },
+    {
+     "archive_timestamp_utc": "2017-04-06T07:33:54+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2017/en/whopickedwhom",
+     "sha256": "f29c9ea6b4da338796573744fa0fd81ee8f58806aa789b25641b3fb31d40fcd2",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 354,
+     "cells_differing": 227,
+     "max_abs_diff_pp": 3.7
+    }
+   ]
+  },
+  "2018": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2018-03-15T12:00:00-04:00",
+   "pre_tip_readable_captures": 6,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2018-03-15T09:40:20+00:00",
+    "pre_tip": true,
+    "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+    "sha256": "7b688497672a1ae49b9905135a9321770145c888c338e8dfd6bd224a8d951b67",
+    "kind": "html",
+    "readable": true,
+    "complete": true,
+    "cells_compared": 384,
+    "cells_differing": 176,
+    "max_abs_diff_pp": 2.6
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2018-03-10T07:56:58+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "b3a7963ab4dd36ecc9c6004ae3a31b6827ffdcc1ff38fd616879036536c0bda0",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2018-03-11T07:15:44+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "5e121856ebb5b3571641e1520724ffee6a662ff806fc4fc3ffdbf01bfc617e36",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2018-03-12T09:07:37+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "2b2908f875b6ec1308706fbba1a4bcb4e8df0239b25e7431b8a32131d4ddeaa5",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 289,
+     "max_abs_diff_pp": 11.3
+    },
+    {
+     "archive_timestamp_utc": "2018-03-12T20:00:49+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "8c14c7818042a01daaab8c4957a9c78f9ee9a03549e729db11fd47a150be6bc9",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 283,
+     "max_abs_diff_pp": 7.9
+    },
+    {
+     "archive_timestamp_utc": "2018-03-13T00:16:59+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com:80/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "752d2c7003bfe56ae481088408183a3bc5038b9b62f8055f1751020daa5617c4",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 274,
+     "max_abs_diff_pp": 7.1
+    },
+    {
+     "archive_timestamp_utc": "2018-03-13T23:08:54+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "837f48f59b193840f916394ec2da39fd515c06ec20d05e8fea8ecb8192666d73",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 248,
+     "max_abs_diff_pp": 6.4
+    },
+    {
+     "archive_timestamp_utc": "2018-03-14T04:34:03+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "f95cafa82563a3cb06660f9bc955c54f1b2d72368a52f64501bb2fe4d5520186",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 253,
+     "max_abs_diff_pp": 6.1
+    },
+    {
+     "archive_timestamp_utc": "2018-03-15T09:40:20+00:00",
+     "pre_tip": true,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "7b688497672a1ae49b9905135a9321770145c888c338e8dfd6bd224a8d951b67",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 176,
+     "max_abs_diff_pp": 2.6
+    },
+    {
+     "archive_timestamp_utc": "2018-03-15T23:08:47+00:00",
+     "pre_tip": false,
+     "url": "http://games.espn.com/tournament-challenge-bracket/2018/en/whopickedwhom",
+     "sha256": "fb5b69ceaf96258fd2db1ea008ad38ff452c5592bc24bdab36f476cea2fb605a",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 169,
+     "max_abs_diff_pp": 1.1
+    }
+   ]
+  },
+  "2019": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2019-03-21T12:00:00-04:00",
+   "pre_tip_readable_captures": 1,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2019-03-18T17:52:11+00:00",
+    "pre_tip": true,
+    "url": "http://fantasy.espn.com/tournament-challenge-bracket/2019/en/whopickedwhom",
+    "sha256": "20ace2df82e9981b0b75f3a58ddc9d55e9517b573f83ab490f706026580de857",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 360,
+    "cells_differing": 223,
+    "max_abs_diff_pp": 6.1
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2019-03-18T17:52:11+00:00",
+     "pre_tip": true,
+     "url": "http://fantasy.espn.com/tournament-challenge-bracket/2019/en/whopickedwhom",
+     "sha256": "20ace2df82e9981b0b75f3a58ddc9d55e9517b573f83ab490f706026580de857",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 223,
+     "max_abs_diff_pp": 6.1
+    },
+    {
+     "archive_timestamp_utc": "2019-03-21T23:59:30+00:00",
+     "pre_tip": false,
+     "url": "http://fantasy.espn.com/tournament-challenge-bracket/2019/en/whopickedwhom",
+     "sha256": "f7f5a76a48f43292bbfdeddb4271a86af599a3bdf6cffda99e65630aa5d1f28e",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 162,
+     "max_abs_diff_pp": 3.8
+    }
+   ]
+  },
+  "2021": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2021-03-19T12:00:00-04:00",
+   "pre_tip_readable_captures": 8,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2021-03-15T17:28:02+00:00",
+    "pre_tip": true,
+    "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+    "sha256": "0e63e0487cc80ae9d081dfa7ec4218df1f34d768ff6f194878d89c29aa05af87",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 360,
+    "cells_differing": 193,
+    "max_abs_diff_pp": 1.9
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2021-03-15T13:54:45+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "9ec88caf459c1fc330f9075fd4580bbbad2489d8f0df6be97f18f736d164851e",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 210,
+     "max_abs_diff_pp": 3.4
+    },
+    {
+     "archive_timestamp_utc": "2021-03-15T14:55:51+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "24905c69369b15eac34dd76aa795bfc6326c0fc8f9c6c91d033c095b16eaff83",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 208,
+     "max_abs_diff_pp": 3.0
+    },
+    {
+     "archive_timestamp_utc": "2021-03-15T15:35:38+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "84c21a4ed72419e1a486f5c27fdc0715556b5d08455c3d27ae583dca966357f9",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 203,
+     "max_abs_diff_pp": 2.6
+    },
+    {
+     "archive_timestamp_utc": "2021-03-15T17:28:02+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "0e63e0487cc80ae9d081dfa7ec4218df1f34d768ff6f194878d89c29aa05af87",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 193,
+     "max_abs_diff_pp": 1.9
+    },
+    {
+     "archive_timestamp_utc": "2021-03-17T17:38:46+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "639efb0835aa659a43a8a2f5f7c6cf330e5ffea83ec8ac3ee6be31c9c0a12314",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 218,
+     "max_abs_diff_pp": 2.5
+    },
+    {
+     "archive_timestamp_utc": "2021-03-18T04:26:57+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "1316b2c1eed893ec481be704f3ea90b678974c980a23c9a78e6403c2e23a13b4",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 227,
+     "max_abs_diff_pp": 2.9
+    },
+    {
+     "archive_timestamp_utc": "2021-03-18T19:49:10+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "86859c765db2dafb85a858fc7ddd34816ca1e0944dfa608bc20a851202d40f31",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 233,
+     "max_abs_diff_pp": 3.2
+    },
+    {
+     "archive_timestamp_utc": "2021-03-19T04:04:26+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "a2c53bce5885f5429a838244254ea2a1e9c0db3f52709e2e5d54033552a4b0be",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 348,
+     "cells_differing": 233,
+     "max_abs_diff_pp": 3.7
+    },
+    {
+     "archive_timestamp_utc": "2021-03-19T19:29:38+00:00",
+     "pre_tip": false,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2021/en/whopickedwhom",
+     "sha256": "9c9bf081bc6b1ca445c063c362ee2b29234d98b589f05fedc9982b3fb25fb3bc",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 348,
+     "cells_differing": 247,
+     "max_abs_diff_pp": 4.3
+    }
+   ]
+  },
+  "2022": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2022-03-17T12:00:00-04:00",
+   "pre_tip_readable_captures": 2,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2022-03-16T03:29:16+00:00",
+    "pre_tip": true,
+    "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom",
+    "sha256": "e7bfe7bb83661984782e1db373017b785207e875641bba4091858c93492398e2",
+    "kind": "html",
+    "readable": true,
+    "complete": false,
+    "cells_compared": 372,
+    "cells_differing": 190,
+    "max_abs_diff_pp": 8.3
+   },
+   "post_tip_exact_matches": [
+    "2022-03-20T06:49:45+00:00"
+   ],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2022-03-13T01:05:46+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom",
+     "sha256": "a28f6d85cc2b5f99231ce638d8753399ed01274efb7e35e8ecb1b54202dfc98a",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2022-03-15T19:01:13+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom%22,",
+     "sha256": "739beacccd1be9904a5604ac7226fe0b376ed5febc7d8304e274271f77d2032c",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2022-03-15T19:01:20+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom%22",
+     "sha256": "9474b27e7143c581e2bdcd3d6a2ff942d214273e225d8049f33e6c32bd4c8955",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2022-03-16T03:29:16+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom",
+     "sha256": "e7bfe7bb83661984782e1db373017b785207e875641bba4091858c93492398e2",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 190,
+     "max_abs_diff_pp": 8.3
+    },
+    {
+     "archive_timestamp_utc": "2022-03-16T12:51:45+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom?itid=lk_inline_enhanced-template",
+     "sha256": "f710c4e35e574c3a14d2c4425b203880cfe937af6bb142d16f58418c5bb6d622",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 191,
+     "max_abs_diff_pp": 7.4
+    },
+    {
+     "archive_timestamp_utc": "2022-03-20T06:49:45+00:00",
+     "pre_tip": false,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2022/en/whopickedwhom",
+     "sha256": "b333363d260b0aeedb0ab13175f1848d649cf1c5d33a55174dccd01a263c5cb0",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    }
+   ]
+  },
+  "2023": {
+   "verdict": "VERIFIED",
+   "tip_bound": "2023-03-16T12:00:00-04:00",
+   "pre_tip_readable_captures": 5,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2023-03-14T20:31:40+00:00",
+    "pre_tip": true,
+    "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+    "sha256": "343c348da05ebd5508e47760ab0aca04be834eaad21877c7f1b7e3b83bd47a4e",
+    "kind": "html",
+    "readable": true,
+    "complete": true,
+    "cells_compared": 384,
+    "cells_differing": 0,
+    "max_abs_diff_pp": 0.0
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2023-03-13T23:38:44+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "07d70b16646aef06719ce9fa13823c545b9340ab74c9c3765bce8beb590b2e93",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 236,
+     "max_abs_diff_pp": 2.7
+    },
+    {
+     "archive_timestamp_utc": "2023-03-14T13:53:20+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom%22",
+     "sha256": "8a88b1a38b5e67c6509a47cab8725473ff682520513c8b871adf36273c554107",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2023-03-14T13:53:22+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom%22,",
+     "sha256": "3e5fe672451519b27aa4cbe5b7d400846d2a21d7e509b6d665b1667d2411fccc",
+     "kind": "html",
+     "readable": false,
+     "complete": false,
+     "cells_compared": 0,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2023-03-14T17:09:28+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "3c36349c6e5cf5d1398e5f75cb9dd6c181cdc993b6ebe00688a6a314299e8abd",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 122,
+     "max_abs_diff_pp": 0.6
+    },
+    {
+     "archive_timestamp_utc": "2023-03-14T20:31:40+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "343c348da05ebd5508e47760ab0aca04be834eaad21877c7f1b7e3b83bd47a4e",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 0,
+     "max_abs_diff_pp": 0.0
+    },
+    {
+     "archive_timestamp_utc": "2023-03-14T20:53:01+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "3d4558daada532fad7f28bd70286c67fe9acb82aefb1a32c50adcacf8a2a277f",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 24,
+     "max_abs_diff_pp": 0.1
+    },
+    {
+     "archive_timestamp_utc": "2023-03-15T10:09:38+00:00",
+     "pre_tip": true,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "79a3588ce855bef98d37d74b897dac753350fcbef0a81d0729b2bb8f107d6f38",
+     "kind": "html",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 203,
+     "max_abs_diff_pp": 1.2
+    },
+    {
+     "archive_timestamp_utc": "2023-03-16T20:09:33+00:00",
+     "pre_tip": false,
+     "url": "https://fantasy.espn.com/tournament-challenge-bracket/2023/en/whopickedwhom",
+     "sha256": "b971961b97d335ee641034e23314f31d18adefb7128d92759be5f3c0cb206e87",
+     "kind": "html",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 233,
+     "max_abs_diff_pp": 6.7
+    }
+   ]
+  },
+  "2024": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2024-03-21T12:00:00-04:00",
+   "pre_tip_readable_captures": 30,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2024-03-21T15:57:29+00:00",
+    "pre_tip": true,
+    "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+    "sha256": "ea5072eb08de9808e5c7e6c1609d44cc625309f0370143fe2a638186dc8ef4c0",
+    "kind": "api(0.1pp)",
+    "readable": true,
+    "complete": true,
+    "cells_compared": 384,
+    "cells_differing": 35,
+    "max_abs_diff_pp": 0.15
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2024-03-17T22:53:06+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "6dc2e64ac2e811d27241ada2cb636503aefb6cec4cc1aacbc66712cb2539f311",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 354,
+     "max_abs_diff_pp": 45.41
+    },
+    {
+     "archive_timestamp_utc": "2024-03-17T23:36:55+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "55b8f15a1f245b255f81fd0b2cff95ab8b484b9c37246c8b0024322e2b1001b1",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 283,
+     "max_abs_diff_pp": 10.12
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T00:38:18+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "1c1ebb505845d8a94a583c91742eccd84f38fcde4e5f309247aee12e497c0e79",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 282,
+     "max_abs_diff_pp": 9.32
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T01:22:01+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "f2145d4ca5f9906e92714f64d5e6830fa93d4fc7d25054a1e1c038b6ecc5350c",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 279,
+     "max_abs_diff_pp": 9.32
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T02:38:36+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "0e209ee77dc6f18d618153661a0269482b2825878859a0752cb55d964dec9b7a",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 274,
+     "max_abs_diff_pp": 9.22
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T03:27:04+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "5b118ba206ff33d75a95831aec3759343e7b59e5f3f0623991a7ed39f4290e35",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 270,
+     "max_abs_diff_pp": 9.12
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T04:53:14+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "44ccf6583c596d1bcaa3809e707b8ef2698ee54244d8d773d0ca55c777754740",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 268,
+     "max_abs_diff_pp": 9.02
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T12:10:06+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "0f5aaefce38c581c1a87ddd2c71068bf1e1e7d1f941d6ae21ca2c8f2e2e3a464",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 267,
+     "max_abs_diff_pp": 9.02
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T13:47:40+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "91cecd87f9e184427ffe83b241ae295f27f7419524e04b34c0e2b4667caea240",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 264,
+     "max_abs_diff_pp": 9.12
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T16:34:37+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "2bae94f8537524e8b4414a4600b316a9c1e7f86b3a9728e901846ba88077e9bd",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 264,
+     "max_abs_diff_pp": 8.92
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T17:20:59+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "ba941827e97a8476442bc66d3be88af506578d2a78b5d7d1b1b350eec1ae71ad",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 264,
+     "max_abs_diff_pp": 8.82
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T18:03:42+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "c24d09d9ce864860ec27caa67625bb62a692239854e5bd69c5efaf48330c76f9",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 266,
+     "max_abs_diff_pp": 8.72
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T18:57:04+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "9439a0bb95b4c0964e7af11e232ca7d3790533caeb6e66ecd7caed3deec2cd72",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 262,
+     "max_abs_diff_pp": 8.42
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T19:56:27+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "e4bce51ac0fa67fa240d18451714eb5301d6967297829d83ac8a626dd7d72e57",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 262,
+     "max_abs_diff_pp": 8.22
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T20:39:55+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "4322dfd18b5a26ac55ecddc7337e92abcc4ebf03798bc5ea717034718802cb39",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 262,
+     "max_abs_diff_pp": 8.02
+    },
+    {
+     "archive_timestamp_utc": "2024-03-18T22:33:02+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "8ed5f9a3d5755b0074abb351c89764745d6b9655ede9ce82e028809dbebc147b",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 255,
+     "max_abs_diff_pp": 7.72
+    },
+    {
+     "archive_timestamp_utc": "2024-03-19T01:42:20+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "7be4f872bfac4e7ae880b53a56b5d9b7cbfe554f98ff787f878ef171c08d3497",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 232,
+     "max_abs_diff_pp": 7.02
+    },
+    {
+     "archive_timestamp_utc": "2024-03-19T05:12:04+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "323db236154b5f4e8d24e3eac60589f79495fb6a6107f1ef5255bcfaad412298",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 232,
+     "max_abs_diff_pp": 6.72
+    },
+    {
+     "archive_timestamp_utc": "2024-03-19T13:09:22+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "98831cdd7dbff32e6fc5e7e72e239f58b6ab4bf5f41648f24fbf9b2375db8b0b",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 213,
+     "max_abs_diff_pp": 6.32
+    },
+    {
+     "archive_timestamp_utc": "2024-03-19T17:46:50+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "4e72dcafdaa4cffc7d7ca5b99eefeadd21ee9d5027a8cac64ee21d79497a3249",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 200,
+     "max_abs_diff_pp": 5.92
+    },
+    {
+     "archive_timestamp_utc": "2024-03-19T23:14:46+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "f57f98ea785eb11c7f68aa6a67951dba43825f8921cb846e7827d5db225991a6",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 200,
+     "max_abs_diff_pp": 5.62
+    },
+    {
+     "archive_timestamp_utc": "2024-03-20T15:07:38+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "709f47cdab0672d75115797aefd08b74e4c8d335ee6993c015263c730ff6173f",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 241,
+     "max_abs_diff_pp": 3.62
+    },
+    {
+     "archive_timestamp_utc": "2024-03-20T17:09:00+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "91dd1956d828edad32332a454aa9c861c283bd7d21e1f8612fc0ba27b7fce1c5",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 237,
+     "max_abs_diff_pp": 3.12
+    },
+    {
+     "archive_timestamp_utc": "2024-03-20T18:05:25+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "f0336d3c89f49faa572d6105e49a64b39238cfa4040ec5515f3ecbe01dc08f84",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 234,
+     "max_abs_diff_pp": 2.92
+    },
+    {
+     "archive_timestamp_utc": "2024-03-20T21:48:31+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "fc6950e81e6ad23b092e1864592e1c000dc49fb799c571fedd78a98f8b8586d4",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 230,
+     "max_abs_diff_pp": 2.32
+    },
+    {
+     "archive_timestamp_utc": "2024-03-21T03:42:15+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "5a412a31b3d7f3c01ed43ea31ac4c9d0d372919f91e167e8b67ab7903d77e345",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 197,
+     "max_abs_diff_pp": 2.35
+    },
+    {
+     "archive_timestamp_utc": "2024-03-21T12:23:04+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "4103a44f07abc1d91ed20f771d3443a89104311a745fa51774912a8e41438210",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 182,
+     "max_abs_diff_pp": 1.45
+    },
+    {
+     "archive_timestamp_utc": "2024-03-21T14:27:29+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "306bfac42bfc5e3bb9025d162286f0edbe95098f749136543d056461fe7b6d8c",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 140,
+     "max_abs_diff_pp": 0.85
+    },
+    {
+     "archive_timestamp_utc": "2024-03-21T15:07:56+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "585286b947f213f9b64e5ecf93b676fbe22c96faa64712dfc9ed568ce0d03166",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 111,
+     "max_abs_diff_pp": 0.55
+    },
+    {
+     "archive_timestamp_utc": "2024-03-21T15:57:29+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions?challengeId=240&platform=chui&view=chui_default",
+     "sha256": "ea5072eb08de9808e5c7e6c1609d44cc625309f0370143fe2a638186dc8ef4c0",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 35,
+     "max_abs_diff_pp": 0.15
+    }
+   ]
+  },
+  "2025": {
+   "verdict": "MISMATCHED",
+   "tip_bound": "2025-03-20T12:00:00-04:00",
+   "pre_tip_readable_captures": 8,
+   "best_pre_tip": {
+    "archive_timestamp_utc": "2025-03-20T14:24:03+00:00",
+    "pre_tip": true,
+    "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+    "sha256": "d51134dacfc98be65b3682ea40a9d322bb48c044e1e5f3d93beb7af941666adf",
+    "kind": "api(0.1pp)",
+    "readable": true,
+    "complete": true,
+    "cells_compared": 384,
+    "cells_differing": 136,
+    "max_abs_diff_pp": 1.26
+   },
+   "post_tip_exact_matches": [],
+   "captures": [
+    {
+     "archive_timestamp_utc": "2025-03-16T23:10:52+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "532fae580e2da8f3c72afd5d084d1209210aa38ca0b5e51a23bdc0a423275ac2",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 288,
+     "max_abs_diff_pp": 14.06
+    },
+    {
+     "archive_timestamp_utc": "2025-03-17T13:19:27+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "3030524c068b2edb03d70da0ed7763c98ccade3b9cb2424e39bf2966d7fc6a93",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 238,
+     "max_abs_diff_pp": 13.16
+    },
+    {
+     "archive_timestamp_utc": "2025-03-18T00:37:30+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "b4aaafffde0b0f73db3a09f44b5c8836eb396f62d3e2a0e24e6ed1fce1f7f2fb",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 226,
+     "max_abs_diff_pp": 13.56
+    },
+    {
+     "archive_timestamp_utc": "2025-03-18T16:22:02+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "643f1a97d3334543e88dff2367e30c90e553352fa29a5f79c838ba9ec24560d3",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 360,
+     "cells_differing": 216,
+     "max_abs_diff_pp": 13.56
+    },
+    {
+     "archive_timestamp_utc": "2025-03-19T03:00:47+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "a62231a7bc8ed0e2d7c8ef5a43a14282bdfd653a777c2b3ffd4bdfb7ed8b9a69",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": false,
+     "cells_compared": 372,
+     "cells_differing": 196,
+     "max_abs_diff_pp": 13.16
+    },
+    {
+     "archive_timestamp_utc": "2025-03-19T16:40:26+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "cdfc12a40c007b65ac2537355de6dd4b15a04e0d80b6b22ae9128c2d4c847cfa",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 195,
+     "max_abs_diff_pp": 9.26
+    },
+    {
+     "archive_timestamp_utc": "2025-03-20T04:11:45+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "d139431ed23223fb8dbf20ea1fbd3e9ef1f8da62850d6814948cf77fcd6d9aed",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 163,
+     "max_abs_diff_pp": 3.46
+    },
+    {
+     "archive_timestamp_utc": "2025-03-20T14:24:03+00:00",
+     "pre_tip": true,
+     "url": "https://gambit-api.fantasy.espn.com/apis/v1/propositions/?challengeId=257&platform=chui&view=chui_default",
+     "sha256": "d51134dacfc98be65b3682ea40a9d322bb48c044e1e5f3d93beb7af941666adf",
+     "kind": "api(0.1pp)",
+     "readable": true,
+     "complete": true,
+     "cells_compared": 384,
+     "cells_differing": 136,
+     "max_abs_diff_pp": 1.26
+    }
+   ]
+  }
+ },
+ "pre_tip_search_note": "Internet Archive CDX queried for ESPN Who Picked Whom HTML pages (games.espn.go.com, games.espn.com, fantasy.espn.com) and gambit-api propositions, Selection Sunday-1 day to tip+30 days; 2011 and 2013 have no pre-tip capture of the page (only entry/group/front pages were archived)."
+}

@@ -39,7 +39,12 @@ Thumbs.db
 # got pruned. They're local/regenerable working data now; the workflows'
 # existing "git add / diff --quiet / commit" steps no-op gracefully once these
 # paths are untracked and ignored, so no workflow edits were needed.
-data/raw/
+data/raw/*
+# Exception: the archived public picks are point-in-time evidence, not a
+# regenerable cache. Their SHA-256s are embedded in the candidate artifacts and
+# their capture evidence (Internet Archive captures) cannot be re-fetched on
+# demand, so they are tracked (~0.4 MB). See docs/PROJECT_ROADMAP_2027.md.
+!data/raw/historical_public_picks/
 data/processed/
 data/raw/cache/
 data/raw/prospective_eval_*.json
@@ -65,17 +70,12 @@ artifacts/local_reports/
 # git-as-database growth as data/raw/ above. Untracked/local now.
 artifacts/outcome_log_*.json
 
-# Generated candidate artifacts (~770 KB per season, 14 seasons).
-# These are build inputs, not build outputs: docs/data/season_*.json is what
-# the site actually serves, and those stay tracked. Regenerate any season with
-#   python scripts/experiments/build_candidate_artifact.py --year YYYY
-# (~75s each), then rebuild the payloads with scripts/build_ui_payload.py.
-#
-# The .sha256 sidecars are deliberately NOT ignored. For an official
-# prospective season the digest is the record that matters -- it is what makes
-# "this is the bracket that was predicted before the tournament" checkable --
-# and 87 bytes of it is worth keeping when the 770 KB it describes is not.
-artifacts/candidates/*.json
+# Candidate artifacts (artifacts/candidates/candidates_YYYY.json, ~770 KB per
+# season) are TRACKED, like the pool10/pool50/pool100 variants. They used to be
+# ignored while their .sha256 sidecars were committed; the files were then lost
+# and the sidecars pointed at nothing, which failed the 2027 historical source
+# gate (docs/PROJECT_ROADMAP_2027.md, decision log 2026-10-11). A checksum is
+# only evidence while the bytes it describes still exist.
 
 # Kaggle submission CSVs (~3 MB each, 132k rows, regenerated in ~10 s by
 # scripts/kaggle_submission.py). The .meta.json sidecar -- what went into the
