@@ -79,28 +79,35 @@ def visible(pg, selector):
 
 
 @pytest.mark.parametrize("page", [(1280, 900), (390, 844)], ids=["desktop", "phone"], indirect=True)
-def test_landing_opens_pending_with_orientation_first(site, page):
+def test_landing_opens_on_analytics_for_2026_and_says_why(site, page):
     page.goto(site)
-    page.wait_for_selector("#main.pending")
-    settle(page)
-    assert "y=2027" in page.evaluate("location.hash") and "s=rule" in page.evaluate("location.hash")
-    assert visible(page, "#empty.wait")
-    assert page.locator("#empty.wait").inner_text().startswith("2027 field not announced yet")
-    assert top(page, "#empty") < top(page, "#compare") < top(page, "#rulepanel") < top(page, "#board")
-    assert page.locator("#compare .scard").count() == 5
-    assert page.locator("#compare .scard.na").count() == 4
-    assert page.locator("#rule-body .rule-row").count() == 3
+    page.wait_for_selector("#main.view-analytics")
+    page.wait_for_selector("#charts .chart-card")
+    assert "y=2026" in page.evaluate("location.hash")
+    assert page.locator("#analytics").is_visible()
+    assert not page.locator("#board").is_visible()
+    assert page.locator("#season-note").inner_text().startswith("There's no 2027 bracket yet, so this shows 2026")
+    assert page.locator("#kpis .kpi").count() == 3
+    assert page.locator("#charts .chart-card").count() == 3
+
+
+def test_bracket_toggle_shows_the_bracket_and_round_trips_in_the_link(site, page):
+    page.goto(site)
+    page.wait_for_selector("#main.view-analytics")
+    page.wait_for_selector("#charts .chart-card")
+    page.click("#view-bracket")
+    assert page.locator("#board").is_visible()
+    assert not page.locator("#analytics").is_visible()
+    assert "v=bracket" in page.evaluate("location.hash")
+    page.reload()
+    page.wait_for_selector("#main.view-bracket")
+    assert page.locator("#board").is_visible()
     assert page.locator("#board > .round").count() == 6
-    counts = page.eval_on_selector_all("#board .r-count", "els => els.map(e => e.textContent)")
-    assert counts == ["32 games", "16 games", "8 games", "4 games", "2 games", "1 game"]
-    assert page.locator("#board .game").count() == 0
-    assert page.locator("#board .r-sub").count() == 6
-    for hidden in ("#headline", "#tune", "#explore", "#why", "#board-tools"):
-        assert not visible(page, hidden), hidden
+    assert page.locator("#board .game").count() == 63
 
 
 def test_missing_recommended_payload_does_not_render_p1_under_its_name(site, page):
-    page.goto(site + "#y=2026&s=recommended")
+    page.goto(site + "#y=2026&s=recommended&v=bracket")
     page.wait_for_function("state.season && state.season.status === 'ready'", timeout=SEARCH_TIMEOUT)
     page.evaluate("""
       state.season.strategies = state.season.strategies.filter(s => s.id !== 'recommended');
@@ -128,7 +135,7 @@ def test_a_chosen_rule_travels_in_rq_and_is_said_when_2026_lacks_it(site, page):
     # No Simple rule reproduces both 2026 and 2025, so a rule chosen on 2027
     # (run: 2026) is not a survivor on 2026 (run: 2025): the page says so and
     # keeps the link's rule rather than quietly showing another under its name.
-    page.goto(site)
+    page.goto(site + "#y=2027&s=rule&v=bracket")
     settle(page)
     page.locator("#rule-body .rule-row").nth(1).click()
     assert "rq=" in page.evaluate("location.hash")
@@ -145,7 +152,7 @@ def test_a_chosen_rule_travels_in_rq_and_is_said_when_2026_lacks_it(site, page):
 
 
 def test_one_variable_table_is_collapsed_after_the_alternatives(site, page):
-    page.goto(site + "#y=2026&s=rule")
+    page.goto(site + "#y=2026&s=rule&v=bracket")
     settle(page)
     table = page.locator("#rule-body details.one-more")
     assert table.count() == 1
@@ -159,7 +166,7 @@ def test_one_variable_table_is_collapsed_after_the_alternatives(site, page):
 def test_scorecard_scores_against_chalk_and_gates_the_held_out_block(site, page):
     # 2025 had 9 upsets in 63 games, so the all-chalk bracket (1,790) out-scored
     # every strategy: raw points alone would read as "all three are bad".
-    page.goto(site + "#y=2025&s=p1")
+    page.goto(site + "#y=2025&s=p1&v=bracket")
     page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
     assert visible(page, "#scorecard")
     text = page.locator("#scorecard").inner_text()
@@ -176,7 +183,7 @@ def test_scorecard_scores_against_chalk_and_gates_the_held_out_block(site, page)
 
 
 def test_filters_gate_per_strategy_on_2026(site, page):
-    page.goto(site + "#y=2026")
+    page.goto(site + "#y=2026&v=bracket")
     page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
     page.locator("#customize > summary").click()
     page.click("#compare .scard[data-strategy='p1']")
@@ -190,7 +197,7 @@ def test_filters_gate_per_strategy_on_2026(site, page):
 
 
 def test_pool_variant_selector_round_trips_and_changes_metrics(site, page):
-    page.goto(site + "#y=2026&pool=50")
+    page.goto(site + "#y=2026&pool=50&v=bracket")
     page.wait_for_function("() => document.querySelectorAll('#board .side.picked').length === 63")
     assert page.evaluate("state.poolSize") == 50
     page.click("#customize > summary")
@@ -204,7 +211,7 @@ def test_pool_variant_selector_round_trips_and_changes_metrics(site, page):
 
 
 def test_checkpoint_guard_shows_its_message(site, page):
-    page.goto(site + "#y=2026&s=rule")
+    page.goto(site + "#y=2026&s=rule&v=bracket")
     settle(page)
     assert page.evaluate("state.rule.checkpoints") == [3, 5]
     assert page.locator("#rule-body .rule-line .chip").count() == 6
@@ -218,7 +225,7 @@ def test_a_skipped_newest_season_is_said_and_the_run_starts_below_it(site, page)
     # 2024 has no one-variable-per-round survivor for the Final Four at any
     # cap: on 2025 the search says so and starts the run at the most recent
     # season a rule reproduces.
-    page.goto(site + "#y=2025&s=rule")
+    page.goto(site + "#y=2025&s=rule&v=bracket")
     settle(page)
     line = page.locator("#rule-body .ex-line:has-text('No simple rule reproduces')")
     assert line.inner_text().startswith("No simple rule reproduces final four and champion in ")
@@ -235,7 +242,7 @@ def test_a_skipped_newest_season_is_said_and_the_run_starts_below_it(site, page)
 
 
 def test_search_runs_off_the_main_thread_and_the_latest_controls_win(site, page):
-    page.goto(site + "#y=2026&s=rule")
+    page.goto(site + "#y=2026&s=rule&v=bracket")
     settle(page)
     page.evaluate("window.__ticks = 0; (function loop() { window.__ticks++; requestAnimationFrame(loop); })();")
     page.click("#rule-body .chip:has-text('Flexible')")    # the heavier of the two settings

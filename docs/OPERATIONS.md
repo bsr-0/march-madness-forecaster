@@ -75,6 +75,7 @@ The site review identified several important gaps and a few delivered fixes:
 - delivered: per-game win probabilities on the board
 - delivered: champion callout and title-probability display
 - delivered: track-record realisation display for historical seasons
+- delivered: analytics dashboard as the default view (bracket view via toggle or `v=bracket`); when the newest season has no bracket yet, the site notes it and shows the latest ready season
 - missing: direct pool settings customization beyond the supported preset set
 - missing: lock-one-game then re-optimize flow
 - missing: multi-entry support

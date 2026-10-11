@@ -368,18 +368,16 @@ console.log('\ndefault season');
 
 const app0 = loadApp('');
 
-check('opens on the newest listed season once it can show something', () => {
-  // The 2027 shape exactly: listed, not yet played, with played seasons
-  // before it -- the rule search runs over those, so it is the front door.
+check('opens on the newest season with a bracket, skipping a not-started one', () => {
+  // The 2027 shape exactly: listed, not yet built. Visitors land on 2026.
   const seasons = [
     { year: 2025, status: 'ready' },
     { year: 2026, status: 'ready' },
     { year: 2027, status: 'not_started' },
   ];
-  assert.strictEqual(app0.pickDefaultSeason(seasons), 2027);
-  // Any played season before it will do for the search.
-  assert.strictEqual(app0.pickDefaultSeason([{ year: 2026, status: 'not_started' }, { year: 2025, status: 'unavailable' }, { year: 2024, status: 'ready' }]), 2026);
-  // Nothing played before it: nothing to search; the newest listed season explains itself.
+  assert.strictEqual(app0.pickDefaultSeason(seasons), 2026);
+  assert.strictEqual(app0.pickDefaultSeason([{ year: 2026, status: 'not_started' }, { year: 2025, status: 'unavailable' }, { year: 2024, status: 'ready' }]), 2024);
+  // Nothing built yet: the newest listed season explains itself.
   assert.strictEqual(app0.pickDefaultSeason([{ year: 2026, status: 'not_started' }, { year: 2025, status: 'unavailable' }]), 2026);
 });
 

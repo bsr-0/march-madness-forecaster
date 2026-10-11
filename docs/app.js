@@ -128,6 +128,7 @@ const state = {
   // season the system was frozen to be judged on.
   year: 2026,
   poolSize: 30,
+  view: 'analytics',     // 'analytics' (default) | 'bracket'
   strategy: RECOMMENDED, // RECOMMENDED | 'p1' | 'ev' | MODEL | CUSTOM
   /* CUSTOM is driven by this pair rather than by an id. Champion and depth are
    * independent properties of a bracket, so they filter JOINTLY: either alone
@@ -691,25 +692,14 @@ function p1Pct(p) {
   return `${(p * 100).toFixed(0)}%`;
 }
 
-/* Which season to open on.
- *
- * Deliberately not max(year): 2027 is listed as soon as the calendar knows
- * about it and stays "not_started" until Selection Sunday, so the newest LISTED
- * season is an empty state for most of the year. And deliberately not a
- * literal: a hardcoded 2026 would have opened the 2027 tournament on last
- * year's bracket.
- *
- * Split out of init() so it can be tested without a network.
+/* Which season to open on: the newest one that has a bracket. A listed season
+ * still "not_started" (2027 until Selection Sunday) is skipped rather than
+ * opened, so visitors land on a bracket; renderSeasonNote() says so. Split out
+ * of init() so it can be tested without a network.
  */
 function pickDefaultSeason(seasons) {
   const all = (seasons || []).slice().sort((a, b) => a.year - b.year);
   const ready = all.filter(s => s.status === 'ready').map(s => s.year);
-  // The newest listed season is the front door once it can show something:
-  // its bracket, or -- from the day the previous season is played until
-  // Selection Sunday -- the rule search over the seasons before it, with a
-  // blank bracket waiting for the field (see fieldPending()).
-  const newest = all[all.length - 1];
-  if (newest && newest.status === 'not_started' && ready.some(y => y < newest.year)) return newest.year;
   if (ready.length) return Math.max(...ready);
   // No bracket anywhere: show the newest thing we know about and let its own
   // empty state explain itself, rather than a year that may not be listed.
@@ -747,6 +737,7 @@ function writeHash() {
     if (state.pick[k] !== null && state.pick[k] !== undefined) p.set(k, String(state.pick[k]));
   }
   if (state.alt) p.set('alt', String(state.alt));
+  if (state.view === 'bracket') p.set('v', 'bracket');
   // Not in HASH_KEYS: that loop round-trips state.pick[k] specifically, and
   // these two live directly on state. Without them a shared risk-adjusted
   // link silently reopened at the strategy's un-risked baseline -- exactly
@@ -817,6 +808,7 @@ function readHash() {
   }
   const alt = parseInt(p.get('alt'), 10);
   if (Number.isFinite(alt)) state.alt = alt;
+  if (p.get('v') === 'bracket') state.view = 'bracket';
 
   // Same pairing as writeHash(): risk/fam are not filter picks, so they are
   // not in HASH_KEYS. A junk or out-of-grid `risk` is dropped rather than
@@ -3410,6 +3402,7 @@ async function setYear(year) {
   refit();
   renderStrategies();
   render();
+  renderSeasonNote();
   // The rule search is keyed on the season too: a held result is for the
   // previous one and ruleStrategy() will not show it, so the search reruns
   // here -- this is also how a link opening on s=rule gets its first result.
@@ -3446,9 +3439,8 @@ async function init() {
   const [idx] = await Promise.all([
     fetch(`data/seasons.json?v=${DATA_V}`).then(r => r.json()),
   ]);
-  // Open on the newest listed season once it can show something (see
-  // pickDefaultSeason(): its bracket, or the rule search with a blank
-  // bracket while its field is pending). A shared link names its own.
+  // Open on the newest season with a bracket (see pickDefaultSeason()).
+  // A shared link names its own.
   state.seasonsIndex = idx.seasons;
   const fromHash = readHash();
   const fallback = pickDefaultSeason(idx.seasons);
@@ -3485,11 +3477,185 @@ async function init() {
   // this cannot loop on our own writes.
   window.addEventListener('hashchange', () => location.reload());
 
+  applyView();
+  loadAnalytics();
   await setYear(state.year);
 
   // The row scrolls on a narrow viewport and the default season sits at the
   // far right of seventeen, so it would otherwise open out of view.
   document.querySelector('.yr.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+
+/* ---------- view: analytics (default) or bracket ---------- */
+
+function applyView() {
+  const main = document.getElementById('main');
+  main.classList.toggle('view-analytics', state.view !== 'bracket');
+  main.classList.toggle('view-bracket', state.view === 'bracket');
+  for (const b of document.querySelectorAll('.view-toggle .mode')) {
+    const on = b.dataset.view === state.view;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+}
+
+function setView(view) {
+  if (view !== 'analytics' && view !== 'bracket') return;
+  state.view = view;
+  applyView();
+  writeHash();
+}
+
+/* Shown while the newest listed season has no bracket and an earlier one is on
+ * screen, so the page does not silently stand in for the season it was asked
+ * about. */
+function renderSeasonNote() {
+  const el = document.getElementById('season-note');
+  const newest = (state.seasonsIndex || []).reduce((a, s) => (!a || s.year > a.year ? s : a), null);
+  const show = !!newest && newest.status !== 'ready' && state.year < newest.year;
+  el.hidden = !show;
+  el.textContent = show
+    ? `There's no ${newest.year} bracket yet, so this shows ${state.year}. The ${newest.year} field is announced on Selection Sunday.`
+    : '';
+}
+
+/* ---------- analytics ----------
+ * Testing metrics from data/ml_backtest.json: leave-one-year-out predictions,
+ * so every season is scored by a model that never saw it. Charts are inline
+ * SVG; each has a table twin, and every mark has a native hover title. */
+
+async function loadAnalytics() {
+  const host = document.getElementById('charts');
+  try {
+    const res = await fetch(`data/ml_backtest.json?v=${DATA_V}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    renderAnalytics(d);
+    window.matchMedia(PHONE_Q).addEventListener('change', () => renderAnalytics(d));
+  } catch (err) {
+    host.innerHTML = `<p class="prior-note">Test results could not be loaded (${err.message}).</p>`;
+  }
+}
+
+// Charts are drawn at a phone width on phones rather than scaled down from
+// the desktop drawing, which would shrink the axis text to ~5px.
+const PHONE_Q = '(max-width: 600px)';
+const chartW = () => (window.matchMedia(PHONE_Q).matches ? 300 : 640);
+
+function renderAnalytics(d) {
+  const by = Object.fromEntries(d.models.map(m => [m.key, m]));
+  const model = by.torvik, seed = by.seed;
+  const pct = x => `${(x * 100).toFixed(1)}%`;
+  const f3 = x => x.toFixed(3);
+  const kpi = (label, value, sub) => `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div><div class="kpi-sub">${sub}</div></div>`;
+  const first = d.years[0], last = d.years[d.years.length - 1];
+  document.getElementById('kpis').innerHTML = [
+    kpi('Accuracy', pct(model.accuracy), `Seed rule ${pct(seed.accuracy)} · share of games picked right`),
+    kpi('Probability error', f3(model.brier), `Seed rule ${f3(seed.brier)} · lower is better`),
+    kpi('Games tested', model.n_games.toLocaleString(), `Tournament games, ${first}–${last}`),
+  ].join('');
+  const scored = new Set(d.years);
+  document.getElementById('charts').innerHTML = [
+    chartSkillByYear(d.per_year.filter(r => scored.has(r.year))),
+    chartAccuracyByRound(d.per_round),
+    chartCalibration(d.calibration.bins),
+  ].join('');
+}
+
+function vizCard({ id, title, blurb, legend, svg, table, wide }) {
+  return `<figure class="chart-card${wide ? ' wide' : ''}" aria-labelledby="${id}-t">
+    <figcaption><h3 id="${id}-t">${title}</h3><p>${blurb}</p></figcaption>
+    <div class="viz-legend">${legend}</div>
+    ${svg}
+    <details class="viz-table"><summary>Table</summary>${table}</details>
+  </figure>`;
+}
+
+function vizTable(head, rows) {
+  return `<table><thead><tr>${head.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead>`
+    + `<tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+const swatch = color => `<span><i style="background:${color}"></i>`;
+
+function chartSkillByYear(rows) {
+  const f3 = x => x.toFixed(3);
+  const W = chartW(), H = 240, L = 44, R = 8, T = 10, B = 26;
+  const x0 = L, x1 = W - R, y0 = T, y1 = H - B;
+  const steps = Math.max(1, Math.ceil(Math.max(...rows.map(r => Math.abs(r.bss))) / 0.05 - 1e-9));
+  const lim = steps * 0.05;
+  const y = v => y0 + (y1 - y0) * (lim - v) / (2 * lim);
+  const band = (x1 - x0) / rows.length, bw = Math.max(4, band * 0.6);
+  const every = W < 400 ? 4 : 2;
+  const ticks = Array.from({ length: 2 * steps + 1 }, (_, k) => (k - steps) * 0.05).map(v => `<line class="${v === 0 ? 'base' : 'grid'}" x1="${x0}" x2="${x1}" y1="${y(v)}" y2="${y(v)}"/><text x="${x0 - 6}" y="${y(v) + 3}" text-anchor="end">${v.toFixed(2)}</text>`).join('');
+  const bars = rows.map((r, i) => {
+    const cx = x0 + i * band + band / 2;
+    const top = Math.min(y(0), y(r.bss)), h = Math.max(1, Math.abs(y(r.bss) - y(0)));
+    const fill = r.bss >= 0 ? 'var(--s-model)' : 'var(--s-down)';
+    const label = i % every === 0 ? `<text x="${cx}" y="${H - 8}" text-anchor="middle">${r.year}</text>` : '';
+    return `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${h}" rx="2" fill="${fill}"><title>${r.year}: probability skill ${r.bss.toFixed(3)} (model ${f3(r.brier_model)}, seed ${f3(r.brier_seed)})</title></rect>${label}`;
+  }).join('');
+  return vizCard({
+    id: 'skill', wide: true,
+    title: 'Skill against the seed rule, by season',
+    blurb: 'Probability error is the average squared gap between each predicted chance and the result; lower is better. Above zero means the model’s error was lower than the seed rule’s that season; below zero means it was higher.',
+    legend: `${swatch('var(--s-model)')}Beat the seed rule</span>${swatch('var(--s-down)')}Lost to it</span>`,
+    svg: `<svg class="viz-svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="skill-t">${ticks}${bars}</svg>`,
+    table: vizTable(['Season', 'Model error', 'Seed error', 'Skill'],
+      rows.map(r => [r.year, f3(r.brier_model), f3(r.brier_seed), r.bss.toFixed(3)])),
+  });
+}
+
+function chartAccuracyByRound(rows) {
+  const pct = x => `${(x * 100).toFixed(1)}%`;
+  const W = chartW(), H = 260, L = 44, R = 8, T = 10, B = 30;
+  const name = r => (W < 400 ? ROUND_SHORT[r.round] || r.label : r.label);
+  const x0 = L, x1 = W - R, y0 = T, y1 = H - B;
+  const y = v => y1 - (y1 - y0) * v;
+  const band = (x1 - x0) / rows.length, bw = Math.min(28, (band - 8) / 2);
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(v => `<line class="${v === 0 ? 'base' : 'grid'}" x1="${x0}" x2="${x1}" y1="${y(v)}" y2="${y(v)}"/><text x="${x0 - 6}" y="${y(v) + 3}" text-anchor="end">${Math.round(v * 100)}%</text>`).join('');
+  const bars = rows.map((r, i) => {
+    const cx = x0 + i * band + band / 2;
+    const bar = (x, acc, fill, who) => `<rect x="${x}" y="${y(acc)}" width="${bw}" height="${y1 - y(acc)}" rx="2" fill="${fill}"><title>${r.label}, ${who}: ${pct(acc)}</title></rect>`;
+    return bar(cx - bw - 1, r.accuracy_model, 'var(--s-model)', 'model')
+      + bar(cx + 1, r.accuracy_seed, 'var(--s-seed)', 'seed rule')
+      + `<text x="${cx}" y="${H - 10}" text-anchor="middle">${name(r)}</text>`;
+  }).join('');
+  return vizCard({
+    id: 'rounds',
+    title: 'Accuracy by round, model against seed rule',
+    blurb: 'Share of games where the pick won, by round. Bars start at zero, so small gaps stay small.',
+    legend: `${swatch('var(--s-model)')}Model</span>${swatch('var(--s-seed)')}Seed rule</span>`,
+    svg: `<svg class="viz-svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="rounds-t">${ticks}${bars}</svg>`,
+    table: vizTable(['Round', 'Games', 'Model', 'Seed rule'],
+      rows.map(r => [r.label, r.n_games.toLocaleString(), pct(r.accuracy_model), pct(r.accuracy_seed)])),
+  });
+}
+
+function chartCalibration(bins) {
+  const W = chartW(), H = W < 400 ? 280 : 300, L = 44, R = 12, T = 10, B = 34;
+  const x0 = L, x1 = W - R, y0 = T, y1 = H - B;
+  const x = v => x0 + (x1 - x0) * v, y = v => y1 - (y1 - y0) * v;
+  const pts = bins.filter(b => b.count > 0 && b.mean_predicted != null);
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(v =>
+    `<line class="grid" x1="${x(0)}" x2="${x(1)}" y1="${y(v)}" y2="${y(v)}"/><text x="${x0 - 6}" y="${y(v) + 3}" text-anchor="end">${v.toFixed(2)}</text>`
+    + `<text x="${x(v)}" y="${H - 16}" text-anchor="middle">${v.toFixed(2)}</text>`).join('');
+  const diagonal = `<line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--ink-3)" stroke-width="1"/>`;
+  const dots = pts.map(b => {
+    const r = 3 + Math.sqrt(b.count) / 2;
+    return `<circle cx="${x(b.mean_predicted)}" cy="${y(b.mean_actual)}" r="${r}" fill="var(--s-model)" stroke="var(--panel)" stroke-width="2"><title>Predicted ${b.mean_predicted.toFixed(2)}, won ${b.mean_actual.toFixed(2)} (${b.count} games)</title></circle>`;
+  }).join('');
+  const axes = `<text class="axis-title" x="${(x0 + x1) / 2}" y="${H - 1}" text-anchor="middle">Predicted chance the better seed wins</text>`
+    + `<text class="axis-title" x="12" y="${(y0 + y1) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(y0 + y1) / 2})">Share that won</text>`;
+  return vizCard({
+    id: 'calib', wide: false,
+    title: 'Calibration: predicted against actual',
+    blurb: 'Each dot is a band of predicted probabilities. Sitting on the diagonal means the predicted chance matched how often those games were won.',
+    legend: `${swatch('var(--s-model)')}Band, sized by games</span>${swatch('var(--ink-3)')}Perfect calibration</span>`,
+    svg: `<svg class="viz-svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="calib-t">${grid}${diagonal}${dots}${axes}</svg>`,
+    table: vizTable(['Predicted band', 'Games', 'Mean predicted', 'Actual won'],
+      pts.map(b => [`${b.lower.toFixed(1)}–${b.upper.toFixed(1)}`, b.count, b.mean_predicted.toFixed(3), b.mean_actual.toFixed(3)])),
+  });
 }
 
 init();

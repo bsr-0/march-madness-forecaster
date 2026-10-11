@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=df584189">
+<link rel="stylesheet" href="app.css?v=4309cd35">
 </head>
 <body>
 
@@ -20,6 +20,10 @@
     <span class="mark">Bracket Lab</span>
     <!-- Newest season first, then the played seasons as history (init()). -->
     <nav class="years" id="years" aria-label="Season"></nav>
+  </div>
+  <div class="modes view-toggle" role="group" aria-label="View">
+    <button class="mode on" id="view-analytics" data-view="analytics" onclick="setView('analytics')" aria-pressed="true">Analytics</button>
+    <button class="mode" id="view-bracket" data-view="bracket" onclick="setView('bracket')" aria-pressed="false">Bracket</button>
   </div>
   <!-- Only while the newest listed season is not_started (fieldPending()).
        No payload carries an exact tip-off date, so this reads as an estimate
@@ -36,7 +40,22 @@
        backtested rules and the fitted model: the rule search is excluded on
        purpose because it is never scored (see its own panel). Hidden when
        the season on screen hasn't been played yet. -->
-  <section class="panel" id="leaderboard" hidden></section>
+  <p class="season-note" id="season-note" hidden></p>
+
+  <!-- ANALYTICS, the default view. Testing metrics for the model over past
+       seasons (ml_backtest.json, filled by renderAnalytics() in app.js) --
+       independent of which season is on screen, so it reads the same before
+       the field is out. -->
+  <section class="analytics analytics-only" id="analytics" aria-labelledby="analytics-title">
+    <div class="analytics-head">
+      <h2 id="analytics-title">How the model tested</h2>
+      <p id="analytics-scope">Each season is scored by a model that was never trained on that season. 2026 is left out because the model was trained on it.</p>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="charts" id="charts"><p class="prior-note">Loading test results&hellip;</p></div>
+  </section>
+
+  <section class="panel analytics-only" id="leaderboard" hidden></section>
 
   <!-- 2. WHAT YOU GET. The one-glance summary of the bracket on screen:
        season, objective, champion, the two numbers, and the one sentence that
@@ -44,21 +63,21 @@
        ranking). Everything a visitor needs before the bracket itself; nothing
        they do not. Filled by renderHeadline() from the same payload fields
        the comparison table and the board use, so the three cannot disagree. -->
-  <section class="headline" id="headline" hidden></section>
+  <section class="headline bracket-only" id="headline" hidden></section>
 
   <!-- 2a. SCORECARD. Does the bracket beat "always pick the better seed"?
        As played (points and games against the all-chalk bracket, since ESPN
        points mostly reward chalk) for a played season, and held-out R2 and
        accuracy against seeds for the fitted model. renderScorecard() in
        app.js hides it when neither applies. -->
-  <section class="panel" id="scorecard" hidden></section>
+  <section class="panel analytics-only" id="scorecard" hidden></section>
 
   <!-- Said out loud rather than in a title= tooltip, which no phone shows. -->
-  <p class="dropped" id="dropped-note" role="status" aria-live="polite"></p>
+  <p class="dropped bracket-only" id="dropped-note" role="status" aria-live="polite"></p>
 
   <!-- 3. THE BRACKET. Getting it OUT is the deliverable of this whole system:
        63 picks typed into a pool site. -->
-  <section class="board-tools" id="board-tools" hidden>
+  <section class="board-tools bracket-only" id="board-tools" hidden>
     <button class="tool" id="copy-picks" onclick="copyPicks()">Copy picks</button>
     <button class="tool" id="print-picks" onclick="window.print()">Print</button>
     <span class="tool-msg" id="copy-msg" role="status" aria-live="polite"></span>
@@ -70,12 +89,12 @@
        shows one round at a time instead. Always in the DOM -- CSS alone
        decides whether it is visible, so there is nothing for JS to create or
        tear down when the viewport crosses the breakpoint. -->
-  <nav class="board-nav" id="board-nav" hidden aria-label="Round">
+  <nav class="board-nav bracket-only" id="board-nav" hidden aria-label="Round">
     <button class="rnav-btn" id="rnav-prev" onclick="setMobileRound(-1)" aria-label="Previous round">&#8249;</button>
     <span class="rnav-label" id="rnav-label" aria-live="polite"></span>
     <button class="rnav-btn" id="rnav-next" onclick="setMobileRound(1)" aria-label="Next round">&#8250;</button>
   </nav>
-  <nav class="rnav-dots" id="rnav-dots" hidden aria-label="Round shortcuts"></nav>
+  <nav class="rnav-dots bracket-only" id="rnav-dots" hidden aria-label="Round shortcuts"></nav>
 
   <!-- Season unavailable / not started. With played seasons before it a
        not-started season is PENDING instead (fieldPending() in app.js): this
@@ -84,13 +103,13 @@
        counts under the chosen rule's criteria (pendingBoardHTML()). -->
   <section class="empty" id="empty" hidden></section>
 
-  <section class="board" id="board" aria-label="Bracket"></section>
+  <section class="board bracket-only" id="board" aria-label="Bracket"></section>
 
   <!-- One entry point for changing how this bracket is built. The bracket
-       above remains the default view; strategy choice, filters, and advanced
+       above is the Bracket view; strategy choice, filters, and advanced
        exploration live together here. Native disclosure keeps the control
        usable without requiring JavaScript. -->
-  <details class="customize" id="customize" hidden>
+  <details class="customize bracket-only" id="customize" hidden>
     <summary class="tune-head">
       <span class="tune-title">Customize this bracket</span>
       <span class="tune-sub">Choose a strategy, adjust the picks, or explore the advanced tools.</span>
@@ -118,7 +137,7 @@
        docs/index2.html); renderCompare() in app.js still builds it from the
        exact same strategyRows() data, so nothing here can disagree with the
        headline or the board. -->
-  <section class="compare" id="compare" hidden></section>
+  <section class="compare bracket-only" id="compare" hidden></section>
 
   <!-- Advanced tools are a labelled section inside Customize, rather than a
        second disclosure wrapped around two more disclosures. -->
@@ -257,7 +276,7 @@
        artifacts/methodology_audit/; the page's job is to state the result
        plainly and keep the reasoning one click away, not to bury the bracket
        under it. -->
-  <details class="why" id="why" hidden>
+  <details class="why bracket-only" id="why" hidden>
     <summary class="tune-head">
       <span class="tune-title">Why this bracket, and how it was tested</span>
       <span class="tune-sub">The objective, the referee, and the model behind the numbers above.</span>
@@ -304,6 +323,6 @@
      against the new data. v=23 shipped the strategy picker without a bump, so
      anyone with a warm cache kept seeing the removed variable-selection UI. -->
 <script src="fit.js?v=7554f046"></script>
-<script src="app.js?v=029e8c78"></script>
+<script src="app.js?v=76fbaf46"></script>
 </body>
 </html>
