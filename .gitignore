@@ -125,3 +125,6 @@ docs/data/training_pit.json
 # writes docs/data, the JS tests read docs/app.js and docs/fit.js). It is not
 # deployed from here -- the prediction_models hub pulls it at deploy time and
 # serves it at /madness/.
+
+# Local virtualenv
+.venv/

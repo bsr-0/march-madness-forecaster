@@ -131,11 +131,11 @@
   },
   {
    "year": 2014,
-   "generated_at": "2026-10-11T14:43:24+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 77,
+   "generated_at": "2026-10-12T04:42:06+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 83,
    "artifact": "artifacts/candidates/candidates_2014.json",
-   "artifact_sha256": "6b89f0f8333a3f18a303f95c1bc80c698eb195541f8dbe66545507a19fae757a",
+   "artifact_sha256": "023a62600632166a3779a730e9a6700a9e48d63946f01d4ad7ed6e01ea2977ae",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -155,7 +155,7 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [
     "umass"
    ],
@@ -163,19 +163,20 @@
     "data/raw/historical/torvik_2014.json": "5c4f44cbf99bd8554fae88c458f36480808cf03be2dea1d90d073c515d48ceeb",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2014.json": "5c129e537133980058fbdfc9045cdf4d27a66ca89ca79c1ca403412ce15e0d16",
+    "data/raw/historical_public_picks/espn_picks_2014.json": "28385eb7b38ecd92caab6651b39f951c77fb6e36616f72118a2c013708b90ca6",
     "data/raw/historical/tournament_context_2014.json": "f0ab778573cb85396848da99f7801e058fecef2f0674e43db8e8db94a2f0fe3e",
     "data/raw/historical/external_ratings_2014.json": "991be2c75ef3dd8edc1c328b8aaff17fa1cb27d5bfb332122f13ffab3c1c6dae",
     "data/raw/historical/historical_games_2014.json": "0faf6e0cc483c81ccf1cf617603bcfebf96d90da083e11b8fe58dd3d0117c894"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2015,
-   "generated_at": "2026-10-11T14:44:41+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 78,
+   "generated_at": "2026-10-12T04:42:06+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 83,
    "artifact": "artifacts/candidates/candidates_2015.json",
-   "artifact_sha256": "5ba0566e9bdb8a6c09f844dda09cb46d66c0db5bf3e71cbac369c22417fbf2d7",
+   "artifact_sha256": "65b67166d8daa6b56a8f6420da826bd2fc88b6d5f5ba281ee492431483661d9b",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -195,25 +196,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2015.json": "105cc3dfeb29490a19ebe72effc5310c592e402784d67de5e529f7667adfe488",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2015.json": "a1981e42af39d365a2e049e2ee90c2b79010be3887e2ff9474d0ab3e5ccf6c98",
+    "data/raw/historical_public_picks/espn_picks_2015.json": "1d52c1ea3e248750301cc5d9a62c63f43b3dbfefc993b8576f556abdf071ce72",
     "data/raw/historical/tournament_context_2015.json": "0480235d3952d8fe1b5053e470beeb6eef5542187c95d478302f55f6003d94e3",
     "data/raw/historical/external_ratings_2015.json": "d99915e5c6d0f43068437ba5405ade86a8888dc8623c85c7bd0368d61e5723e7",
     "data/raw/historical/historical_games_2015.json": "1635a60156939cb7f8bc103158800e56637bdca6e23cb1647b0a19ccc5399285"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2016,
-   "generated_at": "2026-10-11T14:45:59+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 76,
+   "generated_at": "2026-10-12T04:42:06+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 84,
    "artifact": "artifacts/candidates/candidates_2016.json",
-   "artifact_sha256": "5712cd98cc3f3084f7f2ed74d543d66a0ae6eb6718bcc8d40c8b3ce75aa5a758",
+   "artifact_sha256": "07e6fdf30cc51492eb7b56801aa0f62ed09065e7b23da51f7bee0836c7f99dd2",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -233,25 +235,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2016.json": "3ffb48e57820209e92d477d2ccc32f30769eddf39f3dff4fa2548659a835cf43",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2016.json": "fb06ba6b25e58e7d261b3d62cc17a076b98e6cbbaa249d5980a39b8fd81c8200",
+    "data/raw/historical_public_picks/espn_picks_2016.json": "cc7becd99c106a1a9c0e298bb131462d155c9dffc9677ee82bc396f75583a358",
     "data/raw/historical/tournament_context_2016.json": "ec2a2d674895cfce1c025079b2ebd433bbd3fad026f7109a50743efac52ba0cc",
     "data/raw/historical/external_ratings_2016.json": "75259b36ddc7436e7a5cc8a7fdb4b83bf794736f5e8c94b97f08dec108967ae7",
     "data/raw/historical/historical_games_2016.json": "2ee9f0411c09c0b91e636d5d6fb62ced467fe593264df6e724786c53bff4814b"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2017,
-   "generated_at": "2026-10-11T14:47:15+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 78,
+   "generated_at": "2026-10-12T04:42:06+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 85,
    "artifact": "artifacts/candidates/candidates_2017.json",
-   "artifact_sha256": "e855b20101a0585ad264c688b8daa8c04a1d73e76f185830b8687d392f44ad18",
+   "artifact_sha256": "abadea357c16bfbd01a0d4a1b02aa0c22983688e5338b4a66b841e307b6d9586",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -271,25 +274,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2017.json": "afea79ad912f56ccf72259a39b3e9e36ea1a787c1fa2c45c836cf1e52a4049ba",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2017.json": "5b83679a3af89050ce8d5804c40c08f8c33aec42eb17577d4b1e75af911ebb04",
+    "data/raw/historical_public_picks/espn_picks_2017.json": "7f06e44cd983a33bd8fac5100ef8ff1534b74cae9280fe16d60ae25cfa4156df",
     "data/raw/historical/tournament_context_2017.json": "fa2178e826bb5120ad2aeb0b77e36043bc739e3bc46f499232624eedca7e1dce",
     "data/raw/historical/external_ratings_2017.json": "c0639711c7b476b5c495ff987abce1f13de5752c429aa4c45e8523275c214fd5",
     "data/raw/historical/historical_games_2017.json": "ead97c9fa971a8aac7428ed8cd44c08a20820c81d011c6a2586e4ca2bb2f43df"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2018,
-   "generated_at": "2026-10-11T14:48:33+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 78,
+   "generated_at": "2026-10-12T04:43:29+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 85,
    "artifact": "artifacts/candidates/candidates_2018.json",
-   "artifact_sha256": "85675654505b3856210a7ec8d96bea3bb8ce3794d5c03af1c607d69589093ddd",
+   "artifact_sha256": "6f41efbef83fb8fc6b521198b1489163bc6351e28992482d5a3f4e9b030dbc22",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -309,25 +313,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2018.json": "ccfa0d0f758b7e22ddf3917db5fd606c8e955bcc951ff8e3f0fc937346fc8df0",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2018.json": "2c37363be9361b789dfa2f57e29ab6f665221d37d18597442aa0ff68e25d365a",
+    "data/raw/historical_public_picks/espn_picks_2018.json": "027beeac425659f417a190ef60e127414e07bc0ef0301b268b49d20769b476e7",
     "data/raw/historical/tournament_context_2018.json": "54ea3e66f1f3d12b2d93161935201f302f905356e0d7b9bc2386e2cd465a377f",
     "data/raw/historical/external_ratings_2018.json": "abcb476f887a5612e01e02aeb38d918cac0b6384a6d8a6a1da77dd6bd7582d96",
     "data/raw/historical/historical_games_2018.json": "6b0cd32f8a5b0b83948bb41ed33fbeb87af34956d34671459e29a1c96fc9484f"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2019,
-   "generated_at": "2026-10-11T14:49:51+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 76,
+   "generated_at": "2026-10-12T04:43:29+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 85,
    "artifact": "artifacts/candidates/candidates_2019.json",
-   "artifact_sha256": "861788c98910bd9cf35de58f001474678c4a882f8c75bb7371c3afba9b9192c9",
+   "artifact_sha256": "f38d223e604f3820d1b5bea8604b20ac46653b066fb84ef58f3a78e282183e31",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -347,25 +352,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2019.json": "f12962bd54ef2544f4ab8a933d275b2dd140c297cff0f5d548d5bd2dbcdf80b3",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2019.json": "dfe4aa30cd9040f2ddb4c6e1a646a4d3973516396d25d98415f86127cfe1c1f5",
+    "data/raw/historical_public_picks/espn_picks_2019.json": "25ed31a89954d03cc9c369363edc846fde374f9181a102a75d61100911320052",
     "data/raw/historical/tournament_context_2019.json": "2fdaeda5b7a97f6553f8d27bab46233995a53afa9eb091ea3e39ca7d7e49edbc",
     "data/raw/historical/external_ratings_2019.json": "daaa8e4ae4467a1b3b1ac4eb4966fc09810c8711b7d07acbfda03730bf6019da",
     "data/raw/historical/historical_games_2019.json": "fb2501a9047af689ee74d88763baf79a6430306e00ca9f72b68c04d769f6b4fa"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2021,
-   "generated_at": "2026-10-11T14:51:07+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 77,
+   "generated_at": "2026-10-12T04:43:30+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 85,
    "artifact": "artifacts/candidates/candidates_2021.json",
-   "artifact_sha256": "bd51a4b787a274f54c3b36795cf4accfc70d64cca6843d0eed496cd378496b30",
+   "artifact_sha256": "1d66d1fbb830ddb89936649b0bac59619b7761b7cdfae3159cf5d6b8015bdac7",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -385,25 +391,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2021.json": "9cf798dd898968f7eb31147c06c7005e967abf813ef18b7cd3d72164db7b1ca7",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2021.json": "032e8d66add889c34a6fca1098652a473d74b1c3ed85624e40c38f2d9f381d11",
+    "data/raw/historical_public_picks/espn_picks_2021.json": "adeb051f9e8e9a0d92c73a6bbd47e09c1b03da7f09ffc2b760d0f48dd7e9ddc9",
     "data/raw/historical/tournament_context_2021.json": "7ef899b84deda335abdc39189f2b92e5fc0cf3c3fb7f66d88407366e883a24ee",
     "data/raw/historical/external_ratings_2021.json": "a79ead4611dc1303502fb8259a3c4cdc354dff965eff5509113fead855cab744",
     "data/raw/historical/historical_games_2021.json": "90cf6f35767d233cb11ce521f3a097762422f0c5f67dfa45e0bc725f5400aecd"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2022,
-   "generated_at": "2026-10-11T14:52:24+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 77,
+   "generated_at": "2026-10-12T04:43:31+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 83,
    "artifact": "artifacts/candidates/candidates_2022.json",
-   "artifact_sha256": "cbb0725b791112dd3e59261668f691cec673d7e698846ec922473e78cf3e998c",
+   "artifact_sha256": "35cf6f199e3fe3014076d96cf30988b1b14a06f6c9148bfd2a9e60f081db2e4b",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -423,17 +430,18 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2022.json": "393b523c17f2f0c3b98dfaa593ba161cce78e71634e95638d96916a00ea9e458",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2022.json": "1f8a34e661bcaff444e29464ceaa2d718f11256b3b640746d223417c76cf46ee",
+    "data/raw/historical_public_picks/espn_picks_2022.json": "5bedd944bcb2e52ae48f84cfc14755ea54f5351e6c24761f906a6f094b339b2a",
     "data/raw/historical/tournament_context_2022.json": "4d629922785bae1314b6cd8f46cb70891faa079d0f6f8e130ee0e82a27a6a2dc",
     "data/raw/historical/external_ratings_2022.json": "d2d707d5e0e555e63f9c037d8929eff17b045a76ac822125765ce45ff19f8d56",
     "data/raw/historical/historical_games_2022.json": "dce8690870a4ba515257a88253e33a5e6692288b6c8711ee19fdadb047f103c8"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2023,
@@ -475,11 +483,11 @@
   },
   {
    "year": 2024,
-   "generated_at": "2026-10-11T14:54:58+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 79,
+   "generated_at": "2026-10-12T04:44:54+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 87,
    "artifact": "artifacts/candidates/candidates_2024.json",
-   "artifact_sha256": "b201c5b60e847c7df0e67261f724c45dc6b93254f2b8c14e1a4131f23439c990",
+   "artifact_sha256": "b0e47fd535070a6dec6fbb21302abf3b010511183243520ee9383ea09214be27",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -499,25 +507,26 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2024.json": "f1241528ba298dfa94148fa1381e246890d4f1bfc43e4b960191957af1d55329",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2024.json": "dfff467b4e9ab87719e1cc23419bc7dd60404163044bf184fa1665be1d2089c5",
+    "data/raw/historical_public_picks/espn_picks_2024.json": "8d104fc5e0c66a081ef55e1f41aec6a82b63ab8e1018b80b037da23c396aecc9",
     "data/raw/historical/tournament_context_2024.json": "78d36cde8c11820843e979b547bf60525cb3acd3145a9281dc731e1e3a03ab0f",
     "data/raw/historical/external_ratings_2024.json": "cc3e5ddb0a9af20fe7861ccef3bad720fabf60e11653e26740a8e354205b3bfb",
     "data/raw/historical/historical_games_2024.json": "d9313e92fc2a76d6c673a15a67587a65deaeebdffd26bf7f79dccc1df0a5c16a"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2025,
-   "generated_at": "2026-10-11T14:56:17+00:00",
-   "commit": "176c62ac45534e028119c8d2158a77f24a61d290",
-   "build_seconds": 79,
+   "generated_at": "2026-10-12T04:44:54+00:00",
+   "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0",
+   "build_seconds": 85,
    "artifact": "artifacts/candidates/candidates_2025.json",
-   "artifact_sha256": "dacde4b54f08fe6debcead299e9c8f4c1857009c2be58d1b3b4b7dad24d4527e",
+   "artifact_sha256": "351ee3c539c93a5047717a2a037c616148754b18dab4a949c43d7f044a3cc53a",
    "sidecar_matches": true,
    "meta": {
     "n_sims": 150000,
@@ -537,17 +546,18 @@
     ],
     "simulations_per_rating_source": 50000
    },
-   "public_picks_capture_time_verified": false,
+   "public_picks_capture_time_verified": true,
    "missing_torvik_team_ratings": [],
    "inputs_sha256": {
     "data/raw/historical/torvik_2025.json": "d3811c9da7644edf7a3d047ed102ef05c30e950b94143b6168e60f7ec6a8ed59",
     "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
     "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
-    "data/raw/historical_public_picks/espn_picks_2025.json": "2f2708c51bace5a7666f3351ea6128b047747c453bc9a658d20fab1f8a717237",
+    "data/raw/historical_public_picks/espn_picks_2025.json": "a8122bbb7bbd94463fe6d24e49d91150f1058dc28a8f303c2e8af7587fc555af",
     "data/raw/historical/tournament_context_2025.json": "fd3c89d72533998fd688502d35b3a77cd5782065e7407a86cf0e26a1ab7a55de",
     "data/raw/historical/external_ratings_2025.json": "387bcd3bd8cd90624f8649a04a7bf824f1639ed3f546e6360ab3accec05c0f3f",
     "data/raw/historical/historical_games_2025.json": "2ff7ca544af6ff26c5715c3ab863cc8bb0e1b7742752ff06c38cbe9754f3c528"
-   }
+   },
+   "rebuilt_after_picks_resourcing": true
   },
   {
    "year": 2026,
@@ -592,14 +602,279 @@
   "method": "Same commit, inputs, settings and --generated-at, built into artifacts/local_reports/replay_2026-10-11/ (separate directory); compared with cmp and SHA-256.",
   "results": [
    {
-    "year": 2023,
-    "sha256": "676146f51574619723fe3e66cadaca60d5e7d1e8071fc039f1dfa3ca83fc0054",
-    "byte_identical": true
-   },
-   {
     "year": 2012,
     "sha256": "91fc7e00eb8e5f9a5fe0ebb7e2a34c237d276dc6c4f39cc9c7ac1c3ed0bd231a",
     "byte_identical": true
+   },
+   {
+    "year": 2023,
+    "sha256": "676146f51574619723fe3e66cadaca60d5e7d1e8071fc039f1dfa3ca83fc0054",
+    "byte_identical": true,
+    "note": "2023 not rebuilt in the second pass"
+   },
+   {
+    "year": 2016,
+    "sha256": "07e6fdf30cc51492eb7b56801aa0f62ed09065e7b23da51f7bee0836c7f99dd2",
+    "byte_identical": true,
+    "note": "replayed after the picks re-sourcing rebuild, into artifacts/local_reports/replay_2026-10-12/"
+   }
+  ]
+ },
+ "rebuild_after_picks_resourcing": {
+  "when": "2026-10-12",
+  "reason": "ten public-picks archives re-sourced from pre-tip captures (roadmap decision 2026-10-11); every artifact that consumed them was rebuilt with --force from the same frozen settings",
+  "seasons": [
+   2014,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2021,
+   2022,
+   2024,
+   2025
+  ],
+  "pool_variants": [
+   {
+    "year": 2015,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2015.json",
+    "artifact_sha256": "b505a9106c33ab512c5c7a3e9f757f895ef0071de2a5778a333976c1262e1b13",
+    "generated_at": "2026-10-12T04:44:55+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2014,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2014.json",
+    "artifact_sha256": "243a810fb1c43f65f6312f13e3859671c29140ab4471dbcc476b4ff839768f86",
+    "generated_at": "2026-10-12T04:44:54+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2016,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2016.json",
+    "artifact_sha256": "480f783a22534aa252c6eec321b07fe2fe50977eada12d73c872e674291be12b",
+    "generated_at": "2026-10-12T04:46:11+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2017,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2017.json",
+    "artifact_sha256": "c402261ea799230c62626c3efc56538295d04ead2b9e23eac46f1ac6bffc5dbe",
+    "generated_at": "2026-10-12T04:46:11+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2018,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2018.json",
+    "artifact_sha256": "e74d3d46d7ef302ab29fc707f8768d4d38d20b810f19c9437f8c6bf7f7bdc32d",
+    "generated_at": "2026-10-12T04:46:19+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2019,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2019.json",
+    "artifact_sha256": "77a31140be4558be617745ad351a03d2df53276c3bfa8ee32cb22a059bbf903f",
+    "generated_at": "2026-10-12T04:46:21+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2021,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2021.json",
+    "artifact_sha256": "4e74bbf528f0f234cce9b1319359bb846c3bfc198d05337a39bf4bec14cc3ca4",
+    "generated_at": "2026-10-12T04:47:28+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2022,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2022.json",
+    "artifact_sha256": "7b12988e30b656afdc2692c0377478540b271796a59a858bb23d3a0c7641f8f5",
+    "generated_at": "2026-10-12T04:47:30+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2024,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2024.json",
+    "artifact_sha256": "a0972f2e3d1185a820aa2b0f18ad114102919438552e1eef5c5e07d8c804007d",
+    "generated_at": "2026-10-12T04:47:39+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2025,
+    "pool_size": 10,
+    "artifact": "artifacts/candidates/pool10/candidates_2025.json",
+    "artifact_sha256": "463314641f5ca335eccdb506ad8ba73588c05f0255a2f0f9b3a5b9cd75aeffbc",
+    "generated_at": "2026-10-12T04:47:39+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2014,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2014.json",
+    "artifact_sha256": "938c391c99c7e31320c61a9a7b5ef51614691b7a24a9fc7116273c1cfbeca4d8",
+    "generated_at": "2026-10-12T04:48:48+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2015,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2015.json",
+    "artifact_sha256": "a05c08d985610ff1c97ed155363829bae293eb3ac1efecd5a30a74c6ee86e31b",
+    "generated_at": "2026-10-12T04:48:48+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2016,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2016.json",
+    "artifact_sha256": "44ce872105d437a04f2fc4eae5a409fe386d9f45879edb97f9f4a186441c5bf4",
+    "generated_at": "2026-10-12T04:48:59+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2017,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2017.json",
+    "artifact_sha256": "9b4cd9bd4a1ee66d3ff848bff94bcc0b63e7773a01729cd5475e114e0c0e5fa4",
+    "generated_at": "2026-10-12T04:48:59+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2018,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2018.json",
+    "artifact_sha256": "a553aa1a056fde13e34b4accb5d09d8ef61b07c84c239fe1511c1499caead6a5",
+    "generated_at": "2026-10-12T04:50:19+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2019,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2019.json",
+    "artifact_sha256": "1696ff84ca29866bf3bbd407ce631ba8adc84d971fa5104f44ca4c78f44210e1",
+    "generated_at": "2026-10-12T04:50:19+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2021,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2021.json",
+    "artifact_sha256": "90853dd076044120681de48c55d39ca3f53db6a4eb4c8b3463e0c4b3fb6d46ac",
+    "generated_at": "2026-10-12T04:50:30+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2022,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2022.json",
+    "artifact_sha256": "b14aea835235e09c835884c1fe4ac05c62a6dbb4b07ccbd144c91eca60701af7",
+    "generated_at": "2026-10-12T04:50:31+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2024,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2024.json",
+    "artifact_sha256": "5eb4e2b4de6c7af2926d760ceacc2df9a94d886a0faf34f50c9794d98d972c8f",
+    "generated_at": "2026-10-12T04:51:50+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2025,
+    "pool_size": 50,
+    "artifact": "artifacts/candidates/pool50/candidates_2025.json",
+    "artifact_sha256": "c6ccb35e363571d081cb55521fabf9c20131e68775468c8931c16da44df313bf",
+    "generated_at": "2026-10-12T04:51:50+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2014,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2014.json",
+    "artifact_sha256": "7b07d66b84881a7f1c4766f04a22ca4fa857a430f45d112ee98254ff870a0e21",
+    "generated_at": "2026-10-12T04:52:04+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2015,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2015.json",
+    "artifact_sha256": "0c12ca613f9f34f8f8b6be2d2874cc24e9f7b807f66c443e06c87d0e38e53246",
+    "generated_at": "2026-10-12T04:52:04+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2016,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2016.json",
+    "artifact_sha256": "dae5bbc73bb08695b2efc094df921d1ceba0e9de0ad925576071d27cbe267553",
+    "generated_at": "2026-10-12T04:53:24+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2017,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2017.json",
+    "artifact_sha256": "0c45e50135c95bd721ea4d9cd99efdff0b3ce3334a42b5bc888977b3fd994577",
+    "generated_at": "2026-10-12T04:53:24+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2019,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2019.json",
+    "artifact_sha256": "d92aadff169501709cc79d6fd715bc312b39986d95349cf75407760f73b5447d",
+    "generated_at": "2026-10-12T04:53:52+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2018,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2018.json",
+    "artifact_sha256": "e6242cdc99e84dead8b7821c6063a7425c826ba7da2c8b9b4528706703c16cd3",
+    "generated_at": "2026-10-12T04:53:50+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2022,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2022.json",
+    "artifact_sha256": "2ebeba970b58c336f7b5478aff93aa2fdc317444a57ed094b76a20ca505bb028",
+    "generated_at": "2026-10-12T04:55:11+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2021,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2021.json",
+    "artifact_sha256": "74e5301e3e60223f9e311cab857ce97f2d8379964e2d758740c9109b12980642",
+    "generated_at": "2026-10-12T04:55:10+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2024,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2024.json",
+    "artifact_sha256": "e3ede423b3c5ebacf712f9fd2dc24350b256123c891ca8dcc097b27ad3b27883",
+    "generated_at": "2026-10-12T04:55:38+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
+   },
+   {
+    "year": 2025,
+    "pool_size": 100,
+    "artifact": "artifacts/candidates/pool100/candidates_2025.json",
+    "artifact_sha256": "702e25d2fe49f4dfee95f2507dddbf2d912a3f1af73c4a15f5da0c8adc149966",
+    "generated_at": "2026-10-12T04:55:38+00:00",
+    "commit": "a2e31e73001822cd5b21932d54aaf796b87dabc0"
    }
   ]
  }

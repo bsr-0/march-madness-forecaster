@@ -328,10 +328,10 @@
     "fit_inputs_hash": "6e2e33356a041ca829477382002b953435c3a2c51e11c92b142b0aafc4ab5bbe",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
     "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
-    "app_js_sha256": "76fbaf46d6ff48a10620fbd00a064e36235f76575a9c9579a28ca4bf1ac7bfe3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/candidates_2026.json",
     "candidates_generated_at": "2026-10-11T14:57:36+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-10-11T15:06:10.178161+00:00"
+  "generated_at": "2026-10-12T13:57:53.765003+00:00"
 }

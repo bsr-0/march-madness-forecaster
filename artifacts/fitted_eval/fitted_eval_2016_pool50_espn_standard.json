@@ -80,7 +80,7 @@
     ]
   ],
   "ev": 727.1,
-  "p1": 0.0522,
+  "p1": 0.0442,
   "champion": "UNC",
   "not_a_candidate": "This bracket was SCORED by the production referee, not SELECTED by it. It is not in the candidate bank, was never eligible for selection, and no selection behaviour reads this file.",
   "p1_meaning": "P(1st) here is the P(1st) of this bracket when evaluated in the common pool/referee framework the other displayed brackets are scored in -- not the fitted model's own belief about its chances.",
@@ -106,181 +106,181 @@
     "named:champ_equity": {
       "shipped": {
         "ev": 797.2,
-        "p1": 0.0508
+        "p1": 0.0215
       },
       "replayed": {
         "ev": 797.2,
-        "p1": 0.0508
+        "p1": 0.0215
       }
     },
     "named:ev_optimal": {
       "shipped": {
         "ev": 797.6,
-        "p1": 0.0504
+        "p1": 0.018
       },
       "replayed": {
         "ev": 797.6,
-        "p1": 0.0504
+        "p1": 0.018
       }
     },
     "named:blend_region_35": {
       "shipped": {
-        "ev": 693.3,
-        "p1": 0.083
+        "ev": 696.1,
+        "p1": 0.0827
       },
       "replayed": {
-        "ev": 693.3,
-        "p1": 0.083
+        "ev": 696.1,
+        "p1": 0.0827
       }
     },
     "named:ev_risk_10": {
       "shipped": {
-        "ev": 797.1,
-        "p1": 0.0535
+        "ev": 797.2,
+        "p1": 0.0215
       },
       "replayed": {
-        "ev": 797.1,
-        "p1": 0.0535
+        "ev": 797.2,
+        "p1": 0.0215
       }
     },
     "named:ev_risk_30": {
       "shipped": {
-        "ev": 794.4,
-        "p1": 0.0554
+        "ev": 797.2,
+        "p1": 0.0215
       },
       "replayed": {
-        "ev": 794.4,
-        "p1": 0.0554
+        "ev": 797.2,
+        "p1": 0.0215
       }
     },
     "named:ev_risk_50": {
       "shipped": {
-        "ev": 762.3,
-        "p1": 0.0755
+        "ev": 763.2,
+        "p1": 0.0675
       },
       "replayed": {
-        "ev": 762.3,
-        "p1": 0.0755
+        "ev": 763.2,
+        "p1": 0.0675
       }
     },
     "named:ev_risk_70": {
       "shipped": {
-        "ev": 745.8,
-        "p1": 0.0622
+        "ev": 743.6,
+        "p1": 0.0628
       },
       "replayed": {
-        "ev": 745.8,
-        "p1": 0.0622
+        "ev": 743.6,
+        "p1": 0.0628
       }
     },
     "named:ev_risk_90": {
       "shipped": {
-        "ev": 716.9,
-        "p1": 0.0555
+        "ev": 664.9,
+        "p1": 0.0489
       },
       "replayed": {
-        "ev": 716.9,
-        "p1": 0.0555
+        "ev": 664.9,
+        "p1": 0.0489
       }
     },
     "named:blend_region_10": {
       "shipped": {
         "ev": 728.7,
-        "p1": 0.056
+        "p1": 0.0426
       },
       "replayed": {
         "ev": 728.7,
-        "p1": 0.056
+        "p1": 0.0426
       }
     },
     "named:blend_region_30": {
       "shipped": {
-        "ev": 693.3,
-        "p1": 0.083
+        "ev": 696.1,
+        "p1": 0.0827
       },
       "replayed": {
-        "ev": 693.3,
-        "p1": 0.083
+        "ev": 696.1,
+        "p1": 0.0827
       }
     },
     "named:blend_region_50": {
       "shipped": {
-        "ev": 686.0,
-        "p1": 0.0803
+        "ev": 681.5,
+        "p1": 0.0819
       },
       "replayed": {
-        "ev": 686.0,
-        "p1": 0.0803
+        "ev": 681.5,
+        "p1": 0.0819
       }
     },
     "named:blend_region_70": {
       "shipped": {
-        "ev": 655.6,
-        "p1": 0.0645
+        "ev": 671.6,
+        "p1": 0.1227
       },
       "replayed": {
-        "ev": 655.6,
-        "p1": 0.0645
+        "ev": 671.6,
+        "p1": 0.1227
       }
     },
     "named:blend_region_90": {
       "shipped": {
-        "ev": 618.3,
-        "p1": 0.0493
+        "ev": 608.5,
+        "p1": 0.1086
       },
       "replayed": {
-        "ev": 618.3,
-        "p1": 0.0493
+        "ev": 608.5,
+        "p1": 0.1086
       }
     },
     "candidate:0": {
       "shipped": {
         "ev": 575.4,
-        "p1": 0.0127
+        "p1": 0.0077
       },
       "replayed": {
         "ev": 575.4,
-        "p1": 0.0127
+        "p1": 0.0077
       }
     },
     "candidate:1": {
       "shipped": {
         "ev": 625.5,
-        "p1": 0.032
+        "p1": 0.0493
       },
       "replayed": {
         "ev": 625.5,
-        "p1": 0.032
+        "p1": 0.0493
       }
     },
     "candidate:2": {
       "shipped": {
         "ev": 554.1,
-        "p1": 0.0488
+        "p1": 0.034
       },
       "replayed": {
         "ev": 554.1,
-        "p1": 0.0488
+        "p1": 0.034
       }
     },
     "candidate:3": {
       "shipped": {
         "ev": 589.2,
-        "p1": 0.0599
+        "p1": 0.0415
       },
       "replayed": {
         "ev": 589.2,
-        "p1": 0.0599
+        "p1": 0.0415
       }
     },
     "candidate:4": {
       "shipped": {
         "ev": 520.8,
-        "p1": 0.0135
+        "p1": 0.0335
       },
       "replayed": {
         "ev": 520.8,
-        "p1": 0.0135
+        "p1": 0.0335
       }
     }
   },
@@ -327,11 +327,11 @@
   "inputs": {
     "fit_inputs_hash": "49e517f21c7629bfc29e0debd24a9b7c4091029ffa25768fe0a5f05c7434dd5c",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
-    "fit_js_sha256": "040142ee94f6a7cf4827b548a8b149d874af9de7bce2a0cf5a5911fac3671618",
-    "app_js_sha256": "2febbff32ca2cfc5b7b9782ebd45f719a2ef24007cdc0a1b3772fc39519390e1",
+    "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/pool50/candidates_2016.json",
-    "candidates_generated_at": "2026-09-24T02:19:58.406798+00:00"
+    "candidates_generated_at": "2026-10-12T04:48:59+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 50-entry pool (you plus 49 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-24T02:20:23.215961+00:00"
+  "generated_at": "2026-10-12T13:58:36.871549+00:00"
 }

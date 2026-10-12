@@ -80,7 +80,7 @@
     ]
   ],
   "ev": 771.1,
-  "p1": 0.0434,
+  "p1": 0.0464,
   "champion": "UNC",
   "not_a_candidate": "This bracket was SCORED by the production referee, not SELECTED by it. It is not in the candidate bank, was never eligible for selection, and no selection behaviour reads this file.",
   "p1_meaning": "P(1st) here is the P(1st) of this bracket when evaluated in the common pool/referee framework the other displayed brackets are scored in -- not the fitted model's own belief about its chances.",
@@ -106,131 +106,131 @@
     "named:champ_equity": {
       "shipped": {
         "ev": 819.0,
-        "p1": 0.0687
+        "p1": 0.0722
       },
       "replayed": {
         "ev": 819.0,
-        "p1": 0.0687
+        "p1": 0.0722
       }
     },
     "named:ev_optimal": {
       "shipped": {
         "ev": 821.0,
-        "p1": 0.0769
+        "p1": 0.0811
       },
       "replayed": {
         "ev": 821.0,
-        "p1": 0.0769
+        "p1": 0.0811
       }
     },
     "named:blend_region_35": {
       "shipped": {
         "ev": 745.2,
-        "p1": 0.0409
+        "p1": 0.0437
       },
       "replayed": {
         "ev": 745.2,
-        "p1": 0.0409
+        "p1": 0.0437
       }
     },
     "named:ev_risk_10": {
       "shipped": {
         "ev": 820.8,
-        "p1": 0.0704
+        "p1": 0.0726
       },
       "replayed": {
         "ev": 820.8,
-        "p1": 0.0704
+        "p1": 0.0726
       }
     },
     "named:ev_risk_30": {
       "shipped": {
         "ev": 818.6,
-        "p1": 0.0675
+        "p1": 0.0717
       },
       "replayed": {
         "ev": 818.6,
-        "p1": 0.0675
+        "p1": 0.0717
       }
     },
     "named:ev_risk_50": {
       "shipped": {
         "ev": 814.6,
-        "p1": 0.066
+        "p1": 0.0698
       },
       "replayed": {
         "ev": 814.6,
-        "p1": 0.066
+        "p1": 0.0698
       }
     },
     "named:ev_risk_70": {
       "shipped": {
         "ev": 792.9,
-        "p1": 0.0545
+        "p1": 0.0575
       },
       "replayed": {
         "ev": 792.9,
-        "p1": 0.0545
+        "p1": 0.0575
       }
     },
     "named:ev_risk_90": {
       "shipped": {
         "ev": 765.1,
-        "p1": 0.0436
+        "p1": 0.0467
       },
       "replayed": {
         "ev": 765.1,
-        "p1": 0.0436
+        "p1": 0.0467
       }
     },
     "named:blend_region_10": {
       "shipped": {
         "ev": 754.0,
-        "p1": 0.0365
+        "p1": 0.0393
       },
       "replayed": {
         "ev": 754.0,
-        "p1": 0.0365
+        "p1": 0.0393
       }
     },
     "named:blend_region_30": {
       "shipped": {
         "ev": 745.2,
-        "p1": 0.0409
+        "p1": 0.0437
       },
       "replayed": {
         "ev": 745.2,
-        "p1": 0.0409
+        "p1": 0.0437
       }
     },
     "named:blend_region_50": {
       "shipped": {
         "ev": 742.5,
-        "p1": 0.0632
+        "p1": 0.0649
       },
       "replayed": {
         "ev": 742.5,
-        "p1": 0.0632
+        "p1": 0.0649
       }
     },
     "named:blend_region_70": {
       "shipped": {
         "ev": 742.6,
-        "p1": 0.0693
+        "p1": 0.0713
       },
       "replayed": {
         "ev": 742.6,
-        "p1": 0.0693
+        "p1": 0.0713
       }
     },
     "named:blend_region_90": {
       "shipped": {
         "ev": 682.2,
-        "p1": 0.0442
+        "p1": 0.0461
       },
       "replayed": {
         "ev": 682.2,
-        "p1": 0.0442
+        "p1": 0.0461
       }
     },
     "candidate:0": {
@@ -246,41 +246,41 @@
     "candidate:1": {
       "shipped": {
         "ev": 507.7,
-        "p1": 0.0198
+        "p1": 0.0208
       },
       "replayed": {
         "ev": 507.7,
-        "p1": 0.0198
+        "p1": 0.0208
       }
     },
     "candidate:2": {
       "shipped": {
         "ev": 582.2,
-        "p1": 0.0613
+        "p1": 0.0649
       },
       "replayed": {
         "ev": 582.2,
-        "p1": 0.0613
+        "p1": 0.0649
       }
     },
     "candidate:3": {
       "shipped": {
         "ev": 615.9,
-        "p1": 0.018
+        "p1": 0.019
       },
       "replayed": {
         "ev": 615.9,
-        "p1": 0.018
+        "p1": 0.019
       }
     },
     "candidate:4": {
       "shipped": {
         "ev": 658.0,
-        "p1": 0.0145
+        "p1": 0.0164
       },
       "replayed": {
         "ev": 658.0,
-        "p1": 0.0145
+        "p1": 0.0164
       }
     }
   },
@@ -328,10 +328,10 @@
     "fit_inputs_hash": "3dd7c019583e4b0e6407a3f1ba6b9621e8f51d8151194f504ac7009cfe3033a5",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
     "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
-    "app_js_sha256": "76fbaf46d6ff48a10620fbd00a064e36235f76575a9c9579a28ca4bf1ac7bfe3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/candidates_2017.json",
-    "candidates_generated_at": "2026-10-11T14:47:15+00:00"
+    "candidates_generated_at": "2026-10-12T04:42:06+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-10-11T15:04:01.658752+00:00"
+  "generated_at": "2026-10-12T13:57:34.111749+00:00"
 }

@@ -327,11 +327,11 @@
   "inputs": {
     "fit_inputs_hash": "a8ac2e6745dea6911cea8d0d74281e4ecb871762e6e64ed6e22a518be0cf5396",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
-    "fit_js_sha256": "040142ee94f6a7cf4827b548a8b149d874af9de7bce2a0cf5a5911fac3671618",
-    "app_js_sha256": "2febbff32ca2cfc5b7b9782ebd45f719a2ef24007cdc0a1b3772fc39519390e1",
+    "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/pool100/candidates_2024.json",
-    "candidates_generated_at": "2026-09-24T03:14:42.699559+00:00"
+    "candidates_generated_at": "2026-10-12T04:55:38+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 100-entry pool (you plus 99 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-24T03:15:32.583085+00:00"
+  "generated_at": "2026-10-12T14:00:55.497666+00:00"
 }

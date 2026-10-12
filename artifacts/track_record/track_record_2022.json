@@ -83,9 +83,9 @@
       ],
       "source": "named_strategies.blend_region_35",
       "points": 810,
-      "won_share": 0.0122,
+      "won_share": 0.012,
       "median_rank": 5,
-      "mean_rank": 5.3,
+      "mean_rank": 5.36,
       "pool_median_points": 560,
       "pool_best_points": 1150,
       "n_trials": 2000
@@ -170,9 +170,9 @@
       ],
       "source": "named_strategies.ev_optimal",
       "points": 780,
-      "won_share": 0.0043,
+      "won_share": 0.004,
       "median_rank": 6,
-      "mean_rank": 5.85,
+      "mean_rank": 5.9,
       "pool_median_points": 560,
       "pool_best_points": 1150,
       "n_trials": 2000
@@ -265,14 +265,14 @@
         "status": "INDETERMINATE",
         "fallback": true,
         "fallback_reason": "Historical source eligibility is INDETERMINATE. public-picks capture time is not verified",
-        "candidate_artifact_sha256": "cbb0725b791112dd3e59261668f691cec673d7e698846ec922473e78cf3e998c",
+        "candidate_artifact_sha256": "35cf6f199e3fe3014076d96cf30988b1b14a06f6c9148bfd2a9e60f081db2e4b",
         "prospective_artifact_gate": null,
         "source": "seed_only"
       },
       "points": 620,
       "won_share": 0.0,
       "median_rank": 12,
-      "mean_rank": 11.64,
+      "mean_rank": 11.74,
       "pool_median_points": 560,
       "pool_best_points": 1150,
       "n_trials": 2000
@@ -356,11 +356,11 @@
         ]
       ],
       "source": "artifacts/fitted_eval/fitted_eval_2022.json",
-      "fitted_eval_generated_at": "2026-10-11T15:05:05.529067+00:00",
+      "fitted_eval_generated_at": "2026-10-12T13:57:35.138917+00:00",
       "points": 1040,
-      "won_share": 0.1137,
+      "won_share": 0.1105,
       "median_rank": 3,
-      "mean_rank": 3.02,
+      "mean_rank": 3.07,
       "pool_median_points": 560,
       "pool_best_points": 1150,
       "n_trials": 2000
@@ -394,31 +394,31 @@
     "named:ev_optimal": {
       "shipped": {
         "ev": 880.6,
-        "p1": 0.0224
+        "p1": 0.0215
       },
       "replayed": {
         "ev": 880.6,
-        "p1": 0.0224
+        "p1": 0.0215
       }
     },
     "named:blend_region_35": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       }
     },
     "named:ev_risk_10": {
       "shipped": {
         "ev": 880.4,
-        "p1": 0.0214
+        "p1": 0.0207
       },
       "replayed": {
         "ev": 880.4,
-        "p1": 0.0214
+        "p1": 0.0207
       }
     },
     "named:ev_risk_30": {
@@ -443,130 +443,130 @@
     },
     "named:ev_risk_70": {
       "shipped": {
-        "ev": 869.6,
-        "p1": 0.0162
+        "ev": 868.5,
+        "p1": 0.0155
       },
       "replayed": {
-        "ev": 869.6,
-        "p1": 0.0162
+        "ev": 868.5,
+        "p1": 0.0155
       }
     },
     "named:ev_risk_90": {
       "shipped": {
         "ev": 846.5,
-        "p1": 0.011
+        "p1": 0.0109
       },
       "replayed": {
         "ev": 846.5,
-        "p1": 0.011
+        "p1": 0.0109
       }
     },
     "named:blend_region_10": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       }
     },
     "named:blend_region_30": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.1194
+        "p1": 0.1174
       }
     },
     "named:blend_region_50": {
       "shipped": {
         "ev": 756.1,
-        "p1": 0.1188
+        "p1": 0.1185
       },
       "replayed": {
         "ev": 756.1,
-        "p1": 0.1188
+        "p1": 0.1185
       }
     },
     "named:blend_region_70": {
       "shipped": {
-        "ev": 737.5,
-        "p1": 0.112
+        "ev": 737.3,
+        "p1": 0.1107
       },
       "replayed": {
-        "ev": 737.5,
-        "p1": 0.112
+        "ev": 737.3,
+        "p1": 0.1107
       }
     },
     "named:blend_region_90": {
       "shipped": {
-        "ev": 641.3,
-        "p1": 0.0953
+        "ev": 676.6,
+        "p1": 0.0948
       },
       "replayed": {
-        "ev": 641.3,
-        "p1": 0.0953
+        "ev": 676.6,
+        "p1": 0.0948
       }
     },
     "candidate:0": {
       "shipped": {
         "ev": 625.9,
-        "p1": 0.0635
+        "p1": 0.06
       },
       "replayed": {
         "ev": 625.9,
-        "p1": 0.0635
+        "p1": 0.06
       }
     },
     "candidate:1": {
       "shipped": {
         "ev": 708.3,
-        "p1": 0.017
+        "p1": 0.0173
       },
       "replayed": {
         "ev": 708.3,
-        "p1": 0.017
+        "p1": 0.0173
       }
     },
     "candidate:2": {
       "shipped": {
         "ev": 577.0,
-        "p1": 0.0187
+        "p1": 0.0182
       },
       "replayed": {
         "ev": 577.0,
-        "p1": 0.0187
+        "p1": 0.0182
       }
     },
     "candidate:3": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.0301
+        "p1": 0.0302
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.0301
+        "p1": 0.0302
       }
     },
     "candidate:4": {
       "shipped": {
         "ev": 602.6,
-        "p1": 0.024
+        "p1": 0.0235
       },
       "replayed": {
         "ev": 602.6,
-        "p1": 0.024
+        "p1": 0.0235
       }
     }
   },
   "inputs": {
     "outcome_sha256": "f237ab0b45ad5fc87993c0bd7335dae061bfe3c527c6a56fbc33ea512ffd85f7",
     "candidates_artifact": "artifacts/candidates/candidates_2022.json",
-    "candidates_generated_at": "2026-10-11T14:52:24+00:00",
+    "candidates_generated_at": "2026-10-12T04:43:31+00:00",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44"
   },
-  "generated_at": "2026-10-11T15:09:16.958676+00:00"
+  "generated_at": "2026-10-12T14:01:59.464425+00:00"
 }

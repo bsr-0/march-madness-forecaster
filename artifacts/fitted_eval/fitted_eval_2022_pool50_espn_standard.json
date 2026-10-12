@@ -116,21 +116,21 @@
     "named:ev_optimal": {
       "shipped": {
         "ev": 880.6,
-        "p1": 0.0112
+        "p1": 0.0115
       },
       "replayed": {
         "ev": 880.6,
-        "p1": 0.0112
+        "p1": 0.0115
       }
     },
     "named:blend_region_35": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       }
     },
     "named:ev_risk_10": {
@@ -165,122 +165,122 @@
     },
     "named:ev_risk_70": {
       "shipped": {
-        "ev": 869.6,
-        "p1": 0.01
+        "ev": 868.5,
+        "p1": 0.0103
       },
       "replayed": {
-        "ev": 869.6,
-        "p1": 0.01
+        "ev": 868.5,
+        "p1": 0.0103
       }
     },
     "named:ev_risk_90": {
       "shipped": {
         "ev": 846.5,
-        "p1": 0.0088
+        "p1": 0.0095
       },
       "replayed": {
         "ev": 846.5,
-        "p1": 0.0088
+        "p1": 0.0095
       }
     },
     "named:blend_region_10": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       }
     },
     "named:blend_region_30": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.0983
+        "p1": 0.0947
       }
     },
     "named:blend_region_50": {
       "shipped": {
         "ev": 756.1,
-        "p1": 0.0998
+        "p1": 0.0967
       },
       "replayed": {
         "ev": 756.1,
-        "p1": 0.0998
+        "p1": 0.0967
       }
     },
     "named:blend_region_70": {
       "shipped": {
-        "ev": 737.5,
-        "p1": 0.0937
+        "ev": 737.3,
+        "p1": 0.0903
       },
       "replayed": {
-        "ev": 737.5,
-        "p1": 0.0937
+        "ev": 737.3,
+        "p1": 0.0903
       }
     },
     "named:blend_region_90": {
       "shipped": {
-        "ev": 641.3,
-        "p1": 0.0732
+        "ev": 676.6,
+        "p1": 0.0752
       },
       "replayed": {
-        "ev": 641.3,
-        "p1": 0.0732
+        "ev": 676.6,
+        "p1": 0.0752
       }
     },
     "candidate:0": {
       "shipped": {
         "ev": 625.9,
-        "p1": 0.047
+        "p1": 0.0467
       },
       "replayed": {
         "ev": 625.9,
-        "p1": 0.047
+        "p1": 0.0467
       }
     },
     "candidate:1": {
       "shipped": {
         "ev": 708.3,
-        "p1": 0.0138
+        "p1": 0.0132
       },
       "replayed": {
         "ev": 708.3,
-        "p1": 0.0138
+        "p1": 0.0132
       }
     },
     "candidate:2": {
       "shipped": {
         "ev": 577.0,
-        "p1": 0.0112
+        "p1": 0.0107
       },
       "replayed": {
         "ev": 577.0,
-        "p1": 0.0112
+        "p1": 0.0107
       }
     },
     "candidate:3": {
       "shipped": {
         "ev": 758.0,
-        "p1": 0.0174
+        "p1": 0.0165
       },
       "replayed": {
         "ev": 758.0,
-        "p1": 0.0174
+        "p1": 0.0165
       }
     },
     "candidate:4": {
       "shipped": {
         "ev": 602.6,
-        "p1": 0.0222
+        "p1": 0.021
       },
       "replayed": {
         "ev": 602.6,
-        "p1": 0.0222
+        "p1": 0.021
       }
     }
   },
@@ -327,11 +327,11 @@
   "inputs": {
     "fit_inputs_hash": "5622816113e7f73ce9228b460b9b9667f7d148629c0eb4cf00b01b42c67ba9b3",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
-    "fit_js_sha256": "040142ee94f6a7cf4827b548a8b149d874af9de7bce2a0cf5a5911fac3671618",
-    "app_js_sha256": "2febbff32ca2cfc5b7b9782ebd45f719a2ef24007cdc0a1b3772fc39519390e1",
+    "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/pool50/candidates_2022.json",
-    "candidates_generated_at": "2026-09-24T02:57:19.170422+00:00"
+    "candidates_generated_at": "2026-10-12T04:50:31+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 50-entry pool (you plus 49 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-24T02:57:44.838720+00:00"
+  "generated_at": "2026-10-12T13:58:55.989987+00:00"
 }

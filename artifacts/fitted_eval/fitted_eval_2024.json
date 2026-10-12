@@ -106,21 +106,21 @@
     "named:champ_equity": {
       "shipped": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       },
       "replayed": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       }
     },
     "named:ev_optimal": {
       "shipped": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       },
       "replayed": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       }
     },
     "named:blend_region_35": {
@@ -136,11 +136,11 @@
     "named:ev_risk_10": {
       "shipped": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       },
       "replayed": {
         "ev": 947.7,
-        "p1": 0.0399
+        "p1": 0.0397
       }
     },
     "named:ev_risk_30": {
@@ -166,11 +166,11 @@
     "named:ev_risk_70": {
       "shipped": {
         "ev": 934.2,
-        "p1": 0.0325
+        "p1": 0.0323
       },
       "replayed": {
         "ev": 934.2,
-        "p1": 0.0325
+        "p1": 0.0323
       }
     },
     "named:ev_risk_90": {
@@ -236,11 +236,11 @@
     "candidate:0": {
       "shipped": {
         "ev": 798.0,
-        "p1": 0.0257
+        "p1": 0.0252
       },
       "replayed": {
         "ev": 798.0,
-        "p1": 0.0257
+        "p1": 0.0252
       }
     },
     "candidate:1": {
@@ -266,11 +266,11 @@
     "candidate:3": {
       "shipped": {
         "ev": 631.0,
-        "p1": 0.0155
+        "p1": 0.015
       },
       "replayed": {
         "ev": 631.0,
-        "p1": 0.0155
+        "p1": 0.015
       }
     },
     "candidate:4": {
@@ -328,10 +328,10 @@
     "fit_inputs_hash": "a8ac2e6745dea6911cea8d0d74281e4ecb871762e6e64ed6e22a518be0cf5396",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
     "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
-    "app_js_sha256": "76fbaf46d6ff48a10620fbd00a064e36235f76575a9c9579a28ca4bf1ac7bfe3",
+    "app_js_sha256": "8d0df820f09d069560356bea628c21e181279ad7d6141a5b17e484859799476d",
     "candidates_artifact": "artifacts/candidates/candidates_2024.json",
-    "candidates_generated_at": "2026-10-11T14:54:58+00:00"
+    "candidates_generated_at": "2026-10-12T04:44:54+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-10-11T15:05:38.072170+00:00"
+  "generated_at": "2026-10-12T13:57:53.565073+00:00"
 }

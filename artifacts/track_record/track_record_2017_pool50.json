@@ -83,9 +83,9 @@
       ],
       "source": "named_strategies.blend_region_35",
       "points": 1320,
-      "won_share": 0.1445,
+      "won_share": 0.148,
       "median_rank": 3,
-      "mean_rank": 2.82,
+      "mean_rank": 2.77,
       "pool_median_points": 730,
       "pool_best_points": 1410,
       "n_trials": 2000
@@ -172,7 +172,7 @@
       "points": 1100,
       "won_share": 0.0003,
       "median_rank": 9,
-      "mean_rank": 9.33,
+      "mean_rank": 9.2,
       "pool_median_points": 730,
       "pool_best_points": 1410,
       "n_trials": 2000
@@ -256,11 +256,11 @@
         ]
       ],
       "source": "artifacts/fitted_eval/fitted_eval_2017.json",
-      "fitted_eval_generated_at": "2026-10-11T15:04:01.658752+00:00",
+      "fitted_eval_generated_at": "2026-10-12T13:57:34.111749+00:00",
       "points": 1440,
-      "won_share": 0.6538,
+      "won_share": 0.6609,
       "median_rank": 1,
-      "mean_rank": 1.38,
+      "mean_rank": 1.37,
       "pool_median_points": 730,
       "pool_best_points": 1410,
       "n_trials": 2000
@@ -284,161 +284,161 @@
     "named:champ_equity": {
       "shipped": {
         "ev": 819.0,
-        "p1": 0.0423
+        "p1": 0.0437
       },
       "replayed": {
         "ev": 819.0,
-        "p1": 0.0423
+        "p1": 0.0437
       }
     },
     "named:ev_optimal": {
       "shipped": {
         "ev": 821.0,
-        "p1": 0.0451
+        "p1": 0.0459
       },
       "replayed": {
         "ev": 821.0,
-        "p1": 0.0451
+        "p1": 0.0459
       }
     },
     "named:blend_region_35": {
       "shipped": {
         "ev": 745.2,
-        "p1": 0.025
+        "p1": 0.0249
       },
       "replayed": {
         "ev": 745.2,
-        "p1": 0.025
+        "p1": 0.0249
       }
     },
     "named:ev_risk_10": {
       "shipped": {
         "ev": 820.8,
-        "p1": 0.0428
+        "p1": 0.0446
       },
       "replayed": {
         "ev": 820.8,
-        "p1": 0.0428
+        "p1": 0.0446
       }
     },
     "named:ev_risk_30": {
       "shipped": {
         "ev": 818.6,
-        "p1": 0.0415
+        "p1": 0.0424
       },
       "replayed": {
         "ev": 818.6,
-        "p1": 0.0415
+        "p1": 0.0424
       }
     },
     "named:ev_risk_50": {
       "shipped": {
         "ev": 814.6,
-        "p1": 0.0408
+        "p1": 0.0415
       },
       "replayed": {
         "ev": 814.6,
-        "p1": 0.0408
+        "p1": 0.0415
       }
     },
     "named:ev_risk_70": {
       "shipped": {
         "ev": 792.9,
-        "p1": 0.027
+        "p1": 0.0278
       },
       "replayed": {
         "ev": 792.9,
-        "p1": 0.027
+        "p1": 0.0278
       }
     },
     "named:ev_risk_90": {
       "shipped": {
         "ev": 765.1,
-        "p1": 0.025
+        "p1": 0.0245
       },
       "replayed": {
         "ev": 765.1,
-        "p1": 0.025
+        "p1": 0.0245
       }
     },
     "named:blend_region_10": {
       "shipped": {
         "ev": 754.0,
-        "p1": 0.0274
+        "p1": 0.0271
       },
       "replayed": {
         "ev": 754.0,
-        "p1": 0.0274
+        "p1": 0.0271
       }
     },
     "named:blend_region_30": {
       "shipped": {
         "ev": 745.2,
-        "p1": 0.025
+        "p1": 0.0249
       },
       "replayed": {
         "ev": 745.2,
-        "p1": 0.025
+        "p1": 0.0249
       }
     },
     "named:blend_region_50": {
       "shipped": {
         "ev": 742.5,
-        "p1": 0.0352
+        "p1": 0.035
       },
       "replayed": {
         "ev": 742.5,
-        "p1": 0.0352
+        "p1": 0.035
       }
     },
     "named:blend_region_70": {
       "shipped": {
         "ev": 742.6,
-        "p1": 0.0352
+        "p1": 0.0372
       },
       "replayed": {
         "ev": 742.6,
-        "p1": 0.0352
+        "p1": 0.0372
       }
     },
     "named:blend_region_90": {
       "shipped": {
         "ev": 682.2,
-        "p1": 0.02
+        "p1": 0.021
       },
       "replayed": {
         "ev": 682.2,
-        "p1": 0.02
+        "p1": 0.021
       }
     },
     "candidate:0": {
       "shipped": {
         "ev": 619.0,
-        "p1": 0.0163
+        "p1": 0.017
       },
       "replayed": {
         "ev": 619.0,
-        "p1": 0.0163
+        "p1": 0.017
       }
     },
     "candidate:1": {
       "shipped": {
         "ev": 507.7,
-        "p1": 0.011
+        "p1": 0.01
       },
       "replayed": {
         "ev": 507.7,
-        "p1": 0.011
+        "p1": 0.01
       }
     },
     "candidate:2": {
       "shipped": {
         "ev": 582.2,
-        "p1": 0.049
+        "p1": 0.0505
       },
       "replayed": {
         "ev": 582.2,
-        "p1": 0.049
+        "p1": 0.0505
       }
     },
     "candidate:3": {
@@ -454,19 +454,19 @@
     "candidate:4": {
       "shipped": {
         "ev": 658.0,
-        "p1": 0.0067
+        "p1": 0.0062
       },
       "replayed": {
         "ev": 658.0,
-        "p1": 0.0067
+        "p1": 0.0062
       }
     }
   },
   "inputs": {
     "outcome_sha256": "4e47d07fb90087bb7566a069bde74910ceab076fd68ac0f2eb79d3337810abd7",
     "candidates_artifact": "artifacts/candidates/pool50/candidates_2017.json",
-    "candidates_generated_at": "2026-09-24T02:27:01.705473+00:00",
+    "candidates_generated_at": "2026-10-12T04:48:59+00:00",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44"
   },
-  "generated_at": "2026-10-11T15:31:00.202409+00:00"
+  "generated_at": "2026-10-12T14:03:02.967898+00:00"
 }
