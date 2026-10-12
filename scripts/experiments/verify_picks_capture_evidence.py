@@ -9,7 +9,8 @@ on trust:
 * ``captured_at`` equals the archive timestamp, which is before the season's
   R64 tip (``season_calendar.get_round_of_64_tip``);
 * the capture shows all 64 teams x 6 rounds, and every share in the archive
-  equals the page at the page's 0.1-point display precision.
+  equals the page at the page's 0.1-point display precision (or, for ESPN's
+  2024+ propositions API, at the archive's 4-decimal precision).
 
 The acceptance rule was pre-registered in docs/PROJECT_ROADMAP_2027.md
 (decision log, 2026-10-11). Exit code 0 means every evidenced archive passes.
@@ -44,7 +45,7 @@ def _decode(raw: bytes) -> str:
     """Archive ``id_`` captures keep the original transfer encoding."""
     if raw[:2] == b"\x1f\x8b":
         raw = gzip.decompress(raw)
-    elif not raw.lstrip().startswith(b"<"):
+    elif not raw.lstrip()[:1] in (b"<", b"[", b"{"):
         try:
             import brotli
 
@@ -63,6 +64,19 @@ def parse_who_picked_whom(raw: bytes) -> dict[tuple[int, str], dict[str, int]]:
         if name and pct:
             key = (int(seed), html.unescape(re.sub(r"\s+", " ", name.group(1)).strip()))
             teams.setdefault(key, {})[ROUNDS[int(rnd)]] = round(float(pct.group(1)) * 10)
+    return teams
+
+
+def parse_gambit_propositions(raw: bytes) -> dict[tuple[int, str], dict[str, float]]:
+    """ESPN's 2024+ propositions API -> (seed, name) -> {round: share}."""
+    teams: dict[tuple[int, str], dict[str, float]] = {}
+    for prop in json.loads(_decode(raw)):
+        period = prop.get("scoringPeriodId")
+        for outcome in prop.get("possibleOutcomes", []):
+            counters = [c for c in outcome.get("choiceCounters", []) if c.get("scoringFormatId", 5) == 5]
+            if period and counters:
+                key = (outcome["regionSeed"], outcome["name"])
+                teams.setdefault(key, {})[ROUNDS[period - 1]] = counters[0]["percentage"]
     return teams
 
 
@@ -112,7 +126,8 @@ def verify_archive(path: Path) -> list[str]:
     if not captured < tip:
         problems.append(f"{path.name}: capture {captured} is not before the R64 tip {tip}")
 
-    page = parse_who_picked_whom(raw)
+    api = evidence.get("format") == "gambit_api"
+    page = parse_gambit_propositions(raw) if api else parse_who_picked_whom(raw)
     stored = data["teams"]
     seeds = _context_seeds(year)
     notes = evidence.get("name_mapping_notes", {})
@@ -131,7 +146,11 @@ def verify_archive(path: Path) -> list[str]:
         (team_id, rnd)
         for team_id, key in matched.items()
         for rnd in ROUNDS
-        if round(stored[team_id][rnd] * 1000) != page[key].get(rnd)
+        if (
+            round(stored[team_id][rnd], 4) != round(page[key].get(rnd, -1.0), 4)
+            if api
+            else round(stored[team_id][rnd] * 1000) != page[key].get(rnd)
+        )
     ]
     if differing:
         problems.append(f"{path.name}: {len(differing)} share(s) differ from the capture, e.g. {differing[:3]}")

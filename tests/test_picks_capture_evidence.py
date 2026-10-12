@@ -7,7 +7,7 @@ import pytest
 
 from scripts.experiments.verify_picks_capture_evidence import PICKS_DIR, verify_archive
 
-EVIDENCED = ["espn_picks_2012.json", "espn_picks_2023.json"]
+EVIDENCED = [f"espn_picks_{y}.json" for y in (2012, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025)]
 
 
 @pytest.mark.parametrize("name", EVIDENCED)
@@ -50,3 +50,12 @@ def test_unevidenced_archives_carry_no_capture_time():
     """Only archives with re-checkable evidence may claim a capture time."""
     claimed = [p.name for p in PICKS_DIR.glob("espn_picks_*.json") if "captured_at" in json.loads(p.read_text())]
     assert sorted(claimed) == EVIDENCED
+
+
+def test_a_changed_api_share_is_caught(tmp_path):
+    def edit(data):
+        team = next(iter(data["teams"]))
+        data["teams"][team]["R32"] = round(data["teams"][team]["R32"] + 0.0001, 4)
+
+    problems = verify_archive(_tampered(tmp_path, "espn_picks_2024.json", edit))
+    assert any("differ from the capture" in p for p in problems)
