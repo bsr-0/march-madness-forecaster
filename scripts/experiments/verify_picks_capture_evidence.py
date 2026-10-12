@@ -45,7 +45,7 @@ def _decode(raw: bytes) -> str:
     """Archive ``id_`` captures keep the original transfer encoding."""
     if raw[:2] == b"\x1f\x8b":
         raw = gzip.decompress(raw)
-    elif not raw.lstrip()[:1] in (b"<", b"[", b"{"):
+    elif raw.lstrip()[:1] not in (b"<", b"[", b"{"):
         try:
             import brotli
 
