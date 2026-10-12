@@ -1,0 +1,305 @@
+{
+ "files": {
+  "data/raw/historical/external_ratings_2011.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2011.json.gz",
+   "bytes": 2991638,
+   "sha256": "28bfd6c8de15ea159aafc90391f15eae272e2ced395aa2fa004973dc68cb9502"
+  },
+  "data/raw/historical/external_ratings_2012.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2012.json.gz",
+   "bytes": 3439905,
+   "sha256": "7b4554b23708f38f74405ed9c64a34f92883b6099319e5cb2fd09d9c2bb2c041"
+  },
+  "data/raw/historical/external_ratings_2013.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2013.json.gz",
+   "bytes": 3350041,
+   "sha256": "6978d3cd7ccc37d37c0274c9534dbcc66819fb188b59e8a4cd993282998352e8"
+  },
+  "data/raw/historical/external_ratings_2014.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2014.json.gz",
+   "bytes": 3720692,
+   "sha256": "991be2c75ef3dd8edc1c328b8aaff17fa1cb27d5bfb332122f13ffab3c1c6dae"
+  },
+  "data/raw/historical/external_ratings_2015.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2015.json.gz",
+   "bytes": 3552289,
+   "sha256": "d99915e5c6d0f43068437ba5405ade86a8888dc8623c85c7bd0368d61e5723e7"
+  },
+  "data/raw/historical/external_ratings_2016.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2016.json.gz",
+   "bytes": 3723515,
+   "sha256": "75259b36ddc7436e7a5cc8a7fdb4b83bf794736f5e8c94b97f08dec108967ae7"
+  },
+  "data/raw/historical/external_ratings_2017.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2017.json.gz",
+   "bytes": 4141350,
+   "sha256": "c0639711c7b476b5c495ff987abce1f13de5752c429aa4c45e8523275c214fd5"
+  },
+  "data/raw/historical/external_ratings_2018.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2018.json.gz",
+   "bytes": 3838419,
+   "sha256": "abcb476f887a5612e01e02aeb38d918cac0b6384a6d8a6a1da77dd6bd7582d96"
+  },
+  "data/raw/historical/external_ratings_2019.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2019.json.gz",
+   "bytes": 3927633,
+   "sha256": "daaa8e4ae4467a1b3b1ac4eb4966fc09810c8711b7d07acbfda03730bf6019da"
+  },
+  "data/raw/historical/external_ratings_2021.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2021.json.gz",
+   "bytes": 3123980,
+   "sha256": "a79ead4611dc1303502fb8259a3c4cdc354dff965eff5509113fead855cab744"
+  },
+  "data/raw/historical/external_ratings_2022.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2022.json.gz",
+   "bytes": 3752281,
+   "sha256": "d2d707d5e0e555e63f9c037d8929eff17b045a76ac822125765ce45ff19f8d56"
+  },
+  "data/raw/historical/external_ratings_2023.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2023.json.gz",
+   "bytes": 3924454,
+   "sha256": "00907681fc27d7f4faef8174ba6dd51af318f6d619773cb9d0cd343fdb0857b6"
+  },
+  "data/raw/historical/external_ratings_2024.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2024.json.gz",
+   "bytes": 3617495,
+   "sha256": "cc3e5ddb0a9af20fe7861ccef3bad720fabf60e11653e26740a8e354205b3bfb"
+  },
+  "data/raw/historical/external_ratings_2025.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2025.json.gz",
+   "bytes": 3339837,
+   "sha256": "387bcd3bd8cd90624f8649a04a7bf824f1639ed3f546e6360ab3accec05c0f3f"
+  },
+  "data/raw/historical/external_ratings_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2026.json.gz",
+   "bytes": 3229359,
+   "sha256": "c452c34eb59d13a70036a3b8d87d004abcf3567509a8e11257d9fdb6ddd88aa9"
+  },
+  "data/raw/historical/historical_games_2011.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2011.json.gz",
+   "bytes": 7323122,
+   "sha256": "a9a2b410068f69ae96d1b860333a26de7a1853e3efc6679d67be4a36f8f7910f"
+  },
+  "data/raw/historical/historical_games_2012.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2012.json.gz",
+   "bytes": 6454040,
+   "sha256": "50de619480547266960e74a27c947fad1e11fbef8a8247e5c2f2dcb1f825ebce"
+  },
+  "data/raw/historical/historical_games_2013.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2013.json.gz",
+   "bytes": 6547594,
+   "sha256": "f88af9029b74e788f4344e3e1b75b2930465736d6731a896d90718ca67bbbffd"
+  },
+  "data/raw/historical/historical_games_2014.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2014.json.gz",
+   "bytes": 7830573,
+   "sha256": "0faf6e0cc483c81ccf1cf617603bcfebf96d90da083e11b8fe58dd3d0117c894"
+  },
+  "data/raw/historical/historical_games_2015.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2015.json.gz",
+   "bytes": 7827939,
+   "sha256": "1635a60156939cb7f8bc103158800e56637bdca6e23cb1647b0a19ccc5399285"
+  },
+  "data/raw/historical/historical_games_2016.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2016.json.gz",
+   "bytes": 7846450,
+   "sha256": "2ee9f0411c09c0b91e636d5d6fb62ced467fe593264df6e724786c53bff4814b"
+  },
+  "data/raw/historical/historical_games_2017.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2017.json.gz",
+   "bytes": 7818060,
+   "sha256": "ead97c9fa971a8aac7428ed8cd44c08a20820c81d011c6a2586e4ca2bb2f43df"
+  },
+  "data/raw/historical/historical_games_2018.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2018.json.gz",
+   "bytes": 7921213,
+   "sha256": "6b0cd32f8a5b0b83948bb41ed33fbeb87af34956d34671459e29a1c96fc9484f"
+  },
+  "data/raw/historical/historical_games_2019.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2019.json.gz",
+   "bytes": 7980757,
+   "sha256": "fb2501a9047af689ee74d88763baf79a6430306e00ca9f72b68c04d769f6b4fa"
+  },
+  "data/raw/historical/historical_games_2021.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2021.json.gz",
+   "bytes": 5662550,
+   "sha256": "90cf6f35767d233cb11ce521f3a097762422f0c5f67dfa45e0bc725f5400aecd"
+  },
+  "data/raw/historical/historical_games_2022.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2022.json.gz",
+   "bytes": 7877742,
+   "sha256": "dce8690870a4ba515257a88253e33a5e6692288b6c8711ee19fdadb047f103c8"
+  },
+  "data/raw/historical/historical_games_2023.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2023.json.gz",
+   "bytes": 8225108,
+   "sha256": "ef0cc553d019710d1c280315f96a211348f54d33b56585011de1dfe13f826f26"
+  },
+  "data/raw/historical/historical_games_2024.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2024.json.gz",
+   "bytes": 8248870,
+   "sha256": "d9313e92fc2a76d6c673a15a67587a65deaeebdffd26bf7f79dccc1df0a5c16a"
+  },
+  "data/raw/historical/historical_games_2025.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2025.json.gz",
+   "bytes": 8316725,
+   "sha256": "2ff7ca544af6ff26c5715c3ab863cc8bb0e1b7742752ff06c38cbe9754f3c528"
+  },
+  "data/raw/historical/historical_games_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/historical_games_2026.json.gz",
+   "bytes": 7978089,
+   "sha256": "1743ba7601251c4791700641b5eef19899a57dbe2925d454ab77937d87f989c7"
+  },
+  "data/raw/historical/torvik_2011.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2011.json.gz",
+   "bytes": 3744037,
+   "sha256": "b89c6a032d05aa5d5e766ac56231c2073e3982af0490c8ce76155b7747d420a4"
+  },
+  "data/raw/historical/torvik_2012.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2012.json.gz",
+   "bytes": 3995930,
+   "sha256": "94d4e031c4f53999a24131627c938be0e8ff3a26857e84e114231e19279a7b03"
+  },
+  "data/raw/historical/torvik_2013.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2013.json.gz",
+   "bytes": 4080440,
+   "sha256": "6a3b300ec0f3de6ecece6a9a233e7ed2d2c3476f8da2e9455dc52791213b99c2"
+  },
+  "data/raw/historical/torvik_2014.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2014.json.gz",
+   "bytes": 4246640,
+   "sha256": "5c4f44cbf99bd8554fae88c458f36480808cf03be2dea1d90d073c515d48ceeb"
+  },
+  "data/raw/historical/torvik_2015.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2015.json.gz",
+   "bytes": 4240585,
+   "sha256": "105cc3dfeb29490a19ebe72effc5310c592e402784d67de5e529f7667adfe488"
+  },
+  "data/raw/historical/torvik_2016.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2016.json.gz",
+   "bytes": 4101407,
+   "sha256": "3ffb48e57820209e92d477d2ccc32f30769eddf39f3dff4fa2548659a835cf43"
+  },
+  "data/raw/historical/torvik_2017.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2017.json.gz",
+   "bytes": 4055760,
+   "sha256": "afea79ad912f56ccf72259a39b3e9e36ea1a787c1fa2c45c836cf1e52a4049ba"
+  },
+  "data/raw/historical/torvik_2018.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2018.json.gz",
+   "bytes": 4049872,
+   "sha256": "ccfa0d0f758b7e22ddf3917db5fd606c8e955bcc951ff8e3f0fc937346fc8df0"
+  },
+  "data/raw/historical/torvik_2019.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2019.json.gz",
+   "bytes": 4138522,
+   "sha256": "f12962bd54ef2544f4ab8a933d275b2dd140c297cff0f5d548d5bd2dbcdf80b3"
+  },
+  "data/raw/historical/torvik_2021.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2021.json.gz",
+   "bytes": 3467057,
+   "sha256": "9cf798dd898968f7eb31147c06c7005e967abf813ef18b7cd3d72164db7b1ca7"
+  },
+  "data/raw/historical/torvik_2022.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2022.json.gz",
+   "bytes": 4063485,
+   "sha256": "393b523c17f2f0c3b98dfaa593ba161cce78e71634e95638d96916a00ea9e458"
+  },
+  "data/raw/historical/torvik_2023.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2023.json.gz",
+   "bytes": 4183504,
+   "sha256": "f08e0a986af9ffb9d6132fee1596c0c25c9ec2d35c470f21bffaa35e8278240e"
+  },
+  "data/raw/historical/torvik_2024.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2024.json.gz",
+   "bytes": 4367194,
+   "sha256": "f1241528ba298dfa94148fa1381e246890d4f1bfc43e4b960191957af1d55329"
+  },
+  "data/raw/historical/torvik_2025.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2025.json.gz",
+   "bytes": 4392963,
+   "sha256": "d3811c9da7644edf7a3d047ed102ef05c30e950b94143b6168e60f7ec6a8ed59"
+  },
+  "data/raw/historical/torvik_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2026.json.gz",
+   "bytes": 4402309,
+   "sha256": "ac4624ad5487d27df41ca0133bf73f86ebb235b07d5e0c2c40b00d6c9a06d174"
+  },
+  "data/raw/historical/tournament_context_2011.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2011.json.gz",
+   "bytes": 147678,
+   "sha256": "2c81a406401ab126a267f1305e9f63704d4f0af038f92f6269942f8a5235e810"
+  },
+  "data/raw/historical/tournament_context_2012.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2012.json.gz",
+   "bytes": 147174,
+   "sha256": "c120aa6ebc6423b9ab8c1166a6c5bc8d1b5f812648112fdc6cbc862eed16553e"
+  },
+  "data/raw/historical/tournament_context_2013.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2013.json.gz",
+   "bytes": 148021,
+   "sha256": "5d2d2cfd9e2c73908bcb0c4d7aafe9f4e2e9b38d4444af9eeeaafbb8805dbb69"
+  },
+  "data/raw/historical/tournament_context_2014.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2014.json.gz",
+   "bytes": 149291,
+   "sha256": "f0ab778573cb85396848da99f7801e058fecef2f0674e43db8e8db94a2f0fe3e"
+  },
+  "data/raw/historical/tournament_context_2015.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2015.json.gz",
+   "bytes": 149056,
+   "sha256": "0480235d3952d8fe1b5053e470beeb6eef5542187c95d478302f55f6003d94e3"
+  },
+  "data/raw/historical/tournament_context_2016.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2016.json.gz",
+   "bytes": 149119,
+   "sha256": "ec2a2d674895cfce1c025079b2ebd433bbd3fad026f7109a50743efac52ba0cc"
+  },
+  "data/raw/historical/tournament_context_2017.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2017.json.gz",
+   "bytes": 149580,
+   "sha256": "fa2178e826bb5120ad2aeb0b77e36043bc739e3bc46f499232624eedca7e1dce"
+  },
+  "data/raw/historical/tournament_context_2018.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2018.json.gz",
+   "bytes": 149362,
+   "sha256": "54ea3e66f1f3d12b2d93161935201f302f905356e0d7b9bc2386e2cd465a377f"
+  },
+  "data/raw/historical/tournament_context_2019.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2019.json.gz",
+   "bytes": 149764,
+   "sha256": "2fdaeda5b7a97f6553f8d27bab46233995a53afa9eb091ea3e39ca7d7e49edbc"
+  },
+  "data/raw/historical/tournament_context_2021.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2021.json.gz",
+   "bytes": 147941,
+   "sha256": "7ef899b84deda335abdc39189f2b92e5fc0cf3c3fb7f66d88407366e883a24ee"
+  },
+  "data/raw/historical/tournament_context_2022.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2022.json.gz",
+   "bytes": 151013,
+   "sha256": "4d629922785bae1314b6cd8f46cb70891faa079d0f6f8e130ee0e82a27a6a2dc"
+  },
+  "data/raw/historical/tournament_context_2023.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2023.json.gz",
+   "bytes": 152828,
+   "sha256": "8dc1400cf3362911685d3f238a86a1fdc842cbd7e48711bc7f74932e9bda51d7"
+  },
+  "data/raw/historical/tournament_context_2024.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2024.json.gz",
+   "bytes": 152248,
+   "sha256": "78d36cde8c11820843e979b547bf60525cb3acd3145a9281dc731e1e3a03ab0f"
+  },
+  "data/raw/historical/tournament_context_2025.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2025.json.gz",
+   "bytes": 152788,
+   "sha256": "fd3c89d72533998fd688502d35b3a77cd5782065e7407a86cf0e26a1ab7a55de"
+  },
+  "data/raw/historical/tournament_context_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2026.json.gz",
+   "bytes": 154391,
+   "sha256": "04c0579daef80116418f55d4c97d7464843cd6a7504208b7b9a6ef6f4caee2d8"
+  }
+ },
+ "note": "gzip copies (mtime=0, level 9) of untracked build inputs; sha256 is of the original bytes"
+}
