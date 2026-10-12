@@ -239,16 +239,28 @@ def build(year: int, seed: int, *, pool_size: int = DEFAULT_POOL_SIZE) -> Dict[s
     print("[3/3] parity against the shipped artifact, then the track record ...")
     parity = parity_check(art, team_ids, ref)
 
+    # The payload's top-level strategies belong to its primary pool; a pool
+    # variant carries its own. Recommended -- the frozen release choice -- is
+    # defined for the primary pool only, so variants never score it.
+    primary = pool_size == season.get("p1_pool_size", DEFAULT_POOL_SIZE)
+    if primary:
+        payload_strategies = season["strategies"]
+    else:
+        variant = next((v for v in season.get("pool_variants", []) if v.get("pool_size") == pool_size), None)
+        if variant is None:
+            raise RuntimeError(f"{year}: payload has no pool-{pool_size} variant")
+        payload_strategies = variant["strategies"]
+
     strategies: Dict[str, Any] = {}
     for sid, named in NAMED.items():
         w_idx = art["named_strategies"][named]["w"]
-        payload_w = next(s for s in season["strategies"] if s["id"] == sid)["picks"]
+        payload_w = next(s for s in payload_strategies if s["id"] == sid)["picks"]
         if payload_w != w_idx:
             raise RuntimeError(f"{year}: payload strategy {sid} picks differ from artifact {named}")
         winners = [[team_ids[i] for i in r] for r in w_idx]
         strategies[sid] = {"w": w_idx, "source": f"named_strategies.{named}", **realised(winners, actual, ref)}
 
-    recommended = next((s for s in season["strategies"] if s["id"] == "recommended"), None)
+    recommended = next((s for s in payload_strategies if s["id"] == "recommended"), None) if primary else None
     if recommended is not None:
         w_idx = recommended["picks"]
         if len(w_idx) != 6 or any(any(type(i) is not int or not 0 <= i < len(team_ids) for i in rnd) for rnd in w_idx):

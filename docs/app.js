@@ -2689,6 +2689,9 @@ function renderStrategies() {
     active: state.strategy === st.id || (state.strategy === CUSTOM && state.objective === st.id),
     stat: (() => {
       const v = (filt && filt.by && filt.by[st.id]) || st;
+      // A seed-only Recommended carries no P(1st)/EV by design; say so rather
+      // than inventing a number (or crashing on the missing one).
+      if (v.p1 == null || v.ev == null) return 'Seed-only · not pool-scored';
       return `${p1Pct(v.p1)} to win · ${v.ev.toFixed(0)} pts`
            + (filt ? ' · filtered' : '');
     })(),

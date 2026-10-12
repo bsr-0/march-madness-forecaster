@@ -3,7 +3,7 @@
 F4-2  Team-identity scoring (what the pool pays on) is the default; the
       shape-encoded scorer, which can credit a bracket for a team that never
       won, is an explicit legacy opt-in.
-F4-6  A season with no ESPN pick archive (2012) draws its opponents from the
+F4-6  A season with no ESPN pick archive (e.g. 2007) draws its opponents from the
       static seed pick rates, not from a behavioural model fitted on the
       2023-2026 pool brackets (future information), and with no chalk noise
       that the evaluation stage would then ignore.
@@ -53,9 +53,12 @@ def test_cli_maps_shape_encoded_to_the_legacy_scorer(monkeypatch):
 
 def test_no_espn_year_uses_static_seed_pick_rates_without_chalk_noise():
     logging.disable(logging.WARNING)
-    seeds, regions = M.load_seeds_and_regions(2012)
-    assert seeds, "2012 seeds must load"
-    pick_dist, n_opp, chalk = M.resolve_opponent_pick_distribution(2012, seeds, 29, "pool")
+    # 2007 has seeds but no ESPN picks archive. (2012 served here until its
+    # pre-tip archive was recovered on 2026-10-11.)
+    assert not list((REPO / "data/raw/historical_public_picks").glob("*2007*.json"))
+    seeds, regions = M.load_seeds_and_regions(2007)
+    assert seeds, "2007 seeds must load"
+    pick_dist, n_opp, chalk = M.resolve_opponent_pick_distribution(2007, seeds, 29, "pool")
     assert chalk == 0.0
     assert n_opp == 29
     assert pick_dist == M.build_seed_pick_distribution(seeds)

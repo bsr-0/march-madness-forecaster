@@ -256,7 +256,7 @@
         ]
       ],
       "source": "artifacts/fitted_eval/fitted_eval_2026.json",
-      "fitted_eval_generated_at": "2026-09-23T04:47:00.477285+00:00",
+      "fitted_eval_generated_at": "2026-10-11T15:06:10.178161+00:00",
       "points": 1030,
       "won_share": 0.0997,
       "median_rank": 3,
@@ -468,5 +468,5 @@
     "candidates_generated_at": "2026-09-23T04:32:12.757738+00:00",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44"
   },
-  "generated_at": "2026-09-23T13:23:34.089876+00:00"
+  "generated_at": "2026-10-11T15:30:25.511465+00:00"
 }

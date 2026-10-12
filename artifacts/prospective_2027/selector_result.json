@@ -1,0 +1,455 @@
+{
+  "dependency_manifest_sha256": "b49f5a4f87b360d497db71a411c4ec05ff2a514cf985f81f36d87105aaa875d6",
+  "generated_at": "2026-10-11T10:01:37.722545-05:00",
+  "git_commit": "0dc074739a3baaefa83cfeeeabd0b89ff0c9e520",
+  "git_worktree_clean": false,
+  "inputs": {
+    "candidate_artifacts": {
+      "2011": {
+        "path": "artifacts/candidates/candidates_2011.json",
+        "sha256": "fc0e8f21c87296a9c2593b910ade9c70b12c5bbf0048b80c8863da40a977bc17",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2011.json": "28bfd6c8de15ea159aafc90391f15eae272e2ced395aa2fa004973dc68cb9502",
+          "data/raw/historical/historical_games_2011.json": "a9a2b410068f69ae96d1b860333a26de7a1853e3efc6679d67be4a36f8f7910f",
+          "data/raw/historical/torvik_2011.json": "b89c6a032d05aa5d5e766ac56231c2073e3982af0490c8ce76155b7747d420a4",
+          "data/raw/historical/tournament_context_2011.json": "2c81a406401ab126a267f1305e9f63704d4f0af038f92f6269942f8a5235e810",
+          "data/raw/historical_public_picks/espn_picks_2011.json": "9830829c360f37c34173674fd75e4f8ff40bbb64923a51a9eb7d0db0e8e802fa"
+        }
+      },
+      "2012": {
+        "path": "artifacts/candidates/candidates_2012.json",
+        "sha256": "91fc7e00eb8e5f9a5fe0ebb7e2a34c237d276dc6c4f39cc9c7ac1c3ed0bd231a",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2012.json": "7b4554b23708f38f74405ed9c64a34f92883b6099319e5cb2fd09d9c2bb2c041",
+          "data/raw/historical/historical_games_2012.json": "50de619480547266960e74a27c947fad1e11fbef8a8247e5c2f2dcb1f825ebce",
+          "data/raw/historical/torvik_2012.json": "94d4e031c4f53999a24131627c938be0e8ff3a26857e84e114231e19279a7b03",
+          "data/raw/historical/tournament_context_2012.json": "c120aa6ebc6423b9ab8c1166a6c5bc8d1b5f812648112fdc6cbc862eed16553e",
+          "data/raw/historical_public_picks/espn_picks_2012.json": "7b4ba8c83965f83f38d8d0045c47e96608b43778a325737099145f1db338978e"
+        }
+      },
+      "2013": {
+        "path": "artifacts/candidates/candidates_2013.json",
+        "sha256": "29ed2c703a2195f33fe4fdace72d5b1b88437bbd8737ae2501aebd18cdca0e91",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2013.json": "6978d3cd7ccc37d37c0274c9534dbcc66819fb188b59e8a4cd993282998352e8",
+          "data/raw/historical/historical_games_2013.json": "f88af9029b74e788f4344e3e1b75b2930465736d6731a896d90718ca67bbbffd",
+          "data/raw/historical/torvik_2013.json": "6a3b300ec0f3de6ecece6a9a233e7ed2d2c3476f8da2e9455dc52791213b99c2",
+          "data/raw/historical/tournament_context_2013.json": "5d2d2cfd9e2c73908bcb0c4d7aafe9f4e2e9b38d4444af9eeeaafbb8805dbb69",
+          "data/raw/historical_public_picks/espn_picks_2013.json": "6ab159a91b3e4974cc0bc2c5d50e5dc6a9fd2aa3a2e8635bc7a8cc81768865e7"
+        }
+      },
+      "2014": {
+        "path": "artifacts/candidates/candidates_2014.json",
+        "sha256": "6b89f0f8333a3f18a303f95c1bc80c698eb195541f8dbe66545507a19fae757a",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2014.json": "991be2c75ef3dd8edc1c328b8aaff17fa1cb27d5bfb332122f13ffab3c1c6dae",
+          "data/raw/historical/historical_games_2014.json": "0faf6e0cc483c81ccf1cf617603bcfebf96d90da083e11b8fe58dd3d0117c894",
+          "data/raw/historical/torvik_2014.json": "5c4f44cbf99bd8554fae88c458f36480808cf03be2dea1d90d073c515d48ceeb",
+          "data/raw/historical/tournament_context_2014.json": "f0ab778573cb85396848da99f7801e058fecef2f0674e43db8e8db94a2f0fe3e",
+          "data/raw/historical_public_picks/espn_picks_2014.json": "5c129e537133980058fbdfc9045cdf4d27a66ca89ca79c1ca403412ce15e0d16"
+        }
+      },
+      "2015": {
+        "path": "artifacts/candidates/candidates_2015.json",
+        "sha256": "5ba0566e9bdb8a6c09f844dda09cb46d66c0db5bf3e71cbac369c22417fbf2d7",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2015.json": "d99915e5c6d0f43068437ba5405ade86a8888dc8623c85c7bd0368d61e5723e7",
+          "data/raw/historical/historical_games_2015.json": "1635a60156939cb7f8bc103158800e56637bdca6e23cb1647b0a19ccc5399285",
+          "data/raw/historical/torvik_2015.json": "105cc3dfeb29490a19ebe72effc5310c592e402784d67de5e529f7667adfe488",
+          "data/raw/historical/tournament_context_2015.json": "0480235d3952d8fe1b5053e470beeb6eef5542187c95d478302f55f6003d94e3",
+          "data/raw/historical_public_picks/espn_picks_2015.json": "a1981e42af39d365a2e049e2ee90c2b79010be3887e2ff9474d0ab3e5ccf6c98"
+        }
+      },
+      "2016": {
+        "path": "artifacts/candidates/candidates_2016.json",
+        "sha256": "5712cd98cc3f3084f7f2ed74d543d66a0ae6eb6718bcc8d40c8b3ce75aa5a758",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2016.json": "75259b36ddc7436e7a5cc8a7fdb4b83bf794736f5e8c94b97f08dec108967ae7",
+          "data/raw/historical/historical_games_2016.json": "2ee9f0411c09c0b91e636d5d6fb62ced467fe593264df6e724786c53bff4814b",
+          "data/raw/historical/torvik_2016.json": "3ffb48e57820209e92d477d2ccc32f30769eddf39f3dff4fa2548659a835cf43",
+          "data/raw/historical/tournament_context_2016.json": "ec2a2d674895cfce1c025079b2ebd433bbd3fad026f7109a50743efac52ba0cc",
+          "data/raw/historical_public_picks/espn_picks_2016.json": "fb06ba6b25e58e7d261b3d62cc17a076b98e6cbbaa249d5980a39b8fd81c8200"
+        }
+      },
+      "2017": {
+        "path": "artifacts/candidates/candidates_2017.json",
+        "sha256": "e855b20101a0585ad264c688b8daa8c04a1d73e76f185830b8687d392f44ad18",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2017.json": "c0639711c7b476b5c495ff987abce1f13de5752c429aa4c45e8523275c214fd5",
+          "data/raw/historical/historical_games_2017.json": "ead97c9fa971a8aac7428ed8cd44c08a20820c81d011c6a2586e4ca2bb2f43df",
+          "data/raw/historical/torvik_2017.json": "afea79ad912f56ccf72259a39b3e9e36ea1a787c1fa2c45c836cf1e52a4049ba",
+          "data/raw/historical/tournament_context_2017.json": "fa2178e826bb5120ad2aeb0b77e36043bc739e3bc46f499232624eedca7e1dce",
+          "data/raw/historical_public_picks/espn_picks_2017.json": "5b83679a3af89050ce8d5804c40c08f8c33aec42eb17577d4b1e75af911ebb04"
+        }
+      },
+      "2018": {
+        "path": "artifacts/candidates/candidates_2018.json",
+        "sha256": "85675654505b3856210a7ec8d96bea3bb8ce3794d5c03af1c607d69589093ddd",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2018.json": "abcb476f887a5612e01e02aeb38d918cac0b6384a6d8a6a1da77dd6bd7582d96",
+          "data/raw/historical/historical_games_2018.json": "6b0cd32f8a5b0b83948bb41ed33fbeb87af34956d34671459e29a1c96fc9484f",
+          "data/raw/historical/torvik_2018.json": "ccfa0d0f758b7e22ddf3917db5fd606c8e955bcc951ff8e3f0fc937346fc8df0",
+          "data/raw/historical/tournament_context_2018.json": "54ea3e66f1f3d12b2d93161935201f302f905356e0d7b9bc2386e2cd465a377f",
+          "data/raw/historical_public_picks/espn_picks_2018.json": "2c37363be9361b789dfa2f57e29ab6f665221d37d18597442aa0ff68e25d365a"
+        }
+      },
+      "2019": {
+        "path": "artifacts/candidates/candidates_2019.json",
+        "sha256": "861788c98910bd9cf35de58f001474678c4a882f8c75bb7371c3afba9b9192c9",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2019.json": "daaa8e4ae4467a1b3b1ac4eb4966fc09810c8711b7d07acbfda03730bf6019da",
+          "data/raw/historical/historical_games_2019.json": "fb2501a9047af689ee74d88763baf79a6430306e00ca9f72b68c04d769f6b4fa",
+          "data/raw/historical/torvik_2019.json": "f12962bd54ef2544f4ab8a933d275b2dd140c297cff0f5d548d5bd2dbcdf80b3",
+          "data/raw/historical/tournament_context_2019.json": "2fdaeda5b7a97f6553f8d27bab46233995a53afa9eb091ea3e39ca7d7e49edbc",
+          "data/raw/historical_public_picks/espn_picks_2019.json": "dfe4aa30cd9040f2ddb4c6e1a646a4d3973516396d25d98415f86127cfe1c1f5"
+        }
+      },
+      "2021": {
+        "path": "artifacts/candidates/candidates_2021.json",
+        "sha256": "bd51a4b787a274f54c3b36795cf4accfc70d64cca6843d0eed496cd378496b30",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2021.json": "a79ead4611dc1303502fb8259a3c4cdc354dff965eff5509113fead855cab744",
+          "data/raw/historical/historical_games_2021.json": "90cf6f35767d233cb11ce521f3a097762422f0c5f67dfa45e0bc725f5400aecd",
+          "data/raw/historical/torvik_2021.json": "9cf798dd898968f7eb31147c06c7005e967abf813ef18b7cd3d72164db7b1ca7",
+          "data/raw/historical/tournament_context_2021.json": "7ef899b84deda335abdc39189f2b92e5fc0cf3c3fb7f66d88407366e883a24ee",
+          "data/raw/historical_public_picks/espn_picks_2021.json": "032e8d66add889c34a6fca1098652a473d74b1c3ed85624e40c38f2d9f381d11"
+        }
+      },
+      "2022": {
+        "path": "artifacts/candidates/candidates_2022.json",
+        "sha256": "cbb0725b791112dd3e59261668f691cec673d7e698846ec922473e78cf3e998c",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2022.json": "d2d707d5e0e555e63f9c037d8929eff17b045a76ac822125765ce45ff19f8d56",
+          "data/raw/historical/historical_games_2022.json": "dce8690870a4ba515257a88253e33a5e6692288b6c8711ee19fdadb047f103c8",
+          "data/raw/historical/torvik_2022.json": "393b523c17f2f0c3b98dfaa593ba161cce78e71634e95638d96916a00ea9e458",
+          "data/raw/historical/tournament_context_2022.json": "4d629922785bae1314b6cd8f46cb70891faa079d0f6f8e130ee0e82a27a6a2dc",
+          "data/raw/historical_public_picks/espn_picks_2022.json": "1f8a34e661bcaff444e29464ceaa2d718f11256b3b640746d223417c76cf46ee"
+        }
+      },
+      "2023": {
+        "path": "artifacts/candidates/candidates_2023.json",
+        "sha256": "676146f51574619723fe3e66cadaca60d5e7d1e8071fc039f1dfa3ca83fc0054",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2023.json": "00907681fc27d7f4faef8174ba6dd51af318f6d619773cb9d0cd343fdb0857b6",
+          "data/raw/historical/historical_games_2023.json": "ef0cc553d019710d1c280315f96a211348f54d33b56585011de1dfe13f826f26",
+          "data/raw/historical/torvik_2023.json": "f08e0a986af9ffb9d6132fee1596c0c25c9ec2d35c470f21bffaa35e8278240e",
+          "data/raw/historical/tournament_context_2023.json": "8dc1400cf3362911685d3f238a86a1fdc842cbd7e48711bc7f74932e9bda51d7",
+          "data/raw/historical_public_picks/espn_picks_2023.json": "d5474c0a2b32e97f4d3ed50e935a495a49d9e623ff7ade0ea5cf1ee1c8b0f9f7"
+        }
+      },
+      "2024": {
+        "path": "artifacts/candidates/candidates_2024.json",
+        "sha256": "b201c5b60e847c7df0e67261f724c45dc6b93254f2b8c14e1a4131f23439c990",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2024.json": "cc3e5ddb0a9af20fe7861ccef3bad720fabf60e11653e26740a8e354205b3bfb",
+          "data/raw/historical/historical_games_2024.json": "d9313e92fc2a76d6c673a15a67587a65deaeebdffd26bf7f79dccc1df0a5c16a",
+          "data/raw/historical/torvik_2024.json": "f1241528ba298dfa94148fa1381e246890d4f1bfc43e4b960191957af1d55329",
+          "data/raw/historical/tournament_context_2024.json": "78d36cde8c11820843e979b547bf60525cb3acd3145a9281dc731e1e3a03ab0f",
+          "data/raw/historical_public_picks/espn_picks_2024.json": "dfff467b4e9ab87719e1cc23419bc7dd60404163044bf184fa1665be1d2089c5"
+        }
+      },
+      "2025": {
+        "path": "artifacts/candidates/candidates_2025.json",
+        "sha256": "dacde4b54f08fe6debcead299e9c8f4c1857009c2be58d1b3b4b7dad24d4527e",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2025.json": "387bcd3bd8cd90624f8649a04a7bf824f1639ed3f546e6360ab3accec05c0f3f",
+          "data/raw/historical/historical_games_2025.json": "2ff7ca544af6ff26c5715c3ab863cc8bb0e1b7742752ff06c38cbe9754f3c528",
+          "data/raw/historical/torvik_2025.json": "d3811c9da7644edf7a3d047ed102ef05c30e950b94143b6168e60f7ec6a8ed59",
+          "data/raw/historical/tournament_context_2025.json": "fd3c89d72533998fd688502d35b3a77cd5782065e7407a86cf0e26a1ab7a55de",
+          "data/raw/historical_public_picks/espn_picks_2025.json": "2f2708c51bace5a7666f3351ea6128b047747c453bc9a658d20fab1f8a717237"
+        }
+      }
+    }
+  },
+  "kind": "prospective_2027_points_selector",
+  "promotion_gate": {
+    "status": "INDETERMINATE"
+  },
+  "python_version": "3.11.15",
+  "reason": "No paired score comparison was run because source eligibility is not PASS.",
+  "release": {
+    "fallback": true,
+    "reason": "historical source gate is not PASS",
+    "selected_rule": "seed_only"
+  },
+  "schema": 1,
+  "source_gate": {
+    "artifacts": {
+      "2011": {
+        "path": "artifacts/candidates/candidates_2011.json",
+        "sha256": "fc0e8f21c87296a9c2593b910ade9c70b12c5bbf0048b80c8863da40a977bc17",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2011.json": "28bfd6c8de15ea159aafc90391f15eae272e2ced395aa2fa004973dc68cb9502",
+          "data/raw/historical/historical_games_2011.json": "a9a2b410068f69ae96d1b860333a26de7a1853e3efc6679d67be4a36f8f7910f",
+          "data/raw/historical/torvik_2011.json": "b89c6a032d05aa5d5e766ac56231c2073e3982af0490c8ce76155b7747d420a4",
+          "data/raw/historical/tournament_context_2011.json": "2c81a406401ab126a267f1305e9f63704d4f0af038f92f6269942f8a5235e810",
+          "data/raw/historical_public_picks/espn_picks_2011.json": "9830829c360f37c34173674fd75e4f8ff40bbb64923a51a9eb7d0db0e8e802fa"
+        }
+      },
+      "2012": {
+        "path": "artifacts/candidates/candidates_2012.json",
+        "sha256": "91fc7e00eb8e5f9a5fe0ebb7e2a34c237d276dc6c4f39cc9c7ac1c3ed0bd231a",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2012.json": "7b4554b23708f38f74405ed9c64a34f92883b6099319e5cb2fd09d9c2bb2c041",
+          "data/raw/historical/historical_games_2012.json": "50de619480547266960e74a27c947fad1e11fbef8a8247e5c2f2dcb1f825ebce",
+          "data/raw/historical/torvik_2012.json": "94d4e031c4f53999a24131627c938be0e8ff3a26857e84e114231e19279a7b03",
+          "data/raw/historical/tournament_context_2012.json": "c120aa6ebc6423b9ab8c1166a6c5bc8d1b5f812648112fdc6cbc862eed16553e",
+          "data/raw/historical_public_picks/espn_picks_2012.json": "7b4ba8c83965f83f38d8d0045c47e96608b43778a325737099145f1db338978e"
+        }
+      },
+      "2013": {
+        "path": "artifacts/candidates/candidates_2013.json",
+        "sha256": "29ed2c703a2195f33fe4fdace72d5b1b88437bbd8737ae2501aebd18cdca0e91",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2013.json": "6978d3cd7ccc37d37c0274c9534dbcc66819fb188b59e8a4cd993282998352e8",
+          "data/raw/historical/historical_games_2013.json": "f88af9029b74e788f4344e3e1b75b2930465736d6731a896d90718ca67bbbffd",
+          "data/raw/historical/torvik_2013.json": "6a3b300ec0f3de6ecece6a9a233e7ed2d2c3476f8da2e9455dc52791213b99c2",
+          "data/raw/historical/tournament_context_2013.json": "5d2d2cfd9e2c73908bcb0c4d7aafe9f4e2e9b38d4444af9eeeaafbb8805dbb69",
+          "data/raw/historical_public_picks/espn_picks_2013.json": "6ab159a91b3e4974cc0bc2c5d50e5dc6a9fd2aa3a2e8635bc7a8cc81768865e7"
+        }
+      },
+      "2014": {
+        "path": "artifacts/candidates/candidates_2014.json",
+        "sha256": "6b89f0f8333a3f18a303f95c1bc80c698eb195541f8dbe66545507a19fae757a",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2014.json": "991be2c75ef3dd8edc1c328b8aaff17fa1cb27d5bfb332122f13ffab3c1c6dae",
+          "data/raw/historical/historical_games_2014.json": "0faf6e0cc483c81ccf1cf617603bcfebf96d90da083e11b8fe58dd3d0117c894",
+          "data/raw/historical/torvik_2014.json": "5c4f44cbf99bd8554fae88c458f36480808cf03be2dea1d90d073c515d48ceeb",
+          "data/raw/historical/tournament_context_2014.json": "f0ab778573cb85396848da99f7801e058fecef2f0674e43db8e8db94a2f0fe3e",
+          "data/raw/historical_public_picks/espn_picks_2014.json": "5c129e537133980058fbdfc9045cdf4d27a66ca89ca79c1ca403412ce15e0d16"
+        }
+      },
+      "2015": {
+        "path": "artifacts/candidates/candidates_2015.json",
+        "sha256": "5ba0566e9bdb8a6c09f844dda09cb46d66c0db5bf3e71cbac369c22417fbf2d7",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2015.json": "d99915e5c6d0f43068437ba5405ade86a8888dc8623c85c7bd0368d61e5723e7",
+          "data/raw/historical/historical_games_2015.json": "1635a60156939cb7f8bc103158800e56637bdca6e23cb1647b0a19ccc5399285",
+          "data/raw/historical/torvik_2015.json": "105cc3dfeb29490a19ebe72effc5310c592e402784d67de5e529f7667adfe488",
+          "data/raw/historical/tournament_context_2015.json": "0480235d3952d8fe1b5053e470beeb6eef5542187c95d478302f55f6003d94e3",
+          "data/raw/historical_public_picks/espn_picks_2015.json": "a1981e42af39d365a2e049e2ee90c2b79010be3887e2ff9474d0ab3e5ccf6c98"
+        }
+      },
+      "2016": {
+        "path": "artifacts/candidates/candidates_2016.json",
+        "sha256": "5712cd98cc3f3084f7f2ed74d543d66a0ae6eb6718bcc8d40c8b3ce75aa5a758",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2016.json": "75259b36ddc7436e7a5cc8a7fdb4b83bf794736f5e8c94b97f08dec108967ae7",
+          "data/raw/historical/historical_games_2016.json": "2ee9f0411c09c0b91e636d5d6fb62ced467fe593264df6e724786c53bff4814b",
+          "data/raw/historical/torvik_2016.json": "3ffb48e57820209e92d477d2ccc32f30769eddf39f3dff4fa2548659a835cf43",
+          "data/raw/historical/tournament_context_2016.json": "ec2a2d674895cfce1c025079b2ebd433bbd3fad026f7109a50743efac52ba0cc",
+          "data/raw/historical_public_picks/espn_picks_2016.json": "fb06ba6b25e58e7d261b3d62cc17a076b98e6cbbaa249d5980a39b8fd81c8200"
+        }
+      },
+      "2017": {
+        "path": "artifacts/candidates/candidates_2017.json",
+        "sha256": "e855b20101a0585ad264c688b8daa8c04a1d73e76f185830b8687d392f44ad18",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2017.json": "c0639711c7b476b5c495ff987abce1f13de5752c429aa4c45e8523275c214fd5",
+          "data/raw/historical/historical_games_2017.json": "ead97c9fa971a8aac7428ed8cd44c08a20820c81d011c6a2586e4ca2bb2f43df",
+          "data/raw/historical/torvik_2017.json": "afea79ad912f56ccf72259a39b3e9e36ea1a787c1fa2c45c836cf1e52a4049ba",
+          "data/raw/historical/tournament_context_2017.json": "fa2178e826bb5120ad2aeb0b77e36043bc739e3bc46f499232624eedca7e1dce",
+          "data/raw/historical_public_picks/espn_picks_2017.json": "5b83679a3af89050ce8d5804c40c08f8c33aec42eb17577d4b1e75af911ebb04"
+        }
+      },
+      "2018": {
+        "path": "artifacts/candidates/candidates_2018.json",
+        "sha256": "85675654505b3856210a7ec8d96bea3bb8ce3794d5c03af1c607d69589093ddd",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2018.json": "abcb476f887a5612e01e02aeb38d918cac0b6384a6d8a6a1da77dd6bd7582d96",
+          "data/raw/historical/historical_games_2018.json": "6b0cd32f8a5b0b83948bb41ed33fbeb87af34956d34671459e29a1c96fc9484f",
+          "data/raw/historical/torvik_2018.json": "ccfa0d0f758b7e22ddf3917db5fd606c8e955bcc951ff8e3f0fc937346fc8df0",
+          "data/raw/historical/tournament_context_2018.json": "54ea3e66f1f3d12b2d93161935201f302f905356e0d7b9bc2386e2cd465a377f",
+          "data/raw/historical_public_picks/espn_picks_2018.json": "2c37363be9361b789dfa2f57e29ab6f665221d37d18597442aa0ff68e25d365a"
+        }
+      },
+      "2019": {
+        "path": "artifacts/candidates/candidates_2019.json",
+        "sha256": "861788c98910bd9cf35de58f001474678c4a882f8c75bb7371c3afba9b9192c9",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2019.json": "daaa8e4ae4467a1b3b1ac4eb4966fc09810c8711b7d07acbfda03730bf6019da",
+          "data/raw/historical/historical_games_2019.json": "fb2501a9047af689ee74d88763baf79a6430306e00ca9f72b68c04d769f6b4fa",
+          "data/raw/historical/torvik_2019.json": "f12962bd54ef2544f4ab8a933d275b2dd140c297cff0f5d548d5bd2dbcdf80b3",
+          "data/raw/historical/tournament_context_2019.json": "2fdaeda5b7a97f6553f8d27bab46233995a53afa9eb091ea3e39ca7d7e49edbc",
+          "data/raw/historical_public_picks/espn_picks_2019.json": "dfe4aa30cd9040f2ddb4c6e1a646a4d3973516396d25d98415f86127cfe1c1f5"
+        }
+      },
+      "2021": {
+        "path": "artifacts/candidates/candidates_2021.json",
+        "sha256": "bd51a4b787a274f54c3b36795cf4accfc70d64cca6843d0eed496cd378496b30",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2021.json": "a79ead4611dc1303502fb8259a3c4cdc354dff965eff5509113fead855cab744",
+          "data/raw/historical/historical_games_2021.json": "90cf6f35767d233cb11ce521f3a097762422f0c5f67dfa45e0bc725f5400aecd",
+          "data/raw/historical/torvik_2021.json": "9cf798dd898968f7eb31147c06c7005e967abf813ef18b7cd3d72164db7b1ca7",
+          "data/raw/historical/tournament_context_2021.json": "7ef899b84deda335abdc39189f2b92e5fc0cf3c3fb7f66d88407366e883a24ee",
+          "data/raw/historical_public_picks/espn_picks_2021.json": "032e8d66add889c34a6fca1098652a473d74b1c3ed85624e40c38f2d9f381d11"
+        }
+      },
+      "2022": {
+        "path": "artifacts/candidates/candidates_2022.json",
+        "sha256": "cbb0725b791112dd3e59261668f691cec673d7e698846ec922473e78cf3e998c",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2022.json": "d2d707d5e0e555e63f9c037d8929eff17b045a76ac822125765ce45ff19f8d56",
+          "data/raw/historical/historical_games_2022.json": "dce8690870a4ba515257a88253e33a5e6692288b6c8711ee19fdadb047f103c8",
+          "data/raw/historical/torvik_2022.json": "393b523c17f2f0c3b98dfaa593ba161cce78e71634e95638d96916a00ea9e458",
+          "data/raw/historical/tournament_context_2022.json": "4d629922785bae1314b6cd8f46cb70891faa079d0f6f8e130ee0e82a27a6a2dc",
+          "data/raw/historical_public_picks/espn_picks_2022.json": "1f8a34e661bcaff444e29464ceaa2d718f11256b3b640746d223417c76cf46ee"
+        }
+      },
+      "2023": {
+        "path": "artifacts/candidates/candidates_2023.json",
+        "sha256": "676146f51574619723fe3e66cadaca60d5e7d1e8071fc039f1dfa3ca83fc0054",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2023.json": "00907681fc27d7f4faef8174ba6dd51af318f6d619773cb9d0cd343fdb0857b6",
+          "data/raw/historical/historical_games_2023.json": "ef0cc553d019710d1c280315f96a211348f54d33b56585011de1dfe13f826f26",
+          "data/raw/historical/torvik_2023.json": "f08e0a986af9ffb9d6132fee1596c0c25c9ec2d35c470f21bffaa35e8278240e",
+          "data/raw/historical/tournament_context_2023.json": "8dc1400cf3362911685d3f238a86a1fdc842cbd7e48711bc7f74932e9bda51d7",
+          "data/raw/historical_public_picks/espn_picks_2023.json": "d5474c0a2b32e97f4d3ed50e935a495a49d9e623ff7ade0ea5cf1ee1c8b0f9f7"
+        }
+      },
+      "2024": {
+        "path": "artifacts/candidates/candidates_2024.json",
+        "sha256": "b201c5b60e847c7df0e67261f724c45dc6b93254f2b8c14e1a4131f23439c990",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2024.json": "cc3e5ddb0a9af20fe7861ccef3bad720fabf60e11653e26740a8e354205b3bfb",
+          "data/raw/historical/historical_games_2024.json": "d9313e92fc2a76d6c673a15a67587a65deaeebdffd26bf7f79dccc1df0a5c16a",
+          "data/raw/historical/torvik_2024.json": "f1241528ba298dfa94148fa1381e246890d4f1bfc43e4b960191957af1d55329",
+          "data/raw/historical/tournament_context_2024.json": "78d36cde8c11820843e979b547bf60525cb3acd3145a9281dc731e1e3a03ab0f",
+          "data/raw/historical_public_picks/espn_picks_2024.json": "dfff467b4e9ab87719e1cc23419bc7dd60404163044bf184fa1665be1d2089c5"
+        }
+      },
+      "2025": {
+        "path": "artifacts/candidates/candidates_2025.json",
+        "sha256": "dacde4b54f08fe6debcead299e9c8f4c1857009c2be58d1b3b4b7dad24d4527e",
+        "source_hashes": {
+          "data/kaggle/MNCAATourneyCompactResults.csv": "5260a076b4e0937aa0420fd5eb72789b9931c662ed071c5060407458d8de8a05",
+          "data/kaggle/MNCAATourneySeeds.csv": "8c2f4dacb6711aa2d8bb44ba245eeef74203150a99bb543b5edbd99aaa0d4987",
+          "data/raw/historical/external_ratings_2025.json": "387bcd3bd8cd90624f8649a04a7bf824f1639ed3f546e6360ab3accec05c0f3f",
+          "data/raw/historical/historical_games_2025.json": "2ff7ca544af6ff26c5715c3ab863cc8bb0e1b7742752ff06c38cbe9754f3c528",
+          "data/raw/historical/torvik_2025.json": "d3811c9da7644edf7a3d047ed102ef05c30e950b94143b6168e60f7ec6a8ed59",
+          "data/raw/historical/tournament_context_2025.json": "fd3c89d72533998fd688502d35b3a77cd5782065e7407a86cf0e26a1ab7a55de",
+          "data/raw/historical_public_picks/espn_picks_2025.json": "2f2708c51bace5a7666f3351ea6128b047747c453bc9a658d20fab1f8a717237"
+        }
+      }
+    },
+    "issues": [
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2011"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2013"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2014"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2015"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2016"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2017"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2018"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2019"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2021"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2022"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2024"
+      },
+      {
+        "reason": "public-picks capture time is not verified",
+        "status": "INDETERMINATE",
+        "year": "2025"
+      }
+    ],
+    "status": "INDETERMINATE"
+  },
+  "spec_hash": "797aba3e8db5a2b23cecbc0efa359445255bf5430f872d5b4eb393089bd28ee3",
+  "status": "INDETERMINATE"
+}

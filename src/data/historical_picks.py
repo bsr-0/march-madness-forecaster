@@ -83,6 +83,10 @@ _PICKS_TEAM_ALIAS: Dict[str, str] = {
     "siue": "siu_edwardsville",
     "sam_houston_state": "sam_houston",
     "liu_brooklyn": "long_island_university",
+    # Reverse direction for archives keyed by tournament-context ids (2012),
+    # read against Kaggle-named brackets.
+    "long_island_university": "liu_brooklyn",
+    "detroit_mercy": "detroit",
     # Play-in combined entries: ESPN lumps both play-in teams into one row
     # before the play-in game is decided. Map to the team that won the
     # play-in and entered the main bracket.

@@ -299,6 +299,29 @@ def _source_group_issues(
     return issues
 
 
+def _field_source_issues(records: Any, label: str = "field/results") -> list[Dict[str, str]]:
+    """Field and results inputs must both be recorded with verifiable hashes.
+
+    The builder records one entry per consumed file. Seasons whose seeds and
+    results both come from one combined ``tournament_context_YYYY.json``
+    therefore carry a single record, which still covers both roles -- but only
+    if that one file demonstrably holds both a ``seeds`` and a ``results``
+    block. Otherwise two records (one per role) are required, as before.
+    """
+    if isinstance(records, list) and len(records) == 1 and isinstance(records[0], Mapping):
+        issues = _source_record_issues(records[0], f"{label} input 1")
+        if issues:
+            return issues
+        try:
+            payload = json.loads(_source_path(records[0]["file"]).read_text())
+        except (OSError, ValueError):
+            payload = None
+        if isinstance(payload, Mapping) and "seeds" in payload and "results" in payload:
+            return []
+        return [{"status": "INDETERMINATE", "reason": f"{label} single source does not contain both seeds and results"}]
+    return _source_group_issues(records, label, minimum=2)
+
+
 def _rating_source_issues(ratings: Any, optional_sources: Sequence[str]) -> list[Dict[str, str]]:
     if not isinstance(ratings, Mapping):
         return [{"status": "INDETERMINATE", "reason": "rating-source provenance is absent"}]
@@ -387,10 +410,8 @@ def inspect_historical_sources(spec: Mapping[str, Any], candidates_dir: Path) ->
         ratings = provenance.get("rating_sources")
         rating_config = spec["candidate_generation"]["rating_sources"]
         evidence_issues = [
-            *_source_group_issues(
+            *_field_source_issues(
                 field_provenance.get("input_files") if isinstance(field_provenance, Mapping) else None,
-                "field/results",
-                minimum=2,
             ),
             *_source_group_issues(seed_inputs, "seed-referee", exact=2),
             *_source_record_issues(public, "public-picks"),
@@ -607,11 +628,7 @@ def validate_prospective_artifact(
         source_issues = [
             *_source_record_issues(public, "public-picks"),
             *_source_record_issues(torvik, "Torvik"),
-            *_source_group_issues(
-                field.get("input_files") if isinstance(field, Mapping) else None,
-                "field/results",
-                minimum=2,
-            ),
+            *_field_source_issues(field.get("input_files") if isinstance(field, Mapping) else None),
             *_source_group_issues(
                 seed_source.get("input_files") if isinstance(seed_source, Mapping) else None,
                 "seed-referee",

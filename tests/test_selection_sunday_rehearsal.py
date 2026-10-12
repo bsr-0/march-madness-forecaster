@@ -371,14 +371,26 @@ class TestUserTextThatShipsFromPython:
             assert term not in self._payload_text(payload), f"{path.name} shows {term!r} to users"
 
     def test_the_validation_range_is_the_one_we_actually_measured(self):
-        """2011-2026 excluding 2020, at pool 30 -- see FINDINGS and the artifact."""
+        """2011-2026 excluding 2020, at pool 30 -- see FINDINGS and the artifact.
+
+        The headline note is the Recommended bracket's own note (0b833937), so a
+        seed-only fallback makes no backtest claim at all; any range a note does
+        state must be the one actually measured.
+        """
+        import re
+
         for path in sorted((REPO / "docs" / "data").glob("season_*.json")):
             payload = json.loads(path.read_text())
             if payload.get("status") != "ready":
                 continue
             note = payload["pool_optimized_note"]
             assert "2005-2025" not in note, f"{path.name} still claims the wrong range"
-            assert "2011-2026" in note, f"{path.name} does not state the real evidence range"
+            recommended = next((s for s in payload["strategies"] if s["id"] == "recommended"), None)
+            assert recommended is not None and note == recommended["note"], f"{path.name}: note is not the Recommended note"
+            for stated in re.findall(r"\b(?:19|20)\d\d-(?:19|20)\d\d\b", note):
+                assert stated == "2011-2026", f"{path.name} states {stated}, not the real evidence range"
+            if (recommended.get("selector") or {}).get("fallback"):
+                assert "tested on" not in note.lower(), f"{path.name}: seed-only fallback claims a backtest"
 
 
 class TestAStaleLinkSaysSo:

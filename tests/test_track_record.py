@@ -27,7 +27,8 @@ RECORDS = sorted((REPO / "artifacts" / "track_record").glob("track_record_*.json
 
 
 def _year(p: Path) -> int:
-    return int(p.stem.split("_")[-1])
+    """track_record_YYYY.json (pool 30) or track_record_YYYY_poolN.json."""
+    return int(p.stem.split("_")[2])
 
 
 def _artifact(rec: dict) -> dict:
@@ -177,10 +178,15 @@ def test_embedded_copy_equals_the_file_for_exactly_the_payloads_brackets(path: P
     if not season_path.exists():
         pytest.skip("payload not built")
     season = json.loads(season_path.read_text())
+    rec = json.loads(path.read_text())
+    # Only the payload's own pool carries an embedded track record.
+    if rec["scorer"]["pool_size"] != season.get("p1_pool_size", bca.DEFAULT_POOL_SIZE):
+        variant = next((v for v in season.get("pool_variants", []) if v.get("pool_size") == rec["scorer"]["pool_size"]), {})
+        assert variant.get("track_record") is None, "pool-variant track records are not embedded"
+        return
     emb = season.get("track_record")
     if emb is None:
         return
-    rec = json.loads(path.read_text())
     for sid, r in emb["strategies"].items():
         src = rec["strategies"][sid]
         for k in ("points", "won_share", "median_rank", "pool_median_points", "pool_best_points"):

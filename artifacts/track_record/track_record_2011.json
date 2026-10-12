@@ -177,6 +177,106 @@
       "pool_best_points": 1010,
       "n_trials": 2000
     },
+    "recommended": {
+      "w": [
+        [
+          10,
+          27,
+          1,
+          49,
+          7,
+          9,
+          47,
+          44,
+          36,
+          13,
+          60,
+          22,
+          63,
+          46,
+          59,
+          32,
+          39,
+          6,
+          21,
+          61,
+          45,
+          4,
+          52,
+          11,
+          20,
+          31,
+          56,
+          24,
+          14,
+          41,
+          50,
+          34
+        ],
+        [
+          10,
+          49,
+          9,
+          44,
+          36,
+          22,
+          46,
+          32,
+          39,
+          61,
+          4,
+          11,
+          20,
+          24,
+          41,
+          34
+        ],
+        [
+          10,
+          44,
+          36,
+          32,
+          39,
+          11,
+          20,
+          34
+        ],
+        [
+          10,
+          36,
+          39,
+          20
+        ],
+        [
+          10,
+          20
+        ],
+        [
+          10
+        ]
+      ],
+      "source": "seed_only",
+      "selector": {
+        "spec_version": "2027.v4",
+        "spec_hash": "797aba3e8db5a2b23cecbc0efa359445255bf5430f872d5b4eb393089bd28ee3",
+        "rule_id": "seed_only",
+        "source_gate": "INDETERMINATE",
+        "promotion_gate": "INDETERMINATE",
+        "status": "INDETERMINATE",
+        "fallback": true,
+        "fallback_reason": "Historical source eligibility is INDETERMINATE. public-picks capture time is not verified",
+        "candidate_artifact_sha256": "fc0e8f21c87296a9c2593b910ade9c70b12c5bbf0048b80c8863da40a977bc17",
+        "prospective_artifact_gate": null,
+        "source": "seed_only"
+      },
+      "points": 570,
+      "won_share": 0.0,
+      "median_rank": 9,
+      "mean_rank": 9.31,
+      "pool_median_points": 530,
+      "pool_best_points": 1010,
+      "n_trials": 2000
+    },
     "model": {
       "w": [
         [
@@ -256,7 +356,7 @@
         ]
       ],
       "source": "artifacts/fitted_eval/fitted_eval_2011.json",
-      "fitted_eval_generated_at": "2026-09-16T23:16:32.672929+00:00",
+      "fitted_eval_generated_at": "2026-10-11T15:02:23.126824+00:00",
       "points": 940,
       "won_share": 0.456,
       "median_rank": 2,
@@ -271,6 +371,10 @@
     "field": "draw_selection_trials, same seed and count as the candidate artifact's P(1st)",
     "scoring": "score_brackets_team_identity under ESPN scoring; first_place_shares for ties",
     "pool_size": 30,
+    "pool_settings": {
+      "pool_size": 30,
+      "scoring_id": "espn_standard"
+    },
     "n_opponents": 29,
     "p1_trials": 2000,
     "seed": 20260820,
@@ -305,6 +409,106 @@
       "replayed": {
         "ev": 844.8,
         "p1": 0.031
+      }
+    },
+    "named:ev_risk_10": {
+      "shipped": {
+        "ev": 866.5,
+        "p1": 0.0205
+      },
+      "replayed": {
+        "ev": 866.5,
+        "p1": 0.0205
+      }
+    },
+    "named:ev_risk_30": {
+      "shipped": {
+        "ev": 866.0,
+        "p1": 0.0184
+      },
+      "replayed": {
+        "ev": 866.0,
+        "p1": 0.0184
+      }
+    },
+    "named:ev_risk_50": {
+      "shipped": {
+        "ev": 859.7,
+        "p1": 0.0164
+      },
+      "replayed": {
+        "ev": 859.7,
+        "p1": 0.0164
+      }
+    },
+    "named:ev_risk_70": {
+      "shipped": {
+        "ev": 859.2,
+        "p1": 0.0179
+      },
+      "replayed": {
+        "ev": 859.2,
+        "p1": 0.0179
+      }
+    },
+    "named:ev_risk_90": {
+      "shipped": {
+        "ev": 717.4,
+        "p1": 0.0123
+      },
+      "replayed": {
+        "ev": 717.4,
+        "p1": 0.0123
+      }
+    },
+    "named:blend_region_10": {
+      "shipped": {
+        "ev": 841.8,
+        "p1": 0.0287
+      },
+      "replayed": {
+        "ev": 841.8,
+        "p1": 0.0287
+      }
+    },
+    "named:blend_region_30": {
+      "shipped": {
+        "ev": 841.8,
+        "p1": 0.0287
+      },
+      "replayed": {
+        "ev": 841.8,
+        "p1": 0.0287
+      }
+    },
+    "named:blend_region_50": {
+      "shipped": {
+        "ev": 830.5,
+        "p1": 0.0375
+      },
+      "replayed": {
+        "ev": 830.5,
+        "p1": 0.0375
+      }
+    },
+    "named:blend_region_70": {
+      "shipped": {
+        "ev": 794.1,
+        "p1": 0.0476
+      },
+      "replayed": {
+        "ev": 794.1,
+        "p1": 0.0476
+      }
+    },
+    "named:blend_region_90": {
+      "shipped": {
+        "ev": 475.5,
+        "p1": 0.0915
+      },
+      "replayed": {
+        "ev": 475.5,
+        "p1": 0.0915
       }
     },
     "candidate:0": {
@@ -361,8 +565,8 @@
   "inputs": {
     "outcome_sha256": "751322f79efa04c16a0da34825537a4aa195fd55d23c7bf3c8b1ff767d961c91",
     "candidates_artifact": "artifacts/candidates/candidates_2011.json",
-    "candidates_generated_at": "2026-09-16T04:03:23.619323+00:00",
+    "candidates_generated_at": "2026-10-11T14:39:33+00:00",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44"
   },
-  "generated_at": "2026-09-16T23:16:43.938984+00:00"
+  "generated_at": "2026-10-11T15:06:26.973637+00:00"
 }

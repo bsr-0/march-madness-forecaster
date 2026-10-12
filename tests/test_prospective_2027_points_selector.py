@@ -650,3 +650,38 @@ def test_payload_recommendation_uses_v4_rule_when_both_gates_pass(monkeypatch, t
     assert recommendation["p1"] == 0.12
     assert recommendation["selector"]["rule_id"] == "ev_optimal"
     assert recommendation["selector"]["fallback"] is False
+
+
+def _record(path):
+    import hashlib
+
+    return {"file": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
+def test_one_combined_context_file_covers_field_and_results(tmp_path):
+    """The builder records tournament_context_YYYY.json once when it supplies both roles."""
+    from src.evaluation.prospective_2027_points import _field_source_issues
+
+    combined = tmp_path / "tournament_context_2011.json"
+    combined.write_text('{"seeds": {}, "results": {}}')
+    assert _field_source_issues([_record(combined)]) == []
+
+
+def test_one_file_without_results_does_not_cover_both_roles(tmp_path):
+    from src.evaluation.prospective_2027_points import _field_source_issues
+
+    seeds_only = tmp_path / "tournament_seeds_2011.json"
+    seeds_only.write_text('{"seeds": {}}')
+    issues = _field_source_issues([_record(seeds_only)])
+    assert [i["status"] for i in issues] == ["INDETERMINATE"]
+
+
+def test_a_changed_combined_file_still_fails_its_hash(tmp_path):
+    from src.evaluation.prospective_2027_points import _field_source_issues
+
+    combined = tmp_path / "tournament_context_2011.json"
+    combined.write_text('{"seeds": {}, "results": {}}')
+    record = _record(combined)
+    combined.write_text('{"seeds": {}, "results": {"changed": true}}')
+    assert [i["status"] for i in _field_source_issues([record])] == ["FAIL"]
+    assert [i["status"] for i in _field_source_issues([])] == ["INDETERMINATE"]

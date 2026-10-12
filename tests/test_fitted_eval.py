@@ -35,7 +35,17 @@ EVALS = sorted((REPO / "artifacts" / "fitted_eval").glob("fitted_eval_*.json"))
 
 
 def _year(p: Path) -> int:
-    return int(p.stem.split("_")[-1])
+    """fitted_eval_YYYY.json (pool 30) or fitted_eval_YYYY_poolN_SCORING.json."""
+    return int(p.stem.split("_")[2])
+
+
+def _embedded(season: dict, pool_size: int, key: str):
+    """The payload's copy for this pool: top level for the payload's own pool,
+    otherwise the matching pool variant's copy (absent when not embedded)."""
+    if pool_size == season.get("p1_pool_size", bca.DEFAULT_POOL_SIZE):
+        return season.get(key)
+    variant = next((v for v in season.get("pool_variants", []) if v.get("pool_size") == pool_size), None)
+    return None if variant is None else variant.get(key)
 
 
 def _artifact(e: dict) -> dict:
@@ -97,7 +107,9 @@ def test_evaluator_only_reads_the_candidate_artifact():
     assert "candidates_{year}.json\"" in src
     # The only write is to its own directory.
     assert src.count("write_text(") == 1
-    assert 'OUT_DIR / f"fitted_eval_{a.year}.json"' in src
+    # Pool 30 / ESPN standard keeps the bare name; other pool settings get a suffix.
+    assert 'OUT_DIR / f"fitted_eval_{a.year}{suffix}.json"' in src
+    assert 'suffix = "" if a.pool_size == 30 and a.scoring == "espn_standard"' in src
 
 
 # ------------------------------------------------------- recorded parity holds
@@ -136,8 +148,13 @@ def test_configuration_matches_the_artifact(path: Path):
     sc = e["scorer"]
     assert sc["n_sims_total"] == art["meta"]["n_sims"]
     assert sc["p1_trials"] == art["meta"]["p1_trials"]
-    assert sc["pool_size"] == art["meta"]["p1_pool_size"] == bca.DEFAULT_POOL_SIZE
-    assert sc["n_opponents"] == bca.DEFAULT_POOL_SIZE - 1
+    assert sc["pool_size"] == art["meta"]["p1_pool_size"]
+    assert sc["n_opponents"] == sc["pool_size"] - 1
+    # The file name states the pool: the bare name is the default pool only.
+    if path.stem == f"fitted_eval_{_year(path)}":
+        assert sc["pool_size"] == bca.DEFAULT_POOL_SIZE
+    else:
+        assert path.stem == f"fitted_eval_{_year(path)}_pool{sc['pool_size']}_{sc['pool_settings']['scoring_id']}"
     assert sc["trials_seed"] == sc["seed"] + 7
     assert sc["torvik_sims_replayed"] == max(1, art["meta"]["n_sims"] // sc["n_rating_sources"])
     assert e["p1_assumption"] == art["meta"]["p1_assumption"]
@@ -176,7 +193,7 @@ def test_embedded_copy_in_the_payload_equals_the_file_or_is_absent(path: Path):
     if not season_path.exists():
         pytest.skip("payload not built")
     season = json.loads(season_path.read_text())
-    fe = season.get("fitted_eval")
+    fe = _embedded(season, e["scorer"]["pool_size"], "fitted_eval")
     if fe is None:
         return
     for k in ("kind", "w", "ev", "p1", "not_a_candidate", "p1_meaning", "scorer", "inputs", "generated_at"):

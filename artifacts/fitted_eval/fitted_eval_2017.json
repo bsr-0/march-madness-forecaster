@@ -91,6 +91,10 @@
     "scoring_rules": "ESPN R64/R32/S16/E8/F4/CHAMP",
     "pool_size": 30,
     "n_opponents": 29,
+    "pool_settings": {
+      "pool_size": 30,
+      "scoring_id": "espn_standard"
+    },
     "n_sims_total": 150000,
     "torvik_sims_replayed": 50000,
     "n_rating_sources": 3,
@@ -127,6 +131,106 @@
       "replayed": {
         "ev": 745.2,
         "p1": 0.0409
+      }
+    },
+    "named:ev_risk_10": {
+      "shipped": {
+        "ev": 820.8,
+        "p1": 0.0704
+      },
+      "replayed": {
+        "ev": 820.8,
+        "p1": 0.0704
+      }
+    },
+    "named:ev_risk_30": {
+      "shipped": {
+        "ev": 818.6,
+        "p1": 0.0675
+      },
+      "replayed": {
+        "ev": 818.6,
+        "p1": 0.0675
+      }
+    },
+    "named:ev_risk_50": {
+      "shipped": {
+        "ev": 814.6,
+        "p1": 0.066
+      },
+      "replayed": {
+        "ev": 814.6,
+        "p1": 0.066
+      }
+    },
+    "named:ev_risk_70": {
+      "shipped": {
+        "ev": 792.9,
+        "p1": 0.0545
+      },
+      "replayed": {
+        "ev": 792.9,
+        "p1": 0.0545
+      }
+    },
+    "named:ev_risk_90": {
+      "shipped": {
+        "ev": 765.1,
+        "p1": 0.0436
+      },
+      "replayed": {
+        "ev": 765.1,
+        "p1": 0.0436
+      }
+    },
+    "named:blend_region_10": {
+      "shipped": {
+        "ev": 754.0,
+        "p1": 0.0365
+      },
+      "replayed": {
+        "ev": 754.0,
+        "p1": 0.0365
+      }
+    },
+    "named:blend_region_30": {
+      "shipped": {
+        "ev": 745.2,
+        "p1": 0.0409
+      },
+      "replayed": {
+        "ev": 745.2,
+        "p1": 0.0409
+      }
+    },
+    "named:blend_region_50": {
+      "shipped": {
+        "ev": 742.5,
+        "p1": 0.0632
+      },
+      "replayed": {
+        "ev": 742.5,
+        "p1": 0.0632
+      }
+    },
+    "named:blend_region_70": {
+      "shipped": {
+        "ev": 742.6,
+        "p1": 0.0693
+      },
+      "replayed": {
+        "ev": 742.6,
+        "p1": 0.0693
+      }
+    },
+    "named:blend_region_90": {
+      "shipped": {
+        "ev": 682.2,
+        "p1": 0.0442
+      },
+      "replayed": {
+        "ev": 682.2,
+        "p1": 0.0442
       }
     },
     "candidate:0": {
@@ -223,11 +327,11 @@
   "inputs": {
     "fit_inputs_hash": "3dd7c019583e4b0e6407a3f1ba6b9621e8f51d8151194f504ac7009cfe3033a5",
     "training_sha256": "24723c9a07aa9811e40c40f7f395ee18b8605c73cb3c042c55ee71afbde77a44",
-    "fit_js_sha256": "ee39dd862d13eb7f08837f4abb8e9af7fa732eab4ac74baa53cb12073a7ceaa3",
-    "app_js_sha256": "0f6ce560614aa4427c325f8fe77bf554edbfd917c53d97b26b70ea54c907b6df",
+    "fit_js_sha256": "7554f046eb6bb26926579cc48c808575dc3850c2fe6e1add0cc4c4c1fe70b4d3",
+    "app_js_sha256": "76fbaf46d6ff48a10620fbd00a064e36235f76575a9c9579a28ca4bf1ac7bfe3",
     "candidates_artifact": "artifacts/candidates/candidates_2017.json",
-    "candidates_generated_at": "2026-09-16T04:03:24.659098+00:00"
+    "candidates_generated_at": "2026-10-11T14:47:15+00:00"
   },
   "p1_assumption": "P(1st) is the expected share of first place (a tie for the top score is split among the tied entries) in a 30-entry pool (you plus 29 opponents) with ESPN public pick behaviour. It is NOT a universal probability of winning any pool.",
-  "generated_at": "2026-09-16T23:18:21.295568+00:00"
+  "generated_at": "2026-10-11T15:04:01.658752+00:00"
 }
