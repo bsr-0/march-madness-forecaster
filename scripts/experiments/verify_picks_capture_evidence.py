@@ -81,8 +81,16 @@ def parse_gambit_propositions(raw: bytes) -> dict[tuple[int, str], dict[str, flo
 
 
 def _context_seeds(year: int) -> dict[str, int]:
-    ctx = json.loads((REPO / "data" / "raw" / "historical" / f"tournament_context_{year}.json").read_text())
-    return {t["team_id"]: t["seed"] for t in ctx["seeds"]["teams"]}
+    """Seeds from the local cache, else from the committed input archive.
+
+    ``data/raw/`` is untracked, so a fresh checkout (CI) has only the archived
+    gzip copy that ``scripts/restore_build_inputs.py`` keeps.
+    """
+    name = f"tournament_context_{year}.json"
+    live = REPO / "data" / "raw" / "historical" / name
+    archived = REPO / "data" / "archive" / "build_inputs" / "data" / "raw" / "historical" / (name + ".gz")
+    raw = live.read_bytes() if live.is_file() else gzip.decompress(archived.read_bytes())
+    return {t["team_id"]: t["seed"] for t in json.loads(raw)["seeds"]["teams"]}
 
 
 def _resolve(seed: int, name: str, stored_ids: set[str], seeds: dict[str, int], notes: dict[str, str]) -> str | None:

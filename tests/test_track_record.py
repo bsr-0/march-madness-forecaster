@@ -152,7 +152,10 @@ def test_outcome_is_the_canonical_tournament_result(path: Path):
     from src.simulation.pool_competition import actual_winners_by_round
 
     rec = json.loads(path.read_text())
-    actual = actual_winners_by_round(load_tournament_results(_year(path)))
+    games = load_tournament_results(_year(path))
+    if not games:
+        pytest.skip(f"tournament results for {_year(path)} not present on this checkout (data/raw is untracked)")
+    actual = actual_winners_by_round(games)
     assert tr.outcome_hash(actual) == rec["inputs"]["outcome_sha256"]
 
 
