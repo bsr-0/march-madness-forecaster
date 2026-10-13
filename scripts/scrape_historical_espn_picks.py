@@ -50,6 +50,40 @@ logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = Path("data/raw/historical_public_picks")
 
+
+def is_evidenced(path: Path) -> bool:
+    """True when an archive carries verified capture evidence.
+
+    Such a file holds shares transcribed from a committed, pre-tip Internet
+    Archive capture (see scripts/experiments/verify_picks_capture_evidence.py
+    and the roadmap decision log, 2026-10-11). A later import has no such
+    provenance, so letting it replace the file would silently turn verified
+    point-in-time evidence back into an unverifiable copy.
+    """
+    try:
+        return "capture_evidence" in json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return False
+
+
+def write_archive(path: Path, data: dict, *, replace_evidenced: bool = False) -> bool:
+    """Write one archive; refuse to replace an evidenced one. Returns True if written."""
+    path = Path(path)
+    if path.exists() and is_evidenced(path) and not replace_evidenced:
+        logger.warning(
+            "Refusing to overwrite %s: it carries verified capture evidence. "
+            "Pass --replace-evidenced only if you mean to discard that evidence.",
+            path.name,
+        )
+        return False
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    return True
+
+
+# Set from --replace-evidenced in main(); the workflow never passes it.
+_REPLACE_EVIDENCED = False
+
 # TidyTuesday mirror of Kaggle public picks (2024 only, uses % suffix in values)
 TIDYTUESDAY_PUBLIC_PICKS_URL = (
     "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-03-26/public-picks.csv"
@@ -657,8 +691,8 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
         }
 
         out_path = output_dir / f"espn_picks_{yr}.json"
-        with open(out_path, "w") as f:
-            json.dump(data, f, indent=2)
+        if not write_archive(out_path, data, replace_evidenced=_REPLACE_EVIDENCED):
+            continue
         logger.info("Saved %s (%d teams)", out_path.name, len(teams))
         written += 1
 
@@ -819,7 +853,15 @@ def main():
         default=None,
         help=f"Output directory (default: {OUTPUT_DIR})",
     )
+    parser.add_argument(
+        "--replace-evidenced",
+        action="store_true",
+        help="Allow replacing an archive that carries verified capture evidence "
+        "(discards that evidence; never used by the ingestion workflow)",
+    )
     args = parser.parse_args()
+    global _REPLACE_EVIDENCED
+    _REPLACE_EVIDENCED = args.replace_evidenced
 
     output_dir = Path(args.output_dir) if args.output_dir else OUTPUT_DIR
 
@@ -850,8 +892,8 @@ def main():
 
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"espn_picks_{args.year}.json"
-        with open(output_path, "w") as f:
-            json.dump(data, f, indent=2)
+        if not write_archive(output_path, data, replace_evidenced=args.replace_evidenced):
+            return 1
         logger.info("Saved %s", output_path)
 
         # Validate the written file
@@ -871,10 +913,11 @@ def main():
         data = scrape_year(year)
         if data is not None:
             output_path = output_dir / f"espn_picks_{year}.json"
-            with open(output_path, "w") as f:
-                json.dump(data, f, indent=2)
-            logger.info("Saved %s", output_path)
-            results[year] = "success"
+            if write_archive(output_path, data, replace_evidenced=args.replace_evidenced):
+                logger.info("Saved %s", output_path)
+                results[year] = "success"
+            else:
+                results[year] = "kept (evidenced archive)"
         else:
             logger.warning("No data for %d", year)
             results[year] = "failed"

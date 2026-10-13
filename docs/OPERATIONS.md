@@ -59,6 +59,7 @@ Rules:
 - record schema/version and provenance in-band
 - keep large temporary simulation output outside `docs/data/` and `artifacts/`
 - avoid a second format when the JSON is already the effective source of truth
+- archived public picks with `capture_evidence` (twelve seasons, see the 2027 roadmap) are protected: `scripts/scrape_historical_espn_picks.py` refuses to overwrite them (override only with `--replace-evidenced`, which discards the evidence), and the ESPN Picks Ingestion workflow fails before committing if one was changed
 
 ## Static delivery
 

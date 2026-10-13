@@ -24,6 +24,7 @@ import hashlib
 import html
 import json
 import re
+import subprocess
 import sys
 import zlib
 from datetime import datetime
@@ -165,11 +166,37 @@ def verify_archive(path: Path) -> list[str]:
     return problems
 
 
+def protected_against(ref: str, picks_dir: Path) -> list[str]:
+    """Problems if an archive evidenced at ``ref`` was replaced, stripped or deleted.
+
+    ``verify_archive`` only inspects files that still claim a capture time, so a
+    bulk import that swaps an evidenced archive for an unevidenced one would
+    pass it. Comparing with the base revision closes that gap.
+    """
+    rel = picks_dir.resolve().relative_to(REPO).as_posix()
+    listing = subprocess.run(["git", "ls-tree", "--name-only", ref, rel + "/"], cwd=REPO, capture_output=True, text=True, check=True)
+    problems = []
+    for name in sorted(n for n in listing.stdout.split() if Path(n).name.startswith("espn_picks_")):
+        old = json.loads(subprocess.run(["git", "show", f"{ref}:{name}"], cwd=REPO, capture_output=True, text=True, check=True).stdout)
+        if "capture_evidence" not in old:
+            continue
+        path = REPO / name
+        new = json.loads(path.read_text()) if path.is_file() else None
+        if new is None:
+            problems.append(f"{Path(name).name}: evidenced archive was deleted")
+        elif new.get("capture_evidence") != old["capture_evidence"] or new.get("captured_at") != old["captured_at"] or new["teams"] != old["teams"]:
+            problems.append(f"{Path(name).name}: evidenced archive differs from {ref}")
+    return problems
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--picks-dir", type=Path, default=PICKS_DIR)
+    parser.add_argument("--protected-against", metavar="REF", help="also fail if an archive evidenced at REF was changed or removed")
     args = parser.parse_args()
     checked, failures = [], []
+    if args.protected_against:
+        failures.extend(protected_against(args.protected_against, args.picks_dir))
     for path in sorted(args.picks_dir.glob("espn_picks_*.json")):
         if "captured_at" in json.loads(path.read_text()):
             checked.append(path.name)
