@@ -91,6 +91,18 @@ def test_landing_opens_on_analytics_for_2026_and_says_why(site, page):
     assert page.locator("#charts .chart-card").count() == 3
 
 
+def test_a_season_the_visitor_picked_is_not_explained_as_a_substitute(site, page):
+    page.goto(site + "#y=2016")
+    page.wait_for_selector("#main.view-analytics")
+    assert page.evaluate("state.year") == 2016
+    assert page.locator("#season-note").is_hidden()
+    page.goto(site)
+    page.wait_for_selector("#season-note:not([hidden])")
+    page.click("button.yr[data-year='2012']")
+    page.wait_for_function("state.year === 2012")
+    assert page.locator("#season-note").is_hidden()
+
+
 def test_bracket_toggle_shows_the_bracket_and_round_trips_in_the_link(site, page):
     page.goto(site)
     page.wait_for_selector("#main.view-analytics")

@@ -3366,7 +3366,11 @@ function initUsageInstrumentation() {
 
 /* ---------- controls ---------- */
 
-async function setYear(year) {
+async function setYear(year, { auto = false } = {}) {
+  // True only when the page chose the season itself (no season in the link):
+  // renderSeasonNote() explains that substitution and must not claim it when
+  // the visitor picked the season.
+  state.autoSeason = auto;
   // A team drawer is keyed by INDEX into state.season.teams, a slot that is
   // only stable within one season's bracket -- index 5 in 2011 and index 5 in
   // 2026 are unrelated teams. Leaving the drawer open across a year change
@@ -3447,10 +3451,12 @@ async function init() {
   state.seasonsIndex = idx.seasons;
   const fromHash = readHash();
   const fallback = pickDefaultSeason(idx.seasons);
+  let autoSeason = false;
   if (fromHash !== null && idx.seasons.some(s => s.year === fromHash)) {
     state.year = fromHash;
   } else if (fallback !== null) {
     state.year = fallback;
+    autoSeason = true;
   }
 
   // Newest season first -- the one to fill in -- then the played seasons
@@ -3482,7 +3488,7 @@ async function init() {
 
   applyView();
   loadAnalytics();
-  await setYear(state.year);
+  await setYear(state.year, { auto: autoSeason });
 
   // The row scrolls on a narrow viewport and the default season sits at the
   // far right of seventeen, so it would otherwise open out of view.
@@ -3509,13 +3515,13 @@ function setView(view) {
   writeHash();
 }
 
-/* Shown while the newest listed season has no bracket and an earlier one is on
- * screen, so the page does not silently stand in for the season it was asked
- * about. */
+/* Shown while the newest listed season has no bracket and the page itself opened
+ * on an earlier one, so it does not silently stand in for the season it was
+ * asked about. A season the visitor picked or linked to needs no explanation. */
 function renderSeasonNote() {
   const el = document.getElementById('season-note');
   const newest = (state.seasonsIndex || []).reduce((a, s) => (!a || s.year > a.year ? s : a), null);
-  const show = !!newest && newest.status !== 'ready' && state.year < newest.year;
+  const show = !!newest && newest.status !== 'ready' && state.year < newest.year && state.autoSeason === true;
   el.hidden = !show;
   el.textContent = show
     ? `There's no ${newest.year} bracket yet, so this shows ${state.year}. The ${newest.year} field is announced on Selection Sunday.`
