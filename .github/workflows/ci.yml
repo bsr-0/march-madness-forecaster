@@ -60,6 +60,12 @@ jobs:
         with:
           extra-packages: pytest-timeout
 
+      - name: Restore archived inputs
+        # data/raw/ is untracked; the raw files the builds and tests read are
+        # kept as gzip copies under data/archive/build_inputs and restored here
+        # byte-for-byte (the script verifies every SHA-256).
+        run: python -m scripts.restore_build_inputs
+
       - name: Unit tests
         run: pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
 
@@ -74,7 +80,7 @@ jobs:
         # opponent_strategy="per_mode" workers-equivalence (Q3 option A),
         # and cached-vs-live bracket equivalence (Phase 5). These tests
         # are skip-clean if torvik / tournament_results / pool_history
-        # data is missing; everything they need is committed in the repo.
+        # data is missing; the raw inputs are restored from the committed archive.
         run: pytest tests/ -m "backtest_regression" --timeout=600 --tb=short -q
 
       - name: Track test count

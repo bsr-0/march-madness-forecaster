@@ -53,11 +53,11 @@ def test_cli_maps_shape_encoded_to_the_legacy_scorer(monkeypatch):
 
 def test_no_espn_year_uses_static_seed_pick_rates_without_chalk_noise():
     logging.disable(logging.WARNING)
-    # 2007 has seeds but no ESPN picks archive. (2012 served here until its
-    # pre-tip archive was recovered on 2026-10-11.)
+    # 2007 has no ESPN picks archive. (2012 served here until its pre-tip
+    # archive was recovered on 2026-10-11.) The field is synthetic -- only the
+    # seeds matter to the seed-rate fallback -- so no raw data is needed.
     assert not list((REPO / "data/raw/historical_public_picks").glob("*2007*.json"))
-    seeds, regions = M.load_seeds_and_regions(2007)
-    assert seeds, "2007 seeds must load"
+    seeds = {f"team_{i:02d}": 1 + i % 16 for i in range(64)}
     pick_dist, n_opp, chalk = M.resolve_opponent_pick_distribution(2007, seeds, 29, "pool")
     assert chalk == 0.0
     assert n_opp == 29

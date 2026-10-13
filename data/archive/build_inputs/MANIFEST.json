@@ -1,5 +1,15 @@
 {
  "files": {
+  "data/raw/historical/cbbpy_rosters_2025.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/cbbpy_rosters_2025.json.gz",
+   "bytes": 10946722,
+   "sha256": "f0f417ae46ca313592796341cbf7d6393997bc400dd1bdce36540cb87c2762ae"
+  },
+  "data/raw/historical/cbbpy_rosters_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/cbbpy_rosters_2026.json.gz",
+   "bytes": 10511438,
+   "sha256": "13d42fc2d7e99eeef693a1282e9c7b7a1e6b0b1ea4f60ac1948344522869e164"
+  },
   "data/raw/historical/external_ratings_2011.json": {
    "archive": "data/archive/build_inputs/data/raw/historical/external_ratings_2011.json.gz",
    "bytes": 2991638,
@@ -150,6 +160,21 @@
    "bytes": 7978089,
    "sha256": "1743ba7601251c4791700641b5eef19899a57dbe2925d454ab77937d87f989c7"
   },
+  "data/raw/historical/torvik_2008.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2008.json.gz",
+   "bytes": 938071,
+   "sha256": "2fcbd8fe0b79ba3c8ebe317c23fe2ddbadf0b79067ce823103d56e8e3f0b39f7"
+  },
+  "data/raw/historical/torvik_2009.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2009.json.gz",
+   "bytes": 947246,
+   "sha256": "fc085cf02c50c4d0b6443192c4426b2c435d54813a3d229e858cf977231b768b"
+  },
+  "data/raw/historical/torvik_2010.json": {
+   "archive": "data/archive/build_inputs/data/raw/historical/torvik_2010.json.gz",
+   "bytes": 4059285,
+   "sha256": "c4e4eb44a35a6677281762c7f72e2fa2ec13987d85dc8857bbaca2f682c2bf64"
+  },
   "data/raw/historical/torvik_2011.json": {
    "archive": "data/archive/build_inputs/data/raw/historical/torvik_2011.json.gz",
    "bytes": 3744037,
@@ -299,7 +324,12 @@
    "archive": "data/archive/build_inputs/data/raw/historical/tournament_context_2026.json.gz",
    "bytes": 154391,
    "sha256": "04c0579daef80116418f55d4c97d7464843cd6a7504208b7b9a6ef6f4caee2d8"
+  },
+  "data/raw/tournament_seeds_2026.json": {
+   "archive": "data/archive/build_inputs/data/raw/tournament_seeds_2026.json.gz",
+   "bytes": 10794,
+   "sha256": "1c878e4a056b03baae0cb282e6b16b1f7ea257fd488d38ae689e93faa502fafe"
   }
  },
- "note": "gzip copies (mtime=0, level 9) of untracked build inputs; sha256 is of the original bytes"
+ "note": "gzip copies (mtime=0, level 9) of untracked build and test inputs; sha256 is of the original bytes"
 }

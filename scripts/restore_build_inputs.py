@@ -29,6 +29,18 @@ ARCHIVE = REPO / "data" / "archive" / "build_inputs"
 MANIFEST = ARCHIVE / "MANIFEST.json"
 CANDIDATES = REPO / "artifacts" / "candidates"
 
+# Inputs the test suite reads that the candidate artifacts do not record: the
+# 2026 seed file, the Torvik seasons the no-seed model trains on before 2011,
+# and the two cbbpy roster seasons the roster-adjustment tests read. Archived so a fresh checkout (CI) can run the same tests as a developer.
+EXTRA_INPUTS = (
+    "data/raw/tournament_seeds_2026.json",
+    "data/raw/historical/torvik_2008.json",
+    "data/raw/historical/torvik_2009.json",
+    "data/raw/historical/torvik_2010.json",
+    "data/raw/historical/cbbpy_rosters_2025.json",
+    "data/raw/historical/cbbpy_rosters_2026.json",
+)
+
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -63,13 +75,15 @@ def _tracked() -> set[str]:
 
 def write() -> int:
     tracked = _tracked()
-    manifest = {"note": "gzip copies (mtime=0, level 9) of untracked build inputs; sha256 is of the original bytes", "files": {}}
-    for file, digest in sorted(recorded_inputs().items()):
+    manifest = {"note": "gzip copies (mtime=0, level 9) of untracked build and test inputs; sha256 is of the original bytes", "files": {}}
+    recorded = recorded_inputs()
+    for file in sorted(set(recorded) | set(EXTRA_INPUTS)):
         if file in tracked:
             continue
         raw = (REPO / file).read_bytes()
-        if _sha256(raw) != digest:
+        if file in recorded and _sha256(raw) != recorded[file]:
             raise SystemExit(f"{file}: live bytes differ from the hash the artifacts record")
+        digest = _sha256(raw)
         target = ARCHIVE / (file + ".gz")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(gzip.compress(raw, compresslevel=9, mtime=0))

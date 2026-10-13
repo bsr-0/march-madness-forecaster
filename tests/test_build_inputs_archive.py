@@ -17,3 +17,9 @@ def test_archive_covers_every_untracked_recorded_input():
 
 def test_archive_decompresses_to_the_recorded_bytes():
     assert rbi.check() == []
+
+
+def test_archive_holds_the_extra_inputs_the_tests_read():
+    archived = json.loads(rbi.MANIFEST.read_text())["files"]
+    for file in rbi.EXTRA_INPUTS:
+        assert file in archived, f"{file} is read by tests but not archived"
